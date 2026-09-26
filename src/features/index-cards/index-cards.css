@@ -11,6 +11,7 @@
   background: var(--surface-workspace);
   transition: grid-template-columns var(--motion-normal) var(--ease-out);
 }
+.index-cards-layout.library-resizing { transition: none; user-select: none; }
 .index-cards-layout.library-collapsed { grid-template-columns: 0px minmax(0, 1fr); }
 .directory-panel {
   grid-column: 1;
@@ -33,6 +34,28 @@
   visibility: hidden;
   transition: transform var(--motion-normal) var(--ease-out), visibility 0s var(--motion-normal);
 }
+.library-resizer {
+  grid-column: 1;
+  grid-row: 1;
+  justify-self: end;
+  position: relative;
+  z-index: 3;
+  width: 10px;
+  height: 100%;
+  transform: translateX(50%);
+  cursor: col-resize;
+  touch-action: none;
+}
+.library-resizer::after {
+  content: '';
+  position: absolute;
+  inset: 0 4px;
+  background: transparent;
+  transition: background-color var(--motion-fast);
+}
+.library-resizer:hover::after,
+.library-resizer:focus-visible::after,
+.library-resizing .library-resizer::after { background: var(--brand); }
 .library-floating-toggle {
   position: absolute;
   left: 8px;

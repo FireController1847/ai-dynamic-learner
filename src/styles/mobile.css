@@ -28,6 +28,7 @@
     box-shadow: var(--shadow-overlay);
   }
   .library-collapsed .directory-panel { box-shadow: none; }
+  .library-resizer { display: none; }
   .library-scrim {
     position: absolute;
     inset: 0;

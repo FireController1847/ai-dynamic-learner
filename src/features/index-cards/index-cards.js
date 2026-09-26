@@ -7,6 +7,10 @@ import { canMove, countCards, findItem, groupOptions, moveItem } from './tree-mo
 
 const { computed, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref, watch } = window.Vue;
 
+const MIN_LIBRARY_WIDTH = 248;
+const MAX_LIBRARY_WIDTH = 640;
+const MIN_DETAIL_WIDTH = 320;
+
 export const IndexCards = {
   name: 'IndexCards',
   props: {
@@ -20,8 +24,12 @@ export const IndexCards = {
     const overlayQuery = window.matchMedia('(max-width: 700px), (max-width: 1100px) and (pointer: coarse)');
     const libraryOverlay = ref(overlayQuery.matches);
     const libraryCollapsed = ref(overlayQuery.matches && selectedId.value !== null);
+    const libraryWidth = ref(null);
+    const libraryResizing = ref(false);
+    const layout = ref(null);
     function updateLibraryLayout(event) {
       libraryOverlay.value = event.matches;
+      libraryResizing.value = false;
       if (event.matches && selectedId.value) setLibraryCollapsed(true);
     }
     overlayQuery.addEventListener('change', updateLibraryLayout);
@@ -51,7 +59,63 @@ export const IndexCards = {
         props.model.lastSelectedSetId = null;
       }
     }, { immediate: true });
-    onMounted(() => { if (selectedId.value) tree.value?.reveal(selectedId.value); });
+    function maxLibraryWidth() {
+      const available = layout.value?.clientWidth ?? (MAX_LIBRARY_WIDTH + MIN_DETAIL_WIDTH);
+      return Math.max(MIN_LIBRARY_WIDTH, Math.min(MAX_LIBRARY_WIDTH, available - MIN_DETAIL_WIDTH));
+    }
+
+    function currentLibraryWidth() {
+      return libraryWidth.value ??
+        layout.value?.querySelector('.directory-panel')?.getBoundingClientRect().width ??
+        280;
+    }
+
+    function setLibraryWidth(width) {
+      libraryWidth.value = Math.round(Math.min(Math.max(width, MIN_LIBRARY_WIDTH), maxLibraryWidth()));
+    }
+
+    function keepLibraryWidthInBounds() {
+      if (libraryWidth.value !== null) setLibraryWidth(libraryWidth.value);
+    }
+
+    function beginLibraryResize(event) {
+      if (event.button !== 0 || libraryOverlay.value || libraryCollapsed.value) return;
+      event.preventDefault();
+      libraryResizing.value = true;
+      event.currentTarget.setPointerCapture(event.pointerId);
+      resizeLibraryFromPointer(event);
+    }
+
+    function resizeLibraryFromPointer(event) {
+      if (!libraryResizing.value || !layout.value) return;
+      const bounds = layout.value.getBoundingClientRect();
+      setLibraryWidth(event.clientX - bounds.left);
+    }
+
+    function endLibraryResize(event) {
+      libraryResizing.value = false;
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    function resizeLibraryFromKeyboard(event) {
+      const step = event.shiftKey ? 48 : 16;
+      let width = currentLibraryWidth();
+      if (event.key === 'ArrowLeft') width -= step;
+      else if (event.key === 'ArrowRight') width += step;
+      else if (event.key === 'Home') width = MIN_LIBRARY_WIDTH;
+      else if (event.key === 'End') width = maxLibraryWidth();
+      else return;
+      event.preventDefault();
+      setLibraryWidth(width);
+    }
+
+    onMounted(() => {
+      if (selectedId.value) tree.value?.reveal(selectedId.value);
+      window.addEventListener('resize', keepLibraryWidthInBounds);
+    });
+    onBeforeUnmount(() => window.removeEventListener('resize', keepLibraryWidthInBounds));
 
     async function setLibraryCollapsed(collapsed) {
       libraryCollapsed.value = collapsed;
@@ -86,7 +150,14 @@ export const IndexCards = {
         }
       },
     }, [
-      h('div', { class: ['index-cards-layout', { 'library-collapsed': libraryCollapsed.value }] }, [
+      h('div', {
+        ref: layout,
+        class: ['index-cards-layout', {
+          'library-collapsed': libraryCollapsed.value,
+          'library-resizing': libraryResizing.value,
+        }],
+        style: libraryWidth.value === null ? null : { '--library-width': `${libraryWidth.value}px` },
+      }, [
         libraryCollapsed.value ? h('button', {
           ref: showLibraryButton, type: 'button', class: 'icon-button library-floating-toggle',
           title: 'Show library', 'aria-label': 'Show library',
@@ -109,6 +180,21 @@ export const IndexCards = {
             'aria-haspopup': 'dialog', onClick: () => { settingsOpen.value = true; },
           }, ['Settings', h(Icon, { name: 'settings' })]),
         }),
+        !libraryOverlay.value && !libraryCollapsed.value ? h('div', {
+          class: 'library-resizer',
+          role: 'separator',
+          tabindex: 0,
+          'aria-label': 'Resize library',
+          'aria-orientation': 'vertical',
+          'aria-valuemin': MIN_LIBRARY_WIDTH,
+          'aria-valuemax': maxLibraryWidth(),
+          'aria-valuenow': Math.round(currentLibraryWidth()),
+          onPointerdown: beginLibraryResize,
+          onPointermove: resizeLibraryFromPointer,
+          onPointerup: endLibraryResize,
+          onPointercancel: endLibraryResize,
+          onKeydown: resizeLibraryFromKeyboard,
+        }) : null,
         selection.value ? h('section', {
           class: ['index-cards-detail', { 'is-set': selection.value.item.kind === 'set' }],
           'aria-label': 'Selected item',

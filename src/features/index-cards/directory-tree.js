@@ -1,6 +1,6 @@
 import { Icon } from '../../components/icon.js';
 import { DeleteConfirmation } from './delete-confirmation.js';
-import { canMove, countItems, createItem, deleteItem, findItem, MAX_ITEMS, MAX_NAME_LENGTH, moveItem } from './tree-model.js';
+import { canMove, countItems, createItem, deleteItem, findItem, MAX_DEPTH, MAX_ITEMS, MAX_NAME_LENGTH, moveItem } from './tree-model.js';
 
 const { h, nextTick, onDeactivated, ref } = window.Vue;
 
@@ -99,10 +99,27 @@ export const DirectoryTree = {
         announcement.value = `The workspace limit is ${MAX_ITEMS} groups and sets.`;
         return;
       }
+
+      const selected = findItem(props.items, props.selectedId);
+      if (selected?.item.kind === 'group' && selected.depth >= MAX_DEPTH) {
+        announcement.value = `Groups can be at most ${MAX_DEPTH} levels deep.`;
+        return;
+      }
+
       const item = createItem(kind);
-      props.items.unshift(item);
+      if (selected?.item.kind === 'group') {
+        selected.item.children.unshift(item);
+        expanded.value.add(selected.item.id);
+        announcement.value = `Created a new ${kind} inside ${selected.item.name}.`;
+      } else if (selected) {
+        selected.siblings.splice(selected.index + 1, 0, item);
+        announcement.value = `Created a new ${kind} after ${selected.item.name}.`;
+      } else {
+        props.items.unshift(item);
+        announcement.value = `Created a new ${kind} at the top level.`;
+      }
+
       if (kind === 'group') expanded.value.add(item.id);
-      announcement.value = `Created a new ${kind} at the top level.`;
       rename(item);
     }
 
