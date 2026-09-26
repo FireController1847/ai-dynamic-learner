@@ -1,0 +1,163 @@
+.index-cards-detail.is-set {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  container: card-workspace / inline-size;
+}
+.is-set > .item-organization { flex-shrink: 0; max-height: 40%; overflow: auto; }
+.card-set-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 224px;
+  grid-template-rows: minmax(0, 1fr);
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+.card-set {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  min-height: 0;
+  padding: 16px 24px 20px;
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+.card-set > * { flex-shrink: 0; }
+.card-review-session {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  width: min(100%, 800px);
+  margin-bottom: 24px;
+}
+.card-review-session-copy { flex: 1 1 140px; }
+.card-review-session-copy strong { font-size: 14px; font-weight: 600; }
+.card-review-session-copy p { margin: 2px 0 0; color: var(--text-secondary); font-size: 12px; line-height: 16px; }
+.card-review-session-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.ruled-card-stack {
+  position: relative;
+  isolation: isolate;
+  width: min(100%, 800px);
+  /* Landscape 5 × 3 card; all paper measurements below scale from its width. */
+  aspect-ratio: 5 / 3;
+  container: index-card / inline-size;
+  margin: auto 0 28px;
+  perspective: 1100px;
+}
+.ruled-card-stack::before, .ruled-card-stack::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius);
+  background: var(--paper);
+  opacity: 0;
+}
+.ruled-card-stack.has-second-card::before { opacity: 1; transform: translateY(5px) scaleX(0.99); }
+.ruled-card-stack.has-third-card::after { z-index: -2; opacity: 1; transform: translateY(10px) scaleX(0.98); }
+.card-face {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--paper);
+  box-shadow: 0 0 0 1px var(--control-border), var(--shadow-paper);
+  animation: card-turn-in var(--motion-normal) var(--ease-out);
+}
+.card-face-heading {
+  display: flex;
+  align-items: center;
+  gap: 2cqw;
+  flex: 0 0 10cqw; /* Half-inch title area. */
+  min-height: 0;
+  padding: 1cqw 4cqw 1cqw 10cqw;
+  box-shadow: inset 0 -1px var(--paper-red-line);
+}
+.card-title-input {
+  flex: 1;
+  width: 0;
+  min-width: 0;
+  min-height: 0;
+  padding: 0.5cqw 0;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  font-size: 3.333333cqw;
+  line-height: 5cqw;
+  font-weight: 600;
+}
+.card-title-input:hover { border-bottom-color: var(--control-border); }
+.card-title-input:focus-visible { outline-color: var(--brand); }
+.card-title-input::placeholder, .card-writing::placeholder { color: var(--text-secondary); opacity: 1; }
+.card-face-side, .card-face-number { flex-shrink: 0; color: var(--text-secondary); font-size: 2.5cqw; line-height: 4cqw; font-variant-numeric: tabular-nums; }
+.card-face-side { padding: 0 1cqw; }
+.card-writing {
+  /* Nine quarter-inch rows plus a quarter-inch unruled bottom margin.
+     A cqw is 1% of the card width: 5cqw therefore represents 1/4 inch. */
+  --rule-spacing: 5cqw;
+  display: block;
+  flex: 0 0 45cqw;
+  width: 100%;
+  height: 45cqw;
+  min-height: 0;
+  margin-bottom: 5cqw;
+  padding: 0 4cqw 0 10cqw;
+  overflow: auto;
+  resize: none;
+  border: 0;
+  border-radius: 0;
+  background-color: transparent;
+  background-image:
+    linear-gradient(to right, transparent 7.5cqw, var(--paper-red-line) 7.5cqw, var(--paper-red-line) calc(7.5cqw + 1px), transparent calc(7.5cqw + 1px)),
+    repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--rule-spacing) - 1px), var(--paper-blue-line) calc(var(--rule-spacing) - 1px), var(--paper-blue-line) var(--rule-spacing));
+  background-attachment: local;
+  font-size: 3.333333cqw;
+  line-height: var(--rule-spacing);
+  tab-size: 4;
+}
+.card-writing:focus-visible { outline: 2px solid var(--brand); outline-offset: -3px; }
+.card-controls { width: min(100%, 800px); margin-bottom: auto; }
+.card-review-controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  width: min(100%, 480px);
+  margin: 0 auto 12px;
+}
+/* Equal grid tracks and shared base metrics keep all three actions identical in size. */
+.card-review-controls > button { min-width: 0; min-height: 36px; padding: 7px 8px; }
+.card-previous .ui-icon { transform: rotate(180deg); }
+.card-review-instruction { margin: 0 0 12px; color: var(--text-secondary); font-size: 12px; line-height: 16px; text-align: center; }
+.card-edit-controls { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 8px; }
+.card-edit-controls .quiet-button { background: transparent; border-color: transparent; font-weight: 400; }
+.card-edit-controls .quiet-button:hover:not(:disabled) { background: var(--surface-hover); }
+.card-edit-hint, .card-limit-message { margin: 8px 0 0; color: var(--text-secondary); font-size: 12px; line-height: 16px; text-align: center; }
+.card-set-empty { width: min(100%, 480px); margin: auto 0; padding: 32px 16px; text-align: center; }
+.card-set-empty > .ui-icon { width: 32px; height: 32px; color: var(--text-secondary); }
+.card-set-empty h3 { margin: 16px 0 8px; font-size: 20px; line-height: 26px; }
+.card-set-empty p { margin: 0 0 20px; color: var(--text-secondary); }
+
+@keyframes card-turn-in {
+  from { opacity: 0.5; transform: rotateY(-5deg); }
+  to { opacity: 1; transform: rotateY(0); }
+}
+
+@container card-workspace (max-width: 640px) {
+  .card-set-layout { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(152px, 25%); }
+  .card-set { padding: 16px; }
+  .card-review-session { margin-bottom: 16px; }
+}
+@container card-workspace (max-width: 380px) {
+  .card-review-controls .ui-icon { display: none; }
+  .card-review-controls { gap: 4px; }
+}
+@media (pointer: coarse) {
+  .card-review-controls > button { min-height: var(--control-height); }
+}

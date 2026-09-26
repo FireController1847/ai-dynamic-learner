@@ -1,0 +1,30 @@
+# Change routing
+
+Start with the primary files below; follow imports only as needed. Paths are relative to the project root.
+
+| Change | Primary files or locations |
+| --- | --- |
+| App name/configuration | `src/app/app-config.js`; `package.json` for package metadata |
+| Initial page markup | `src/html/index.html` for the document and mount point; `src/app/app.js` for the rendered main and heading |
+| Vue startup and state | `src/app/app.js` |
+| Compact page header and titles | `src/app/app.js` renders the current page title beside navigation; `src/styles/shell.css` controls header sizing. Feature views do not repeat the page title. |
+| Sidebar and application switching | `src/app/app.js` for composition; `src/app/navigation-drawer.js` for the modal drawer and links; `src/styles/shell.css` for layout and animation |
+| Page URLs and browser history | `src/features/feature-definitions.js` for feature paths, labels, and order; `src/app/navigation.js` for browser history; `server.mjs` for direct requests and redirects; `src/app/app.js` for Home |
+| Index Cards page and selected item | `src/features/index-cards/index-cards.js` |
+| Card stack, editing, and review | `src/features/index-cards/card-set.js` for the unified UI; `card-model.js` for card creation, shuffle, and validation; `card-set.css` for the 5:3 paper geometry, nine proportional writing rows, styling, and animation |
+| Review setup and sequence | `src/features/index-cards/review-setup.js` and `review-setup.css` for the two-step dialog; `card-set.js` for the visible session summary, finish/end actions, starting side, and forward/backward/shuffled sequence; `card-list.js` for matching previews |
+| Card titles and right-hand card list | `src/features/index-cards/card-set.js` for the title input and selected card; `card-model.js` for title defaults and validation; `card-list.js` and `card-list.css` for list navigation and responsive layout |
+| Library minimization and height | `src/features/index-cards/index-cards.js` owns collapsed state and the floating restore icon; `directory-tree.js` owns the minimize control; `index-cards.css` and `src/styles/shell.css` own sizing, animation, and scrolling |
+| Groups, sets, renaming, and dragging | `src/features/index-cards/directory-tree.js` for the UI; `src/features/index-cards/tree-model.js` for data, moves, and validation |
+| Deleting groups, sets, and cards | `src/features/index-cards/directory-tree.js` for immediate empty-container deletion and confirmation of populated containers; `card-set.js` for immediate individual-card deletion and selection cleanup; `delete-confirmation.js` and `delete-confirmation.css` for the fullscreen prompt; `tree-model.js` for directory deletion |
+| Index Cards styling | `src/features/index-cards/index-cards.css`, `card-set.css`, and `card-list.css`, imported by `src/styles/index.css` |
+| Local saving and workspace backups | `src/app/workspace.js` for storage and files; `src/app/workspace-tools.js` for download/upload and replacement review, composed into the navigation drawer footer by `src/app/app.js`; `docs/workspace-data.md` for the format |
+| Word Search | `src/features/word-search/word-search.js` |
+| Visual styling | `src/styles/index.css` for imports; `tokens.css` for semantic design values; `base.css` for typography and shared controls; `shell.css` for navigation. See `docs/design.md` for the Fluent-inspired styling rules. |
+| Adding a future feature | Create feature modules in `src/features/`; add metadata in `src/features/feature-definitions.js` and its component in `src/features/feature-registry.js`; restart the server to load the new path |
+| Shared icons and controls | `src/components/icon.js` for inline SVG icons; `src/styles/base.css` for shared control styles |
+| Adding a shared component or utility | `src/components/` contains the generic icon component; `src/core/ids.js` provides shared ID creation and validation |
+| Static server behavior | `server.mjs`; `package.json` for the start command |
+| Architectural changes | `docs/architecture.md`, affected modules, and this routing table; `AGENTS.md` if maintenance rules change |
+
+All named files exist. Index Cards owns the directory editor and editable card stack; Word Search remains an empty feature view. Consult [architecture.md](architecture.md) for dependency and structural changes.

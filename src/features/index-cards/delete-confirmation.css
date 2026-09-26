@@ -1,0 +1,24 @@
+body:has(.delete-confirmation[open]) { overflow: hidden; }
+.delete-confirmation {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  padding: clamp(24px, 5vw, 64px);
+  overflow-y: auto;
+  border: 0;
+  color: var(--text-color);
+  background: var(--page-background);
+}
+.delete-confirmation[open] { display: flex; }
+.delete-confirmation::backdrop { background: var(--page-background); }
+.delete-confirmation-content { width: 100%; max-width: 480px; margin: auto; overflow-wrap: anywhere; }
+.delete-confirmation-icon { display: grid; place-items: center; width: 48px; height: 48px; margin-bottom: 20px; border-radius: var(--radius-dialog); color: var(--danger); background: var(--danger-tint); }
+.delete-confirmation-icon .ui-icon { width: 24px; height: 24px; }
+.delete-confirmation-eyebrow { margin: 0 0 8px; color: var(--danger); font-weight: 600; }
+.delete-confirmation h2 { font-size: 24px; line-height: 32px; }
+.delete-confirmation-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 24px; }

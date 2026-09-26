@@ -1,0 +1,43 @@
+.card-list-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  border-left: 1px solid var(--border-color);
+  background: var(--surface-subtle);
+}
+.card-list-count { margin-left: 6px; color: var(--text-secondary); font-size: 12px; font-weight: 400; }
+.card-list-order, .card-list-empty { margin: 0; padding: 8px 16px; color: var(--text-secondary); font-size: 12px; line-height: 16px; }
+.card-list-items { position: relative; flex: 1; min-height: 0; margin: 0; padding: 4px 8px 8px; overflow: auto; list-style: none; scrollbar-gutter: stable; }
+.card-list-items li + li { margin-top: 4px; }
+.card-list-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  min-height: 60px;
+  padding: 10px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: transparent;
+  text-align: left;
+  transition: background-color var(--motion-fast);
+}
+.card-list-item:hover { background: var(--surface-hover); }
+.card-list-item[aria-current='true'] { background: var(--brand-tint); box-shadow: inset 3px 0 var(--brand); }
+.card-list-item[aria-current='true'] .card-list-title { color: var(--brand-text); }
+.card-list-number { min-width: 20px; color: var(--text-secondary); font-size: 12px; font-variant-numeric: tabular-nums; }
+.card-list-copy { display: grid; flex: 1; min-width: 0; gap: 2px; }
+.card-list-title, .card-list-preview { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.card-list-title { font-size: 14px; font-weight: 600; }
+.card-list-preview { color: var(--text-secondary); font-size: 12px; line-height: 16px; }
+
+@container card-workspace (max-width: 640px) {
+  .card-list-panel { border-left: 0; border-top: 1px solid var(--border-color); }
+  .card-list-toolbar { min-height: 40px; padding-top: 4px; padding-bottom: 4px; }
+  .card-list-order { padding-top: 4px; padding-bottom: 4px; }
+  .card-list-items { display: flex; gap: 8px; padding: 4px 8px 8px; }
+  .card-list-items li { flex: 0 0 192px; }
+  .card-list-items li + li { margin-top: 0; }
+}

@@ -1,0 +1,46 @@
+# Architecture
+
+## Runtime
+
+`npm start` launches the zero-dependency Node server in `server.mjs`. `/` and the feature paths in `src/features/feature-definitions.js` map to `src/html/index.html`, allowing direct links and refreshes. Feature paths without a trailing slash redirect to their canonical slash form, preserving query strings. Other URLs map to project files; missing assets and unknown pages return 404 rather than falling back to HTML. The server supports GET and HEAD, assigns MIME types, and confines resolved paths and symlink targets to the project root. It serves project files directly, so keep private material outside that root. There is no directory listing.
+
+The HTML loads the pinned Vue 3.5.13 global production browser build from jsDelivr, then loads `src/app/app.js` as a native ES module. The CDN requires network access. Vue is the sole library global; application modules use ES exports. No build tooling, TypeScript, single-file component compilation, Bootstrap, jQuery, router, or state library is present. Add Bootstrap JavaScript only when a feature needs an isolated overlay.
+
+`app-config.js` is the canonical app identity. Startup uses it for the document title, Home heading, and navigation drawer identity. One compact application header combines the menu button with the current feature title; feature views do not duplicate that heading. Plain components render the header, navigation, and semantic `main` into an initially empty mount point, so raw template syntax never flashes. CSS imports flow through `index.css` into tokens, base rules, and shell spacing.
+
+## Ownership and dependencies
+
+| Layer | Responsibility | Allowed local dependencies |
+| --- | --- | --- |
+| `src/app` | Composition, root Vue state, browser workflow coordination | App modules, features, components, core |
+| `src/features` | Feature-specific components, data definitions, business behavior | Features, components, core |
+| `src/components` | Reusable, feature-neutral Vue components | Core and other generic components only |
+| `src/core` | Feature-neutral utilities | Other core modules only |
+
+Lower layers must never import from `app`; core must never import from features or components. Keep shared data canonical rather than duplicating it across features. Vue owns reactive state and UI rendering. Isolate imperative browser operations in focused modules when they become necessary. Future schemas remain declarative data without DOM operations or Vue behavior.
+
+`src/features/feature-definitions.js` defines canonical feature IDs, labels, and paths as browser-neutral data. The Node server imports this data without importing Vue components. `src/features/feature-registry.js` associates these definitions with plain Vue components for the browser. Each feature lives in its own directory and receives its title from the registry. Add future definitions and register their components, then restart the server to load the new paths. `components/icon.js` provides generic inline SVG icons without an external icon dependency. `core/ids.js` provides shared ID generation and validation for directory entries and cards.
+
+`app.js` derives the selected feature from the URL and owns sidebar visibility. `/` displays Home, `/index-cards/` displays Index Cards, and `/word-search/` displays Word Search. `navigation.js` isolates browser history operations: ordinary link clicks use `pushState`, and `popstate` synchronizes Vue state for Back/Forward. Links retain real destinations and native modified-click/new-tab behavior. No router dependency is needed.
+
+`navigation-drawer.js` owns the full-height modal drawer, isolating the native dialog operation from feature code. The sidebar starts closed. Vue transitions animate the panel and backdrop; reduced-motion preferences disable animation. The native dialog confines keyboard focus while open, and the page cannot scroll behind it. Navigation closes the drawer and focuses main content after the exit transition. Escape, the close button, or clicking the backdrop dismisses navigation and returns focus to the menu button. Vue's `KeepAlive` preserves mounted UI state when switching during the session, including visits to Home. Reloading keeps the URL-selected page and saved workspace data but resets temporary UI state.
+
+## Workspace and Index Cards
+
+`app/workspace.js` owns the canonical reactive workspace, local browser storage, and JSON backup operations. The app passes each feature only its own `model` object. Index Cards mutates that object through feature-owned operations; a deep watcher saves changes. `app/workspace-tools.js` handles backup controls and stages validated uploads for explicit replacement. `app.js` composes these controls into the navigation drawer's footer slot, rather than each page. Closing the drawer discards an unconfirmed upload review without applying it. Storage failures remain visible outside the drawer. A successful replacement resets the feature component cache so old selection and editing state cannot survive into the imported data.
+
+Index Cards uses ordered arrays for the root directory and every group's children. Sets have an ordered `cards` collection with an editable shared title and plain-text front/back content. `tree-model.js` owns creation, lookups, order, cycle/depth guards, and imported data validation. `directory-tree.js` owns disclosure, inline naming, and drag feedback. The feature entry composes the left directory and selected-item controls, including keyboard/touch alternatives to dragging. Feature CSS lives beside these modules and is imported through the root stylesheet. `card-set.js` provides one editable review surface with flipping, navigation, duplication, shuffle, and deletion. `card-model.js` owns card creation, validation, limits, and shuffle generation. `review-setup.js` stages starting-side and order choices in a two-step native dialog; only Start review applies them. `card-set.js` owns forward/backward/shuffled sequences and resets the visible side on navigation, while editing remains available. A visible session summary explains current progress and settings; Finish review at the last card or End review restores front-first saved-order browsing without changing card data. Temporary review order never mutates saved card order; `card-set.css` owns the ruled-paper appearance and motion. Set location controls are collapsed below the card workspace by default. `card-list.js` renders the active set’s cards beside the editor, following the current review order and emitting selection/creation requests. `card-list.css` owns the independently scrolling list and stacks it below the editor when the workspace is narrow. Card titles are optional in imported data for compatibility; the editor and list share the same canonical title field.
+
+The backup contains all implemented workspace data; Word Search has no data yet. See [workspace-data.md](workspace-data.md) before changing the persisted shape or backup behavior. Schemas stay declarative; validation and mutation functions live outside the data.
+
+The app shell fills the viewport below a compact header, normally 48 pixels tall, with a 44-pixel navigation target. Index Cards fills the remaining main area, with its directory toolbar above an independently scrolling tree. The feature entry owns library collapse state; the mounted directory is hidden when collapsed, retaining expansion and selection state. The collapsed library occupies no space; content uses the full available width. A floating icon at the upper left restores it and keyboard focus follows the toggle. The library slides horizontally while the desktop content expands or contracts; on narrow screens it overlays the content. The collapsed panel is inert and hidden from assistive technology during its exit, then visually hidden. Reduced-motion preferences disable transitions. This UI state is temporary and is not part of backups.
+
+## Growth
+
+Prefer focused modules below 400 lines and split large schemas by section around 500 lines. Responsibility determines boundaries; avoid both monoliths and unnecessary one-function wrappers. Extend persistence and backup support as real feature data is added. Authentication, schema rendering, AI integration, printing, and migrations remain out of scope until requested functionality requires them.
+
+Keep [change-routing.md](change-routing.md) aligned with file ownership. Add specialized documentation only when its functionality exists. Maintenance and manual verification rules live in [AGENTS.md](../AGENTS.md).
+
+## Visual system
+
+The Fluent-inspired visual system uses semantic tokens in `styles/tokens.css` and shared typography, button metrics, focus, and reduced-motion rules in `styles/base.css`. Feature styles own layouts rather than redefining control metrics. The library and card list are adjoining workspace panels; only the ruled paper and overlays use elevation. On narrow workspaces the card list becomes a horizontal strip beneath the editor, with selection reveal and arrow navigation on both axes. The fullscreen deletion prompt has its own `delete-confirmation.css`. See [design.md](design.md) for styling conventions and manual review guidance.
