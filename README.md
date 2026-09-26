@@ -1,5 +1,7 @@
 # Dynamic Learner
 
+Licensed under [Apache License 2.0](LICENSE).
+
 A modular browser-native Vue 3 application with a collapsible navigation drawer, an Index Cards library with editable card stacks, and a reserved Word Search page. JavaScript uses native ES modules and plain Vue component objects, with no application build step or npm dependencies.
 
 The interface uses a Microsoft Fluent-inspired visual system: compact shared controls, neutral adjoining panels, blue selection accents, and animated drawers. Ruled index cards retain their red and blue lines. See [design conventions](docs/design.md) for the shared styling rules; no Fluent package or external font is required.

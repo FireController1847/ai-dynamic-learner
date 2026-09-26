@@ -13,7 +13,7 @@ The workflow uses GitHub's built-in token, Pages artifact upload, and Pages depl
 
 ## Packaging and paths
 
-`npm run pages:prepare` recreates `dist/`. This is a copy/package operation, not compilation or bundling. It includes only the `src/app`, `core`, `components`, `features`, and `styles` asset directories, plus generated HTML entry points, a 404 page, and `.nojekyll`. Repository metadata, documentation, the server, and workspace backups are not in the site artifact. `dist/` is covered by the existing Node gitignore template.
+`npm run pages:prepare` recreates `dist/`. This is a copy/package operation, not compilation or bundling. It includes only the `src/app`, `core`, `components`, `features`, and `styles` asset directories, plus generated HTML entry points, a 404 page, `.nojekyll`, and the Apache 2.0 `LICENSE`. Repository metadata, documentation, the server, and workspace backups are not in the site artifact. `dist/` is covered by the existing Node gitignore template.
 
 The workflow reads the base path from `actions/configure-pages`: project sites use `/repository-name/`; user/organization sites and configured custom domains usually use `/`. It writes that path into the HTML base element. Navigation derives the same root from its module URL, so assets, ordinary links, modified-click/new-tab links, and browser history stay under the deployed root.
 

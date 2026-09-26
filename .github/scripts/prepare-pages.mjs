@@ -26,6 +26,7 @@ for (const route of routes) {
 // Package only browser assets, not the repository, docs, server, or workspace backups.
 await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
+await cp(new URL('LICENSE', root), new URL('LICENSE', output));
 for (const directory of ['app', 'core', 'components', 'features', 'styles']) {
   await cp(new URL(`src/${directory}/`, root), new URL(`src/${directory}/`, output), { recursive: true });
 }
