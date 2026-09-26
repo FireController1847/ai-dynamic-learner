@@ -4,15 +4,21 @@ import { CardList } from './card-list.js';
 import { CardPaper } from './card-paper.js';
 import { ReviewSetup } from './review-setup.js';
 
-const { computed, h, nextTick, onDeactivated, ref, watch } = window.Vue;
+const { computed, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref, watch } = window.Vue;
+
+const MIN_CARD_LIST_WIDTH = 160;
+const MAX_CARD_LIST_WIDTH = 480;
+const MIN_EDITOR_WIDTH = 400;
 
 export const CardSet = {
   name: 'CardSet',
   props: {
     set: { type: Object, required: true },
     totalCards: { type: Number, required: true },
+    cardListWidth: { type: Number, default: null },
   },
-  setup(props) {
+  emits: ['resize-card-list'],
+  setup(props, { emit }) {
     const currentId = ref(props.set.cards[0]?.id ?? null);
     const side = ref('front');
     const reviewSide = ref('front');
@@ -26,7 +32,10 @@ export const CardSet = {
     const editor = ref(null);
     const addButton = ref(null);
     const deleteButton = ref(null);
+    const layout = ref(null);
+    const cardListResizing = ref(false);
     const message = ref('');
+    let layoutObserver = null;
     const orderedCards = computed(() => {
       if (reviewOrder.value === 'backward') return [...props.set.cards].reverse();
       if (!shuffleOrder.value) return props.set.cards;
@@ -41,7 +50,73 @@ export const CardSet = {
       if (!length && reviewActive.value) endReview(false);
     });
 
-    onDeactivated(() => { reviewSetupOpen.value = false; });
+    onDeactivated(() => {
+      reviewSetupOpen.value = false;
+      cardListResizing.value = false;
+    });
+
+    function maxCardListWidth() {
+      const available = layout.value?.clientWidth ?? (MAX_CARD_LIST_WIDTH + MIN_EDITOR_WIDTH);
+      return Math.max(MIN_CARD_LIST_WIDTH,
+        Math.min(MAX_CARD_LIST_WIDTH, available - MIN_EDITOR_WIDTH));
+    }
+
+    function currentCardListWidth() {
+      return props.cardListWidth ??
+        layout.value?.querySelector('.card-list-panel')?.getBoundingClientRect().width ??
+        224;
+    }
+
+    function setCardListWidth(width) {
+      emit('resize-card-list',
+        Math.round(Math.min(Math.max(width, MIN_CARD_LIST_WIDTH), maxCardListWidth())));
+    }
+
+    function keepCardListWidthInBounds() {
+      if (props.cardListWidth !== null) setCardListWidth(props.cardListWidth);
+    }
+
+    function beginCardListResize(event) {
+      if (event.button !== 0) return;
+      event.preventDefault();
+      cardListResizing.value = true;
+      event.currentTarget.setPointerCapture(event.pointerId);
+      resizeCardListFromPointer(event);
+    }
+
+    function resizeCardListFromPointer(event) {
+      if (!cardListResizing.value || !layout.value) return;
+      const bounds = layout.value.getBoundingClientRect();
+      setCardListWidth(bounds.right - event.clientX);
+    }
+
+    function endCardListResize(event) {
+      cardListResizing.value = false;
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    function resizeCardListFromKeyboard(event) {
+      const step = event.shiftKey ? 48 : 16;
+      let width = currentCardListWidth();
+      if (event.key === 'ArrowLeft') width += step;
+      else if (event.key === 'ArrowRight') width -= step;
+      else if (event.key === 'Home') width = MIN_CARD_LIST_WIDTH;
+      else if (event.key === 'End') width = maxCardListWidth();
+      else return;
+      event.preventDefault();
+      event.stopPropagation();
+      setCardListWidth(width);
+    }
+
+    onMounted(() => {
+      if (window.ResizeObserver && layout.value) {
+        layoutObserver = new ResizeObserver(keepCardListWidthInBounds);
+        layoutObserver.observe(layout.value);
+      }
+    });
+    onBeforeUnmount(() => layoutObserver?.disconnect());
 
     async function addCard(duplicate = false) {
       if (atLimit.value) return;
@@ -135,7 +210,12 @@ export const CardSet = {
       const lastCard = index.value === orderedCards.value.length - 1;
       const orderDescription = reviewOrder.value === 'shuffle' ? 'Shuffled'
         : reviewOrder.value === 'backward' ? 'Last to first' : 'First to last';
-      return h('div', { class: 'card-set-layout', onKeydown: shortcuts }, [
+      return h('div', {
+        ref: layout,
+        class: ['card-set-layout', { 'card-list-resizing': cardListResizing.value }],
+        style: props.cardListWidth === null ? null : { '--card-list-width': `${props.cardListWidth}px` },
+        onKeydown: shortcuts,
+      }, [
         h('div', { class: 'card-set' }, [
         card ? h('section', { class: 'card-review-session', 'aria-label': 'Review status' }, [
           h('div', { class: 'card-review-session-copy' }, [
@@ -213,6 +293,21 @@ export const CardSet = {
           onCancel: cancelReview, onStart: startReview,
         }) : null,
         ]),
+        h('div', {
+          class: 'card-list-resizer',
+          role: 'separator',
+          tabindex: 0,
+          'aria-label': 'Resize Cards panel',
+          'aria-orientation': 'vertical',
+          'aria-valuemin': MIN_CARD_LIST_WIDTH,
+          'aria-valuemax': maxCardListWidth(),
+          'aria-valuenow': Math.round(currentCardListWidth()),
+          onPointerdown: beginCardListResize,
+          onPointermove: resizeCardListFromPointer,
+          onPointerup: endCardListResize,
+          onPointercancel: endCardListResize,
+          onKeydown: resizeCardListFromKeyboard,
+        }),
         h(CardList, {
           cards: orderedCards.value, selectedId: card?.id ?? null,
           atLimit: atLimit.value, previewSide: reviewSide.value,

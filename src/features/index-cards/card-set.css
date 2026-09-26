@@ -6,14 +6,18 @@
 }
 .is-set > .item-organization { flex-shrink: 0; max-height: 40%; overflow: auto; }
 .card-set-layout {
+  --card-list-width: 224px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 224px;
+  grid-template-columns: minmax(0, 1fr) var(--card-list-width);
   grid-template-rows: minmax(0, 1fr);
   flex: 1;
   min-width: 0;
   min-height: 0;
 }
+.card-set-layout.card-list-resizing { user-select: none; }
 .card-set {
+  grid-column: 1;
+  grid-row: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -186,7 +190,9 @@
 
 @container card-workspace (max-width: 640px) {
   .card-set-layout { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(152px, 25%); }
-  .card-set { padding: 16px; }
+  .card-set { grid-column: 1; grid-row: 1; padding: 16px; }
+  .card-list-resizer { display: none; }
+  .card-list-panel { grid-column: 1; grid-row: 2; }
   .card-review-session { margin-bottom: 16px; }
 }
 @container card-workspace (max-width: 380px) {

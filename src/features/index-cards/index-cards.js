@@ -25,6 +25,7 @@ export const IndexCards = {
     const libraryOverlay = ref(overlayQuery.matches);
     const libraryCollapsed = ref(overlayQuery.matches && selectedId.value !== null);
     const libraryWidth = ref(null);
+    const cardListWidth = ref(null);
     const libraryResizing = ref(false);
     const layout = ref(null);
     function updateLibraryLayout(event) {
@@ -207,7 +208,11 @@ export const IndexCards = {
               : `Set · ${selection.value.item.cards.length} cards`),
           ]),
           selection.value.item.kind === 'set' ? h(CardSet, {
-            key: selection.value.item.id, set: selection.value.item, totalCards: totalCards.value,
+            key: selection.value.item.id,
+            set: selection.value.item,
+            totalCards: totalCards.value,
+            cardListWidth: cardListWidth.value,
+            onResizeCardList: (width) => { cardListWidth.value = width; },
           }) : null,
           h('details', {
             key: `organization-${selection.value.item.id}`, class: 'item-organization',
