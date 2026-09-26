@@ -5,6 +5,7 @@ export const NavigationDrawer = {
   props: {
     open: Boolean,
     title: { type: String, required: true },
+    logoSrc: { type: String, default: '' },
     items: { type: Array, required: true },
     activePath: { type: String, required: true },
   },
@@ -28,7 +29,10 @@ export const NavigationDrawer = {
         },
       }, [h('div', { class: 'drawer-panel' }, [
         h('div', { class: 'drawer-header' }, [
-          h('span', { class: 'drawer-title' }, props.title),
+          h('div', { class: 'drawer-brand' }, [
+            props.logoSrc ? h('img', { class: 'app-logo drawer-logo', src: props.logoSrc, alt: '', 'aria-hidden': 'true' }) : null,
+            h('span', { class: 'drawer-title' }, props.title),
+          ]),
           h('button', {
             type: 'button',
             class: 'menu-toggle',

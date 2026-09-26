@@ -10,6 +10,8 @@
   background: var(--page-background);
 }
 .app-header h1 { font-size: 16px; line-height: 22px; }
+.app-logo { display: block; flex: 0 0 auto; object-fit: contain; }
+.app-header-logo { width: 28px; height: 28px; margin-left: 2px; }
 .menu-toggle {
   display: grid;
   place-items: center;
@@ -67,6 +69,8 @@ body:has(.navigation-drawer[open]) { overflow: hidden; }
   margin-bottom: 12px;
   padding-left: 12px;
 }
+.drawer-brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.drawer-logo { width: 32px; height: 32px; }
 .drawer-title { font-weight: 600; overflow-wrap: anywhere; }
 .drawer-header .menu-toggle { font-size: 24px; font-weight: 400; }
 .drawer-panel ul { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }

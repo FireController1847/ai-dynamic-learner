@@ -110,7 +110,7 @@ function renderPage(route) {
 await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 await cp(new URL('LICENSE', root), new URL('LICENSE', output));
-for (const directory of ['app', 'core', 'components', 'features', 'styles']) {
+for (const directory of ['app', 'assets', 'core', 'components', 'features', 'styles']) {
   await cp(new URL(`src/${directory}/`, root), new URL(`src/${directory}/`, output), { recursive: true });
 }
 for (const route of routes) {

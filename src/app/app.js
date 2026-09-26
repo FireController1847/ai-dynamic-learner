@@ -8,6 +8,8 @@ import { HomePage } from './home-page.js';
 
 const { computed, createApp, h, KeepAlive, nextTick, ref } = window.Vue;
 
+const appLogoSrc = 'src/assets/dynamic-learner.png';
+
 const navigationItems = [{ id: 'home', label: 'Home', path: '/' }, ...features]
   .map((item) => ({ ...item, href: pageHref(item.path) }));
 
@@ -59,11 +61,13 @@ const App = {
         }, [h('span', { class: 'menu-icon', 'aria-hidden': 'true' }, [
           h('span'), h('span'), h('span'),
         ])]),
+        h('img', { class: 'app-logo app-header-logo', src: appLogoSrc, alt: '', 'aria-hidden': 'true' }),
         h('h1', activeFeature.value?.label ?? (currentPath.value === '/' ? appConfig.name : 'Page not found')),
       ]),
       h(NavigationDrawer, {
         open: sidebarOpen.value,
         title: appConfig.name,
+        logoSrc: appLogoSrc,
         items: navigationItems,
         activePath: currentPath.value,
         onClose: closeSidebar,
