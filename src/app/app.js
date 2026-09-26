@@ -1,13 +1,14 @@
 import { appConfig } from './app-config.js';
 import { features } from '../features/feature-registry.js';
 import { NavigationDrawer } from './navigation-drawer.js';
-import { useNavigation } from './navigation.js';
+import { pageHref, useNavigation } from './navigation.js';
 import { useWorkspace } from './workspace.js';
 import { WorkspaceTools } from './workspace-tools.js';
 
 const { computed, createApp, h, KeepAlive, nextTick, ref } = window.Vue;
 
-const navigationItems = [{ id: 'home', label: 'Home', path: '/' }, ...features];
+const navigationItems = [{ id: 'home', label: 'Home', path: '/' }, ...features]
+  .map((item) => ({ ...item, href: pageHref(item.path) }));
 
 document.title = appConfig.name;
 

@@ -69,7 +69,7 @@ export const CardList = {
         }, [
           h('span', { class: 'card-list-number', 'aria-hidden': 'true' }, String(index + 1).padStart(2, '0')),
           h('span', { class: 'card-list-copy' }, [
-            h('span', { class: 'card-list-title', title: cardTitle(card, `Card ${index + 1}`) }, cardTitle(card, `Card ${index + 1}`)),
+            h('span', { class: 'card-list-title', title: cardTitle(card, `Card ${index + 1}`, props.previewSide) }, cardTitle(card, `Card ${index + 1}`, props.previewSide)),
             h('span', { class: 'card-list-preview' }, card[props.previewSide].trim().replace(/\s+/g, ' ').slice(0, 160) || `Blank ${props.previewSide}`),
           ]),
         ])]),

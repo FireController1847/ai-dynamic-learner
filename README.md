@@ -20,6 +20,8 @@ HOST=127.0.0.1 PORT=8080 npm start
 
 ## Rename and extend
 
+For publishing, see [GitHub Pages setup](docs/github-pages.md). The repository includes a manually triggered **Deploy to GitHub Pages** workflow. It packages the static app without bundling, supports repository-prefixed URLs, and creates direct-link entry points for each feature. Select **GitHub Actions** in the repository's Pages settings, then use **Actions → Deploy to GitHub Pages → Run workflow**. Ordinary pushes do not publish.
+
 Change `name` in `src/app/app-config.js` to update the Home heading, navigation drawer identity, and browser title. Feature pages display their own title in a compact header instead of a persistent app-name banner. Update the package name in `package.json` and this README if renaming the project itself.
 
 Add real functionality under `src/features`, define its ID, label, and path in `src/features/feature-definitions.js`, and register its component in `src/features/feature-registry.js`. Restart the server after adding paths. Compose application behavior in `src/app`. Use `src/components` for reusable, feature-neutral Vue components (currently the icon component) and `src/core` for neutral utilities (currently shared ID helpers).
@@ -40,11 +42,17 @@ Use [change routing](docs/change-routing.md) to find the files for an edit and [
 
 ## Writing and reviewing cards
 
-Select a set and add its first card. Write directly on the large ruled card, then use **Show back** or **Show front** to write or reveal the other side. Click the title at the top of the paper to edit it; the same title appears on both sides and in the card list. Both sides are always editable; there is no separate editing mode. Changes save locally as you type and are included in workspace backups.
+Reloading Index Cards reopens the last selected set and expands its parent groups. Browsing a group does not replace the remembered set. The restored set starts on the first card's front in normal browsing mode; card position and review state are not saved.
 
-Controls below the stack navigate previous/next, add a card after the current one, duplicate the title and both sides, or immediately delete an individual card without confirmation. Review setup is above the card alongside the current position. Review first asks for Front or Back, then Sequential — forward, Sequential — backward, or Shuffle. Start review begins at the first card in that sequence; choosing forward restores saved order. Cancel or Escape keeps the current review unchanged. New cards have a fresh ID; duplicates do not share text state. Each new selection during review starts on your chosen side, and both sides remain editable. Focus the card frame to use Left/Right arrows and Space; these shortcuts leave typing and native controls alone.
+Manual check: select a nested set, move to a later card or start Review, then reload. Confirm the set and parent groups return, with the first card showing its front outside Review. Try deleting the remembered set or restoring an older backup without a saved selection; the page should remain usable without a stale selection.
 
-The workspace supports 1,000 cards total and 2,000 characters per side. Cards use landscape 5:3 proportions modeled on a 3 × 5-inch index card, with nine quarter-inch-spaced writing rows. Text, lines, and margins scale together when the workspace resizes. Longer text scrolls within the paper without stretching it or losing content. Set placement controls remain available under **Location and order**. A different set or restored workspace starts with fresh review state.
+Open **Settings** at the bottom of the Index Cards library to configure **Serif/Sans**, text size, card size, ink darkness, and vertical text alignment. A live sample shows the result. Options apply across sets, save locally, and are included in backups. **Reset display defaults** restores appearance without changing any cards. Font adjustments keep the card's ruling and margins fixed; card scaling keeps its 5:3 aspect ratio.
+
+Select a set and add its first card. Write directly on the large ruled card, then use **Show back** or **Show front** to write or reveal the other side. Click the title at the top of either side to edit it independently. The back title starts blank; existing titles remain on the front. The card list uses the chosen starting side’s title, or a card number when blank. Flipping rotates the paper; reduced-motion preferences disable the animation. Both sides are always editable; there is no separate editing mode. Changes save locally as you type and are included in workspace backups.
+
+Controls below the stack navigate previous/next, add a card after the current one, duplicate both titles and both sides, or immediately delete an individual card without confirmation. Review setup is above the card alongside the current position. Review first asks for Front or Back, then Sequential — forward, Sequential — backward, or Shuffle. Start review begins at the first card in that sequence; choosing forward restores saved order. Cancel or Escape keeps the current review unchanged. New cards have a fresh ID; duplicates do not share text state. Each new selection during review starts on your chosen side, and both sides remain editable. Focus the card frame to use Left/Right arrows and Space; these shortcuts leave typing and native controls alone.
+
+The workspace supports 1,000 cards total and 2,000 characters per side. Cards use landscape 5:3 proportions modeled on a 3 × 5-inch index card, with ten quarter-inch-spaced writing rows. Text, lines, and margins scale together when the workspace resizes. Longer text scrolls within the paper without stretching it or losing content. Set placement controls remain available under **Location and order**. A different set or restored workspace starts with fresh review state.
 
 ## External runtime dependencies
 
@@ -75,3 +83,5 @@ For Review, try Front and Back with all three order choices. Confirm forward sta
 Review is a guided pass through the existing cards, not a separate editor or a scored quiz. The status above the card shows whether a review is running, its starting side, order, and current position. Reveal the other side, then choose **Next card**. The last card offers **Finish review**; **End review** leaves early and restores saved-order browsing without discarding edits. **Change setup** restarts with new choices after confirmation.
 
 Manually start a back-first review, confirm the visible summary and side labels, reveal and advance, finish at the last card, and end another review early. Confirm edited text remains and canceling Change setup leaves the current review intact.
+
+The vertical text alignment setting also adjusts titles against the red rule. Manually check independent titles, both flip directions, duplication, reload, older backups, and reduced motion.

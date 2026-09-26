@@ -1,6 +1,7 @@
 # Maintenance rules
 
 - Runtime: `npm start` runs `node server.mjs`; `HOST` and `PORT` override `127.0.0.1:3000`. No build step, bundler, TypeScript, or compiled Vue single-file components.
+- GitHub Pages: `npm run pages:prepare` copies browser assets into ignored `dist/` and creates route entry points; it does not compile the app. Publishing uses the manually dispatched `.github/workflows/deploy-pages.yml`. See `docs/github-pages.md` before changing deployment behavior.
 - Read [docs/change-routing.md](docs/change-routing.md) before changing code. Read [docs/architecture.md](docs/architecture.md) for dependency or structural changes, not every routine edit.
 - Start with the smallest relevant file set. Use targeted `rg` searches and file discovery before reading directories; expand only when imports or behavior require it. Search by stable identifiers, exports, and field keys. Do not load every document, feature, or schema for a local change.
 - Keep composition, root Vue state, and browser workflow coordination in `app`; feature behavior in `features`; generic components in `components`; neutral utilities in `core`. Lower layers never import from `app`. Generic components import only `core` or other generic components; `core` never imports upper layers.

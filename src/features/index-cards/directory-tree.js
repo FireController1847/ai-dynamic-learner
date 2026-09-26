@@ -12,7 +12,7 @@ export const DirectoryTree = {
     collapsed: Boolean,
   },
   emits: ['select', 'toggle-library'],
-  setup(props, { emit, expose }) {
+  setup(props, { emit, expose, slots }) {
     const expanded = ref(new Set());
     const editingId = ref(null);
     const draft = ref('');
@@ -270,6 +270,7 @@ export const DirectoryTree = {
           : h('p', { class: 'directory-empty' }, 'No groups or sets yet.'),
         draggedId.value ? rootTarget('after', 'Move to end of top level') : null,
       ]),
+      slots.footer ? h('div', { class: 'directory-footer' }, slots.footer()) : null,
       h('p', { class: 'visually-hidden', role: 'status' }, announcement.value),
       pendingDelete.value ? h(DeleteConfirmation, {
         item: pendingDelete.value, onCancel: cancelDelete, onConfirm: confirmDelete,

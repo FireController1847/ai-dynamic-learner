@@ -1,6 +1,7 @@
 import { Icon } from '../../components/icon.js';
-import { createCard, MAX_CARDS, MAX_CARD_TEXT_LENGTH, MAX_CARD_TITLE_LENGTH, shuffledCardIds } from './card-model.js';
+import { createCard, MAX_CARDS, MAX_CARD_TEXT_LENGTH, shuffledCardIds } from './card-model.js';
 import { CardList } from './card-list.js';
+import { CardPaper } from './card-paper.js';
 import { ReviewSetup } from './review-setup.js';
 
 const { computed, h, nextTick, onDeactivated, ref, watch } = window.Vue;
@@ -159,25 +160,9 @@ export const CardSet = {
           tabindex: 0,
           role: 'group',
           'aria-label': `Card ${index.value + 1} of ${orderedCards.value.length}. Use left and right arrows to navigate, Space to flip.`,
-        }, [h('div', { class: 'card-face', key: `${card.id}-${side.value}` }, [
-          h('div', { class: 'card-face-heading' }, [
-            h('input', {
-              class: 'card-title-input', type: 'text', value: card.title ?? '',
-              maxlength: MAX_CARD_TITLE_LENGTH, placeholder: 'Untitled card',
-              'aria-label': 'Card title',
-              onInput: (event) => { card.title = event.target.value; },
-            }),
-            h('span', { class: 'card-face-side' }, side.value === 'front' ? 'Front' : 'Back'),
-            h('span', { class: 'card-face-number', 'aria-hidden': 'true' }, String(index.value + 1).padStart(2, '0')),
-          ]),
-          h('textarea', {
-            ref: editor, class: 'card-writing', value: card[side.value],
-            maxlength: MAX_CARD_TEXT_LENGTH, spellcheck: true,
-            'aria-label': `${side.value === 'front' ? 'Front' : 'Back'} of card ${index.value + 1}`,
-            placeholder: side.value === 'front' ? 'Write a question, word, or idea…' : 'Write the answer or the other side…',
-            onInput: (event) => { card[side.value] = event.target.value; },
-          }),
-        ])]) : h('div', { class: 'card-set-empty' }, [
+        }, [h(CardPaper, {
+          key: card.id, ref: editor, card, side: side.value, position: index.value + 1,
+        })]) : h('div', { class: 'card-set-empty' }, [
           h(Icon, { name: 'cards' }),
           h('h3', 'A fresh stack.'),
           h('p', 'Add your first card, then write directly on either side.'),

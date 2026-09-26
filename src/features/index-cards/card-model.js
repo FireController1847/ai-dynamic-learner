@@ -5,11 +5,14 @@ export const MAX_CARD_TEXT_LENGTH = 2000;
 export const MAX_CARD_TITLE_LENGTH = 120;
 
 export function createCard(source = null) {
-  return { id: createId(), title: source?.title ?? '', front: source?.front ?? '', back: source?.back ?? '' };
+  return {
+    id: createId(), title: source?.title ?? '', backTitle: source?.backTitle ?? '',
+    front: source?.front ?? '', back: source?.back ?? '',
+  };
 }
 
-export function cardTitle(card, fallback = 'Untitled card') {
-  return card.title?.trim() || fallback;
+export function cardTitle(card, fallback = 'Untitled card', side = 'front') {
+  return (side === 'back' ? card.backTitle : card.title)?.trim() || fallback;
 }
 
 export function shuffledCardIds(cards) {
@@ -27,11 +30,12 @@ export function validateCards(cards, ids) {
   }
   for (const card of cards) {
     if (!card || !isValidId(card.id) || ids.has(card.id) ||
-        Object.keys(card).some((key) => !['id', 'title', 'front', 'back'].includes(key)) ||
-        (card.title !== undefined && (typeof card.title !== 'string' || card.title.length > MAX_CARD_TITLE_LENGTH)) ||
+        Object.keys(card).some((key) => !['id', 'title', 'backTitle', 'front', 'back'].includes(key)) ||
+        ['title', 'backTitle'].some((key) => card[key] !== undefined &&
+          (typeof card[key] !== 'string' || card[key].length > MAX_CARD_TITLE_LENGTH)) ||
         typeof card.front !== 'string' || typeof card.back !== 'string' ||
         card.front.length > MAX_CARD_TEXT_LENGTH || card.back.length > MAX_CARD_TEXT_LENGTH) {
-      throw new Error(`Each card needs a unique ID, an optional title of at most ${MAX_CARD_TITLE_LENGTH} characters, and plain-text front and back of at most ${MAX_CARD_TEXT_LENGTH} characters each.`);
+      throw new Error(`Each card needs a unique ID, optional front/back titles of at most ${MAX_CARD_TITLE_LENGTH} characters each, and plain-text front and back of at most ${MAX_CARD_TEXT_LENGTH} characters each.`);
     }
     ids.add(card.id);
   }

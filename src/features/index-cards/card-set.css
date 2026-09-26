@@ -30,7 +30,7 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 8px 16px;
-  width: min(100%, 800px);
+  width: min(100%, var(--card-max-width));
   margin-bottom: 24px;
 }
 .card-review-session-copy { flex: 1 1 140px; }
@@ -40,7 +40,9 @@
 .ruled-card-stack {
   position: relative;
   isolation: isolate;
-  width: min(100%, 800px);
+  /* Fit the available width and screen height without letting large screens
+     inflate the paper. Very short screens can scroll the workspace. */
+  width: min(100%, clamp(var(--card-min-width), var(--card-viewport-width), var(--card-max-width)));
   /* Landscape 5 × 3 card; all paper measurements below scale from its width. */
   aspect-ratio: 5 / 3;
   container: index-card / inline-size;
@@ -59,7 +61,23 @@
 }
 .ruled-card-stack.has-second-card::before { opacity: 1; transform: translateY(5px) scaleX(0.99); }
 .ruled-card-stack.has-third-card::after { z-index: -2; opacity: 1; transform: translateY(10px) scaleX(0.98); }
+.card-flipper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 360ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.card-flipper.is-back { transform: rotateY(180deg); }
+.card-flipper > .card-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.card-face--back { transform: rotateY(180deg); }
 .card-face {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -68,15 +86,24 @@
   border-radius: var(--radius);
   background: var(--paper);
   box-shadow: 0 0 0 1px var(--control-border), var(--shadow-paper);
-  animation: card-turn-in var(--motion-normal) var(--ease-out);
+}
+.card-face::after {
+  content: '';
+  position: absolute;
+  top: 10cqw;
+  bottom: 0;
+  left: 7.5cqw;
+  width: 1px;
+  background: var(--paper-red-line);
+  pointer-events: none;
 }
 .card-face-heading {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 2cqw;
   flex: 0 0 10cqw; /* Half-inch title area. */
   min-height: 0;
-  padding: 1cqw 4cqw 1cqw 10cqw;
+  padding: 0 4cqw 0 10cqw;
   box-shadow: inset 0 -1px var(--paper-red-line);
 }
 .card-title-input {
@@ -84,46 +111,59 @@
   width: 0;
   min-width: 0;
   min-height: 0;
-  padding: 0.5cqw 0;
+  height: 5cqw;
+  padding: 0;
+  transform: translateY(calc(0.9cqw + var(--card-baseline) - 2px));
   border: 0;
   border-bottom: 1px solid transparent;
   border-radius: 0;
   background: transparent;
-  font-size: 3.333333cqw;
+  color: var(--paper-ink);
+  font-family: var(--paper-font);
+  font-size: var(--card-title-size);
   line-height: 5cqw;
-  font-weight: 600;
+  font-weight: 400;
 }
 .card-title-input:hover { border-bottom-color: var(--control-border); }
 .card-title-input:focus-visible { outline-color: var(--brand); }
 .card-title-input::placeholder, .card-writing::placeholder { color: var(--text-secondary); opacity: 1; }
-.card-face-side, .card-face-number { flex-shrink: 0; color: var(--text-secondary); font-size: 2.5cqw; line-height: 4cqw; font-variant-numeric: tabular-nums; }
+.card-face-side, .card-face-number { align-self: center; flex-shrink: 0; color: var(--text-secondary); font-size: 2.5cqw; line-height: 4cqw; font-variant-numeric: tabular-nums; }
 .card-face-side { padding: 0 1cqw; }
 .card-writing {
-  /* Nine quarter-inch rows plus a quarter-inch unruled bottom margin.
+  /* Ten quarter-inch writing rows fill the space below the title.
      A cqw is 1% of the card width: 5cqw therefore represents 1/4 inch. */
   --rule-spacing: 5cqw;
   display: block;
-  flex: 0 0 45cqw;
+  flex: 0 0 50cqw;
   width: 100%;
-  height: 45cqw;
+  height: 50cqw;
   min-height: 0;
-  margin-bottom: 5cqw;
-  padding: 0 4cqw 0 10cqw;
+  margin: 0;
+  /* Adjust the text inset, not the paper's ruling or its horizontal margins. */
+  padding: calc(0.9cqw + var(--card-baseline)) 4cqw 0 10cqw;
   overflow: auto;
   resize: none;
   border: 0;
   border-radius: 0;
   background-color: transparent;
   background-image:
-    linear-gradient(to right, transparent 7.5cqw, var(--paper-red-line) 7.5cqw, var(--paper-red-line) calc(7.5cqw + 1px), transparent calc(7.5cqw + 1px)),
+    linear-gradient(var(--paper), var(--paper)),
     repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--rule-spacing) - 1px), var(--paper-blue-line) calc(var(--rule-spacing) - 1px), var(--paper-blue-line) var(--rule-spacing));
-  background-attachment: local;
-  font-size: 3.333333cqw;
+  /* Stop before the final rule at the paper edge, where it doubles the border.
+     Keep the writing area and the positions of every interior rule unchanged. */
+  background-size: 100% 2px, auto;
+  background-position: left bottom, left top;
+  background-repeat: no-repeat, repeat;
+  background-attachment: scroll, local;
+  color: var(--paper-ink);
+  font-family: var(--paper-font);
+  font-size: var(--card-text-size);
+  font-weight: 400;
   line-height: var(--rule-spacing);
   tab-size: 4;
 }
 .card-writing:focus-visible { outline: 2px solid var(--brand); outline-offset: -3px; }
-.card-controls { width: min(100%, 800px); margin-bottom: auto; }
+.card-controls { width: min(100%, var(--card-max-width)); margin-bottom: auto; }
 .card-review-controls {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -143,11 +183,6 @@
 .card-set-empty > .ui-icon { width: 32px; height: 32px; color: var(--text-secondary); }
 .card-set-empty h3 { margin: 16px 0 8px; font-size: 20px; line-height: 26px; }
 .card-set-empty p { margin: 0 0 20px; color: var(--text-secondary); }
-
-@keyframes card-turn-in {
-  from { opacity: 0.5; transform: rotateY(-5deg); }
-  to { opacity: 1; transform: rotateY(0); }
-}
 
 @container card-workspace (max-width: 640px) {
   .card-set-layout { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(152px, 25%); }

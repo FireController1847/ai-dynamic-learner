@@ -1,10 +1,21 @@
 const { onUnmounted, ref } = window.Vue;
 
+// Derive the deployed root from this module, including a Pages repository prefix.
+const basePath = new URL('../../', import.meta.url).pathname;
+export function pageHref(path) {
+  return `${basePath}${path.slice(1)}`;
+}
+
+function localPath() {
+  const pathname = window.location.pathname;
+  return pathname.startsWith(basePath) ? `/${pathname.slice(basePath.length)}` : pathname;
+}
+
 export function useNavigation(onNavigate) {
-  const currentPath = ref(window.location.pathname);
+  const currentPath = ref(localPath());
 
   function syncLocation() {
-    currentPath.value = window.location.pathname;
+    currentPath.value = localPath();
     onNavigate();
   }
 
@@ -14,8 +25,9 @@ export function useNavigation(onNavigate) {
         event.ctrlKey || event.shiftKey || event.altKey) return;
 
     event.preventDefault();
-    if (window.location.pathname !== path || window.location.search || window.location.hash) {
-      window.history.pushState(null, '', path);
+    const href = pageHref(path);
+    if (window.location.pathname !== href || window.location.search || window.location.hash) {
+      window.history.pushState(null, '', href);
     }
     syncLocation();
   }

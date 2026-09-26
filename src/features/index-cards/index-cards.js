@@ -1,9 +1,11 @@
 import { DirectoryTree } from './directory-tree.js';
 import { CardSet } from './card-set.js';
+import { DisplaySettings } from './display-settings.js';
+import { defaultDisplayOptions, displayStyles } from './display-options.js';
 import { Icon } from '../../components/icon.js';
 import { canMove, countCards, findItem, groupOptions, moveItem } from './tree-model.js';
 
-const { computed, h, nextTick, ref } = window.Vue;
+const { computed, h, nextTick, onDeactivated, onMounted, ref, watch } = window.Vue;
 
 export const IndexCards = {
   name: 'IndexCards',
@@ -12,13 +14,35 @@ export const IndexCards = {
     model: { type: Object, required: true },
   },
   setup(props) {
-    const selectedId = ref(null);
+    const rememberedSet = findItem(props.model.items, props.model.lastSelectedSetId);
+    const selectedId = ref(rememberedSet?.item.kind === 'set' ? rememberedSet.item.id : null);
     const libraryCollapsed = ref(false);
     const tree = ref(null);
     const showLibraryButton = ref(null);
     const message = ref('');
+    const settingsOpen = ref(false);
+    const settingsButton = ref(null);
+    const displayOptions = computed(() => props.model.display ?? defaultDisplayOptions());
+    onDeactivated(() => { settingsOpen.value = false; });
+
+    async function closeSettings() {
+      settingsOpen.value = false;
+      await nextTick();
+      settingsButton.value?.focus();
+    }
     const selection = computed(() => findItem(props.model.items, selectedId.value));
     const totalCards = computed(() => countCards(props.model.items));
+
+    // Remember sets only; browsing a group must not replace the last opened set.
+    watch(() => selection.value?.item, (item) => {
+      if (item?.kind === 'set') props.model.lastSelectedSetId = item.id;
+    });
+    watch(() => findItem(props.model.items, props.model.lastSelectedSetId)?.item.kind, (kind) => {
+      if (kind !== 'set' && props.model.lastSelectedSetId != null) {
+        props.model.lastSelectedSetId = null;
+      }
+    }, { immediate: true });
+    onMounted(() => { if (selectedId.value) tree.value?.reveal(selectedId.value); });
 
     async function setLibraryCollapsed(collapsed) {
       libraryCollapsed.value = collapsed;
@@ -43,7 +67,9 @@ export const IndexCards = {
       }
     }
 
-    return () => h('section', { class: 'index-cards-page', 'aria-label': props.title }, [
+    return () => h('section', {
+      class: 'index-cards-page', 'aria-label': props.title, style: displayStyles(displayOptions.value),
+    }, [
       h('div', { class: ['index-cards-layout', { 'library-collapsed': libraryCollapsed.value }] }, [
         libraryCollapsed.value ? h('button', {
           ref: showLibraryButton, type: 'button', class: 'icon-button library-floating-toggle',
@@ -56,6 +82,11 @@ export const IndexCards = {
           collapsed: libraryCollapsed.value,
           onToggleLibrary: () => setLibraryCollapsed(true),
           onSelect: (id) => { selectedId.value = id; message.value = ''; },
+        }, {
+          footer: () => h('button', {
+            ref: settingsButton, type: 'button', class: 'quiet-button library-settings-button',
+            'aria-haspopup': 'dialog', onClick: () => { settingsOpen.value = true; },
+          }, ['Settings', h(Icon, { name: 'settings' })]),
         }),
         selection.value ? h('section', {
           class: ['index-cards-detail', { 'is-set': selection.value.item.kind === 'set' }],
@@ -102,6 +133,11 @@ export const IndexCards = {
           h('p', { class: 'visually-hidden', role: 'status' }, message.value),
         ]) : null,
       ]),
+      settingsOpen.value ? h(DisplaySettings, {
+        options: displayOptions.value,
+        onUpdate: (options) => { props.model.display = options; },
+        onClose: closeSettings,
+      }) : null,
     ]);
   },
 };

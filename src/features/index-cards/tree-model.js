@@ -89,8 +89,13 @@ export function groupOptions(items, excludedId, trail = []) {
 
 export function validateIndexCards(value) {
   if (!value || typeof value !== 'object' || !Array.isArray(value.items) ||
-      Object.keys(value).some((key) => key !== 'items')) {
+      Object.keys(value).some((key) => !['items', 'display', 'lastSelectedSetId'].includes(key))) {
     throw new Error('The Index Cards directory is invalid.');
+  }
+  if (Object.hasOwn(value, 'display')) validateDisplayOptions(value.display);
+  if (Object.hasOwn(value, 'lastSelectedSetId') && value.lastSelectedSetId !== null &&
+      !isValidId(value.lastSelectedSetId)) {
+    throw new Error('The remembered Index Cards set ID is invalid.');
   }
   const ids = new Set();
   let itemCount = 0;
@@ -123,3 +128,4 @@ export function validateIndexCards(value) {
 }
 import { createId, isValidId } from '../../core/ids.js';
 import { MAX_CARDS, validateCards } from './card-model.js';
+import { validateDisplayOptions } from './display-options.js';

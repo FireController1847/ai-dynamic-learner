@@ -40,7 +40,7 @@ export const NavigationDrawer = {
         h('nav', { 'aria-label': 'Applications' }, [
           h('ul', props.items.map((item) => h('li', { key: item.id }, [
             h('a', {
-              href: item.path,
+              href: item.href,
               class: 'navigation-link',
               'aria-current': props.activePath === item.path ? 'page' : undefined,
               onClick: (event) => emit('navigate', event, item.path),
