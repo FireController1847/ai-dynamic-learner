@@ -50,6 +50,7 @@
   .item-heading h2 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .item-summary { flex-shrink: 0; }
   .card-set-layout { display: flex; flex: 0 0 auto; flex-direction: column; }
+  .card-list-resizer { display: none; }
   .card-set { overflow: visible; padding: 16px 12px; scrollbar-gutter: auto; }
   .card-review-session { gap: 8px; margin-bottom: 16px; }
   .card-review-session-copy { flex-basis: 120px; }
