@@ -11,7 +11,7 @@ const { computed, createApp, h, KeepAlive, nextTick, ref } = window.Vue;
 const navigationItems = [{ id: 'home', label: 'Home', path: '/' }, ...features]
   .map((item) => ({ ...item, href: pageHref(item.path) }));
 
-document.title = appConfig.name;
+if (!document.title) document.title = appConfig.name;
 
 const App = {
   name: 'App',
