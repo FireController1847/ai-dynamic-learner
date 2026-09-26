@@ -8,7 +8,7 @@ import { HomePage } from './home-page.js';
 
 const { computed, createApp, h, KeepAlive, nextTick, ref } = window.Vue;
 
-const appLogoSrc = 'src/assets/dynamic-learner.png';
+const appLogoSrc = new URL('../assets/dynamic-learner.png', import.meta.url).href;
 
 const navigationItems = [{ id: 'home', label: 'Home', path: '/' }, ...features]
   .map((item) => ({ ...item, href: pageHref(item.path) }));
