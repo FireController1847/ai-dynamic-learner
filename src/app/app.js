@@ -4,6 +4,7 @@ import { NavigationDrawer } from './navigation-drawer.js';
 import { pageHref, useNavigation } from './navigation.js';
 import { useWorkspace } from './workspace.js';
 import { WorkspaceTools } from './workspace-tools.js';
+import { HomePage } from './home-page.js';
 
 const { computed, createApp, h, KeepAlive, nextTick, ref } = window.Vue;
 
@@ -80,6 +81,7 @@ const App = {
           class: ['app-content', { 'app-content--workspace': activeFeature.value?.id === 'index-cards' }],
           tabindex: -1,
         }, [
+          currentPath.value === '/' ? h(HomePage, { onNavigate: navigate }) : null,
           h(KeepAlive, { key: workspace.revision.value }, {
             default: () => activeFeature.value ? h(activeFeature.value.component, {
               key: activeFeature.value.id,

@@ -11,7 +11,7 @@ export const DirectoryTree = {
     selectedId: { type: String, default: null },
     collapsed: Boolean,
   },
-  emits: ['select', 'toggle-library'],
+  emits: ['select', 'open-item', 'toggle-library'],
   setup(props, { emit, expose, slots }) {
     const expanded = ref(new Set());
     const editingId = ref(null);
@@ -217,7 +217,7 @@ export const DirectoryTree = {
             ref: (element) => { if (element) labels.set(item.id, element); else labels.delete(item.id); },
             type: 'button', class: 'directory-label', title: item.name,
             'aria-pressed': props.selectedId === item.id,
-            onClick: () => emit('select', item.id),
+            onClick: () => { emit('select', item.id); emit('open-item'); },
             onKeydown: (event) => {
               if (event.key === 'F2') { event.preventDefault(); rename(item); }
             },

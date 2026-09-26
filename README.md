@@ -2,6 +2,10 @@
 
 Licensed under [Apache License 2.0](LICENSE).
 
+## AI development disclosure
+
+Dynamic Learner is developed using AI, primarily OpenAI Codex. AI assistance is central to writing and revising the application's code, interface, and documentation, with a human directing requirements and providing feedback. This is an AI-developed project, not merely an app with an AI feature. AI-assisted development does not imply that changes have been independently reviewed or automatically tested; follow the manual verification guidance below.
+
 A modular browser-native Vue 3 application with a collapsible navigation drawer, an Index Cards library with editable card stacks, and a reserved Word Search page. JavaScript uses native ES modules and plain Vue component objects, with no application build step or npm dependencies.
 
 The interface uses a Microsoft Fluent-inspired visual system: compact shared controls, neutral adjoining panels, blue selection accents, and animated drawers. Ruled index cards retain their red and blue lines. See [design conventions](docs/design.md) for the shared styling rules; no Fluent package or external font is required.
@@ -21,6 +25,8 @@ HOST=127.0.0.1 PORT=8080 npm start
 ```
 
 ## Rename and extend
+
+Home provides launcher cards for Index Cards and Word Search, using the same destinations as the navigation drawer. New feature definitions automatically join the responsive grid; add an icon and description alongside the label and path. Word Search remains a reserved page. The Home footer includes the Apache-2.0 notice, repository link, current local date, and a browser-storage reminder. Repository and license metadata live in `src/app/app-config.js`.
 
 For publishing, see [GitHub Pages setup](docs/github-pages.md). The repository includes a manually triggered **Deploy to GitHub Pages** workflow. It packages the static app without bundling, supports repository-prefixed URLs, and creates direct-link entry points for each feature. Select **GitHub Actions** in the repository's Pages settings, then use **Actions → Deploy to GitHub Pages → Run workflow**. Ordinary pushes do not publish.
 
@@ -61,6 +67,8 @@ The workspace supports 1,000 cards total and 2,000 characters per side. Cards us
 The browser loads Vue **3.5.13** from jsDelivr over HTTPS. Internet access to `cdn.jsdelivr.net` is required; without it, the app will not render. Node serves local files using only built-in modules. Icons are inline SVGs and require no external font or service. No Bootstrap, jQuery, router, or state library is included.
 
 ## Manual verification
+
+On phones and touch tablets, opening a library item dismisses the library; tap the floating icon to reopen it, or tap the backdrop to close it. New-item naming and renaming keep the library open. A restored set starts with the library tucked away. The editor, controls, and horizontal card strip share a vertical scrolling workspace, including when the keyboard reduces available height. Try portrait/landscape, touch sliders in Settings, and the bottom card row. Desktop mouse layouts keep their existing sizing.
 
 Start or restart the app and open `/`. Confirm Home, then use the drawer to visit `/index-cards/` and `/word-search/` and check the matching headings and active navigation markers. Refresh each URL, paste each into a new tab, and use Back/Forward. Confirm links can open in a new tab, `/index-cards` redirects to `/index-cards/`, and an unknown URL returns 404.
 

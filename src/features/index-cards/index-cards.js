@@ -5,7 +5,7 @@ import { defaultDisplayOptions, displayStyles } from './display-options.js';
 import { Icon } from '../../components/icon.js';
 import { canMove, countCards, findItem, groupOptions, moveItem } from './tree-model.js';
 
-const { computed, h, nextTick, onDeactivated, onMounted, ref, watch } = window.Vue;
+const { computed, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref, watch } = window.Vue;
 
 export const IndexCards = {
   name: 'IndexCards',
@@ -16,7 +16,16 @@ export const IndexCards = {
   setup(props) {
     const rememberedSet = findItem(props.model.items, props.model.lastSelectedSetId);
     const selectedId = ref(rememberedSet?.item.kind === 'set' ? rememberedSet.item.id : null);
-    const libraryCollapsed = ref(false);
+    // Keep this breakpoint aligned with styles/mobile.css.
+    const overlayQuery = window.matchMedia('(max-width: 700px), (max-width: 1100px) and (pointer: coarse)');
+    const libraryOverlay = ref(overlayQuery.matches);
+    const libraryCollapsed = ref(overlayQuery.matches && selectedId.value !== null);
+    function updateLibraryLayout(event) {
+      libraryOverlay.value = event.matches;
+      if (event.matches && selectedId.value) setLibraryCollapsed(true);
+    }
+    overlayQuery.addEventListener('change', updateLibraryLayout);
+    onBeforeUnmount(() => overlayQuery.removeEventListener('change', updateLibraryLayout));
     const tree = ref(null);
     const showLibraryButton = ref(null);
     const message = ref('');
@@ -69,6 +78,13 @@ export const IndexCards = {
 
     return () => h('section', {
       class: 'index-cards-page', 'aria-label': props.title, style: displayStyles(displayOptions.value),
+      onKeydown: (event) => {
+        if (event.key === 'Escape' && libraryOverlay.value && !libraryCollapsed.value &&
+            !event.target.closest('dialog')) {
+          event.preventDefault();
+          setLibraryCollapsed(true);
+        }
+      },
     }, [
       h('div', { class: ['index-cards-layout', { 'library-collapsed': libraryCollapsed.value }] }, [
         libraryCollapsed.value ? h('button', {
@@ -77,11 +93,16 @@ export const IndexCards = {
           'aria-expanded': false, 'aria-controls': 'index-cards-library',
           onClick: () => setLibraryCollapsed(false),
         }, [h(Icon, { name: 'panel-open' })]) : null,
+        libraryOverlay.value && !libraryCollapsed.value ? h('button', {
+          type: 'button', class: 'library-scrim', 'aria-label': 'Close library',
+          onClick: () => setLibraryCollapsed(true),
+        }) : null,
         h(DirectoryTree, {
           ref: tree, items: props.model.items, selectedId: selectedId.value,
           collapsed: libraryCollapsed.value,
           onToggleLibrary: () => setLibraryCollapsed(true),
           onSelect: (id) => { selectedId.value = id; message.value = ''; },
+          onOpenItem: () => { if (libraryOverlay.value) setLibraryCollapsed(true); },
         }, {
           footer: () => h('button', {
             ref: settingsButton, type: 'button', class: 'quiet-button library-settings-button',
@@ -91,6 +112,7 @@ export const IndexCards = {
         selection.value ? h('section', {
           class: ['index-cards-detail', { 'is-set': selection.value.item.kind === 'set' }],
           'aria-label': 'Selected item',
+          inert: libraryOverlay.value && !libraryCollapsed.value,
         }, [
           h('header', { class: 'item-heading' }, [
             h('h2', selection.value.item.name),

@@ -1,0 +1,108 @@
+/* Phone widths and touch tablets only. Desktop layout rules stay in their owners.
+   Keep the library overlay query in sync with index-cards.js. */
+@media (max-width: 700px), (max-width: 1100px) and (pointer: coarse) {
+  :root { --control-height: 44px; }
+  .app-shell {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .app-header { padding-top: max(2px, env(safe-area-inset-top)); }
+  .drawer-panel {
+    width: min(320px, calc(100% - 44px));
+    padding-top: env(safe-area-inset-top);
+    padding-left: max(8px, env(safe-area-inset-left));
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+  .navigation-link { min-height: 44px; }
+  .index-cards-layout {
+    --library-width: min(340px, calc(100% - 32px));
+    grid-template-columns: 0px minmax(0, 1fr);
+  }
+  /* Resolve drawer width against the whole workspace, not its zero-width track. */
+  .directory-panel {
+    grid-column: 1 / -1;
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: min(340px, calc(100% - 32px));
+    box-shadow: var(--shadow-overlay);
+  }
+  .library-collapsed .directory-panel { box-shadow: none; }
+  .library-scrim {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    border: 0;
+    padding: 0;
+    background: var(--scrim);
+  }
+  .directory-scroll { overscroll-behavior: contain; scrollbar-gutter: auto; }
+  .tree-toggle, .tree-toggle-space { flex-basis: 44px; width: 44px; }
+  .directory-row { min-width: 260px; }
+  .directory-rename, .item-location select, .display-setting select { font-size: 16px; }
+  .directory-label { padding-inline: 6px; }
+  .directory-footer { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+
+  /* One vertical scroll area keeps the editor reachable with the keyboard open. */
+  .index-cards-detail.is-set { overflow-y: auto; overscroll-behavior-y: contain; }
+  .item-heading { position: sticky; top: 0; z-index: 1; padding-inline: 12px; }
+  .item-heading h2 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .item-summary { flex-shrink: 0; }
+  .card-set-layout { display: flex; flex: 0 0 auto; flex-direction: column; }
+  .card-set { overflow: visible; padding: 16px 12px; scrollbar-gutter: auto; }
+  .card-review-session { gap: 8px; margin-bottom: 16px; }
+  .card-review-session-copy { flex-basis: 120px; }
+  .ruled-card-stack { margin: 0 0 24px; }
+  .card-controls { margin-bottom: 0; }
+  .card-review-controls > button { min-height: 44px; }
+  .card-edit-controls { gap: 4px; }
+  .card-writing, .card-title-input { scroll-margin-block: 76px; }
+  .card-list-panel { flex: 0 0 auto; height: 164px; border-left: 0; border-top: 1px solid var(--border-color); }
+  .card-list-toolbar { min-height: 48px; padding-block: 2px; }
+  .card-list-order { padding-block: 4px; }
+  .card-list-items {
+    display: flex;
+    gap: 8px;
+    padding: 4px 8px 8px;
+    scrollbar-gutter: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity;
+    scroll-padding-inline: 8px;
+  }
+  .card-list-items li { flex: 0 0 192px; scroll-snap-align: start; }
+  .card-list-items li + li { margin-top: 0; }
+  .is-set > .item-organization { max-height: none; overflow: visible; }
+  .item-organization { padding-inline: 12px; }
+  .item-organization summary { min-height: 44px; padding-block: 12px; }
+
+  .display-settings, .review-setup {
+    width: min(560px, calc(100% - 24px));
+    max-height: calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    padding: 16px;
+    overscroll-behavior: contain;
+  }
+  .display-settings-header {
+    position: sticky;
+    top: -16px;
+    z-index: 1;
+    padding-block: 12px;
+    background: var(--page-background);
+  }
+  .display-setting-range input { min-height: 44px; margin: 0; }
+  .review-choice { min-height: 56px; }
+  .review-setup-actions > button, .delete-confirmation-actions > button { flex: 1 1 auto; }
+  .delete-confirmation {
+    padding-top: max(24px, env(safe-area-inset-top));
+    padding-bottom: max(24px, env(safe-area-inset-bottom));
+    padding-left: max(20px, env(safe-area-inset-left));
+    padding-right: max(20px, env(safe-area-inset-right));
+  }
+}
+
+@media (max-width: 420px) {
+  .card-review-session-copy { flex-basis: 100%; }
+  .card-review-session-actions { width: 100%; }
+  .card-review-session-actions > button { flex: 1; }
+  .card-review-controls .ui-icon { display: none; }
+  .display-settings-preview { padding: 12px 8px; }
+}

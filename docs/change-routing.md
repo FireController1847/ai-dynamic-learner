@@ -5,6 +5,7 @@ Start with the primary files below; follow imports only as needed. Paths are rel
 | Change | Primary files or locations |
 | --- | --- |
 | App name/configuration | `src/app/app-config.js`; `package.json` for package metadata |
+| Home app cards and footer | `src/app/home-page.js` and `src/styles/home.css`; `src/features/feature-definitions.js` supplies shared app labels, paths, icons, and descriptions; `src/app/app-config.js` supplies repository URL and license identifier |
 | Initial page markup | `src/html/index.html` for the document and mount point; `src/app/app.js` for the rendered main and heading |
 | Vue startup and state | `src/app/app.js` |
 | Compact page header and titles | `src/app/app.js` renders the current page title beside navigation; `src/styles/shell.css` controls header sizing. Feature views do not repeat the page title. |
@@ -16,6 +17,7 @@ Start with the primary files below; follow imports only as needed. Paths are rel
 | Review setup and sequence | `src/features/index-cards/review-setup.js` and `review-setup.css` for the two-step dialog; `card-set.js` for the visible session summary, finish/end actions, starting side, and forward/backward/shuffled sequence; `card-list.js` for matching previews |
 | Card titles and right-hand card list | `src/features/index-cards/card-paper.js` for separate front/back title inputs; `card-set.js` for the selected card; `card-model.js` for title defaults and validation; `card-list.js` and `card-list.css` for list navigation and responsive layout |
 | Library minimization and height | `src/features/index-cards/index-cards.js` owns collapsed state and the floating restore icon; `directory-tree.js` owns the minimize control; `index-cards.css` and `src/styles/shell.css` own sizing, animation, and scrolling |
+| Mobile and tablet behavior | `src/styles/mobile.css` for scoped layout, safe areas, scrolling, and touch targets; `src/features/index-cards/index-cards.js` for responsive library dismissal; `directory-tree.js` distinguishes opening an item from creating/renaming; `src/html/index.html` for viewport handling |
 | Groups, sets, renaming, and dragging | `src/features/index-cards/directory-tree.js` for the UI; `src/features/index-cards/tree-model.js` for data, moves, and validation |
 | Deleting groups, sets, and cards | `src/features/index-cards/directory-tree.js` for immediate empty-container deletion and confirmation of populated containers; `card-set.js` for immediate individual-card deletion and selection cleanup; `delete-confirmation.js` and `delete-confirmation.css` for the fullscreen prompt; `tree-model.js` for directory deletion |
 | Index Cards styling | `src/features/index-cards/index-cards.css`, `card-set.css`, and `card-list.css`, imported by `src/styles/index.css` |
