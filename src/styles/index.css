@@ -8,4 +8,5 @@
 @import '../features/index-cards/review-setup.css';
 @import '../features/index-cards/delete-confirmation.css';
 @import '../features/index-cards/display-settings.css';
+@import '../features/word-search/word-search.css';
 @import './mobile.css';

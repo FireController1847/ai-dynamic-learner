@@ -1,4 +1,5 @@
 import { validateIndexCards } from '../features/index-cards/tree-model.js';
+import { validateWordSearch } from '../features/word-search/library-model.js';
 
 const { ref, watch } = window.Vue;
 const STORAGE_KEY = 'dynamic-learner.workspace.v1';
@@ -8,7 +9,10 @@ function emptyWorkspace() {
   return {
     format: 'dynamic-learner',
     version: 1,
-    features: { 'index-cards': { items: [] } },
+    features: {
+      'index-cards': { items: [] },
+      'word-search': { items: [] },
+    },
   };
 }
 
@@ -19,10 +23,13 @@ function parseWorkspace(text) {
   catch { throw new Error('This file is not valid JSON.'); }
   if (!value || value.format !== 'dynamic-learner' || value.version !== 1 ||
       Object.keys(value).some((key) => !['format', 'version', 'features'].includes(key)) ||
-      !value.features || Object.keys(value.features).length !== 1 || !value.features['index-cards']) {
+      !value.features || !value.features['index-cards'] ||
+      Object.keys(value.features).some((key) => !['index-cards', 'word-search'].includes(key))) {
     throw new Error('This is not a supported Dynamic Learner workspace backup (version 1).');
   }
   validateIndexCards(value.features['index-cards']);
+  if (value.features['word-search']) validateWordSearch(value.features['word-search']);
+  else value.features['word-search'] = { items: [] };
   return value;
 }
 
