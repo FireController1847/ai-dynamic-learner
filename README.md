@@ -6,7 +6,7 @@ Licensed under [Apache License 2.0](LICENSE).
 
 Dynamic Learner is developed using AI, primarily OpenAI Codex. AI assistance is central to writing and revising the application's code, interface, and documentation, with a human directing requirements and providing feedback. This is an AI-developed project, not merely an app with an AI feature. AI-assisted development does not imply that changes have been independently reviewed or automatically tested; follow the manual verification guidance below.
 
-A modular browser-native Vue 3 application with a collapsible navigation drawer, an Index Cards library with editable card stacks, and a reserved Word Search page. JavaScript uses native ES modules and plain Vue component objects, with no application build step or npm dependencies.
+A modular browser-native Vue 3 application with a collapsible navigation drawer, an Index Cards library with editable card stacks, and a Word Search library scaffold for organizing future puzzles. JavaScript uses native ES modules and plain Vue component objects, with no application build step or npm dependencies.
 
 The interface uses a Microsoft Fluent-inspired visual system: compact shared controls, neutral adjoining panels, blue selection accents, and animated drawers. Ruled index cards retain their red and blue lines. See [design conventions](docs/design.md) for the shared styling rules; no Fluent package or external font is required.
 
@@ -26,7 +26,7 @@ HOST=127.0.0.1 PORT=8080 npm start
 
 ## Rename and extend
 
-Home provides launcher cards for Index Cards and Word Search, using the same destinations as the navigation drawer. New feature definitions automatically join the responsive grid; add an icon and description alongside the label and path. Word Search remains a reserved page. The Home footer includes the Apache-2.0 notice, repository link, current local date, and a browser-storage reminder. Repository and license metadata live in `src/app/app-config.js`.
+Home provides launcher cards for Index Cards and Word Search, using the same destinations as the navigation drawer. New feature definitions automatically join the responsive grid; add an icon and description alongside the label and path. Word Search now includes a persistent library scaffold with nested groups and a staged new-puzzle setup entry point. The Home footer includes the Apache-2.0 notice, repository link, current local date, and a browser-storage reminder. Repository and license metadata live in `src/app/app-config.js`.
 
 For publishing, see [GitHub Pages setup](docs/github-pages.md). The repository includes a manually triggered **Deploy to GitHub Pages** workflow. It packages the static app without bundling, supports repository-prefixed URLs, and creates direct-link entry points for each feature. Select **GitHub Actions** in the repository's Pages settings, then use **Actions → Deploy to GitHub Pages → Run workflow**. Ordinary pushes do not publish.
 
@@ -47,6 +47,12 @@ Drag a row onto the center of a group to move it inside, or near a row's top/bot
 Changes save locally in this browser. Open the main navigation drawer and find **Workspace** at the bottom: **Download backup** exports the workspace as JSON, and **Upload backup** validates a file and shows a replacement review. Confirm to replace the entire workspace, or cancel to keep current data. Closing the drawer also dismisses an unconfirmed review. Back up first if you need to keep both copies. Files contain the saved content and order, not temporary UI state. See [workspace data](docs/workspace-data.md) for format details and storage limits.
 
 Use [change routing](docs/change-routing.md) to find the files for an edit and [architecture](docs/architecture.md) for ownership and dependency rules.
+
+## Word Search library scaffold
+
+Word Search has its own persistent Library containing nested groups and future word-search records. Groups can be created, renamed, deleted, dragged, reordered, moved between groups, and backed up with the rest of the workspace. The Library can be minimized or resized on desktop and becomes an overlay on phones and touch tablets.
+
+**New word search** intentionally does not create a record yet. It opens a setup placeholder in the workspace and remembers the intended destination: the selected group, the selected word search's parent, or the top level. The future setup form will collect the puzzle definition and only then create the word-search record, keeping incomplete puzzles out of saved workspace data.
 
 ## Writing and reviewing cards
 
@@ -73,6 +79,8 @@ On phones and touch tablets, opening a library item dismisses the library; tap t
 Start or restart the app and open `/`. Confirm Home, then use the drawer to visit `/index-cards/` and `/word-search/` and check the matching headings and active navigation markers. Refresh each URL, paste each into a new tab, and use Back/Forward. Confirm links can open in a new tab, `/index-cards` redirects to `/index-cards/`, and an unknown URL returns 404.
 
 Confirm the full-height drawer slides over a dimmed backdrop. Check Tab stays inside; use Escape, the close button, and the backdrop to dismiss it. Confirm focus returns to the menu after dismissal or to content after navigation. Check a narrow window, reduced-motion settings, and the browser console for errors.
+
+On Word Search, create nested groups, rename them, drag/reorder them, resize and minimize the Library, and confirm they survive refresh and backup restore. Choose **New word search** with a group and with nothing selected; confirm the setup placeholder identifies the intended destination and that no word-search record is added yet.
 
 On Index Cards, create several groups and sets, rename with Enter/blur, cancel with Escape, and try a blank name. Nest groups and sets, reorder siblings, return an item to the root, and confirm a group cannot move into itself or a descendant. Try the selection-based move controls without dragging. Refresh and confirm names, structure, and order remain.
 

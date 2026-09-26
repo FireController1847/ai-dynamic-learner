@@ -82,7 +82,9 @@ const App = {
       h('div', { class: 'app-layout' }, [
         h('main', {
           ref: main,
-          class: ['app-content', { 'app-content--workspace': activeFeature.value?.id === 'index-cards' }],
+          class: ['app-content', {
+            'app-content--workspace': ['index-cards', 'word-search'].includes(activeFeature.value?.id),
+          }],
           tabindex: -1,
         }, [
           currentPath.value === '/' ? h(HomePage, { onNavigate: navigate }) : null,

@@ -1,5 +1,9 @@
 import { Icon } from '../components/icon.js';
-import { countCards, countItems } from '../features/index-cards/tree-model.js';
+import { countCards, countItems as countIndexCardItems } from '../features/index-cards/tree-model.js';
+import {
+  countItems as countWordSearchItems,
+  countWordSearches,
+} from '../features/word-search/library-model.js';
 
 const { h, ref, shallowRef } = window.Vue;
 
@@ -60,7 +64,7 @@ export const WorkspaceTools = {
         }),
       ]),
       pending.value ? h('div', { class: 'backup-review', role: 'region', 'aria-label': 'Review backup' }, [
-        h('p', `Replace this workspace with “${pending.value.name}”? This backup contains ${countItems(pending.value.data.features['index-cards'].items)} groups and sets, and ${countCards(pending.value.data.features['index-cards'].items)} cards. Current data will be replaced, not merged.`),
+        h('p', `Replace this workspace with “${pending.value.name}”? This backup contains ${countIndexCardItems(pending.value.data.features['index-cards'].items)} Index Cards groups and sets with ${countCards(pending.value.data.features['index-cards'].items)} cards, plus ${countWordSearchItems(pending.value.data.features['word-search'].items)} Word Search library items with ${countWordSearches(pending.value.data.features['word-search'].items)} word searches. Current data will be replaced, not merged.`),
         h('p', 'Download a backup first if you want to keep the current workspace.'),
         h('div', { class: 'workspace-actions' }, [
           h('button', { type: 'button', class: 'quiet-button', onClick: replace }, 'Replace workspace'),
