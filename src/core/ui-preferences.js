@@ -1,6 +1,8 @@
 export function readNumberPreference(key) {
   try {
-    const value = Number(localStorage.getItem(key));
+    const stored = localStorage.getItem(key);
+    if (stored === null) return null;
+    const value = Number(stored);
     return Number.isFinite(value) ? value : null;
   } catch {
     return null;
