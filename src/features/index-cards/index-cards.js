@@ -133,6 +133,7 @@ export const IndexCards = {
 
     onMounted(() => {
       if (selectedId.value) tree.value?.reveal(selectedId.value);
+      keepLibraryWidthInBounds();
       window.addEventListener('resize', keepLibraryWidthInBounds);
     });
     onBeforeUnmount(() => window.removeEventListener('resize', keepLibraryWidthInBounds));
