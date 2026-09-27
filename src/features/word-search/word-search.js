@@ -1,12 +1,14 @@
 import { Icon } from '../../components/icon.js';
 import { WordSearchLibrary } from './library.js';
 import { canMove, findItem, groupOptions, moveItem } from './library-model.js';
+import { clearPreference, readNumberPreference, writeNumberPreference } from '../../core/ui-preferences.js';
 
 const { computed, h, nextTick, onBeforeUnmount, onMounted, ref } = window.Vue;
 
 const MIN_LIBRARY_WIDTH = 248;
 const MAX_LIBRARY_WIDTH = 640;
 const MIN_DETAIL_WIDTH = 320;
+const LIBRARY_WIDTH_KEY = 'dynamic-learner.ui.word-search.library-width';
 
 export const WordSearch = {
   name: 'WordSearch',
@@ -20,7 +22,7 @@ export const WordSearch = {
     const overlayQuery = window.matchMedia('(max-width: 700px), (max-width: 1100px) and (pointer: coarse)');
     const libraryOverlay = ref(overlayQuery.matches);
     const libraryCollapsed = ref(false);
-    const libraryWidth = ref(null);
+    const libraryWidth = ref(readNumberPreference(LIBRARY_WIDTH_KEY));
     const libraryResizing = ref(false);
     const layout = ref(null);
     const library = ref(null);
@@ -50,6 +52,12 @@ export const WordSearch = {
 
     function setLibraryWidth(width) {
       libraryWidth.value = Math.round(Math.min(Math.max(width, MIN_LIBRARY_WIDTH), maxLibraryWidth()));
+      writeNumberPreference(LIBRARY_WIDTH_KEY, libraryWidth.value);
+    }
+
+    function resetLibraryWidth() {
+      clearPreference(LIBRARY_WIDTH_KEY);
+      libraryWidth.value = null;
     }
 
     function keepLibraryWidthInBounds() {
@@ -275,6 +283,7 @@ export const WordSearch = {
           onPointerup: endLibraryResize,
           onPointercancel: endLibraryResize,
           onKeydown: resizeLibraryFromKeyboard,
+          onDblclick: resetLibraryWidth,
         }) : null,
         detail(),
       ]),
