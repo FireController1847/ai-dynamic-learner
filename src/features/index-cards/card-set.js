@@ -17,7 +17,7 @@ export const CardSet = {
     totalCards: { type: Number, required: true },
     cardListWidth: { type: Number, default: null },
   },
-  emits: ['resize-card-list'],
+  emits: ['resize-card-list', 'reset-card-list'],
   setup(props, { emit }) {
     const currentId = ref(props.set.cards[0]?.id ?? null);
     const side = ref('front');
@@ -307,6 +307,7 @@ export const CardSet = {
           onPointerup: endCardListResize,
           onPointercancel: endCardListResize,
           onKeydown: resizeCardListFromKeyboard,
+          onDblclick: () => emit('reset-card-list'),
         }),
         h(CardList, {
           cards: orderedCards.value, selectedId: card?.id ?? null,
