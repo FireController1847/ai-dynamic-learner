@@ -97,7 +97,10 @@ export const WordSearch = {
       setLibraryWidth(width);
     }
 
-    onMounted(() => window.addEventListener('resize', keepLibraryWidthInBounds));
+    onMounted(() => {
+      keepLibraryWidthInBounds();
+      window.addEventListener('resize', keepLibraryWidthInBounds);
+    });
     onBeforeUnmount(() => window.removeEventListener('resize', keepLibraryWidthInBounds));
 
     async function setLibraryCollapsed(collapsed) {
