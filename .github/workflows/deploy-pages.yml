@@ -2,10 +2,6 @@ name: Deploy to GitHub Pages
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    # Temporary push trigger for this publication run.
 
 permissions:
   contents: read
