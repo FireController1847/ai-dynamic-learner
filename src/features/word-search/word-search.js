@@ -269,9 +269,7 @@ export const WordSearch = {
         item.kind === 'word-search' ? h(item.puzzle ? PuzzleGame : PuzzleSummary, {
           key: item.id, item, onEdit: () => editWordSearch(item),
           ...(item.puzzle ? { options: displayOptions.value } : {}),
-        }) : h('div', { class: 'word-search-group-message' }, [
-          h('p', 'This group can contain nested groups and word searches.'),
-        ]),
+        }) : null,
         organizationControls(item),
         h('p', { class: 'visually-hidden', role: 'status' }, message.value),
       ]);
