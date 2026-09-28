@@ -1,6 +1,7 @@
 import { Icon } from '../../components/icon.js';
+import { DeleteConfirmation } from './delete-confirmation.js';
 import {
-  countDocuments, countItems, createItem, findItem, MAX_DEPTH, MAX_DOCUMENTS, MAX_ITEMS, MAX_NAME_LENGTH,
+  countItems, createItem, deleteItem, findItem, MAX_DEPTH, MAX_ITEMS, MAX_NAME_LENGTH,
 } from './library-model.js';
 
 const { h, nextTick, ref } = window.Vue;
@@ -12,7 +13,7 @@ export const NotebookLibrary = {
     selectedId: { type: String, default: null },
     collapsed: Boolean,
   },
-  emits: ['select', 'open-item', 'toggle-library'],
+  emits: ['select', 'open-item', 'toggle-library', 'new-document'],
   setup(props, { emit, expose, slots }) {
     const expanded = ref(new Set());
     const editingId = ref(null);
@@ -21,7 +22,9 @@ export const NotebookLibrary = {
     const collapseButton = ref(null);
     const newDocumentButton = ref(null);
     const announcement = ref('');
+    const pendingDelete = ref(null);
     const labels = new Map();
+    let deleteTrigger = null;
 
     async function rename(item) {
       emit('select', item.id);
@@ -48,13 +51,9 @@ export const NotebookLibrary = {
       }
     }
 
-    function create(kind) {
+    function createGroup() {
       if (countItems(props.items) >= MAX_ITEMS) {
         announcement.value = `The Notebook limit is ${MAX_ITEMS} groups and documents.`;
-        return;
-      }
-      if (kind === 'document' && countDocuments(props.items) >= MAX_DOCUMENTS) {
-        announcement.value = `The Notebook limit is ${MAX_DOCUMENTS} documents.`;
         return;
       }
 
@@ -64,7 +63,7 @@ export const NotebookLibrary = {
         return;
       }
 
-      const item = createItem(kind);
+      const item = createItem('group');
       if (selected?.item.kind === 'group') {
         selected.item.children.unshift(item);
         expanded.value.add(selected.item.id);
@@ -74,10 +73,39 @@ export const NotebookLibrary = {
         props.items.unshift(item);
       }
 
-      if (kind === 'group') expanded.value.add(item.id);
+      expanded.value.add(item.id);
       emit('select', item.id);
       reveal(item.id);
       rename(item);
+    }
+
+    async function requestDelete(item, event) {
+      deleteTrigger = event.currentTarget;
+      pendingDelete.value = item;
+    }
+
+    async function cancelDelete() {
+      pendingDelete.value = null;
+      await nextTick();
+      if (deleteTrigger?.isConnected) deleteTrigger.focus();
+      deleteTrigger = null;
+    }
+
+    async function confirmDelete() {
+      const found = pendingDelete.value && findItem(props.items, pendingDelete.value.id);
+      if (!found) {
+        await cancelDelete();
+        return;
+      }
+      const { item, siblings, index, parentId } = found;
+      const fallbackId = siblings[index + 1]?.id ?? siblings[index - 1]?.id ?? parentId ?? null;
+      deleteItem(props.items, item.id);
+      if (props.selectedId === item.id) emit('select', fallbackId);
+      pendingDelete.value = null;
+      deleteTrigger = null;
+      announcement.value = `Deleted ${item.name}.`;
+      await nextTick();
+      (labels.get(fallbackId) ?? newDocumentButton.value)?.focus();
     }
 
     function toggle(id) {
@@ -97,6 +125,10 @@ export const NotebookLibrary = {
       reveal,
       focusToggle: () => collapseButton.value?.focus(),
       focusNewDocument: () => newDocumentButton.value?.focus(),
+      beginRename: (id) => {
+        const found = findItem(props.items, id);
+        if (found) rename(found.item);
+      },
     });
 
     function renderItem(item) {
@@ -151,6 +183,13 @@ export const NotebookLibrary = {
             'aria-label': `Rename ${item.name}`,
             onClick: () => rename(item),
           }, [h(Icon, { name: 'pencil' })]),
+          !isGroup ? h('button', {
+            type: 'button',
+            class: 'icon-button delete-button',
+            title: `Delete ${item.name}`,
+            'aria-label': `Delete ${item.name}`,
+            onClick: (event) => requestDelete(item, event),
+          }, [h(Icon, { name: 'trash' })]) : null,
         ]),
         isGroup && isOpen ? h('ul', {
           class: 'directory-children',
@@ -174,7 +213,7 @@ export const NotebookLibrary = {
             class: 'icon-button',
             title: 'New group',
             'aria-label': 'New group',
-            onClick: () => create('group'),
+            onClick: createGroup,
           }, [h(Icon, { name: 'folder' })]),
           h('button', {
             ref: newDocumentButton,
@@ -182,7 +221,7 @@ export const NotebookLibrary = {
             class: 'icon-button',
             title: 'New document',
             'aria-label': 'New document',
-            onClick: () => create('document'),
+            onClick: () => emit('new-document'),
           }, [h(Icon, { name: 'document' })]),
           h('button', {
             ref: collapseButton,
@@ -203,6 +242,11 @@ export const NotebookLibrary = {
       ]),
       h('p', { class: 'visually-hidden', role: 'status' }, announcement.value),
       slots.footer ? h('div', { class: 'notebook-library-footer' }, slots.footer()) : null,
+      pendingDelete.value ? h(DeleteConfirmation, {
+        item: pendingDelete.value,
+        onCancel: cancelDelete,
+        onConfirm: confirmDelete,
+      }) : null,
     ]);
   },
 };
