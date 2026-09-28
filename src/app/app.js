@@ -5,6 +5,7 @@ import { pageHref, useNavigation } from './navigation.js';
 import { useWorkspace } from './workspace.js';
 import { WorkspaceTools } from './workspace-tools.js';
 import { HomePage } from './home-page.js';
+import { Icon } from '../components/icon.js';
 
 const { computed, createApp, h, KeepAlive, nextTick, ref } = window.Vue;
 
@@ -35,7 +36,7 @@ const App = {
     let focusContentOnClose = false;
     const { currentPath, navigate } = useNavigation(onNavigate);
     const activeFeature = computed(() => features.find((feature) => feature.path === currentPath.value));
-    const activeLogoSrc = computed(() => featureImageSrc(activeFeature.value) || appLogoSrc);
+    const activeLogoSrc = computed(() => featureImageSrc(activeFeature.value));
 
     function closeSidebar() {
       focusContentOnClose = false;
@@ -72,7 +73,11 @@ const App = {
         }, [h('span', { class: 'menu-icon', 'aria-hidden': 'true' }, [
           h('span'), h('span'), h('span'),
         ])]),
-        h('img', { class: 'app-logo app-header-logo', src: activeLogoSrc.value, alt: '', 'aria-hidden': 'true' }),
+        activeLogoSrc.value
+          ? h('img', { class: 'app-logo app-header-logo', src: activeLogoSrc.value, alt: '', 'aria-hidden': 'true' })
+          : activeFeature.value?.icon
+            ? h(Icon, { name: activeFeature.value.icon })
+            : h('img', { class: 'app-logo app-header-logo', src: appLogoSrc, alt: '', 'aria-hidden': 'true' }),
         h('h1', activeFeature.value?.label ?? (currentPath.value === '/' ? appConfig.name : 'Page not found')),
       ]),
       h(NavigationDrawer, {
@@ -94,7 +99,7 @@ const App = {
         h('main', {
           ref: main,
           class: ['app-content', {
-            'app-content--workspace': ['index-cards', 'word-search'].includes(activeFeature.value?.id),
+            'app-content--workspace': ['notebook', 'index-cards', 'word-search'].includes(activeFeature.value?.id),
           }],
           tabindex: -1,
         }, [
