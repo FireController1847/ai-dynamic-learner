@@ -17,7 +17,7 @@ const featureImageSrc = (feature) => feature?.image
 
 const navigationItems = [
   { id: 'home', label: 'Home', path: '/', imageSrc: appLogoSrc },
-  ...features,
+  ...features.filter((feature) => !feature.hidden),
 ].map((item) => ({
   ...item,
   href: pageHref(item.path),

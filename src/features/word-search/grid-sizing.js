@@ -3,7 +3,9 @@ import { MIN_CELL_SIZE, MAX_CELL_SIZE } from './display-options.js';
 const { nextTick, onActivated, onBeforeUnmount, onMounted, ref, watch } = window.Vue;
 
 const WORD_BANK_WITH_GAP = 244;
+const HINT_BANK_WITH_GAP = 484;
 const PLAY_LAYOUT_BREAKPOINT = 650;
+const HINT_LAYOUT_BREAKPOINT = 1080;
 const VERTICAL_ALLOWANCE = 240;
 
 // Content such as found-word labels and status text must never resize the board.
@@ -24,8 +26,10 @@ export function useGridSizing(area, size, options) {
     const minimum = Math.max(MIN_CELL_SIZE, Math.ceil(16 * settings.textSize / 100 / 0.62));
     const styles = getComputedStyle(container);
     const containerWidth = container.clientWidth - parseFloat(styles.paddingLeft) - parseFloat(styles.paddingRight);
-    const beside = containerWidth >= PLAY_LAYOUT_BREAKPOINT;
-    const width = containerWidth - (beside ? WORD_BANK_WITH_GAP : 0) - 10;
+    const hintMode = Boolean(container.querySelector('.word-search-word-bank.uses-hints'));
+    const beside = containerWidth >= (hintMode ? HINT_LAYOUT_BREAKPOINT : PLAY_LAYOUT_BREAKPOINT);
+    const bankWidth = hintMode ? HINT_BANK_WITH_GAP : WORD_BANK_WITH_GAP;
+    const width = containerWidth - (beside ? bankWidth : 0) - 10;
     const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
     const workspaceHeight = workspace?.getBoundingClientRect().height ?? viewportHeight;
     const height = Math.min(workspaceHeight, viewportHeight) - VERTICAL_ALLOWANCE;

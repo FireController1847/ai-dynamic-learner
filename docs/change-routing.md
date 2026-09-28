@@ -4,10 +4,10 @@ Start with the primary files below; follow imports only as needed. Paths are rel
 
 | Change | Primary files or locations |
 | --- | --- |
-| App name/configuration | `src/app/app-config.js`; `package.json` for package metadata |
+| App name/configuration | `src/app/app-config.js`; `package.json` for package metadata |\n| Search/social metadata | `src/app/app-config.js` for global metadata defaults and social image configuration; optional per-feature `metadata` in `src/features/feature-definitions.js`; `src/html/index.html` for metadata insertion markers; `.github/scripts/prepare-pages.mjs` renders canonical, Open Graph, Twitter, theme, keyword, and JSON-LD metadata for each route |
 | Home app cards and footer | `src/app/home-page.js` and `src/styles/home.css`; `src/features/feature-definitions.js` supplies shared app labels, paths, icons, and descriptions; `src/app/app-config.js` supplies repository URL and license identifier |
 | Initial page markup | `src/html/index.html` for the document and mount point; `src/app/app.js` for the rendered main and heading |
-| Branding and favicons | `src/assets/` for the Dynamic Learner logo/icon files; `src/html/index.html` for favicon metadata; `src/app/app.js`, `src/app/navigation-drawer.js`, and `src/styles/shell.css` for visible shell branding; `.github/scripts/prepare-pages.mjs` packages the assets |
+| Branding and favicons | `src/assets/` for the Dynamic Learner logo, app icons, and social-preview artwork; `src/html/index.html` for favicon/touch-icon metadata; `src/app/app.js`, `src/app/navigation-drawer.js`, and `src/styles/shell.css` for visible shell branding; `.github/scripts/prepare-pages.mjs` packages the assets |
 | Vue startup and state | `src/app/app.js` |
 | Compact page header and titles | `src/app/app.js` renders the current page title beside navigation; `src/styles/shell.css` controls header sizing. Feature views do not repeat the page title. |
 | Sidebar and application switching | `src/app/app.js` for composition; `src/app/navigation-drawer.js` for the modal drawer and links; `src/styles/shell.css` for layout and animation |

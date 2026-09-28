@@ -1,7 +1,8 @@
 // Shared by the browser registry and Node server; keep this data browser-neutral.
 export const featureDefinitions = [
   {
-    id: 'notebook', label: 'Notebook', path: '/notebook/', icon: 'document',
+    id: 'notebook', label: 'Notebook', path: '/notebook/', icon: 'document', hidden: true,
+    image: 'src/assets/notebook.png',
     description: 'Organize notes into groups and keep your documents together in one notebook.',
   },
   {

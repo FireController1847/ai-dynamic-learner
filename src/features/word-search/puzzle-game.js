@@ -171,26 +171,58 @@ export const PuzzleGame = {
           h('aside', {
             class: ['word-search-word-bank', { 'uses-hints': hintMode.value }],
             'aria-label': hintMode.value ? 'Clues' : 'Words to find',
-          }, [
-            h('h3', complete.value ? 'Nicely done!' : (hintMode.value ? 'Clues' : 'Words to find')),
+          }, hintMode.value ? [
+            h('header', { class: 'word-search-clue-header' }, [
+              h('div', {}, [
+                h('h3', complete.value ? 'Nicely done!' : 'Clues'),
+                h('p', { class: 'word-search-clue-progress' },
+                  `${foundWords.value.size} of ${puzzle.words.length} found`),
+              ]),
+              h('progress', {
+                max: puzzle.words.length,
+                value: foundWords.value.size,
+                'aria-label': 'Words found',
+              }),
+            ]),
+            h('ol', { class: 'word-search-clue-list' }, puzzle.words.map((word, index) => {
+              const found = foundWords.value.has(word);
+              const individuallyRevealed = revealedWords.value.has(word);
+              const answerVisible = revealed.value || found || individuallyRevealed;
+              const location = revealed.value ? game.value.placements.find((entry) => entry.word === word) : null;
+              return h('li', {
+                key: word,
+                class: ['word-search-clue', { 'is-found': found }],
+              }, [
+                h('span', { class: 'word-search-clue-number', 'aria-hidden': 'true' }, index + 1),
+                h('div', { class: 'word-search-clue-content' }, [
+                  h('p', { class: 'word-search-clue-text' }, puzzle.hints?.[word]),
+                  answerVisible ? h('p', { class: 'word-search-revealed-word' }, word) : null,
+                  location ? h('p', { class: 'word-search-answer-location' },
+                    `Row ${Math.floor(location.start / puzzle.size) + 1}, column ${location.start % puzzle.size + 1} → row ${Math.floor(location.end / puzzle.size) + 1}, column ${location.end % puzzle.size + 1}`) : null,
+                  h('div', { class: 'word-search-clue-footer' }, [
+                    h('span', { class: 'word-search-word-state' }, found ? '✓ Found' : 'Not found'),
+                    !found && !revealed.value ? h('button', {
+                      type: 'button',
+                      class: 'word-search-word-reveal',
+                      'aria-pressed': individuallyRevealed,
+                      onClick: () => toggleWordReveal(word),
+                    }, individuallyRevealed ? 'Hide answer' : 'Reveal answer') : null,
+                  ]),
+                ]),
+              ]);
+            })),
+          ] : [
+            h('h3', complete.value ? 'Nicely done!' : 'Words to find'),
             h('p', { class: 'word-search-progress' }, `${foundWords.value.size} of ${puzzle.words.length} found`),
             h('progress', { max: puzzle.words.length, value: foundWords.value.size, 'aria-label': 'Words found' }),
             h('ul', {}, puzzle.words.map((word) => {
               const found = foundWords.value.has(word);
-              const answerVisible = revealed.value || found || revealedWords.value.has(word);
               const location = revealed.value ? game.value.placements.find((entry) => entry.word === word) : null;
               return h('li', {
                 key: word, class: { 'is-found': found },
               }, [
-                h('span', { class: hintMode.value ? 'word-search-clue-text' : 'word-search-answer-text' },
-                  hintMode.value ? puzzle.hints?.[word] : word),
+                h('span', { class: 'word-search-answer-text' }, word),
                 h('span', { class: 'word-search-word-state' }, found ? '✓ Found' : 'To find'),
-                hintMode.value && answerVisible ? h('span', { class: 'word-search-revealed-word' }, word) : null,
-                hintMode.value && !found && !revealed.value ? h('button', {
-                  type: 'button', class: 'quiet-button word-search-word-reveal',
-                  'aria-pressed': revealedWords.value.has(word),
-                  onClick: () => toggleWordReveal(word),
-                }, revealedWords.value.has(word) ? 'Hide word' : 'Reveal word') : null,
                 location ? h('span', { class: 'word-search-answer-location' },
                   `Row ${Math.floor(location.start / puzzle.size) + 1}, column ${location.start % puzzle.size + 1} → row ${Math.floor(location.end / puzzle.size) + 1}, column ${location.end % puzzle.size + 1}`) : null,
               ]);

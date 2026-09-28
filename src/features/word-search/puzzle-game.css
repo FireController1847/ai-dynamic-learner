@@ -77,6 +77,11 @@
   border: 1px solid var(--border-color); border-radius: var(--radius);
   background: var(--surface-subtle);
 }
+.word-search-word-bank.uses-hints {
+  flex-basis: 460px;
+  min-width: min(100%, 380px);
+  max-width: 520px;
+}
 .word-search-word-bank h3 {
   min-height: calc(var(--control-height) + 16px); margin: 0; padding: 8px 12px;
   display: flex; align-items: center; border-bottom: 1px solid var(--border-color);
@@ -92,20 +97,147 @@
 .word-search-word-bank li.is-found { background: color-mix(in srgb, var(--search-highlight) 10%, var(--page-background)); color: var(--search-highlight); }
 .word-search-word-bank:not(.uses-hints) li.is-found > span:first-child { text-decoration: line-through; }
 .word-search-word-state { font-size: 12px; color: var(--text-secondary); white-space: nowrap; }
-.word-search-clue-text { line-height: 18px; }
+.word-search-clue-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(120px, 180px);
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--page-background);
+}
+.word-search-clue-header h3 {
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: 16px;
+  line-height: 22px;
+}
+.word-search-clue-progress {
+  margin: 2px 0 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 16px;
+}
+.word-search-clue-header progress {
+  width: 100%;
+  margin: 0;
+  accent-color: var(--search-highlight);
+}
+.word-search-clue-list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.word-search-clue {
+  display: grid !important;
+  grid-template-columns: 32px minmax(0, 1fr) !important;
+  gap: 12px !important;
+  padding: 14px 16px !important;
+  border-radius: 0 !important;
+}
+.word-search-clue + .word-search-clue {
+  border-top: 1px solid var(--border-color);
+}
+.word-search-clue.is-found {
+  background: color-mix(in srgb, var(--search-highlight) 8%, var(--page-background));
+}
+.word-search-clue-number {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--control-border);
+  border-radius: 50%;
+  color: var(--text-secondary);
+  background: var(--page-background);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.word-search-clue.is-found .word-search-clue-number {
+  border-color: color-mix(in srgb, var(--search-highlight) 35%, var(--control-border));
+  color: var(--search-highlight);
+}
+.word-search-clue-content {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.word-search-clue-text {
+  margin: 2px 0 0;
+  color: var(--text-color);
+  font-size: 14px;
+  line-height: 20px;
+}
 .word-search-revealed-word {
-  grid-column: 1 / -1; color: var(--text-color); font-weight: 600; letter-spacing: 0.03em;
+  margin: 0;
+  color: var(--text-color);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.word-search-answer-location {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 16px;
+}
+.word-search-clue-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.word-search-clue-footer .word-search-word-state {
+  font-size: 12px;
 }
 .word-search-word-reveal {
-  grid-column: 1 / -1; justify-self: start; min-height: 28px; padding: 3px 8px;
-  font-size: 12px; font-weight: 400;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--brand-text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
 }
-.word-search-answer-location { grid-column: 1 / -1; font-size: 12px; color: var(--text-secondary); }
+.word-search-word-reveal:hover {
+  text-decoration: underline;
+}
+.word-search-word-reveal:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 3px;
+}
 .word-search-game-message { min-height: 40px; margin: 0; font-weight: 600; overflow-wrap: anywhere; text-align: center; }
 .word-search-game-actions { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
 .word-search-restart-review { padding: 16px; border: 1px solid var(--border-color); border-radius: var(--radius); background: var(--surface-subtle); }
 .word-search-restart-review p { margin: 0 0 12px; }
 .word-search-generation-error { color: var(--danger); }
+@media (max-width: 1080px) {
+  .word-search-word-bank.uses-hints {
+    flex: 1 1 100%;
+    width: min(100%, 760px);
+    max-width: 760px;
+  }
+}
+
 @media (max-width: 700px), (max-width: 1100px) and (pointer: coarse) {
   .word-search-game { padding: 16px 12px; }
+  .word-search-word-bank.uses-hints {
+    min-width: 0;
+    width: 100%;
+  }
+  .word-search-clue-header {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+  .word-search-clue {
+    grid-template-columns: 28px minmax(0, 1fr) !important;
+    gap: 10px !important;
+    padding: 12px !important;
+  }
 }

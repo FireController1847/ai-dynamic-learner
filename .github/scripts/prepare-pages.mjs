@@ -22,23 +22,18 @@ if (rawBaseUrl) {
   baseUrl.pathname = `${baseUrl.pathname.replace(/\/+$/, '')}/`;
 }
 
-const escapeHtml = (value) => value.replace(/[&<>"']/g, (character) => ({
+const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (character) => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
 }[character]));
 const escapeJson = (value) => JSON.stringify(value).replace(/</g, '\\u003c');
+const meta = (name, content, property = false) =>
+  `<meta ${property ? 'property' : 'name'}="${escapeHtml(name)}" content="${escapeHtml(content)}">`;
 
 const template = await readFile(new URL('src/html/index.html', root), 'utf8');
 for (const marker of [
   '<base href="/">',
   '<title></title>',
-  '<meta name="description" content="">',
-  '<meta name="application-name" content="">',
-  '<meta property="og:site_name" content="">',
-  '<meta property="og:title" content="">',
-  '<meta property="og:description" content="">',
-  '<meta name="twitter:title" content="">',
-  '<meta name="twitter:description" content="">',
-  '<!-- page-url-meta -->',
+  '<!-- page-rich-metadata -->',
   '<!-- page-structured-data -->',
 ]) {
   if (!template.includes(marker)) throw new Error(`The HTML template is missing required metadata marker: ${marker}`);
@@ -49,19 +44,43 @@ for (const route of routes) {
   if (!/^\/(?:[a-z0-9-]+\/)*$/.test(route)) throw new Error(`Unsupported page route: ${route}`);
 }
 
+function absoluteUrl(path) {
+  return baseUrl ? new URL(path.replace(/^\//, ''), baseUrl).href : null;
+}
+
 function pageMetadata(route) {
   const feature = featureDefinitions.find((candidate) => candidate.path === route);
-  const title = feature ? `${feature.label} · ${appConfig.name}` : appConfig.name;
-  const description = feature?.description ?? appConfig.description;
+  const overrides = feature?.metadata ?? {};
+  const title = overrides.title ?? (feature ? `${feature.label} · ${appConfig.name}` : appConfig.name);
+  const description = overrides.description ?? feature?.description ?? appConfig.description;
   const canonicalUrl = baseUrl ? new URL(route.slice(1), baseUrl).href : null;
   const siteUrl = baseUrl?.href ?? null;
+  const keywords = [...new Set([
+    ...appConfig.metadata.keywords,
+    ...(feature ? [feature.label] : []),
+    ...(overrides.keywords ?? []),
+  ])];
+
+  const socialImage = {
+    ...appConfig.metadata.socialImage,
+    ...(overrides.socialImage ?? {}),
+  };
+  const socialImageUrl = absoluteUrl(socialImage.path);
 
   const structuredData = feature ? {
     '@context': 'https://schema.org',
     '@type': 'WebPage',
     name: title,
     description,
+    inLanguage: appConfig.metadata.language,
+    keywords: keywords.join(', '),
     ...(canonicalUrl ? { url: canonicalUrl } : {}),
+    ...(socialImageUrl ? { primaryImageOfPage: {
+      '@type': 'ImageObject',
+      url: socialImageUrl,
+      width: socialImage.width,
+      height: socialImage.height,
+    } } : {}),
     ...(siteUrl ? {
       isPartOf: { '@type': 'WebSite', name: appConfig.name, url: siteUrl },
     } : {}),
@@ -70,39 +89,70 @@ function pageMetadata(route) {
     '@type': 'WebApplication',
     name: appConfig.name,
     description,
-    applicationCategory: 'EducationalApplication',
+    inLanguage: appConfig.metadata.language,
+    applicationCategory: appConfig.metadata.applicationCategory,
     operatingSystem: 'Any',
+    browserRequirements: 'Requires JavaScript and a modern web browser.',
+    isAccessibleForFree: true,
+    keywords: keywords.join(', '),
     ...(canonicalUrl ? { url: canonicalUrl } : {}),
+    ...(socialImageUrl ? { image: socialImageUrl } : {}),
   };
 
-  return { title, description, canonicalUrl, structuredData };
+  return { title, description, canonicalUrl, keywords, socialImage, socialImageUrl, structuredData };
+}
+
+function renderRichMetadata(metadata) {
+  const { title, description, canonicalUrl, keywords, socialImage, socialImageUrl } = metadata;
+  const tags = [
+    meta('description', description),
+    meta('keywords', keywords.join(', ')),
+    meta('application-name', appConfig.name),
+    meta('theme-color', appConfig.metadata.themeColor),
+    meta('msapplication-TileColor', appConfig.metadata.themeColor),
+    meta('color-scheme', 'light'),
+    meta('referrer', 'strict-origin-when-cross-origin'),
+    meta('format-detection', 'telephone=no'),
+    meta('apple-mobile-web-app-title', appConfig.name),
+    meta('og:type', 'website', true),
+    meta('og:site_name', appConfig.name, true),
+    meta('og:title', title, true),
+    meta('og:description', description, true),
+    meta('og:locale', appConfig.metadata.locale, true),
+    meta('twitter:card', appConfig.metadata.twitterCard),
+    meta('twitter:title', title),
+    meta('twitter:description', description),
+  ];
+
+  if (canonicalUrl) {
+    tags.push(`<link rel="canonical" href="${escapeHtml(canonicalUrl)}">`);
+    tags.push(meta('og:url', canonicalUrl, true));
+  }
+
+  if (socialImageUrl) {
+    tags.push(
+      meta('og:image', socialImageUrl, true),
+      meta('og:image:secure_url', socialImageUrl, true),
+      meta('og:image:type', socialImage.type, true),
+      meta('og:image:width', socialImage.width, true),
+      meta('og:image:height', socialImage.height, true),
+      meta('og:image:alt', socialImage.alt, true),
+      meta('twitter:image', socialImageUrl),
+      meta('twitter:image:alt', socialImage.alt),
+    );
+  }
+
+  return tags.join('\n    ');
 }
 
 function renderPage(route) {
-  const { title, description, canonicalUrl, structuredData } = pageMetadata(route);
-  const urlMeta = canonicalUrl
-    ? `<link rel="canonical" href="${escapeHtml(canonicalUrl)}">\n    <meta property="og:url" content="${escapeHtml(canonicalUrl)}">`
-    : '';
-  const jsonLd = `<script type="application/ld+json">${escapeJson(structuredData)}</script>`;
+  const metadata = pageMetadata(route);
+  const jsonLd = `<script type="application/ld+json">${escapeJson(metadata.structuredData)}</script>`;
 
   return template
     .replace('<base href="/">', `<base href="${escapeHtml(basePath)}">`)
-    .replace('<title></title>', `<title>${escapeHtml(title)}</title>`)
-    .replace('<meta name="description" content="">',
-      `<meta name="description" content="${escapeHtml(description)}">`)
-    .replace('<meta name="application-name" content="">',
-      `<meta name="application-name" content="${escapeHtml(appConfig.name)}">`)
-    .replace('<meta property="og:site_name" content="">',
-      `<meta property="og:site_name" content="${escapeHtml(appConfig.name)}">`)
-    .replace('<meta property="og:title" content="">',
-      `<meta property="og:title" content="${escapeHtml(title)}">`)
-    .replace('<meta property="og:description" content="">',
-      `<meta property="og:description" content="${escapeHtml(description)}">`)
-    .replace('<meta name="twitter:title" content="">',
-      `<meta name="twitter:title" content="${escapeHtml(title)}">`)
-    .replace('<meta name="twitter:description" content="">',
-      `<meta name="twitter:description" content="${escapeHtml(description)}">`)
-    .replace('<!-- page-url-meta -->', urlMeta)
+    .replace('<title></title>', `<title>${escapeHtml(metadata.title)}</title>`)
+    .replace('<!-- page-rich-metadata -->', renderRichMetadata(metadata))
     .replace('<!-- page-structured-data -->', jsonLd);
 }
 
