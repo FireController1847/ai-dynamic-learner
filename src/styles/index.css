@@ -10,4 +10,6 @@
 @import '../features/index-cards/display-settings.css';
 @import '../features/word-search/word-search.css';
 @import '../features/word-search/puzzle-form.css';
+@import '../features/word-search/puzzle-game.css';
+@import '../features/word-search/display-settings.css';
 @import './mobile.css';

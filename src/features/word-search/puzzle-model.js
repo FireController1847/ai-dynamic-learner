@@ -3,6 +3,7 @@ export const MAX_WORDS = 40;
 export const MAX_WORD_LENGTH = 24;
 export const MAX_INSTRUCTIONS_LENGTH = 500;
 export const MAX_WORD_INPUT_LENGTH = 4000;
+// TODO: Support custom grid dimensions, including rectangular puzzles.
 export const GRID_SIZES = [10, 15, 20, 24];
 export const DIFFICULTIES = [
   { value: 'easy', label: 'Easy', description: 'Across and down, reading forward.' },
