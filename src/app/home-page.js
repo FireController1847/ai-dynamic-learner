@@ -35,7 +35,14 @@ export const HomePage = {
                 class: 'home-app-card', href: pageHref(feature.path),
                 onClick: (event) => emit('navigate', event, feature.path),
               }, [
-                feature.icon ? h(Icon, { name: feature.icon }) : null,
+                feature.image
+                  ? h('img', {
+                    class: 'home-app-icon',
+                    src: new URL(feature.image, document.baseURI).href,
+                    alt: '',
+                    'aria-hidden': 'true',
+                  })
+                  : feature.icon ? h(Icon, { name: feature.icon }) : null,
                 h('h3', feature.label),
                 h('p', feature.description),
                 h('span', { class: 'home-app-open' }, ['Open ', feature.label, h(Icon, { name: 'chevron' })]),

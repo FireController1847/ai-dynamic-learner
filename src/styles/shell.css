@@ -78,6 +78,7 @@ body:has(.navigation-drawer[open]) { overflow: hidden; }
   position: relative;
   display: flex;
   align-items: center;
+  gap: 10px;
   width: 100%;
   min-height: 40px;
   padding: 8px 16px;
@@ -89,6 +90,7 @@ body:has(.navigation-drawer[open]) { overflow: hidden; }
   overflow-wrap: anywhere;
   transition: background-color var(--motion-fast);
 }
+.navigation-link-icon { display: block; flex: 0 0 auto; width: 24px; height: 24px; object-fit: contain; }
 .navigation-link:hover { background: var(--surface-hover); }
 .navigation-link[aria-current='page'] { color: var(--brand-text); background: var(--brand-tint); font-weight: 600; }
 .navigation-link[aria-current='page']::before {
