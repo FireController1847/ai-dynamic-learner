@@ -11,6 +11,7 @@ Downloads are JSON files containing the current canonical workspace:
   "format": "dynamic-learner",
   "version": 1,
   "features": {
+    "notebook": { "items": [] },
     "index-cards": { "items": [] },
     "word-search": { "items": [] }
   }
@@ -19,9 +20,13 @@ Downloads are JSON files containing the current canonical workspace:
 
 Each directory entry has an `id`, `kind` (`group` or `set`), and `name`. A group has an ordered `children` array containing groups and sets. A set has an ordered `cards` array. Each card contains `id`, `front`, and `back`, plus optional `title` (front) and `backTitle` fields. Both sides and their titles are plain text; side content can include line breaks. New cards include two empty titles, each limited to 120 characters. Older cards remain valid: their existing `title` stays on the front and a missing `backTitle` displays as blank. Empty text is valid. Existing version-1 backups with empty sets or untitled cards remain valid without conversion. Array position is the manual order, including at the root; there is no alphabetical sorting or duplicate order field. IDs are unique across groups, sets, and cards and do not change on edit or move.
 
-Backups include all currently implemented feature data. Index Cards stores groups, sets, names, nesting, order, and both titles and both sides of every card. Word Search stores its library hierarchy of groups and word-search records. URLs, open groups, selected groups, current card/side, active review status, review starting side and order, unfinished rename text, and drawer visibility are temporary UI state, not backup content. Resized Library and Cards panel widths are remembered separately in browser-local UI preferences and are also excluded from backups. Icons and app identity remain application code, not user data.
+Backups include all currently implemented feature data. Notebook stores its grouped document library and each document's persistent type-owned data. Index Cards stores groups, sets, names, nesting, order, and both titles and both sides of every card. Word Search stores its library hierarchy of groups and word-search records. URLs, open groups, selected groups, current card/side, active review status, review starting side and order, unfinished rename text, and drawer visibility are temporary UI state, not backup content. Resized Library and Cards panel widths are remembered separately in browser-local UI preferences and are also excluded from backups. Icons and app identity remain application code, not user data.
 
-Version-1 backups created before Word Search persistence may omit the `word-search` feature entirely; loading one adds an empty Word Search library in memory without requiring a format-version migration.
+Version-1 backups created before Notebook or Word Search persistence may omit those feature records entirely; loading one adds the missing library in memory without requiring a format-version migration.
+
+Notebook document records contain `id`, `kind: "document"`, `name`, a stable `type` ID, and a `data` object owned by that document type. The initial type catalog is `markdown`, `lined`, `grid`, and `graph`. New documents currently default to `markdown` until a document-type picker is added. Markdown data stores `{ "markdown": "..." }`; the non-Markdown types currently store an empty object because their editors and content schemas have not been implemented yet. Unsupported type IDs, unexpected record keys, and editor data outside the currently defined schema reject an uploaded backup.
+
+Notebook documents created before document types were introduced used a top-level `markdown` string. Loading one normalizes it in memory to `type: "markdown"` with `data.markdown` while preserving the text. This is a version-1 compatibility normalization rather than a workspace format-version change; the next normal save or downloaded backup uses the canonical typed shape.
 
 The optional `lastSelectedSetId` field remembers the last opened set through the existing local-save and backup flow. It is a valid ID string or null; older backups may omit it. On a fresh page load, a surviving set is reopened and its parent groups are expanded. Selecting a group does not overwrite the remembered set. Deleted or unavailable references are cleared; selecting a surviving fallback set remembers that set instead. Card position, side, and review state are not persisted: a restored set opens at the first saved card, front side, outside review.
 
@@ -57,7 +62,7 @@ The upload review shows the filename, Index Cards directory/card counts, and Wor
 
 When browser storage is unavailable or full, changes remain in memory and the UI asks the user to download a backup. An unreadable stored workspace is left untouched and automatic writes remain blocked until the user uploads and confirms a valid replacement. Errors do not silently discard the current in-memory workspace.
 
-When extending card data or adding fields to saved word searches, update the owning feature validation, workspace format handling, documentation, and manual backup round-trip checklist together.
+When extending card data, Notebook document types/data, or saved word searches, update the owning feature validation, workspace format handling, documentation, and manual backup round-trip checklist together.
 
 ## Card editing and review
 
