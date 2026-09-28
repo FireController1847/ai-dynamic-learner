@@ -20,16 +20,37 @@
 .word-search-form-columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(200px, 0.8fr); gap: 28px; }
 .word-search-options { display: grid; align-content: start; gap: 24px; }
 .word-search-help { margin: 0; color: var(--text-secondary); font-size: 12px; line-height: 18px; }
-.word-search-difficulty { margin: 0; padding: 0; border: 0; min-width: 0; }
-.word-search-difficulty legend { margin-bottom: 8px; }
-.word-search-difficulty-choice {
+.word-search-difficulty,
+.word-search-study-mode { margin: 0; padding: 0; border: 0; min-width: 0; }
+.word-search-difficulty legend,
+.word-search-study-mode legend { margin-bottom: 8px; }
+.word-search-difficulty-choice,
+.word-search-study-choice {
   display: flex; align-items: flex-start; gap: 8px; padding: 10px;
   border-radius: var(--radius); cursor: pointer;
 }
-.word-search-difficulty-choice:hover { background: var(--surface-hover); }
-.word-search-difficulty-choice.is-selected { background: var(--brand-tint); }
-.word-search-difficulty-choice input { margin: 3px 0 0; accent-color: var(--brand); }
-.word-search-difficulty-choice .word-search-help { display: block; }
+.word-search-difficulty-choice:hover,
+.word-search-study-choice:hover { background: var(--surface-hover); }
+.word-search-difficulty-choice.is-selected,
+.word-search-study-choice.is-selected { background: var(--brand-tint); }
+.word-search-difficulty-choice input,
+.word-search-study-choice input { margin: 3px 0 0; accent-color: var(--brand); }
+.word-search-difficulty-choice .word-search-help,
+.word-search-study-choice .word-search-help { display: block; }
+.word-search-study-mode { display: grid; gap: 4px; }
+.word-search-hint-editor { display: grid; gap: 12px; }
+.word-search-hint-editor h3 { font-size: 14px; }
+.word-search-hint-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 12px; }
+.word-search-hint-field {
+  display: grid; align-content: start; gap: 6px; padding: 12px;
+  border: 1px solid var(--border-color); border-radius: var(--radius);
+  background: var(--surface-subtle); font-weight: 600;
+}
+.word-search-hint-field textarea {
+  width: 100%; min-height: 68px; padding: 8px 10px; resize: vertical;
+  border: 1px solid var(--control-border); border-bottom-color: var(--text-secondary);
+  border-radius: var(--radius); background: var(--page-background); font-weight: 400;
+}
 .word-search-word-preview h3 { font-size: 14px; }
 .word-search-word-chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 0; margin: 12px 0; list-style: none; }
 .word-search-word-chips li { padding: 4px 8px; background: var(--surface-workspace); border-radius: var(--radius); overflow-wrap: anywhere; }
@@ -49,5 +70,7 @@
   .word-search-field input,
   .word-search-field textarea,
   .word-search-field select { font-size: 16px; }
-  .word-search-difficulty-choice { min-height: 44px; }
+  .word-search-difficulty-choice,
+  .word-search-study-choice { min-height: 44px; }
+  .word-search-hint-field textarea { font-size: 16px; }
 }

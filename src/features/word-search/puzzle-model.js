@@ -1,6 +1,7 @@
 export const MIN_WORDS = 3;
 export const MAX_WORDS = 40;
 export const MAX_WORD_LENGTH = 24;
+export const MAX_HINT_LENGTH = 240;
 export const MAX_INSTRUCTIONS_LENGTH = 500;
 export const MAX_WORD_INPUT_LENGTH = 4000;
 // TODO: Support custom grid dimensions, including rectangular puzzles.
@@ -10,6 +11,10 @@ export const DIFFICULTIES = [
   { value: 'medium', label: 'Medium', description: 'Adds diagonal words, reading forward.' },
   { value: 'hard', label: 'Hard', description: 'All eight directions, including backward.' },
 ];
+export const STUDY_MODES = [
+  { value: 'words', label: 'Show word list', description: 'Show each answer in the sidebar while you search.' },
+  { value: 'hints', label: 'Show descriptive hints', description: 'Hide the answers behind clue-style hints with an optional reveal button.' },
+];
 
 export function parseWords(text) {
   const entries = text.split(/[\n,;]/).map((word) => word.trim()).filter(Boolean);
@@ -18,7 +23,6 @@ export function parseWords(text) {
   let duplicates = 0;
   let error = '';
   for (const entry of entries) {
-    // Keep normalization explicit: punctuation within a phrase is not a grid cell.
     if (!/^[a-zA-Z\s'’\-]+$/.test(entry)) {
       error ||= 'Use English letters A–Z, spaces, apostrophes, or hyphens in each word.';
       continue;
@@ -37,7 +41,7 @@ export function parseWords(text) {
 
 export function validatePuzzle(puzzle) {
   if (!puzzle || typeof puzzle !== 'object' || Array.isArray(puzzle) ||
-      Object.keys(puzzle).some((key) => !['words', 'size', 'difficulty', 'instructions'].includes(key)) ||
+      Object.keys(puzzle).some((key) => !['words', 'size', 'difficulty', 'instructions', 'studyMode', 'hints'].includes(key)) ||
       !GRID_SIZES.includes(puzzle.size) ||
       !DIFFICULTIES.some(({ value }) => value === puzzle.difficulty) ||
       typeof puzzle.instructions !== 'string' || puzzle.instructions.length > MAX_INSTRUCTIONS_LENGTH) {
@@ -51,5 +55,19 @@ export function validatePuzzle(puzzle) {
   const longest = Math.max(...puzzle.words.map((word) => word.length));
   if (longest > puzzle.size) {
     throw new Error(`Your longest word has ${longest} letters. Choose a larger grid or shorten the word.`);
+  }
+  const studyMode = puzzle.studyMode ?? 'words';
+  if (!STUDY_MODES.some(({ value }) => value === studyMode)) {
+    throw new Error('The word search study display is invalid.');
+  }
+  if (Object.hasOwn(puzzle, 'hints')) {
+    if (!puzzle.hints || typeof puzzle.hints !== 'object' || Array.isArray(puzzle.hints) ||
+        Object.keys(puzzle.hints).some((word) => !puzzle.words.includes(word)) ||
+        Object.values(puzzle.hints).some((hint) => typeof hint !== 'string' || hint.length > MAX_HINT_LENGTH)) {
+      throw new Error('The word search hints are invalid.');
+    }
+  }
+  if (studyMode === 'hints' && puzzle.words.some((word) => !puzzle.hints?.[word]?.trim())) {
+    throw new Error('Add a descriptive hint for every word when hint study mode is enabled.');
   }
 }

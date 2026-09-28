@@ -19,6 +19,7 @@ export const PuzzleGame = {
     const message = ref('');
     const revealed = ref(false);
     const hint = ref(null);
+    const revealedWords = ref(new Set());
     const pending = ref(null);
     const grid = ref(null);
     const gridVersion = ref(0);
@@ -35,9 +36,16 @@ export const PuzzleGame = {
     let actionTrigger = null;
     const game = computed(() => props.item.game);
     const foundWords = computed(() => new Set(game.value?.found.map(({ word }) => word) ?? []));
+    const hintMode = computed(() => (props.item.puzzle.studyMode ?? 'words') === 'hints');
     const complete = computed(() => foundWords.value.size === props.item.puzzle.words.length);
     onBeforeUnmount(() => { controller?.abort(); clearAttempt(); });
-    onDeactivated(() => { pending.value = null; revealed.value = false; hint.value = null; clearAttempt(); });
+    onDeactivated(() => {
+      pending.value = null;
+      revealed.value = false;
+      revealedWords.value = new Set();
+      hint.value = null;
+      clearAttempt();
+    });
     onMounted(() => { if (!game.value) generate(); });
 
     async function generate() {
@@ -54,8 +62,11 @@ export const PuzzleGame = {
         props.item.game = result;
         gridVersion.value += 1;
         revealed.value = false;
+        revealedWords.value = new Set();
         hint.value = null;
-        message.value = 'Puzzle ready. Find every word in the list.';
+        message.value = hintMode.value
+          ? 'Puzzle ready. Use the clues to find every hidden answer.'
+          : 'Puzzle ready. Find every word in the list.';
       } catch (problem) {
         if (!request.signal.aborted) error.value = problem.message;
       } finally {
@@ -70,7 +81,7 @@ export const PuzzleGame = {
       const text = wordOnLine(game.value.rows, start, end);
       clearAttempt();
       attempt.value = { id: ++attemptId, cells: cells.length ? cells : [start, end], matched: Boolean(match) };
-      attemptTimer = setTimeout(clearAttempt, 260);
+      attemptTimer = setTimeout(clearAttempt, 230);
       const recognized = text ? `Selected “${text}”. ` : '';
       if (!match) {
         message.value = text ? `${recognized}No matching word. Try again.`
@@ -89,7 +100,16 @@ export const PuzzleGame = {
       if (!placement) return;
       hint.value = placement.start;
       grid.value?.focusCell(placement.start);
-      message.value = `${placement.word} starts at row ${Math.floor(placement.start / props.item.puzzle.size) + 1}, column ${placement.start % props.item.puzzle.size + 1}.`;
+      message.value = hintMode.value
+        ? `A remaining answer starts at row ${Math.floor(placement.start / props.item.puzzle.size) + 1}, column ${placement.start % props.item.puzzle.size + 1}.`
+        : `${placement.word} starts at row ${Math.floor(placement.start / props.item.puzzle.size) + 1}, column ${placement.start % props.item.puzzle.size + 1}.`;
+    }
+
+    function toggleWordReveal(word) {
+      const next = new Set(revealedWords.value);
+      if (next.has(word)) next.delete(word);
+      else next.add(word);
+      revealedWords.value = next;
     }
 
     async function requestAction(action, event) {
@@ -113,6 +133,7 @@ export const PuzzleGame = {
       else {
         game.value.found = [];
         revealed.value = false;
+        revealedWords.value = new Set();
         hint.value = null;
         gridVersion.value += 1;
         message.value = 'Progress cleared. Same puzzle, fresh start.';
@@ -147,16 +168,29 @@ export const PuzzleGame = {
             options: props.options,
             attempt: attempt.value,
           }),
-          h('aside', { class: 'word-search-word-bank', 'aria-label': 'Words to find' }, [
-            h('h3', complete.value ? 'Nicely done!' : 'Words to find'),
+          h('aside', {
+            class: ['word-search-word-bank', { 'uses-hints': hintMode.value }],
+            'aria-label': hintMode.value ? 'Clues' : 'Words to find',
+          }, [
+            h('h3', complete.value ? 'Nicely done!' : (hintMode.value ? 'Clues' : 'Words to find')),
             h('p', { class: 'word-search-progress' }, `${foundWords.value.size} of ${puzzle.words.length} found`),
             h('progress', { max: puzzle.words.length, value: foundWords.value.size, 'aria-label': 'Words found' }),
             h('ul', {}, puzzle.words.map((word) => {
+              const found = foundWords.value.has(word);
+              const answerVisible = revealed.value || found || revealedWords.value.has(word);
               const location = revealed.value ? game.value.placements.find((entry) => entry.word === word) : null;
               return h('li', {
-                key: word, class: { 'is-found': foundWords.value.has(word) },
+                key: word, class: { 'is-found': found },
               }, [
-                h('span', word), h('span', { class: 'word-search-word-state' }, foundWords.value.has(word) ? '✓ Found' : 'To find'),
+                h('span', { class: hintMode.value ? 'word-search-clue-text' : 'word-search-answer-text' },
+                  hintMode.value ? puzzle.hints?.[word] : word),
+                h('span', { class: 'word-search-word-state' }, found ? '✓ Found' : 'To find'),
+                hintMode.value && answerVisible ? h('span', { class: 'word-search-revealed-word' }, word) : null,
+                hintMode.value && !found && !revealed.value ? h('button', {
+                  type: 'button', class: 'quiet-button word-search-word-reveal',
+                  'aria-pressed': revealedWords.value.has(word),
+                  onClick: () => toggleWordReveal(word),
+                }, revealedWords.value.has(word) ? 'Hide word' : 'Reveal word') : null,
                 location ? h('span', { class: 'word-search-answer-location' },
                   `Row ${Math.floor(location.start / puzzle.size) + 1}, column ${location.start % puzzle.size + 1} → row ${Math.floor(location.end / puzzle.size) + 1}, column ${location.end % puzzle.size + 1}`) : null,
               ]);

@@ -1,8 +1,8 @@
 import { Icon } from '../../components/icon.js';
 import { MAX_NAME_LENGTH } from './library-model.js';
 import {
-  DIFFICULTIES, GRID_SIZES, MAX_INSTRUCTIONS_LENGTH, MAX_WORD_INPUT_LENGTH,
-  MAX_WORDS, MIN_WORDS, parseWords, validatePuzzle,
+  DIFFICULTIES, GRID_SIZES, MAX_HINT_LENGTH, MAX_INSTRUCTIONS_LENGTH, MAX_WORD_INPUT_LENGTH,
+  MAX_WORDS, MIN_WORDS, STUDY_MODES, parseWords, validatePuzzle,
 } from './puzzle-model.js';
 
 const { computed, h, onMounted, ref } = window.Vue;
@@ -21,6 +21,8 @@ export const PuzzleForm = {
     const size = ref(props.item?.puzzle?.size ?? 15);
     const difficulty = ref(props.item?.puzzle?.difficulty ?? 'medium');
     const instructions = ref(props.item?.puzzle?.instructions ?? '');
+    const studyMode = ref(props.item?.puzzle?.studyMode ?? 'words');
+    const hints = ref({ ...(props.item?.puzzle?.hints ?? {}) });
     const error = ref('');
     const titleInput = ref(null);
     const errorBox = ref(null);
@@ -33,9 +35,13 @@ export const PuzzleForm = {
       try {
         if (!name.value.trim()) throw new Error('Give your word search a title.');
         if (parsed.value.error) throw new Error(parsed.value.error);
+        const savedHints = Object.fromEntries(parsed.value.words
+          .filter((word) => hints.value[word]?.trim())
+          .map((word) => [word, hints.value[word].trim()]));
         const puzzle = {
           words: [...parsed.value.words], size: size.value,
           difficulty: difficulty.value, instructions: instructions.value.trim(),
+          studyMode: studyMode.value, hints: savedHints,
         };
         validatePuzzle(puzzle);
         props.save(name.value, puzzle);
@@ -106,6 +112,37 @@ export const PuzzleForm = {
             word, word.length > size.value ? h('span', ' · too long for this grid') : null,
           ]))),
       ]) : null,
+      h('fieldset', { class: 'word-search-study-mode' }, [
+        h('legend', 'Study display'),
+        h('p', { class: 'word-search-help' }, 'Choose whether the play sidebar gives away the answers or presents clue-style hints.'),
+        ...STUDY_MODES.map((choice) => h('label', {
+          class: ['word-search-study-choice', { 'is-selected': studyMode.value === choice.value }],
+        }, [
+          h('input', {
+            type: 'radio', name: 'puzzle-study-mode', value: choice.value,
+            checked: studyMode.value === choice.value,
+            onChange: () => { studyMode.value = choice.value; },
+          }),
+          h('span', [h('strong', choice.label), h('span', { class: 'word-search-help' }, choice.description)]),
+        ])),
+      ]),
+      studyMode.value === 'hints' && parsed.value.words.length ? h('section', {
+        class: 'word-search-hint-editor', 'aria-labelledby': 'word-search-hint-heading',
+      }, [
+        h('h3', { id: 'word-search-hint-heading' }, 'Hints'),
+        h('p', { class: 'word-search-help' }, 'Write a clue for each answer. Players can reveal an individual answer without marking it found.'),
+        h('div', { class: 'word-search-hint-fields' }, parsed.value.words.map((word) => h('label', {
+          key: word, class: 'word-search-hint-field',
+        }, [
+          h('span', word),
+          h('textarea', {
+            rows: 2, required: true, maxlength: MAX_HINT_LENGTH,
+            placeholder: 'Describe this answer without naming it directly.',
+            value: hints.value[word] ?? '',
+            onInput: (event) => { hints.value[word] = event.target.value; },
+          }),
+        ]))),
+      ]) : null,
       h('div', { class: 'word-search-field' }, [
         h('label', { for: 'puzzle-instructions' }, 'Instructions (optional)'),
         h('textarea', {
@@ -118,7 +155,7 @@ export const PuzzleForm = {
         ref: errorBox, class: 'word-search-error', role: 'alert', tabindex: -1,
       }, error.value) : null,
       h('p', { class: 'word-search-help' }, props.item?.game
-        ? 'Changing words, grid size, or difficulty starts a new puzzle and clears found words. Title and instruction edits keep your progress.'
+        ? 'Changing words, grid size, or difficulty starts a new puzzle and clears found words. Title, instructions, study display, and hints keep the existing grid and progress.'
         : 'Your puzzle will be generated after saving. If the words cannot fit, try a larger grid or fewer words.'),
       h('div', { class: 'word-search-form-actions' }, [
         h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel') }, 'Cancel'),
@@ -140,7 +177,7 @@ export const PuzzleSummary = {
       return h('div', { class: 'word-search-puzzle-summary' }, [
         h('h3', puzzle ? 'Puzzle setup' : 'Add your puzzle details'),
         puzzle ? h('p', { class: 'word-search-help' },
-          `${puzzle.words.length} words · ${puzzle.size} × ${puzzle.size} grid · ${DIFFICULTIES.find(({ value }) => value === puzzle.difficulty).label}`) : null,
+          `${puzzle.words.length} words · ${puzzle.size} × ${puzzle.size} grid · ${DIFFICULTIES.find(({ value }) => value === puzzle.difficulty).label} · ${(puzzle.studyMode ?? 'words') === 'hints' ? 'Hint study mode' : 'Word-list study mode'}`) : null,
         puzzle?.instructions ? h('p', { class: 'word-search-instructions' }, puzzle.instructions) : null,
         puzzle ? h('ul', { class: 'word-search-word-chips' }, puzzle.words.map((word) => h('li', { key: word }, word))) : null,
         h('p', { class: 'word-search-help' }, puzzle
