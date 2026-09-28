@@ -2,6 +2,7 @@ import { Icon } from '../../components/icon.js';
 import { clearPreference, readNumberPreference, writeNumberPreference } from '../../core/ui-preferences.js';
 import { DisplaySettings } from './display-settings.js';
 import { DocumentBuilder } from './document-builder.js';
+import { getDocumentType } from './document-types.js';
 import { NotebookLibrary } from './library.js';
 import {
   canMove, countDocuments, countItems, findItem, groupOptions, insertDocument,
@@ -320,9 +321,9 @@ export const Notebook = {
           selection.value.item.kind === 'document'
             ? h('div', { class: 'notebook-editor-scaffold' }, [
               h('article', { class: 'notebook-document-surface', 'aria-label': 'Document editor scaffold' }, [
-                h('span', { class: 'notebook-document-label' }, 'Document editor'),
+                h('span', { class: 'notebook-document-label' }, getDocumentType(selection.value.item.type)?.label ?? 'Document'),
                 h('h3', selection.value.item.name),
-                h('p', 'Rich Markdown editing will be added here.'),
+                h('p', `${getDocumentType(selection.value.item.type)?.label ?? 'Document'} editing will be added here.`),
               ]),
             ])
             : null,
