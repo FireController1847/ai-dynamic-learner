@@ -4,12 +4,15 @@ import { DisplaySettings } from './display-settings.js';
 import { defaultDisplayOptions, displayStyles } from './display-options.js';
 import { Icon } from '../../components/icon.js';
 import { canMove, countCards, findItem, groupOptions, moveItem } from './tree-model.js';
+import { clearPreference, readNumberPreference, writeNumberPreference } from '../../core/ui-preferences.js';
 
 const { computed, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref, watch } = window.Vue;
 
 const MIN_LIBRARY_WIDTH = 248;
 const MAX_LIBRARY_WIDTH = 640;
 const MIN_DETAIL_WIDTH = 320;
+const LIBRARY_WIDTH_KEY = 'dynamic-learner.ui.index-cards.library-width';
+const CARD_LIST_WIDTH_KEY = 'dynamic-learner.ui.index-cards.card-list-width';
 
 export const IndexCards = {
   name: 'IndexCards',
@@ -24,8 +27,8 @@ export const IndexCards = {
     const overlayQuery = window.matchMedia('(max-width: 700px), (max-width: 1100px) and (pointer: coarse)');
     const libraryOverlay = ref(overlayQuery.matches);
     const libraryCollapsed = ref(overlayQuery.matches && selectedId.value !== null);
-    const libraryWidth = ref(null);
-    const cardListWidth = ref(null);
+    const libraryWidth = ref(readNumberPreference(LIBRARY_WIDTH_KEY));
+    const cardListWidth = ref(readNumberPreference(CARD_LIST_WIDTH_KEY));
     const libraryResizing = ref(false);
     const layout = ref(null);
     function updateLibraryLayout(event) {
@@ -73,6 +76,22 @@ export const IndexCards = {
 
     function setLibraryWidth(width) {
       libraryWidth.value = Math.round(Math.min(Math.max(width, MIN_LIBRARY_WIDTH), maxLibraryWidth()));
+      writeNumberPreference(LIBRARY_WIDTH_KEY, libraryWidth.value);
+    }
+
+    function resetLibraryWidth() {
+      clearPreference(LIBRARY_WIDTH_KEY);
+      libraryWidth.value = null;
+    }
+
+    function setCardListWidth(width) {
+      cardListWidth.value = width;
+      writeNumberPreference(CARD_LIST_WIDTH_KEY, width);
+    }
+
+    function resetCardListWidth() {
+      clearPreference(CARD_LIST_WIDTH_KEY);
+      cardListWidth.value = null;
     }
 
     function keepLibraryWidthInBounds() {
@@ -114,6 +133,7 @@ export const IndexCards = {
 
     onMounted(() => {
       if (selectedId.value) tree.value?.reveal(selectedId.value);
+      keepLibraryWidthInBounds();
       window.addEventListener('resize', keepLibraryWidthInBounds);
     });
     onBeforeUnmount(() => window.removeEventListener('resize', keepLibraryWidthInBounds));
@@ -195,6 +215,7 @@ export const IndexCards = {
           onPointerup: endLibraryResize,
           onPointercancel: endLibraryResize,
           onKeydown: resizeLibraryFromKeyboard,
+          onDblclick: resetLibraryWidth,
         }) : null,
         selection.value ? h('section', {
           class: ['index-cards-detail', { 'is-set': selection.value.item.kind === 'set' }],
@@ -212,7 +233,8 @@ export const IndexCards = {
             set: selection.value.item,
             totalCards: totalCards.value,
             cardListWidth: cardListWidth.value,
-            onResizeCardList: (width) => { cardListWidth.value = width; },
+            onResizeCardList: setCardListWidth,
+            onResetCardList: resetCardListWidth,
           }) : null,
           h('details', {
             key: `organization-${selection.value.item.id}`, class: 'item-organization',

@@ -28,7 +28,7 @@ Start with the primary files below; follow imports only as needed. Paths are rel
 | Visual styling | `src/styles/index.css` for imports; `tokens.css` for semantic design values; `base.css` for typography and shared controls; `shell.css` for navigation. See `docs/design.md` for styling conventions and manual review guidance. |
 | Adding a future feature | Create feature modules in `src/features/`; add metadata in `src/features/feature-definitions.js` and its component in `src/features/feature-registry.js`; restart the server to load the new path |
 | Shared icons and controls | `src/components/icon.js` for inline SVG icons; `src/styles/base.css` for shared control styles |
-| Adding a shared component or utility | `src/components/` contains the generic icon component; `src/core/ids.js` provides shared ID creation and validation |
+| Adding a shared component or utility | `src/components/` contains the generic icon component; `src/core/ids.js` provides shared ID creation and validation; `src/core/ui-preferences.js` provides best-effort browser-local UI preferences that stay outside workspace backups |
 | Static server behavior | `server.mjs`; `package.json` for the start command |
 | GitHub Pages deployment | `.github/workflows/deploy-pages.yml` for manual publishing; `.github/scripts/prepare-pages.mjs` for static packaging and route entry points; `src/html/index.html` for the base marker; `src/app/navigation.js` for repository-prefixed URLs; `docs/github-pages.md` for setup |
 | Architectural changes | `docs/architecture.md`, affected modules, and this routing table; `AGENTS.md` if maintenance rules change |
