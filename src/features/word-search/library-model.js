@@ -1,4 +1,5 @@
 import { createId, isValidId } from '../../core/ids.js';
+import { validatePuzzle } from './puzzle-model.js';
 
 export const MAX_ITEMS = 5000;
 export const MAX_DEPTH = 32;
@@ -9,9 +10,29 @@ export function createGroup() {
   return { id: createId(), kind: 'group', name: 'New group', children: [] };
 }
 
-// The setup form will supply the final name and future puzzle settings before calling this.
-export function createWordSearch(name) {
-  return { id: createId(), kind: 'word-search', name };
+export function saveWordSearch(items, target, name, puzzle) {
+  const trimmedName = name.trim();
+  if (!trimmedName || trimmedName.length > MAX_NAME_LENGTH) {
+    throw new Error(`Enter a title of 1–${MAX_NAME_LENGTH} characters.`);
+  }
+  validatePuzzle(puzzle);
+  if (target.itemId) {
+    const found = findItem(items, target.itemId);
+    if (!found || found.item.kind !== 'word-search') throw new Error('This word search no longer exists.');
+    Object.assign(found.item, { name: trimmedName, puzzle });
+    return found.item;
+  }
+  if (countItems(items) >= MAX_ITEMS || countWordSearches(items) >= MAX_WORD_SEARCHES) {
+    throw new Error(`The library supports ${MAX_ITEMS} items and ${MAX_WORD_SEARCHES} word searches.`);
+  }
+  const parent = target.parentId ? findItem(items, target.parentId) : null;
+  if (target.parentId && (!parent || parent.item.kind !== 'group')) {
+    throw new Error('The destination group no longer exists. Cancel and choose a new destination.');
+  }
+  if (parent && parent.depth >= MAX_DEPTH) throw new Error(`Groups can be at most ${MAX_DEPTH} levels deep.`);
+  const item = { id: createId(), kind: 'word-search', name: trimmedName, puzzle };
+  (parent ? parent.item.children : items).push(item);
+  return item;
 }
 
 export function findItem(items, id, parentId = null, depth = 1) {
@@ -127,9 +148,10 @@ export function validateWordSearch(value) {
         }
         visit(item.children, depth + 1);
       } else {
-        if (Object.keys(item).some((key) => !['id', 'kind', 'name'].includes(key))) {
+        if (Object.keys(item).some((key) => !['id', 'kind', 'name', 'puzzle'].includes(key))) {
           throw new Error('A word search contains unsupported data.');
         }
+        if (Object.hasOwn(item, 'puzzle')) validatePuzzle(item.puzzle);
         searchCount += 1;
         if (searchCount > MAX_WORD_SEARCHES) {
           throw new Error(`A workspace supports up to ${MAX_WORD_SEARCHES} word searches.`);

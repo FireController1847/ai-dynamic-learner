@@ -5,7 +5,7 @@ export const featureDefinitions = [
     description: 'Organize your sets, write on both sides, and review at your own pace.',
   },
   {
-    id: 'word-search', label: 'Word Search', path: '/word-search/', icon: 'search',
-    description: 'Organize word-search puzzles in groups while puzzle setup is being built.'
+    id: 'word-search', label: 'Word Search', path: '/word-search/', icon: 'word-search',
+    description: 'Build word lists, choose puzzle settings, and organize your word searches.'
   },
 ];

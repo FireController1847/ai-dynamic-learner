@@ -1,0 +1,53 @@
+.word-search-form,
+.word-search-puzzle-summary { max-width: 840px; margin: 0 auto; padding: 28px; }
+.word-search-form { display: grid; gap: 24px; }
+.word-search-form-intro p { margin: 0 0 8px; color: var(--text-secondary); }
+.word-search-form-intro h2 { margin-bottom: 8px; }
+.word-search-field { display: grid; align-content: start; gap: 8px; min-width: 0; }
+.word-search-field > label,
+.word-search-difficulty legend { font-weight: 600; }
+.word-search-field input,
+.word-search-field textarea {
+  width: 100%;
+  min-height: var(--control-height);
+  padding: 8px 10px;
+  border: 1px solid var(--control-border);
+  border-bottom-color: var(--text-secondary);
+  border-radius: var(--radius);
+  background: var(--page-background);
+}
+.word-search-field textarea { resize: vertical; }
+.word-search-form-columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(200px, 0.8fr); gap: 28px; }
+.word-search-options { display: grid; align-content: start; gap: 24px; }
+.word-search-help { margin: 0; color: var(--text-secondary); font-size: 12px; line-height: 18px; }
+.word-search-difficulty { margin: 0; padding: 0; border: 0; min-width: 0; }
+.word-search-difficulty legend { margin-bottom: 8px; }
+.word-search-difficulty-choice {
+  display: flex; align-items: flex-start; gap: 8px; padding: 10px;
+  border-radius: var(--radius); cursor: pointer;
+}
+.word-search-difficulty-choice:hover { background: var(--surface-hover); }
+.word-search-difficulty-choice.is-selected { background: var(--brand-tint); }
+.word-search-difficulty-choice input { margin: 3px 0 0; accent-color: var(--brand); }
+.word-search-difficulty-choice .word-search-help { display: block; }
+.word-search-word-preview h3 { font-size: 14px; }
+.word-search-word-chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 0; margin: 12px 0; list-style: none; }
+.word-search-word-chips li { padding: 4px 8px; background: var(--surface-workspace); border-radius: var(--radius); overflow-wrap: anywhere; }
+.word-search-word-chips .is-too-long,
+.word-search-error { color: var(--danger); }
+.word-search-error { margin: 0; }
+.word-search-form-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.word-search-puzzle-summary { margin-inline: 0; display: grid; gap: 12px; justify-items: start; }
+.word-search-instructions { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.word-search-layout.library-collapsed .word-search-form { padding-top: 56px; }
+@media (max-width: 900px) {
+  .word-search-form-columns { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 700px), (max-width: 1100px) and (pointer: coarse) {
+  .word-search-form,
+  .word-search-puzzle-summary { padding: 20px 16px; }
+  .word-search-field input,
+  .word-search-field textarea,
+  .word-search-field select { font-size: 16px; }
+  .word-search-difficulty-choice { min-height: 44px; }
+}

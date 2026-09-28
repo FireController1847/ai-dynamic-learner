@@ -25,6 +25,7 @@ export const WordSearchLibrary = {
     const announcement = ref('');
     const pendingDelete = ref(null);
     const createGroupButton = ref(null);
+    const createWordSearchButton = ref(null);
     const collapseButton = ref(null);
     const labels = new Map();
     let deleteTrigger = null;
@@ -114,7 +115,10 @@ export const WordSearchLibrary = {
         parentId = findItem(props.items, parentId)?.parentId;
       }
     }
-    expose({ reveal, focusToggle: () => collapseButton.value?.focus() });
+    expose({
+      reveal, focusToggle: () => collapseButton.value?.focus(),
+      focusNewWordSearch: () => createWordSearchButton.value?.focus(),
+    });
 
     function endDrag() {
       draggedId.value = null;
@@ -236,7 +240,7 @@ export const WordSearchLibrary = {
             'aria-expanded': isOpen,
             onClick: () => toggle(item.id),
           }, [h(Icon, { name: 'chevron' })]) : h('span', { class: 'word-search-tree-toggle-space' }),
-          h(Icon, { name: isGroup ? 'folder' : 'search' }),
+          h(Icon, { name: isGroup ? 'folder' : 'word-search' }),
           isEditing ? h('input', {
             ref: input, class: 'word-search-rename', value: draft.value,
             'aria-label': `Rename ${isGroup ? 'group' : 'word search'}`,
@@ -293,9 +297,10 @@ export const WordSearchLibrary = {
             'aria-label': 'New group', onClick: createGroupRelativeToSelection,
           }, [h(Icon, { name: 'folder' })]),
           h('button', {
+            ref: createWordSearchButton,
             type: 'button', class: 'icon-button', title: 'New word search',
             'aria-label': 'New word search', onClick: requestWordSearchSetup,
-          }, [h(Icon, { name: 'search' })]),
+          }, [h(Icon, { name: 'word-search' })]),
           h('button', {
             ref: collapseButton,
             type: 'button', class: 'icon-button', title: 'Minimize library',

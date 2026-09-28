@@ -1,6 +1,7 @@
 import { Icon } from '../../components/icon.js';
 import { WordSearchLibrary } from './library.js';
-import { canMove, findItem, groupOptions, moveItem } from './library-model.js';
+import { PuzzleForm, PuzzleSummary } from './puzzle-form.js';
+import { canMove, findItem, groupOptions, moveItem, saveWordSearch } from './library-model.js';
 
 const { computed, h, nextTick, onBeforeUnmount, onMounted, ref } = window.Vue;
 
@@ -17,6 +18,8 @@ export const WordSearch = {
   setup(props) {
     const selectedId = ref(null);
     const setupTarget = ref(null);
+    const setupVersion = ref(0);
+    const workspaceHeading = ref(null);
     const overlayQuery = window.matchMedia('(max-width: 700px), (max-width: 1100px) and (pointer: coarse)');
     const libraryOverlay = ref(overlayQuery.matches);
     const libraryCollapsed = ref(false);
@@ -107,8 +110,34 @@ export const WordSearch = {
 
     function openNewWordSearch(target) {
       setupTarget.value = target;
+      setupVersion.value += 1;
       message.value = '';
       if (libraryOverlay.value) libraryCollapsed.value = true;
+    }
+
+    function editWordSearch(item) {
+      const parentId = selection.value.parentId;
+      openNewWordSearch({
+        itemId: item.id, parentId,
+        parentName: parentId ? findItem(props.model.items, parentId).item.name : 'Top level',
+      });
+    }
+
+    async function cancelSetup() {
+      setupTarget.value = null;
+      await nextTick();
+      if (workspaceHeading.value) workspaceHeading.value.focus();
+      else if (libraryCollapsed.value) showLibraryButton.value?.focus();
+      else library.value?.focusNewWordSearch();
+    }
+
+    function completeSetup(name, puzzle) {
+      const item = saveWordSearch(props.model.items, setupTarget.value, name, puzzle);
+      selectedId.value = item.id;
+      setupTarget.value = null;
+      library.value?.reveal(item.id);
+      message.value = `Saved ${item.name}.`;
+      nextTick(() => workspaceHeading.value?.focus());
     }
 
     function moveToGroup(event) {
@@ -165,48 +194,52 @@ export const WordSearch = {
 
     function detail() {
       if (setupTarget.value) {
-        return h('section', { class: 'word-search-detail', 'aria-label': 'New word search setup' }, [
-          h('div', { class: 'word-search-placeholder' }, [
-            h(Icon, { name: 'search' }),
-            h('p', { class: 'word-search-eyebrow' }, 'Creation scaffold'),
-            h('h2', 'New word search'),
-            h('p', `The setup form will live here. When it is implemented, completing that form will create the word search in “${setupTarget.value.parentName}”.`),
-            h('p', 'Nothing has been added to the library yet.'),
-            h('button', {
-              type: 'button',
-              class: 'quiet-button',
-              onClick: () => { setupTarget.value = null; },
-            }, 'Cancel'),
-          ]),
+        return h('section', {
+          class: 'word-search-detail', 'aria-label': 'Word search setup',
+          inert: libraryOverlay.value && !libraryCollapsed.value,
+        }, [
+          h(PuzzleForm, {
+            key: setupVersion.value,
+            item: setupTarget.value.itemId ? findItem(props.model.items, setupTarget.value.itemId)?.item : null,
+            destination: setupTarget.value.parentName,
+            save: completeSetup,
+            onCancel: cancelSetup,
+          }),
         ]);
       }
 
       const item = selection.value?.item;
       if (!item) {
-        return h('section', { class: 'word-search-detail', 'aria-label': 'Word Search workspace' }, [
+        return h('section', {
+          class: 'word-search-detail', 'aria-label': 'Word Search workspace',
+          inert: libraryOverlay.value && !libraryCollapsed.value,
+        }, [
           h('div', { class: 'word-search-placeholder' }, [
-            h(Icon, { name: 'search' }),
+            h(Icon, { name: 'word-search' }),
             h('h2', 'Build your word-search library'),
-            h('p', 'Create groups to organize puzzles, or choose New word search to open the future setup flow.'),
+            h('p', 'Make a word list around a topic you love, choose your settings, and keep everything organized in groups.'),
+            h('button', {
+              type: 'button', class: 'card-primary-button',
+              onClick: () => openNewWordSearch({ parentId: null, parentName: 'Top level' }),
+            }, 'New word search'),
           ]),
         ]);
       }
 
       return h('section', {
         class: 'word-search-detail',
+        inert: libraryOverlay.value && !libraryCollapsed.value,
         'aria-label': item.kind === 'group' ? 'Selected group' : 'Selected word search',
       }, [
         h('header', { class: 'word-search-item-heading' }, [
-          h('h2', item.name),
+          h('h2', { ref: workspaceHeading, tabindex: -1 }, item.name),
           h('p', item.kind === 'group'
             ? `Group · ${item.children.length} items`
             : 'Word search'),
         ]),
-        item.kind === 'word-search' ? h('div', { class: 'word-search-placeholder' }, [
-          h(Icon, { name: 'search' }),
-          h('h3', 'Puzzle workspace scaffold'),
-          h('p', 'The word-search editor and puzzle content will be added after the creation form is defined.'),
-        ]) : h('div', { class: 'word-search-group-message' }, [
+        item.kind === 'word-search' ? h(PuzzleSummary, {
+          item, onEdit: () => editWordSearch(item),
+        }) : h('div', { class: 'word-search-group-message' }, [
           h('p', 'This group can contain nested groups and word searches.'),
         ]),
         organizationControls(item),

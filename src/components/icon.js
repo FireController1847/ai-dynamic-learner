@@ -7,7 +7,7 @@ const paths = {
   pencil: 'm4 16-1 5 5-1L20 8l-4-4ZM14 6l4 4',
   trash: 'M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7',
   plus: 'M12 5v14M5 12h14',
-  search: 'M17 10a7 7 0 1 0-14 0 7 7 0 0 0 14 0Zm-2 5 6 6',
+  search: 'M17 10a7 7 0 1 1-14 0 7 7 0 1 1 14 0M15 15l6 6',
   settings: 'M10 3h4l.5 3 2 1.2 2.8-1 2 3.5-2.3 2v2.6l2.3 2-2 3.5-2.8-1-2 1.2-.5 3h-4l-.5-3-2-1.2-2.8 1-2-3.5 2.3-2v-2.6l-2.3-2 2-3.5 2.8 1 2-1.2ZM15 13a3 3 0 1 0-6 0 3 3 0 0 0 6 0Z',
   duplicate: 'M8 8h13v13H8ZM16 8V3H3v13h5',
   flip: 'M4 8a8 8 0 0 1 14-2l3 3M21 3v6h-6M20 16a8 8 0 0 1-14 2l-3-3M3 21v-6h6',
@@ -28,6 +28,18 @@ export const Icon = {
       fill: 'none', stroke: 'currentColor', 'stroke-width': 1.6,
       'stroke-linecap': 'round', 'stroke-linejoin': 'round',
       'aria-hidden': 'true', focusable: 'false',
-    }, [h('path', { d: paths[props.name] })]);
+    }, props.name === 'word-search' ? [
+      h('rect', { x: 1.5, y: 1.5, width: 21, height: 7, rx: 3.5 }),
+      h('rect', {
+        x: 1.5, y: 1.5, width: 21, height: 7, rx: 3.5,
+        fill: 'currentColor', 'fill-opacity': 0.12, stroke: 'none',
+      }),
+      ...['CAT', 'ORE', 'WSN'].flatMap((row, rowIndex) => [...row].map((letter, column) =>
+        h('text', {
+          x: 5 + column * 7, y: 7 + rowIndex * 7,
+          fill: 'currentColor', stroke: 'none', 'text-anchor': 'middle',
+          'font-family': 'monospace', 'font-size': 5.5, 'font-weight': 700,
+        }, letter))),
+    ] : [h('path', { d: paths[props.name] })]);
   },
 };
