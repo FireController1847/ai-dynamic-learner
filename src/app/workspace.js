@@ -1,3 +1,4 @@
+import { validateNotebook } from '../features/notebook/library-model.js';
 import { validateIndexCards } from '../features/index-cards/tree-model.js';
 import { validateWordSearch } from '../features/word-search/library-model.js';
 
@@ -10,6 +11,7 @@ function emptyWorkspace() {
     format: 'dynamic-learner',
     version: 1,
     features: {
+      notebook: { items: [] },
       'index-cards': { items: [] },
       'word-search': { items: [] },
     },
@@ -24,9 +26,11 @@ function parseWorkspace(text) {
   if (!value || value.format !== 'dynamic-learner' || value.version !== 1 ||
       Object.keys(value).some((key) => !['format', 'version', 'features'].includes(key)) ||
       !value.features || !value.features['index-cards'] ||
-      Object.keys(value.features).some((key) => !['index-cards', 'word-search'].includes(key))) {
+      Object.keys(value.features).some((key) => !['notebook', 'index-cards', 'word-search'].includes(key))) {
     throw new Error('This is not a supported Dynamic Learner workspace backup (version 1).');
   }
+  if (value.features.notebook) validateNotebook(value.features.notebook);
+  else value.features.notebook = { items: [] };
   validateIndexCards(value.features['index-cards']);
   if (value.features['word-search']) validateWordSearch(value.features['word-search']);
   else value.features['word-search'] = { items: [] };
