@@ -12,6 +12,8 @@ Dynamic Learner takes its visual basis from Microsoft Fluent 2, using native CSS
 
 Feature styles live beside their components. `index-cards.css` owns the library and selected-item frame; `card-set.css` owns the paper, review controls, and workspace composition; `card-list.css` owns the adjacent list and narrow horizontal strip. Review setup and fullscreen deletion each have a dedicated stylesheet.
 
+Word Search uses a snug outer grid frame without internal gridlines. `puzzle-game.css` owns the grid and continuous rounded SVG word highlights; `display-settings.css` owns its appearance dialog. Fit mode balances viewport width/height with readable letters: dense puzzle cells have a 28-pixel minimum, increasing for larger text, while ordinary touch controls retain the shared 44-pixel minimum. Larger grids scroll rather than shrink further. Found words, answer reveals, and hints use continuous capsule/circle outlines; the active outline follows the mouse. Letter color remains readable over translucent fills. Motion settings and system reduced-motion preferences disable transitions and fade effects.
+
 ## Index-card geometry
 
 The paper uses a fixed landscape 5:3 aspect ratio, matching the traditional 3 × 5-inch format. Quarter-inch ruling is modeled as 5% of the card width. Our layout reserves half an inch for the editable title and ten quarter-inch writing rows extending to the bottom edge. The row count is this app's layout choice; ruling and margins vary between physical products. Reference: [Pacon 3 × 5-inch, quarter-inch ruled cards](https://www.teachersparadise.com/c/pacon-index-cards-white-ruled-1-4-ruled-3-x-5-100-cards/).

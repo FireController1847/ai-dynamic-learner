@@ -15,7 +15,7 @@ export const WordSearchLibrary = {
     collapsed: Boolean,
   },
   emits: ['select', 'open-item', 'toggle-library', 'new-word-search'],
-  setup(props, { emit, expose }) {
+  setup(props, { emit, expose, slots }) {
     const expanded = ref(new Set());
     const editingId = ref(null);
     const draft = ref('');
@@ -319,6 +319,7 @@ export const WordSearchLibrary = {
         draggedId.value ? rootTarget('after', 'Move to end of top level') : null,
       ]),
       h('p', { class: 'visually-hidden', role: 'status' }, announcement.value),
+      slots.footer ? h('div', { class: 'word-search-library-footer' }, slots.footer()) : null,
       pendingDelete.value ? h(DeleteConfirmation, {
         item: pendingDelete.value,
         onCancel: cancelDelete,

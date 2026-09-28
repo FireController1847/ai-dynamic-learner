@@ -1,5 +1,7 @@
 import { createId, isValidId } from '../../core/ids.js';
 import { validatePuzzle } from './puzzle-model.js';
+import { validateGame } from './game-model.js';
+import { validateDisplayOptions } from './display-options.js';
 
 export const MAX_ITEMS = 5000;
 export const MAX_DEPTH = 32;
@@ -19,6 +21,9 @@ export function saveWordSearch(items, target, name, puzzle) {
   if (target.itemId) {
     const found = findItem(items, target.itemId);
     if (!found || found.item.kind !== 'word-search') throw new Error('This word search no longer exists.');
+    const previous = found.item.puzzle;
+    if (!previous || previous.size !== puzzle.size || previous.difficulty !== puzzle.difficulty ||
+        JSON.stringify(previous.words) !== JSON.stringify(puzzle.words)) delete found.item.game;
     Object.assign(found.item, { name: trimmedName, puzzle });
     return found.item;
   }
@@ -115,9 +120,11 @@ export function groupOptions(items, excludedId, trail = []) {
 
 export function validateWordSearch(value) {
   if (!value || typeof value !== 'object' || !Array.isArray(value.items) ||
-      Object.keys(value).some((key) => key !== 'items')) {
+      Object.keys(value).some((key) => !['items', 'display'].includes(key))) {
     throw new Error('The Word Search library is invalid.');
   }
+
+  if (Object.hasOwn(value, 'display')) validateDisplayOptions(value.display);
 
   const ids = new Set();
   let itemCount = 0;
@@ -148,10 +155,11 @@ export function validateWordSearch(value) {
         }
         visit(item.children, depth + 1);
       } else {
-        if (Object.keys(item).some((key) => !['id', 'kind', 'name', 'puzzle'].includes(key))) {
+        if (Object.keys(item).some((key) => !['id', 'kind', 'name', 'puzzle', 'game'].includes(key))) {
           throw new Error('A word search contains unsupported data.');
         }
         if (Object.hasOwn(item, 'puzzle')) validatePuzzle(item.puzzle);
+        if (Object.hasOwn(item, 'game')) validateGame(item.puzzle, item.game);
         searchCount += 1;
         if (searchCount > MAX_WORD_SEARCHES) {
           throw new Error(`A workspace supports up to ${MAX_WORD_SEARCHES} word searches.`);

@@ -117,7 +117,9 @@ export const PuzzleForm = {
       error.value ? h('p', {
         ref: errorBox, class: 'word-search-error', role: 'alert', tabindex: -1,
       }, error.value) : null,
-      h('p', { class: 'word-search-help' }, 'This saves your word list and settings. A playable puzzle grid is not generated yet.'),
+      h('p', { class: 'word-search-help' }, props.item?.game
+        ? 'Changing words, grid size, or difficulty starts a new puzzle and clears found words. Title and instruction edits keep your progress.'
+        : 'Your puzzle will be generated after saving. If the words cannot fit, try a larger grid or fewer words.'),
       h('div', { class: 'word-search-form-actions' }, [
         h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel') }, 'Cancel'),
         h('button', { type: 'submit', class: 'card-primary-button' }, [
@@ -142,7 +144,7 @@ export const PuzzleSummary = {
         puzzle?.instructions ? h('p', { class: 'word-search-instructions' }, puzzle.instructions) : null,
         puzzle ? h('ul', { class: 'word-search-word-chips' }, puzzle.words.map((word) => h('li', { key: word }, word))) : null,
         h('p', { class: 'word-search-help' }, puzzle
-          ? 'Your word list and settings are saved. A playable puzzle grid is not generated yet.'
+          ? 'Your word list and settings are saved.'
           : 'Choose words and settings to complete this word search.'),
         h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('edit') },
           puzzle ? 'Edit word search' : 'Set up word search'),

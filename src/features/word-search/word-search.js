@@ -1,10 +1,13 @@
 import { Icon } from '../../components/icon.js';
 import { WordSearchLibrary } from './library.js';
 import { PuzzleForm, PuzzleSummary } from './puzzle-form.js';
+import { PuzzleGame } from './puzzle-game.js';
+import { DisplaySettings } from './display-settings.js';
+import { defaultDisplayOptions } from './display-options.js';
 import { canMove, findItem, groupOptions, moveItem, saveWordSearch } from './library-model.js';
 import { clearPreference, readNumberPreference, writeNumberPreference } from '../../core/ui-preferences.js';
 
-const { computed, h, nextTick, onBeforeUnmount, onMounted, ref } = window.Vue;
+const { computed, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref } = window.Vue;
 
 const MIN_LIBRARY_WIDTH = 248;
 const MAX_LIBRARY_WIDTH = 640;
@@ -31,6 +34,21 @@ export const WordSearch = {
     const library = ref(null);
     const showLibraryButton = ref(null);
     const message = ref('');
+    const settingsOpen = ref(false);
+    const displayOptions = computed(() => props.model.display ?? defaultDisplayOptions());
+    let settingsTrigger = null;
+    onDeactivated(() => { settingsOpen.value = false; });
+
+    function openSettings(trigger) {
+      settingsTrigger = trigger;
+      settingsOpen.value = true;
+    }
+
+    async function closeSettings() {
+      settingsOpen.value = false;
+      await nextTick();
+      if (settingsTrigger?.isConnected) settingsTrigger.focus();
+    }
 
     const selection = computed(() => findItem(props.model.items, selectedId.value));
 
@@ -248,8 +266,9 @@ export const WordSearch = {
             ? `Group · ${item.children.length} items`
             : 'Word search'),
         ]),
-        item.kind === 'word-search' ? h(PuzzleSummary, {
-          item, onEdit: () => editWordSearch(item),
+        item.kind === 'word-search' ? h(item.puzzle ? PuzzleGame : PuzzleSummary, {
+          key: item.id, item, onEdit: () => editWordSearch(item),
+          ...(item.puzzle ? { options: displayOptions.value, onSettings: openSettings } : {}),
         }) : h('div', { class: 'word-search-group-message' }, [
           h('p', 'This group can contain nested groups and word searches.'),
         ]),
@@ -304,6 +323,11 @@ export const WordSearch = {
           onSelect: selectItem,
           onOpenItem: () => { if (libraryOverlay.value) setLibraryCollapsed(true); },
           onNewWordSearch: openNewWordSearch,
+        }, {
+          footer: () => h('button', {
+            type: 'button', class: 'quiet-button word-search-settings-button', 'aria-haspopup': 'dialog',
+            onClick: (event) => openSettings(event.currentTarget),
+          }, ['Settings', h(Icon, { name: 'settings' })]),
         }),
         !libraryOverlay.value && !libraryCollapsed.value ? h('div', {
           class: 'word-search-library-resizer',
@@ -323,6 +347,11 @@ export const WordSearch = {
         }) : null,
         detail(),
       ]),
+      settingsOpen.value ? h(DisplaySettings, {
+        options: displayOptions.value,
+        onUpdate: (options) => { props.model.display = options; },
+        onClose: closeSettings,
+      }) : null,
     ]);
   },
 };

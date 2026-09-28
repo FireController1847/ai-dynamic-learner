@@ -6,6 +6,6 @@ export const featureDefinitions = [
   },
   {
     id: 'word-search', label: 'Word Search', path: '/word-search/', icon: 'word-search',
-    description: 'Build word lists, choose puzzle settings, and organize your word searches.'
+    description: 'Create your own word searches, find every word, and pick up where you left off.'
   },
 ];
