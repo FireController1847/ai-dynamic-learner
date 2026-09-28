@@ -29,7 +29,7 @@ export const HomePage = {
         h('section', { 'aria-labelledby': 'home-apps-title' }, [
           h('h2', { id: 'home-apps-title' }, 'Your learning apps'),
           h('p', { class: 'home-intro' }, 'Choose a place to begin.'),
-          h('ul', { class: 'home-app-grid' }, featureDefinitions.map((feature) =>
+          h('ul', { class: 'home-app-grid' }, featureDefinitions.filter((feature) => !feature.hidden).map((feature) =>
             h('li', { key: feature.id }, [
               h('a', {
                 class: 'home-app-card', href: pageHref(feature.path),
