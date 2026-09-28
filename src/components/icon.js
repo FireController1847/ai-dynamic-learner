@@ -3,6 +3,7 @@ const { h } = window.Vue;
 // Small inline SVGs keep essential controls independent of icon fonts or CDNs.
 const paths = {
   folder: 'M3 5h6l2 2h10v13H3Z',
+  document: 'M6 3h9l4 4v14H6ZM15 3v5h5M9 12h6M9 16h6',
   cards: 'M6 3h15v14H6ZM3 7v14h14M9 8h9M9 12h6',
   pencil: 'm4 16-1 5 5-1L20 8l-4-4ZM14 6l4 4',
   trash: 'M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7',
