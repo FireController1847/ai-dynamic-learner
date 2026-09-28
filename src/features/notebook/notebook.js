@@ -3,6 +3,7 @@ import { clearPreference, readNumberPreference, writeNumberPreference } from '..
 import { DisplaySettings } from './display-settings.js';
 import { DocumentBuilder } from './document-builder.js';
 import { getDocumentType } from './document-types.js';
+import { MarkdownEditor } from './markdown-editor.js';
 import { NotebookLibrary } from './library.js';
 import {
   canMove, countDocuments, countItems, findItem, groupOptions, insertDocument,
@@ -319,13 +320,18 @@ export const Notebook = {
               : 'Document'),
           ]),
           selection.value.item.kind === 'document'
-            ? h('div', { class: 'notebook-editor-scaffold' }, [
-              h('article', { class: 'notebook-document-surface', 'aria-label': 'Document editor scaffold' }, [
-                h('span', { class: 'notebook-document-label' }, getDocumentType(selection.value.item.type)?.label ?? 'Document'),
-                h('h3', selection.value.item.name),
-                h('p', `${getDocumentType(selection.value.item.type)?.label ?? 'Document'} editing will be added here.`),
-              ]),
-            ])
+            ? selection.value.item.type === 'markdown'
+              ? h(MarkdownEditor, {
+                key: selection.value.item.id,
+                document: selection.value.item,
+              })
+              : h('div', { class: 'notebook-editor-scaffold' }, [
+                h('article', { class: 'notebook-document-surface', 'aria-label': 'Document editor scaffold' }, [
+                  h('span', { class: 'notebook-document-label' }, getDocumentType(selection.value.item.type)?.label ?? 'Document'),
+                  h('h3', selection.value.item.name),
+                  h('p', `${getDocumentType(selection.value.item.type)?.label ?? 'Document'} editing will be added here.`),
+                ]),
+              ])
             : null,
           organizationControls(selection.value.item),
           h('p', { class: 'visually-hidden', role: 'status' }, message.value),
