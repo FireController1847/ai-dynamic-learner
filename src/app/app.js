@@ -10,8 +10,18 @@ const { computed, createApp, h, KeepAlive, nextTick, ref } = window.Vue;
 
 const appLogoSrc = new URL('../assets/dynamic-learner.png', import.meta.url).href;
 
-const navigationItems = [{ id: 'home', label: 'Home', path: '/' }, ...features]
-  .map((item) => ({ ...item, href: pageHref(item.path) }));
+const featureImageSrc = (feature) => feature?.image
+  ? new URL(feature.image, document.baseURI).href
+  : '';
+
+const navigationItems = [
+  { id: 'home', label: 'Home', path: '/', imageSrc: appLogoSrc },
+  ...features,
+].map((item) => ({
+  ...item,
+  href: pageHref(item.path),
+  imageSrc: item.imageSrc ?? featureImageSrc(item),
+}));
 
 if (!document.title) document.title = appConfig.name;
 
@@ -25,6 +35,7 @@ const App = {
     let focusContentOnClose = false;
     const { currentPath, navigate } = useNavigation(onNavigate);
     const activeFeature = computed(() => features.find((feature) => feature.path === currentPath.value));
+    const activeLogoSrc = computed(() => featureImageSrc(activeFeature.value) || appLogoSrc);
 
     function closeSidebar() {
       focusContentOnClose = false;
@@ -61,7 +72,7 @@ const App = {
         }, [h('span', { class: 'menu-icon', 'aria-hidden': 'true' }, [
           h('span'), h('span'), h('span'),
         ])]),
-        h('img', { class: 'app-logo app-header-logo', src: appLogoSrc, alt: '', 'aria-hidden': 'true' }),
+        h('img', { class: 'app-logo app-header-logo', src: activeLogoSrc.value, alt: '', 'aria-hidden': 'true' }),
         h('h1', activeFeature.value?.label ?? (currentPath.value === '/' ? appConfig.name : 'Page not found')),
       ]),
       h(NavigationDrawer, {
