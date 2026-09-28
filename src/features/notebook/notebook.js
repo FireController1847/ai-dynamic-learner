@@ -1,8 +1,12 @@
 import { Icon } from '../../components/icon.js';
 import { clearPreference, readNumberPreference, writeNumberPreference } from '../../core/ui-preferences.js';
 import { DisplaySettings } from './display-settings.js';
+import { DocumentBuilder } from './document-builder.js';
 import { NotebookLibrary } from './library.js';
-import { canMove, findItem, groupOptions, moveItem } from './library-model.js';
+import {
+  canMove, countDocuments, countItems, findItem, groupOptions, insertDocument,
+  MAX_DOCUMENTS, MAX_ITEMS, moveItem,
+} from './library-model.js';
 
 const { computed, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref, watch } = window.Vue;
 
@@ -30,6 +34,7 @@ export const Notebook = {
     const showLibraryButton = ref(null);
     const settingsButton = ref(null);
     const settingsOpen = ref(false);
+    const creationTarget = ref(null);
     const message = ref('');
 
     const selection = computed(() => findItem(props.model.items, selectedId.value));
@@ -37,6 +42,11 @@ export const Notebook = {
     watch(() => selection.value?.item, (item) => {
       if (item?.kind === 'document') props.model.lastSelectedDocumentId = item.id;
     });
+    watch(() => findItem(props.model.items, props.model.lastSelectedDocumentId)?.item.kind, (kind) => {
+      if (kind !== 'document' && props.model.lastSelectedDocumentId != null) {
+        props.model.lastSelectedDocumentId = null;
+      }
+    }, { immediate: true });
 
     onDeactivated(() => { settingsOpen.value = false; });
 
@@ -125,6 +135,40 @@ export const Notebook = {
       settingsOpen.value = false;
       await nextTick();
       settingsButton.value?.focus();
+    }
+
+    function beginDocumentCreation() {
+      const current = selection.value;
+      let destination = 'Top level';
+      if (current?.item.kind === 'group') destination = current.item.name;
+      else if (current?.parentId) destination = findItem(props.model.items, current.parentId)?.item.name ?? 'Top level';
+      creationTarget.value = { selectedId: selectedId.value, destination };
+      message.value = '';
+      if (libraryOverlay.value) setLibraryCollapsed(true);
+    }
+
+    async function cancelDocumentCreation() {
+      creationTarget.value = null;
+      await nextTick();
+      if (libraryCollapsed.value) showLibraryButton.value?.focus();
+      else library.value?.focusNewDocument();
+    }
+
+    function createDocument(type) {
+      if (countItems(props.model.items) >= MAX_ITEMS) {
+        message.value = `The Notebook limit is ${MAX_ITEMS} groups and documents.`;
+        return;
+      }
+      if (countDocuments(props.model.items) >= MAX_DOCUMENTS) {
+        message.value = `The Notebook limit is ${MAX_DOCUMENTS} documents.`;
+        return;
+      }
+
+      const item = insertDocument(props.model.items, creationTarget.value, type);
+      selectedId.value = item.id;
+      creationTarget.value = null;
+      library.value?.reveal(item.id);
+      nextTick(() => library.value?.beginRename(item.id));
     }
 
     function moveToGroup(event) {
@@ -223,8 +267,9 @@ export const Notebook = {
           selectedId: selectedId.value,
           collapsed: libraryCollapsed.value,
           onToggleLibrary: () => setLibraryCollapsed(true),
-          onSelect: (id) => { selectedId.value = id; message.value = ''; },
+          onSelect: (id) => { selectedId.value = id; creationTarget.value = null; message.value = ''; },
           onOpenItem: () => { if (libraryOverlay.value) setLibraryCollapsed(true); },
+          onNewDocument: beginDocumentCreation,
         }, {
           footer: () => h('button', {
             ref: settingsButton,
@@ -250,7 +295,18 @@ export const Notebook = {
           onKeydown: resizeLibraryFromKeyboard,
           onDblclick: resetLibraryWidth,
         }) : null,
-        selection.value ? h('section', {
+        creationTarget.value ? h('section', {
+          class: 'notebook-detail notebook-builder-detail',
+          'aria-label': 'Create document',
+          inert: libraryOverlay.value && !libraryCollapsed.value,
+        }, [
+          h(DocumentBuilder, {
+            destination: creationTarget.value.destination,
+            onCreate: createDocument,
+            onCancel: cancelDocumentCreation,
+          }),
+          message.value ? h('p', { class: 'notebook-builder-error', role: 'alert' }, message.value) : null,
+        ]) : selection.value ? h('section', {
           class: ['notebook-detail', { 'is-document': selection.value.item.kind === 'document' }],
           'aria-label': 'Selected item',
           inert: libraryOverlay.value && !libraryCollapsed.value,
