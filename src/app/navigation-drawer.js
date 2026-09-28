@@ -1,3 +1,5 @@
+import { Icon } from '../components/icon.js';
+
 const { h, Transition } = window.Vue;
 
 export const NavigationDrawer = {
@@ -54,7 +56,7 @@ export const NavigationDrawer = {
                 src: item.imageSrc,
                 alt: '',
                 'aria-hidden': 'true',
-              }) : null,
+              }) : item.icon ? h(Icon, { name: item.icon }) : null,
               h('span', item.label),
             ]),
           ]))),
