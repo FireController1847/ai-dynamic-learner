@@ -2,6 +2,7 @@
 export const featureDefinitions = [
   {
     id: 'notebook', label: 'Notebook', path: '/notebook/', icon: 'document',
+    image: 'src/assets/notebook.png',
     description: 'Organize notes into groups and keep your documents together in one notebook.',
   },
   {
