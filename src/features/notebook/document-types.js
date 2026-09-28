@@ -12,14 +12,9 @@ export const DOCUMENT_TYPES = Object.freeze([
     description: 'A ruled note page for free-form notes.',
   }),
   Object.freeze({
-    id: 'grid',
-    label: 'Grid Paper',
-    description: 'A square-grid note page for structured notes and diagrams.',
-  }),
-  Object.freeze({
     id: 'graph',
     label: 'Graph Paper',
-    description: 'A graphing page intended for plots, equations, and spatial notes.',
+    description: 'A square-grid page for diagrams, plots, equations, and spatial notes.',
   }),
 ]);
 
