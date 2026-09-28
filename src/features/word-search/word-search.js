@@ -3,7 +3,7 @@ import { WordSearchLibrary } from './library.js';
 import { PuzzleForm, PuzzleSummary } from './puzzle-form.js';
 import { PuzzleGame } from './puzzle-game.js';
 import { DisplaySettings } from './display-settings.js';
-import { defaultDisplayOptions } from './display-options.js';
+import { resolvedDisplayOptions } from './display-options.js';
 import { canMove, findItem, groupOptions, moveItem, saveWordSearch } from './library-model.js';
 import { clearPreference, readNumberPreference, writeNumberPreference } from '../../core/ui-preferences.js';
 
@@ -35,7 +35,7 @@ export const WordSearch = {
     const showLibraryButton = ref(null);
     const message = ref('');
     const settingsOpen = ref(false);
-    const displayOptions = computed(() => props.model.display ?? defaultDisplayOptions());
+    const displayOptions = computed(() => resolvedDisplayOptions(props.model.display));
     let settingsTrigger = null;
     onDeactivated(() => { settingsOpen.value = false; });
 
@@ -187,7 +187,7 @@ export const WordSearch = {
     }
 
     function organizationControls(item) {
-      return h('details', { class: 'word-search-organization', open: item.kind === 'group' }, [
+      return h('details', { key: `organization-${item.id}`, class: 'word-search-organization', open: item.kind === 'group' }, [
         h('summary', 'Location and order'),
         h('div', { class: 'word-search-location' }, [
           h('label', { for: 'word-search-parent' }, 'Move to group'),
@@ -256,7 +256,7 @@ export const WordSearch = {
       }
 
       return h('section', {
-        class: 'word-search-detail',
+        class: ['word-search-detail', { 'is-search': item.kind === 'word-search' }],
         inert: libraryOverlay.value && !libraryCollapsed.value,
         'aria-label': item.kind === 'group' ? 'Selected group' : 'Selected word search',
       }, [
@@ -268,7 +268,7 @@ export const WordSearch = {
         ]),
         item.kind === 'word-search' ? h(item.puzzle ? PuzzleGame : PuzzleSummary, {
           key: item.id, item, onEdit: () => editWordSearch(item),
-          ...(item.puzzle ? { options: displayOptions.value, onSettings: openSettings } : {}),
+          ...(item.puzzle ? { options: displayOptions.value } : {}),
         }) : h('div', { class: 'word-search-group-message' }, [
           h('p', 'This group can contain nested groups and word searches.'),
         ]),

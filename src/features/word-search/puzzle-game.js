@@ -1,5 +1,5 @@
 import { DIFFICULTIES } from './puzzle-model.js';
-import { matchSelection } from './game-model.js';
+import { lineCells, matchSelection, wordOnLine } from './game-model.js';
 import { generatePuzzle } from './puzzle-generator.js';
 import { PuzzleGrid } from './puzzle-grid.js';
 import { defaultDisplayOptions, displayStyles } from './display-options.js';
@@ -12,7 +12,7 @@ export const PuzzleGame = {
     item: { type: Object, required: true },
     options: { type: Object, default: defaultDisplayOptions },
   },
-  emits: ['edit', 'settings'],
+  emits: ['edit'],
   setup(props, { emit }) {
     const loading = ref(false);
     const error = ref('');
@@ -22,6 +22,13 @@ export const PuzzleGame = {
     const pending = ref(null);
     const grid = ref(null);
     const gridVersion = ref(0);
+    const attempt = ref(null);
+    let attemptTimer;
+    let attemptId = 0;
+    function clearAttempt() {
+      clearTimeout(attemptTimer);
+      attempt.value = null;
+    }
     const restartButton = ref(null);
     const cancelButton = ref(null);
     let controller = null;
@@ -29,11 +36,12 @@ export const PuzzleGame = {
     const game = computed(() => props.item.game);
     const foundWords = computed(() => new Set(game.value?.found.map(({ word }) => word) ?? []));
     const complete = computed(() => foundWords.value.size === props.item.puzzle.words.length);
-    onBeforeUnmount(() => controller?.abort());
-    onDeactivated(() => { pending.value = null; revealed.value = false; hint.value = null; });
+    onBeforeUnmount(() => { controller?.abort(); clearAttempt(); });
+    onDeactivated(() => { pending.value = null; revealed.value = false; hint.value = null; clearAttempt(); });
     onMounted(() => { if (!game.value) generate(); });
 
     async function generate() {
+      clearAttempt();
       controller?.abort();
       const request = new AbortController();
       controller = request;
@@ -58,11 +66,21 @@ export const PuzzleGame = {
     function select(start, end) {
       if (!game.value || loading.value || revealed.value) return;
       const match = matchSelection(props.item.puzzle, game.value, start, end);
-      if (!match) { message.value = 'No match. Choose a whole word in one straight line.'; return; }
-      if (foundWords.value.has(match.word)) { message.value = `${match.word} is already found.`; return; }
+      const cells = lineCells(start, end, props.item.puzzle.size);
+      const text = wordOnLine(game.value.rows, start, end);
+      clearAttempt();
+      attempt.value = { id: ++attemptId, cells: cells.length ? cells : [start, end], matched: Boolean(match) };
+      attemptTimer = setTimeout(clearAttempt, 260);
+      const recognized = text ? `Selected “${text}”. ` : '';
+      if (!match) {
+        message.value = text ? `${recognized}No matching word. Try again.`
+          : 'Those endpoints do not form a straight line. No letter sequence was recognized.';
+        return;
+      }
+      if (foundWords.value.has(match.word)) { message.value = `${recognized}${match.word} is already found.`; return; }
       game.value.found.push(match);
       hint.value = null;
-      message.value = complete.value ? `You found ${match.word}—and completed the puzzle!` : `Found ${match.word}!`;
+      message.value = recognized + (complete.value ? `You found ${match.word}—and completed the puzzle!` : `Found ${match.word}!`);
     }
 
     function giveHint() {
@@ -88,6 +106,7 @@ export const PuzzleGame = {
     }
 
     async function confirmAction() {
+      clearAttempt();
       const action = pending.value;
       pending.value = null;
       if (action === 'new') await generate();
@@ -112,10 +131,6 @@ export const PuzzleGame = {
         h('div', { class: 'word-search-game-toolbar' }, [
           h('p', { class: 'word-search-help' }, `${puzzle.size} × ${puzzle.size} · ${difficulty.label} · ${difficulty.description}`),
           h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('edit') }, 'Edit puzzle'),
-          h('button', {
-            type: 'button', class: 'quiet-button', 'aria-haspopup': 'dialog',
-            onClick: (event) => emit('settings', event.currentTarget),
-          }, 'Display settings'),
         ]),
         puzzle.instructions ? h('p', { class: 'word-search-instructions' }, puzzle.instructions) : null,
         h('p', { id: 'word-search-play-help', class: 'word-search-help' },
@@ -130,6 +145,7 @@ export const PuzzleGame = {
             ref: grid, key: gridVersion.value, game: game.value,
             revealed: revealed.value, hint: hint.value, onSelect: select,
             options: props.options,
+            attempt: attempt.value,
           }),
           h('aside', { class: 'word-search-word-bank', 'aria-label': 'Words to find' }, [
             h('h3', complete.value ? 'Nicely done!' : 'Words to find'),

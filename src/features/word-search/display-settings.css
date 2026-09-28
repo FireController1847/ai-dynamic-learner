@@ -14,6 +14,8 @@
 .word-search-display-range { display: flex; align-items: center; gap: 12px; }
 .word-search-display-range input { width: 100%; min-width: 0; accent-color: var(--brand); }
 .word-search-display-range output { min-width: 44px; text-align: right; }
+.word-search-display-field.is-disabled { color: var(--text-disabled); }
+.word-search-display-field.is-disabled input { opacity: 0.4; cursor: not-allowed; }
 .word-search-display-settings .word-search-board-area { margin-block: 16px; }
 @media (max-width: 420px) {
   .word-search-display-settings { padding: 16px; }

@@ -13,6 +13,7 @@ export const PuzzleGrid = {
     hint: { type: Number, default: null },
     options: { type: Object, default: defaultDisplayOptions },
     helpId: { type: String, default: 'word-search-play-help' },
+    attempt: { type: Object, default: null },
   },
   emits: ['select'],
   setup(props, { emit, expose }) {
@@ -29,6 +30,8 @@ export const PuzzleGrid = {
     const cellSize = useGridSizing(area, size, options);
     const selected = computed(() => new Set(lineCells(anchor.value, endpoint.value, size.value)));
     const found = computed(() => new Set(props.game.found.flatMap(({ start, end }) => lineCells(start, end, size.value))));
+    const answers = computed(() => new Set(props.revealed
+      ? props.game.placements.flatMap(({ start, end }) => lineCells(start, end, size.value)) : []));
 
     function cancelSelection() {
       anchor.value = null;
@@ -130,9 +133,9 @@ export const PuzzleGrid = {
         class: 'word-search-outlines', viewBox: `0 0 ${size.value} ${size.value}`,
         'aria-hidden': 'true', focusable: 'false',
       }, [
-        ...props.game.found.map(({ word, start, end }) => wordOutline(start, end, size.value, `found-${word}`, 'found')),
-        ...(props.revealed ? props.game.placements.map(({ word, start, end }) =>
-          wordOutline(start, end, size.value, `answer-${word}`, 'answer')) : []),
+        ...props.game.found.map(({ word, start, end }) => wordOutline(start, end, size.value, `found-${word}`, 'found', null, word)),
+        ...(props.revealed ? props.game.placements.filter(({ word }) => !props.game.found.some((entry) => entry.word === word))
+          .map(({ word, start, end }) => wordOutline(start, end, size.value, `answer-${word}`, 'answer', null, word)) : []),
         props.hint !== null ? wordOutline(props.hint, props.hint, size.value, 'hint', 'hint') : null,
         anchor.value !== null ? wordOutline(anchor.value, endpoint.value ?? anchor.value, size.value,
           'selection', 'selection', pointerPoint.value) : null,
@@ -164,6 +167,7 @@ export const PuzzleGrid = {
               type: 'button', role: 'gridcell', key: cell, 'data-cell': cell,
               class: ['word-search-cell', {
                 'is-found': found.value.has(cell), 'is-selected': selected.value.has(cell),
+                'is-answer': answers.value.has(cell), 'is-hint': props.hint === cell,
               }],
               tabindex: focused.value === cell ? 0 : -1,
               'aria-label': `${letter}, row ${rowIndex + 1}, column ${col + 1}${found.value.has(cell) ? ', found' : ''}`,
@@ -171,7 +175,12 @@ export const PuzzleGrid = {
               onFocus: () => { focused.value = cell; },
               onClick: (event) => { if (event.detail === 0 || pointerType !== 'mouse') activate(cell); },
               onKeydown: (event) => keyboard(event, cell),
-            }, [h('span', letter)]);
+            }, [h('span', {
+              key: props.attempt?.cells.includes(cell) ? props.attempt.id : 'letter',
+              class: props.attempt?.cells.includes(cell) ? [
+                'word-search-attempt-letter', { 'attempt-miss': !props.attempt.matched },
+              ] : null,
+            }, letter)]);
           })))),
         ]),
       ]),
