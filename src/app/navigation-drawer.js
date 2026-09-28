@@ -48,7 +48,15 @@ export const NavigationDrawer = {
               class: 'navigation-link',
               'aria-current': props.activePath === item.path ? 'page' : undefined,
               onClick: (event) => emit('navigate', event, item.path),
-            }, item.label),
+            }, [
+              item.imageSrc ? h('img', {
+                class: 'navigation-link-icon',
+                src: item.imageSrc,
+                alt: '',
+                'aria-hidden': 'true',
+              }) : null,
+              h('span', item.label),
+            ]),
           ]))),
         ]),
         slots.footer ? h('div', { class: 'drawer-footer' }, slots.footer()) : null,
