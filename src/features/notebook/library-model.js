@@ -41,6 +41,23 @@ export function countDocuments(items) {
     (item.kind === 'group' ? countDocuments(item.children) : 1), 0);
 }
 
+export function deleteItem(items, id) {
+  const found = findItem(items, id);
+  if (!found) return null;
+  return found.siblings.splice(found.index, 1)[0];
+}
+
+export function insertDocument(items, target, documentType) {
+  const item = createItem('document', documentType);
+  const selected = target?.selectedId ? findItem(items, target.selectedId) : null;
+
+  if (selected?.item.kind === 'group') selected.item.children.unshift(item);
+  else if (selected) selected.siblings.splice(selected.index + 1, 0, item);
+  else items.unshift(item);
+
+  return item;
+}
+
 function subtreeDepth(item) {
   return item.kind === 'group' && item.children.length
     ? 1 + Math.max(...item.children.map(subtreeDepth)) : 1;
@@ -140,6 +157,11 @@ export function validateNotebook(value) {
           item.type = DEFAULT_DOCUMENT_TYPE;
           item.data = { markdown: item.markdown };
           delete item.markdown;
+        }
+
+        if (item.type === 'grid' && item.data && typeof item.data === 'object' &&
+            !Array.isArray(item.data) && Object.keys(item.data).length === 0) {
+          item.type = 'graph';
         }
 
         if (Object.keys(item).some((key) => !['id', 'kind', 'name', 'type', 'data'].includes(key)) ||
