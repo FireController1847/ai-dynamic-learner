@@ -3,9 +3,9 @@ import { MIN_CELL_SIZE, MAX_CELL_SIZE } from './display-options.js';
 const { nextTick, onActivated, onBeforeUnmount, onMounted, ref, watch } = window.Vue;
 
 const WORD_BANK_WITH_GAP = 244;
-const HINT_BANK_WITH_GAP = 384;
+const HINT_BANK_WITH_GAP = 484;
 const PLAY_LAYOUT_BREAKPOINT = 650;
-const HINT_LAYOUT_BREAKPOINT = 980;
+const HINT_LAYOUT_BREAKPOINT = 1080;
 const VERTICAL_ALLOWANCE = 240;
 
 // Content such as found-word labels and status text must never resize the board.
