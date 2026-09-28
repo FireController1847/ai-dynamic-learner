@@ -34,6 +34,7 @@
 }
 .home-app-card:hover { background: var(--brand-tint); border-color: var(--brand); }
 .home-app-card > .ui-icon { width: 28px; height: 28px; color: var(--brand); }
+.home-app-icon { display: block; width: 56px; height: 56px; object-fit: contain; }
 .home-app-card p { margin: 0; color: var(--text-secondary); }
 .home-app-open { display: inline-flex; align-items: center; gap: 4px; margin-top: auto; padding-top: 8px; color: var(--brand-text); font-weight: 600; }
 .home-app-open .ui-icon { width: 16px; height: 16px; }
