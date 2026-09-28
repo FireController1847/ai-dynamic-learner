@@ -24,7 +24,7 @@ export const MarkdownEditor = {
     });
 
     function setPercent(value) {
-      sourcePercent.value = Math.round(Math.min(MAX_PANEL_PERCENT, Math.max(MIN_PANEL_PENT, value)));
+      sourcePercent.value = Math.round(Math.min(MAX_PANEL_PERCENT, Math.max(MIN_PANEL_PERCENT, value)));
     }
 
     function beginResize(event) {
