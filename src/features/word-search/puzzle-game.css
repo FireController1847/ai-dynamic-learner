@@ -146,9 +146,8 @@
   to { opacity: 0; }
 }
 @keyframes word-search-outline-label-in {
-  0% { opacity: 0; transform-box: fill-box; transform-origin: center; transform: scale(0.85); }
-  70% { opacity: 1; transform: scale(1.05); }
-  100% { opacity: 1; transform: scale(1); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 .word-search-outline rect { fill: var(--search-highlight); fill-opacity: 0.1; stroke: var(--search-highlight); stroke-width: 0.055; }
 .outline-selection rect { fill-opacity: 0.16; stroke-width: 0.07; transition: width 65ms linear; }
