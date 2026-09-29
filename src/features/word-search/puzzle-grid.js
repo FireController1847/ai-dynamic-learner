@@ -3,7 +3,7 @@ import { defaultDisplayOptions, displayStyles } from './display-options.js';
 import { useGridSizing } from './grid-sizing.js';
 import { wordOutline } from './word-outline.js';
 
-const { computed, h, nextTick, onBeforeUnmount, onDeactivated, ref, watch } = window.Vue;
+const { computed, h, nextTick, onDeactivated, ref, watch } = window.Vue;
 
 export const PuzzleGrid = {
   name: 'PuzzleGrid',
@@ -15,6 +15,7 @@ export const PuzzleGrid = {
     helpId: { type: String, default: 'word-search-play-help' },
     attempt: { type: Object, default: null },
     rotationTurns: { type: Number, default: 0 },
+    rotationFrom: { type: Number, default: 0 },
     rotating: Boolean,
   },
   emits: ['select'],
@@ -25,8 +26,6 @@ export const PuzzleGrid = {
     const anchor = ref(null);
     const endpoint = ref(null);
     const pointerPoint = ref(null);
-    const settling = ref(false);
-    let settleTimer;
     let pointer = null;
     let pointerType = '';
 
@@ -34,7 +33,8 @@ export const PuzzleGrid = {
     const options = computed(() => props.options);
     const cellSize = useGridSizing(area, size, options);
     const selected = computed(() => new Set(lineCells(anchor.value, endpoint.value, size.value)));
-    const found = computed(() => new Set(props.game.found.flatMap(({ start, end }) => lineCells(start, end, size.value))));
+    const found = computed(() => new Set(props.game.found.flatMap(({ start, end }) =>
+      lineCells(start, end, size.value))));
     const answers = computed(() => new Set(props.revealed
       ? props.game.placements.flatMap(({ start, end }) => lineCells(start, end, size.value)) : []));
     const rotation = computed(() => ((Math.round(props.rotationTurns) % 4) + 4) % 4);
@@ -55,27 +55,12 @@ export const PuzzleGrid = {
       return { row, col };
     }
 
-    function sourcePointToVisual(x, y) {
-      const extent = size.value;
-      if (rotation.value === 1) return { x: extent - y, y: x };
-      if (rotation.value === 2) return { x: extent - x, y: extent - y };
-      if (rotation.value === 3) return { x: y, y: extent - x };
-      return { x, y };
-    }
-
     function visualPointToSource(x, y) {
       const extent = size.value;
       if (rotation.value === 1) return { x: y, y: extent - x };
       if (rotation.value === 2) return { x: extent - x, y: extent - y };
       if (rotation.value === 3) return { x: extent - y, y: x };
       return { x, y };
-    }
-
-    function sourceCellToVisualIndex(cell) {
-      const row = Math.floor(cell / size.value);
-      const col = cell % size.value;
-      const visual = sourceToVisual(row, col);
-      return visual.row * size.value + visual.col;
     }
 
     function cancelSelection() {
@@ -87,13 +72,7 @@ export const PuzzleGrid = {
 
     watch(() => props.revealed, cancelSelection);
     watch(() => props.hint, cancelSelection);
-    watch(() => props.rotationTurns, () => {
-      settling.value = true;
-      clearTimeout(settleTimer);
-      settleTimer = setTimeout(() => { settling.value = false; }, 520);
-    });
     onDeactivated(cancelSelection);
-    onBeforeUnmount(() => clearTimeout(settleTimer));
 
     function focusCell(cell) {
       focused.value = cell;
@@ -155,7 +134,9 @@ export const PuzzleGrid = {
       const { start, moved } = pointer;
       const end = cellAt(event);
       pointer = null;
-      if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
       if (end === null) { cancelSelection(); return; }
       if (moved) {
         emit('select', start, end);
@@ -195,64 +176,28 @@ export const PuzzleGrid = {
       focusCell(next);
     }
 
-    function visualOutline(start, end, key, kind, point = null, word = '') {
-      const visualStart = sourceCellToVisualIndex(start);
-      const visualEnd = sourceCellToVisualIndex(end);
-      const visualPoint = point ? sourcePointToVisual(point.x, point.y) : null;
-      return wordOutline(visualStart, visualEnd, size.value, key, kind, visualPoint, word);
-    }
-
     function outlines() {
+      const boardDegrees = props.rotationTurns * 90;
       return h('svg', {
-        class: 'word-search-outlines', viewBox: `0 0 ${size.value} ${size.value}`,
-        'aria-hidden': 'true', focusable: 'false',
+        class: 'word-search-outlines',
+        viewBox: `0 0 ${size.value} ${size.value}`,
+        'aria-hidden': 'true',
+        focusable: 'false',
       }, [
         ...props.game.found.map(({ word, start, end }) =>
-          visualOutline(start, end, `found-${word}`, 'found', null, word)),
+          wordOutline(start, end, size.value, `found-${word}`, 'found', null, word, boardDegrees)),
         ...(props.revealed ? props.game.placements
           .filter(({ word }) => !props.game.found.some((entry) => entry.word === word))
           .map(({ word, start, end }) =>
-            visualOutline(start, end, `answer-${word}`, 'answer', null, word)) : []),
-        props.hint !== null ? visualOutline(props.hint, props.hint, 'hint', 'hint') : null,
-        props.attempt && !props.attempt.matched ? visualOutline(
-          props.attempt.start, props.attempt.end, `miss-${props.attempt.id}`, 'miss') : null,
-        anchor.value !== null ? visualOutline(
-          anchor.value, endpoint.value ?? anchor.value, 'selection', 'selection', pointerPoint.value) : null,
+            wordOutline(start, end, size.value, `answer-${word}`, 'answer', null, word, boardDegrees)) : []),
+        props.hint !== null ? wordOutline(props.hint, props.hint, size.value, 'hint', 'hint') : null,
+        props.attempt && !props.attempt.matched ? wordOutline(
+          props.attempt.start, props.attempt.end, size.value,
+          `miss-${props.attempt.id}`, 'miss') : null,
+        anchor.value !== null ? wordOutline(
+          anchor.value, endpoint.value ?? anchor.value, size.value,
+          'selection', 'selection', pointerPoint.value) : null,
       ]);
-    }
-
-    function renderVisualRow(visualRow) {
-      return h('div', {
-        role: 'row', class: 'word-search-grid-row', key: visualRow,
-      }, Array.from({ length: size.value }, (_, visualCol) => {
-        const source = visualToSource(visualRow, visualCol);
-        const cell = source.row * size.value + source.col;
-        const letter = props.game.rows[source.row][source.col];
-        const delay = ((visualRow + visualCol) % 6) * 24;
-
-        return h('button', {
-          type: 'button', role: 'gridcell', key: cell, 'data-cell': cell,
-          class: ['word-search-cell', {
-            'is-found': found.value.has(cell), 'is-selected': selected.value.has(cell),
-            'is-answer': answers.value.has(cell), 'is-hint': props.hint === cell,
-          }],
-          tabindex: focused.value === cell ? 0 : -1,
-          'aria-label': `${letter}, row ${visualRow + 1}, column ${visualCol + 1}${found.value.has(cell) ? ', found' : ''}`,
-          'aria-selected': selected.value.has(cell),
-          onFocus: () => { focused.value = cell; },
-          onClick: (event) => { if (event.detail === 0 || pointerType !== 'mouse') activate(cell); },
-          onKeydown: (event) => keyboard(event, cell),
-        }, [h('span', {
-          key: props.attempt?.cells.includes(cell) ? props.attempt.id : `letter-${props.rotationTurns}`,
-          class: [
-            { 'word-search-letter-settle': settling.value },
-            ...(props.attempt?.cells.includes(cell)
-              ? ['word-search-attempt-letter', { 'attempt-miss': !props.attempt.matched }]
-              : []),
-          ],
-          style: { '--letter-delay': `${delay}ms` },
-        }, letter)]);
-      }));
     }
 
     return () => h('div', {
@@ -260,7 +205,6 @@ export const PuzzleGrid = {
       class: ['word-search-board-area', {
         'instant-highlights': props.options.motion === 'none',
         'is-rotating': props.rotating,
-        'is-settling': settling.value,
       }],
       style: {
         ...displayStyles(props.options),
@@ -272,6 +216,12 @@ export const PuzzleGrid = {
         h('div', { class: 'word-search-board-stage' }, [
           h('div', {
             class: ['word-search-board-rotator', { 'is-rotating': props.rotating }],
+            style: {
+              '--board-from': `${props.rotationFrom * 90}deg`,
+              '--board-to': `${props.rotationTurns * 90}deg`,
+              '--letter-from': `${-props.rotationFrom * 90}deg`,
+              '--letter-to': `${-props.rotationTurns * 90}deg`,
+            },
           }, [
             h('div', { class: 'word-search-board-frame' }, [
               outlines(),
@@ -295,7 +245,51 @@ export const PuzzleGrid = {
                   }
                 },
                 onLostpointercapture: () => { if (pointer) cancelSelection(); },
-              }, Array.from({ length: size.value }, (_, visualRow) => renderVisualRow(visualRow))),
+              }, props.game.rows.map((row, rowIndex) => h('div', {
+                role: 'row',
+                class: 'word-search-grid-row',
+                key: rowIndex,
+              }, [...row].map((letter, col) => {
+                const cell = rowIndex * size.value + col;
+                const delay = ((rowIndex + col) % 7) * 12;
+                const attemptCell = props.attempt?.cells.includes(cell);
+                return h('button', {
+                  type: 'button',
+                  role: 'gridcell',
+                  key: cell,
+                  'data-cell': cell,
+                  class: ['word-search-cell', {
+                    'is-found': found.value.has(cell),
+                    'is-selected': selected.value.has(cell),
+                    'is-answer': answers.value.has(cell),
+                    'is-hint': props.hint === cell,
+                  }],
+                  tabindex: focused.value === cell ? 0 : -1,
+                  'aria-label': `${letter}, row ${rowIndex + 1}, column ${col + 1}${found.value.has(cell) ? ', found' : ''}`,
+                  'aria-selected': selected.value.has(cell),
+                  onFocus: () => { focused.value = cell; },
+                  onClick: (event) => {
+                    if (event.detail === 0 || pointerType !== 'mouse') activate(cell);
+                  },
+                  onKeydown: (event) => keyboard(event, cell),
+                }, [
+                  h('span', {
+                    key: attemptCell ? props.attempt.id : 'letter',
+                    class: [
+                      'word-search-letter-upright',
+                      ...(attemptCell ? [
+                        'word-search-attempt-letter',
+                        { 'attempt-miss': !props.attempt.matched },
+                      ] : []),
+                    ],
+                  }, [
+                    h('span', {
+                      class: 'word-search-letter-glyph',
+                      style: { '--letter-delay': `${delay}ms` },
+                    }, letter),
+                  ]),
+                ]);
+              })))),
             ]),
           ]),
         ]),
