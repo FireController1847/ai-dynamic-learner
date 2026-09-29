@@ -29,7 +29,7 @@ const LIST_TABLES = [
   {
     table: 'word_search_items',
     source: 'wordSearchItems',
-    columns: ['id', 'parent_id', 'sort_order', 'kind', 'name'],
+    columns: ['id', 'parent_id', 'sort_order', 'kind', 'name', 'board_rotation'],
     keys: ['id'],
   },
   {
