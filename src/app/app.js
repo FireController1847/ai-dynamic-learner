@@ -11,6 +11,7 @@ import { Icon } from '../components/icon.js';
 const { computed, createApp, h, KeepAlive, nextTick, ref } = window.Vue;
 
 const appLogoSrc = new URL('../assets/dynamic-learner.png', import.meta.url).href;
+const homeTipsFeature = Object.freeze({ id: 'home', label: appConfig.name });
 
 const featureImageSrc = (feature) => feature?.image
   ? new URL(feature.image, document.baseURI).href
@@ -35,6 +36,7 @@ const App = {
     let focusContentOnClose = false;
     const { currentPath, navigate } = useNavigation(onNavigate);
     const activeFeature = computed(() => features.find((feature) => feature.path === currentPath.value));
+    const tipsFeature = computed(() => activeFeature.value ?? (currentPath.value === '/' ? homeTipsFeature : null));
     const activeLogoSrc = computed(() => featureImageSrc(activeFeature.value));
 
     function closeSidebar() {
@@ -88,10 +90,10 @@ const App = {
             ? h(Icon, { name: activeFeature.value.icon })
             : h('img', { class: 'app-logo app-header-logo', src: appLogoSrc, alt: '', 'aria-hidden': 'true' }),
         h('h1', activeFeature.value?.label ?? (currentPath.value === '/' ? appConfig.name : 'Page not found')),
-        activeFeature.value ? h('button', {
+        tipsFeature.value ? h('button', {
           type: 'button',
           class: 'quiet-button tips-trigger',
-          title: `Show ${activeFeature.value.label} tips`,
+          title: currentPath.value === '/' ? 'Show tips' : `Show ${tipsFeature.value.label} tips`,
           'aria-haspopup': 'dialog',
           onClick: (event) => tipsExperience.value?.open(event.currentTarget),
         }, [
@@ -112,7 +114,7 @@ const App = {
       }, {
         footer: () => h(WorkspaceTools, { workspace }),
       }),
-      h(TipsExperience, { ref: tipsExperience, feature: activeFeature.value }),
+      h(TipsExperience, { ref: tipsExperience, feature: tipsFeature.value }),
       workspace.storageProblem.value ? h('p', {
         class: 'workspace-storage-warning', role: 'alert',
       }, workspace.storageProblem.value) : null,

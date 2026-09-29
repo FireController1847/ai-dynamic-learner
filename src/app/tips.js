@@ -419,9 +419,14 @@ export const TipsExperience = {
       const bounds = element.getBoundingClientRect();
       const cardWidth = bounds.width;
       const cardHeight = bounds.height;
-      const preferred = step.value?.placement;
-      const placements = [preferred, 'right', 'left', 'bottom', 'top']
-        .filter((value, index, values) => value && values.indexOf(value) === index);
+      const compact = window.innerWidth <= 560;
+      const targetCenterY = (rect.top + rect.bottom) / 2;
+      const compactPrimary = targetCenterY < window.innerHeight / 2 ? 'bottom' : 'top';
+      const preferred = compact ? compactPrimary : step.value?.placement;
+      const placements = compact
+        ? [compactPrimary, compactPrimary === 'bottom' ? 'top' : 'bottom']
+        : [preferred, 'right', 'left', 'bottom', 'top']
+          .filter((value, index, values) => value && values.indexOf(value) === index);
 
       const fits = {
         right: window.innerWidth - rect.right - CARD_GAP - VIEWPORT_MARGIN >= cardWidth,

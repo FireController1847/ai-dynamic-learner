@@ -1,6 +1,34 @@
 // TIPS content is separate from feature components so onboarding can change without
 // changing the apps themselves. Each section appears when that part of the app is open.
 export const tipsCatalog = {
+  home: {
+    version: 1,
+    sections: [
+      {
+        id: 'getting-started',
+        title: 'Getting started',
+        description: 'Learn where to find help and how to open an app.',
+        when: '.home-page',
+        steps: [
+          {
+            title: 'Tips can show you around',
+            body: 'Press Tips anytime you want help with the page you are using.',
+            target: '.tips-trigger',
+            targetLabel: 'Tips button',
+            placement: 'bottom',
+          },
+          {
+            title: 'Pick an app to begin',
+            body: 'Choose one of these apps. You can always come back home and pick another one.',
+            target: '.home-app-grid',
+            targetLabel: 'Learning apps',
+            placement: 'top',
+          },
+        ],
+      },
+    ],
+  },
+
   notebook: {
     version: 5,
     sections: [
