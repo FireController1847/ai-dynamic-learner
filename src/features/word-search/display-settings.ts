@@ -1,9 +1,10 @@
 import type { DisplayOptions } from './display-options.ts';
 import { inputValue } from '../../core/dom.ts';
+import { useDialog } from '../../components/use-dialog.ts';
 import { DISPLAY_FIELDS, defaultDisplayOptions } from './display-options.ts';
 import { PuzzleGrid } from './puzzle-grid.ts';
 
-import { defineComponent, type PropType, h, onMounted, onBeforeUnmount, onDeactivated, ref } from 'vue';
+import { defineComponent, type PropType, h } from 'vue';
 const preview = {
   rows: ['TACROW', 'ORIVEO', 'WONDER', 'LEAFSD', 'MOSSAS', 'FERNXT'],
   found: [{ word: 'CAT', start: 2, end: 0 }, { word: 'WONDER', start: 12, end: 17 }],
@@ -15,11 +16,7 @@ export const DisplaySettings = defineComponent({
   props: { options: { type: Object as PropType<DisplayOptions>, required: true } },
   emits: { 'update': (_options: DisplayOptions) => true, 'close': () => true },
   setup(props, { emit }) {
-    const dialog = ref<HTMLDialogElement | null>(null);
-    const close = () => { if (dialog.value?.open) dialog.value.close(); };
-    onMounted(() => dialog.value?.showModal());
-    onBeforeUnmount(close);
-    onDeactivated(close);
+    const { dialog } = useDialog();
     return () => h('dialog', {
       ref: dialog, class: 'word-search-display-settings', 'aria-labelledby': 'search-display-title',
       onCancel: (event: Event) => { event.preventDefault(); emit('close'); },

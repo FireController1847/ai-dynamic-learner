@@ -1,7 +1,8 @@
 import type { CardSide } from './card-model.ts';
+import { useDialog } from '../../components/use-dialog.ts';
 export type ReviewOrder = 'forward' | 'backward' | 'shuffle';
 export interface ReviewSettings { side: CardSide; order: ReviewOrder }
-import { defineComponent, type PropType, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref } from 'vue';
+import { defineComponent, type PropType, h, nextTick, ref } from 'vue';
 
 export const ReviewSetup = defineComponent({
   name: 'ReviewSetup',
@@ -13,21 +14,11 @@ export const ReviewSetup = defineComponent({
   },
   emits: { 'cancel': () => true, 'start': (_settings: ReviewSettings) => true },
   setup(props, { emit }) {
-    const dialog = ref<HTMLDialogElement | null>(null);
+    const { dialog } = useDialog({ modal: () => props.modal });
     const heading = ref<HTMLElement | null>(null);
     const step = ref(1);
     const side = ref(props.initialSide);
     const order = ref(props.initialOrder);
-
-    function close() {
-      if (dialog.value?.open) dialog.value.close();
-    }
-    onMounted(() => {
-      if (props.modal) dialog.value?.showModal();
-      else dialog.value?.show();
-    });
-    onBeforeUnmount(close);
-    onDeactivated(close);
 
     async function changeStep(value: number) {
       step.value = value;

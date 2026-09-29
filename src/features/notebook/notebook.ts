@@ -8,7 +8,7 @@ import { TIPS_ACTION_EVENT, type TutorialRequest } from '../../core/tutorial.ts'
 import type { Notebook as FeatureModel } from './library-model.ts';
 import { inputValue } from '../../core/dom.ts';
 import { Icon } from '../../components/icon.ts';
-import { clearPreference, readNumberPreference, writeNumberPreference } from '../../core/ui-preferences.ts';
+import { usePersistedPanelResize } from '../../components/use-persisted-panel-resize.ts';
 import { DocumentBuilder } from './document-builder.ts';
 import { getDocumentType } from './document-types.ts';
 import { MarkdownEditor } from './markdown-editor.ts';
@@ -21,8 +21,6 @@ import {
 import { defineComponent, type PropType, computed, h, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 const MIN_LIBRARY_WIDTH = 248;
-const MAX_LIBRARY_WIDTH = 640;
-const MIN_DETAIL_WIDTH = 320;
 const LIBRARY_WIDTH_KEY = 'dynamic-learner.ui.notebook.library-width';
 
 export const Notebook = defineComponent({
@@ -37,9 +35,27 @@ export const Notebook = defineComponent({
     const overlayQuery = window.matchMedia('(max-width: 700px), (max-width: 1100px) and (pointer: coarse)');
     const libraryOverlay = ref(overlayQuery.matches);
     const libraryCollapsed = ref(overlayQuery.matches && selectedId.value !== null);
-    const libraryWidth = ref(readNumberPreference(LIBRARY_WIDTH_KEY));
-    const libraryResizing = ref(false);
     const layout = ref<HTMLElement | null>(null);
+    const {
+      width: libraryWidth,
+      resizing: libraryResizing,
+      maxWidth: maxLibraryWidth,
+      currentWidth: currentLibraryWidth,
+      resetWidth: resetLibraryWidth,
+      beginResize: beginLibraryResize,
+      resizeFromPointer: resizeLibraryFromPointer,
+      endResize: endLibraryResize,
+      resizeFromKeyboard: resizeLibraryFromKeyboard,
+    } = usePersistedPanelResize({
+      preferenceKey: LIBRARY_WIDTH_KEY,
+      container: layout,
+      panelSelector: '.directory-panel',
+      minWidth: MIN_LIBRARY_WIDTH,
+      maxWidth: 640,
+      minRemainingWidth: 320,
+      fallbackWidth: 280,
+      disabled: () => libraryOverlay.value || libraryCollapsed.value,
+    });
     const library = ref<NotebookLibraryHandle | null>(null);
     const showLibraryButton = ref<HTMLButtonElement | null>(null);
     const creationTarget = ref<CreationTarget | null>(null);
@@ -66,72 +82,11 @@ export const Notebook = defineComponent({
     overlayQuery.addEventListener('change', updateLibraryLayout);
     onBeforeUnmount(() => overlayQuery.removeEventListener('change', updateLibraryLayout));
 
-    function maxLibraryWidth() {
-      const available = layout.value?.clientWidth ?? (MAX_LIBRARY_WIDTH + MIN_DETAIL_WIDTH);
-      return Math.max(MIN_LIBRARY_WIDTH, Math.min(MAX_LIBRARY_WIDTH, available - MIN_DETAIL_WIDTH));
-    }
-
-    function currentLibraryWidth() {
-      return libraryWidth.value ??
-        layout.value?.querySelector('.directory-panel')?.getBoundingClientRect().width ??
-        280;
-    }
-
-    function setLibraryWidth(width: number) {
-      libraryWidth.value = Math.round(Math.min(Math.max(width, MIN_LIBRARY_WIDTH), maxLibraryWidth()));
-      writeNumberPreference(LIBRARY_WIDTH_KEY, libraryWidth.value);
-    }
-
-    function resetLibraryWidth() {
-      clearPreference(LIBRARY_WIDTH_KEY);
-      libraryWidth.value = null;
-    }
-
-    function keepLibraryWidthInBounds() {
-      if (libraryWidth.value !== null) setLibraryWidth(libraryWidth.value);
-    }
-
-    function beginLibraryResize(event: PointerEvent) {
-      if (event.button !== 0 || libraryOverlay.value || libraryCollapsed.value) return;
-      event.preventDefault();
-      libraryResizing.value = true;
-      (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
-      resizeLibraryFromPointer(event);
-    }
-
-    function resizeLibraryFromPointer(event: PointerEvent) {
-      if (!libraryResizing.value || !layout.value) return;
-      const bounds = layout.value.getBoundingClientRect();
-      setLibraryWidth(event.clientX - bounds.left);
-    }
-
-    function endLibraryResize(event: PointerEvent) {
-      libraryResizing.value = false;
-      if ((event.currentTarget as HTMLElement).hasPointerCapture(event.pointerId)) {
-        (event.currentTarget as HTMLElement).releasePointerCapture(event.pointerId);
-      }
-    }
-
-    function resizeLibraryFromKeyboard(event: KeyboardEvent) {
-      const step = event.shiftKey ? 48 : 16;
-      let width = currentLibraryWidth();
-      if (event.key === 'ArrowLeft') width -= step;
-      else if (event.key === 'ArrowRight') width += step;
-      else if (event.key === 'Home') width = MIN_LIBRARY_WIDTH;
-      else if (event.key === 'End') width = maxLibraryWidth();
-      else return;
-      event.preventDefault();
-      setLibraryWidth(width);
-    }
-
     onMounted(() => {
       if (selectedId.value) library.value?.reveal(selectedId.value);
-      keepLibraryWidthInBounds();
-      window.addEventListener('resize', keepLibraryWidthInBounds);
       window.addEventListener(TIPS_ACTION_EVENT, handleTipsAction);
     });
     onBeforeUnmount(() => {
-      window.removeEventListener('resize', keepLibraryWidthInBounds);
       window.removeEventListener(TIPS_ACTION_EVENT, handleTipsAction);
     });
 

@@ -3,9 +3,9 @@ import type { VNode } from 'vue';
 import type { LibraryItem, MovePosition } from './library-model.ts';
 import { inputValue } from '../../core/dom.ts';
 import { Icon } from '../../components/icon.ts';
-import { DeleteConfirmation } from './delete-confirmation.ts';
+import { DeleteConfirmation } from '../../components/delete-confirmation.ts';
 import {
-  canMove, countItems, createGroup, deleteItem, findItem,
+  canMove, countItems, countWordSearches, createGroup, deleteItem, findItem,
   MAX_DEPTH, MAX_ITEMS, MAX_NAME_LENGTH, moveItem,
 } from './library-model.ts';
 
@@ -326,7 +326,12 @@ export const WordSearchLibrary = defineComponent({
       h('p', { class: 'visually-hidden', role: 'status' }, announcement.value),
       slots.footer ? h('div', { class: 'word-search-library-footer' }, slots.footer()) : null,
       pendingDelete.value ? h(DeleteConfirmation, {
-        item: pendingDelete.value,
+        itemName: pendingDelete.value.name,
+        itemLabel: pendingDelete.value.kind === 'word-search' ? 'word search' : 'group',
+        detail: pendingDelete.value.kind === 'group'
+          ? `This also deletes ${countItems(pendingDelete.value.children)} nested library items, including ${countWordSearches(pendingDelete.value.children)} word searches.`
+          : 'The saved word search will be removed from the library.',
+        confirmLabel: pendingDelete.value.kind === 'group' ? 'Delete group' : 'Delete word search',
         onCancel: cancelDelete,
         onConfirm: confirmDelete,
       }) : null,

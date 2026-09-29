@@ -1,19 +1,16 @@
 import type { DisplayOptions } from './display-options.ts';
 import { inputValue } from '../../core/dom.ts';
+import { useDialog } from '../../components/use-dialog.ts';
 import { DISPLAY_FIELDS, defaultDisplayOptions } from './display-options.ts';
 
-import { defineComponent, type PropType, h, onMounted, onBeforeUnmount, onDeactivated, ref } from 'vue';
+import { defineComponent, type PropType, h } from 'vue';
 
 export const DisplaySettings = defineComponent({
   name: 'DisplaySettings',
   props: { options: { type: Object as PropType<DisplayOptions>, required: true } },
   emits: { 'update': (_options: DisplayOptions) => true, 'close': () => true },
   setup(props, { emit }) {
-    const dialog = ref<HTMLDialogElement | null>(null);
-    const closeDialog = () => { if (dialog.value?.open) dialog.value.close(); };
-    onMounted(() => dialog.value?.showModal());
-    onBeforeUnmount(closeDialog);
-    onDeactivated(closeDialog);
+    const { dialog } = useDialog();
 
     function control(field: (typeof DISPLAY_FIELDS)[number]) {
       const id = `card-display-${field.key}`;

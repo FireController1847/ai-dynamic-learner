@@ -1,5 +1,6 @@
 @import './tokens.css';
 @import './base.css';
+@import './delete-confirmation.css';
 @import './shell.css';
 @import './tips.css';
 @import './home.css';
@@ -9,7 +10,6 @@
 @import '../features/index-cards/card-set.css';
 @import '../features/index-cards/card-list.css';
 @import '../features/index-cards/review-setup.css';
-@import '../features/index-cards/delete-confirmation.css';
 @import '../features/index-cards/display-settings.css';
 @import '../features/word-search/word-search.css';
 @import '../features/word-search/puzzle-form.css';

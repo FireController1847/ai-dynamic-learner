@@ -1,4 +1,6 @@
-import { defineComponent, type PropType, h, onBeforeUnmount, onDeactivated, onMounted, ref } from 'vue';
+import { useDialog } from '../../components/use-dialog.ts';
+
+import { defineComponent, h } from 'vue';
 
 const examples = [
   ['Headings', '# Title\n## Section\n### Subsection', 'Use one to six # signs, followed by a space.'],
@@ -17,11 +19,7 @@ export const MarkdownCheatsheet = defineComponent({
   name: 'NotebookMarkdownCheatsheet',
   emits: { 'close': () => true },
   setup(props, { emit }) {
-    const dialog = ref<HTMLDialogElement | null>(null);
-    const close = () => { if (dialog.value?.open) dialog.value.close(); };
-    onMounted(() => dialog.value?.showModal());
-    onBeforeUnmount(close);
-    onDeactivated(() => { close(); emit('close'); });
+    const { dialog } = useDialog({ onDeactivate: () => emit('close') });
 
     return () => h('dialog', {
       ref: dialog,

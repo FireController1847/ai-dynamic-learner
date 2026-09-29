@@ -3,7 +3,7 @@ import type { VNode } from 'vue';
 import type { LibraryItem, MovePosition } from './tree-model.ts';
 import { inputValue } from '../../core/dom.ts';
 import { Icon } from '../../components/icon.ts';
-import { DeleteConfirmation } from './delete-confirmation.ts';
+import { DeleteConfirmation } from '../../components/delete-confirmation.ts';
 import { canMove, countItems, createItem, deleteItem, findItem, MAX_DEPTH, MAX_ITEMS, MAX_NAME_LENGTH, moveItem } from './tree-model.ts';
 
 import { defineComponent, type PropType, h, nextTick, onDeactivated, ref } from 'vue';
@@ -295,7 +295,14 @@ export const DirectoryTree = defineComponent({
       slots.footer ? h('div', { class: 'directory-footer' }, slots.footer()) : null,
       h('p', { class: 'visually-hidden', role: 'status' }, announcement.value),
       pendingDelete.value ? h(DeleteConfirmation, {
-        item: pendingDelete.value, onCancel: cancelDelete, onConfirm: confirmDelete,
+        itemName: pendingDelete.value.name,
+        itemLabel: pendingDelete.value.kind,
+        detail: pendingDelete.value.kind === 'group'
+          ? `This also deletes every group, set, and card inside it (${countItems(pendingDelete.value.children)} nested groups and sets).`
+          : 'This also deletes every card in this set.',
+        confirmLabel: `Delete ${pendingDelete.value.kind}`,
+        onCancel: cancelDelete,
+        onConfirm: confirmDelete,
       }) : null,
     ]);
   },

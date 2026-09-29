@@ -1,15 +1,12 @@
-import { defineComponent, type PropType, h, onBeforeUnmount, onDeactivated, onMounted, ref } from 'vue';
+import { useDialog } from '../../components/use-dialog.ts';
+
+import { defineComponent, h } from 'vue';
 
 export const DisplaySettings = defineComponent({
   name: 'NotebookDisplaySettings',
   emits: { 'close': () => true },
   setup(props, { emit }) {
-    const dialog = ref<HTMLDialogElement | null>(null);
-    const closeDialog = () => { if (dialog.value?.open) dialog.value.close(); };
-
-    onMounted(() => dialog.value?.showModal());
-    onBeforeUnmount(closeDialog);
-    onDeactivated(closeDialog);
+    const { dialog } = useDialog();
 
     return () => h('dialog', {
       ref: dialog,

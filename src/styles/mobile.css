@@ -92,13 +92,7 @@
   }
   .display-setting-range input { min-height: 44px; margin: 0; }
   .review-choice { min-height: 56px; }
-  .review-setup-actions > button, .delete-confirmation-actions > button { flex: 1 1 auto; }
-  .delete-confirmation {
-    padding-top: max(24px, env(safe-area-inset-top));
-    padding-bottom: max(24px, env(safe-area-inset-bottom));
-    padding-left: max(20px, env(safe-area-inset-left));
-    padding-right: max(20px, env(safe-area-inset-right));
-  }
+  .review-setup-actions > button { flex: 1 1 auto; }
 }
 
 @media (max-width: 420px) {

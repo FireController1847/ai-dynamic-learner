@@ -6,7 +6,7 @@ import type { VNode } from 'vue';
 import type { LibraryItem, MovePosition } from './library-model.ts';
 import { inputValue } from '../../core/dom.ts';
 import { Icon } from '../../components/icon.ts';
-import { DeleteConfirmation } from './delete-confirmation.ts';
+import { DeleteConfirmation } from '../../components/delete-confirmation.ts';
 import { readMarkdownFile } from './document-files.ts';
 import {
   countItems, createItem, deleteItem, findItem, MAX_DEPTH, MAX_ITEMS, MAX_NAME_LENGTH,
@@ -302,7 +302,12 @@ export const NotebookLibrary = defineComponent({
       h('p', { class: 'visually-hidden', role: 'status' }, announcement.value),
       slots.footer ? h('div', { class: 'notebook-library-footer' }, slots.footer()) : null,
       pendingDelete.value ? h(DeleteConfirmation, {
-        item: pendingDelete.value,
+        itemName: pendingDelete.value.name,
+        title: `Delete this ${pendingDelete.value.kind}?`,
+        detail: pendingDelete.value.kind === 'group'
+          ? 'This also deletes every document and nested group inside it.'
+          : null,
+        confirmLabel: `Delete ${pendingDelete.value.kind}`,
         onCancel: cancelDelete,
         onConfirm: confirmDelete,
       }) : null,
