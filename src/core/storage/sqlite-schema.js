@@ -167,7 +167,6 @@ CREATE TABLE IF NOT EXISTS word_search_words (
   sort_order INTEGER NOT NULL CHECK (sort_order BETWEEN 0 AND 39),
   hint TEXT CHECK (hint IS NULL OR length(hint) <= 240),
   PRIMARY KEY (workspace_id, item_id, word),
-  UNIQUE (workspace_id, item_id, sort_order),
   FOREIGN KEY (workspace_id, item_id)
     REFERENCES word_search_puzzles(workspace_id, item_id) ON DELETE CASCADE
 ) STRICT;
@@ -200,7 +199,6 @@ CREATE TABLE IF NOT EXISTS word_search_game_placements (
   start_cell INTEGER NOT NULL CHECK (start_cell BETWEEN 0 AND 575),
   end_cell INTEGER NOT NULL CHECK (end_cell BETWEEN 0 AND 575),
   PRIMARY KEY (workspace_id, item_id, word),
-  UNIQUE (workspace_id, item_id, sort_order),
   FOREIGN KEY (workspace_id, item_id)
     REFERENCES word_search_games(workspace_id, item_id) ON DELETE CASCADE,
   FOREIGN KEY (workspace_id, item_id, word)
@@ -215,7 +213,6 @@ CREATE TABLE IF NOT EXISTS word_search_game_found (
   start_cell INTEGER NOT NULL CHECK (start_cell BETWEEN 0 AND 575),
   end_cell INTEGER NOT NULL CHECK (end_cell BETWEEN 0 AND 575),
   PRIMARY KEY (workspace_id, item_id, word),
-  UNIQUE (workspace_id, item_id, sort_order),
   FOREIGN KEY (workspace_id, item_id)
     REFERENCES word_search_games(workspace_id, item_id) ON DELETE CASCADE,
   FOREIGN KEY (workspace_id, item_id, word)
