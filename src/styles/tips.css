@@ -298,3 +298,16 @@
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+
+
+.tips-menu-reset {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+}
+
+.tips-reset-button {
+  min-height: 34px;
+}

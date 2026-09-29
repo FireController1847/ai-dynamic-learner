@@ -292,6 +292,18 @@ export const TipsExperience = {
       });
     }
 
+    function resetCurrentTips() {
+      const featureId = props.feature?.id;
+      if (!featureId) return;
+      const prefix = `${featureId}:`;
+      const seen = Object.fromEntries(Object.entries(preferences.value.seen)
+        .filter(([key]) => key !== featureId && !key.startsWith(prefix)));
+      savePreferences({
+        ...preferences.value,
+        seen,
+      });
+    }
+
     function requestPositionUpdate() {
       cancelAnimationFrame(updateFrame);
       updateFrame = requestAnimationFrame(updatePosition);
@@ -660,13 +672,22 @@ export const TipsExperience = {
             h('span', {
               class: ['tips-section-state', {
                 complete: seen,
-                'is-action': !available && canPrepare,
+                'is-action': !seen && !available && canPrepare,
               }],
-            }, !available
-              ? canPrepare ? 'Open for me' : 'Open this screen first'
-              : seen ? 'Done · Show again' : 'Start'),
+            }, seen
+              ? 'Done · Show again'
+              : !available
+                ? canPrepare ? 'Open for me' : 'Open this screen first'
+                : 'Start'),
           ]);
         })),
+        h('div', { class: 'tips-menu-reset' }, [
+          h('button', {
+            type: 'button',
+            class: 'delete-confirm-button tips-reset-button',
+            onClick: resetCurrentTips,
+          }, 'Reset tips'),
+        ]),
       ];
     }
 
