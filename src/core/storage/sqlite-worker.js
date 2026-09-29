@@ -13,21 +13,40 @@ async function openDatabase() {
       initialCapacity: 6,
     });
     const db = new pool.OpfsSAHPoolDb('/dynamic-learner.sqlite3');
+    const storedSchemaVersion = Number(db.selectValue('PRAGMA user_version') ?? 0);
+    if (storedSchemaVersion !== 0 && storedSchemaVersion !== SQLITE_SCHEMA_VERSION) {
+      db.close();
+      throw new Error(
+        `This workspace database uses schema version ${storedSchemaVersion}; this build supports version ${SQLITE_SCHEMA_VERSION}.`,
+      );
+    }
     db.exec(SQLITE_SCHEMA);
-    return { db, version: sqlite3.version.libVersion };
+
+    let workspaceId = db.selectValue(
+      "SELECT value FROM storage_metadata WHERE key = 'active_workspace_id' LIMIT 1",
+    );
+    if (!workspaceId) {
+      workspaceId = crypto.randomUUID();
+      db.exec({
+        sql: 'INSERT INTO storage_metadata (key, value) VALUES (?, ?)',
+        bind: ['active_workspace_id', workspaceId],
+      });
+    }
+
+    return { db, workspaceId, version: sqlite3.version.libVersion };
   })();
   return databasePromise;
 }
 
 async function handle(type, payload) {
-  const { db, version } = await openDatabase();
+  const { db, workspaceId, version } = await openDatabase();
   switch (type) {
     case 'initialize':
-      return { sqliteVersion: version, schemaVersion: SQLITE_SCHEMA_VERSION };
+      return { sqliteVersion: version, schemaVersion: SQLITE_SCHEMA_VERSION, workspaceId };
     case 'load':
-      return loadWorkspaceFromDatabase(db);
+      return loadWorkspaceFromDatabase(db, workspaceId);
     case 'save':
-      saveWorkspaceToDatabase(db, payload.workspace);
+      saveWorkspaceToDatabase(db, payload.workspace, workspaceId);
       return null;
     default:
       throw new Error(`Unsupported SQLite worker operation: ${type}`);
