@@ -101,7 +101,7 @@ async function handle(type, payload) {
       saveWorkspaceToDatabase(db, payload.workspace, workspaceId);
       return null;
     case 'export-backup':
-      return gzipCompress(pool.exportFile(DATABASE_FILENAME));
+      return gzipCompress(await pool.exportFile(DATABASE_FILENAME));
     case 'inspect-backup':
       return inspectBackup(sqlite3, payload.bytes);
     default:
