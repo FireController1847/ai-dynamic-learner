@@ -1,143 +1,110 @@
-# Dynamic Learner
+<p align="center">
+  <img src="src/assets/dynamic-learner.png" alt="Dynamic Learner" width="104">
+</p>
 
-## Notebook Markdown
+<h1 align="center">Dynamic Learner</h1>
 
-Create a Markdown document or use the upload icon beside **New document** in the Library to import a UTF-8 `.md` file (up to 8 MB). Imports create a new document at the selected library location. Lined Paper and Graph Paper show **Coming soon!** and cannot be created yet. Existing documents of those types remain available.
+<p align="center">
+  A browser-native collection of focused learning tools for studying, organizing material, and reviewing at your own pace.
+</p>
 
-The editor provides **Split**, **Source**, and **Preview** modes; **Rich** is reserved for a future editor and is disabled. The download icon immediately after **Preview** exports the current document as `.md`. It shows a loading icon and stays disabled while the file is prepared, then hands the download to the browser.
-
-Use **Contents** in the preview header to show an optional floating table of contents on the right. Entries follow Markdown heading levels and jump to the corresponding preview heading without navigating away. On narrow previews, Contents moves above the text so it remains readable. Headings inside code fences are excluded; repeated headings have distinct targets.
-
-The client-side preview supports GitHub Flavored Markdown (GFM), including tables, task lists, strikethrough, and autolinks, plus nested lists and fenced code. Safe HTML such as `<u>underlined text</u>`, `<sup>`, `<sub>`, and `<details>` is rendered too. Scripts, event handlers, embedded frames, and custom styles are stripped from the preview. Task checkboxes reflect the Markdown source and are read-only; edit `[ ]` / `[x]` in Source to change them. Saved and downloaded Markdown keeps the original source.
-
-Use **Cheatsheet** in the Source header for a compact, scrollable syntax reference with beginner-friendly examples. Close it with **Close** or Escape. Blockquotes use a neutral gray border and muted text. Manual checks: open the cheatsheet in Split and Source modes, including after swapping panels; check keyboard focus returns to the trigger after closing, and that examples remain readable on narrow or short screens. Preview a quote with multiple paragraphs and a nested quote to check spacing and borders.
-
-Empty documents (including whitespace-only Markdown) delete without confirmation; documents with content and populated groups still require confirmation. Notebook **Settings** and **Rich** are unavailable and show **Coming soon!** tooltips on hover or keyboard focus. Manual checks: delete blank, whitespace-only, and populated documents; confirm Settings and Rich do nothing when clicked or activated with Enter/Space, and their tooltips remain visible within narrow layouts.
-
-Manual GFM checks: preview a table with left/center/right alignment, nested task lists, a bare URL, strikethrough, and HTML underline/details. Confirm HTML headings appear in Contents and fenced HTML stays literal. Try `<script>alert(1)</script>`, an image with `onerror`, and a `javascript:` link: none should execute. Check wide tables scroll within a narrow preview, then download/re-import to confirm the source survives unchanged.
-
-Manual checks: create/import Markdown with nested and repeated headings, inline formatting, fenced code, and underlined headings. Toggle Contents, select its links with mouse and keyboard, switch modes, swap panels, and resize to a narrow screen. Download non-ASCII text and reopen the `.md` file to compare it with the source. Import an empty file, reject a non-`.md` or oversized/binary file, and verify imports land in the selected group without overwriting existing names. Check Rich stays disabled and paper-type tooltips appear on hover/focus; reload and round-trip a workspace backup to confirm imported content persists.
-
-Licensed under [Apache License 2.0](LICENSE).
+<p align="center">
+  <a href="https://firecontroller1847.github.io/ai-dynamic-learner/">
+    <img alt="Open Dynamic Learner on GitHub Pages" src="https://img.shields.io/badge/Open%20Dynamic%20Learner-GitHub%20Pages-0f6cbd?style=for-the-badge&logo=githubpages&logoColor=white">
+  </a>
+  <a href="https://github.com/FireController1847/ai-dynamic-learner/stargazers">
+    <img alt="GitHub stars" src="https://img.shields.io/github/stars/FireController1847/ai-dynamic-learner?style=for-the-badge">
+  </a>
+  <a href="https://github.com/FireController1847/ai-dynamic-learner/network/members">
+    <img alt="GitHub forks" src="https://img.shields.io/github/forks/FireController1847/ai-dynamic-learner?style=for-the-badge">
+  </a>
+  <a href="https://github.com/FireController1847/ai-dynamic-learner/commits/main">
+    <img alt="Last commit" src="https://img.shields.io/github/last-commit/FireController1847/ai-dynamic-learner?style=for-the-badge">
+  </a>
+  <a href="LICENSE">
+    <img alt="Apache 2.0 license" src="https://img.shields.io/github/license/FireController1847/ai-dynamic-learner?style=for-the-badge">
+  </a>
+</p>
 
 ## AI development disclosure
 
-Dynamic Learner is developed using AI, primarily OpenAI Codex. AI assistance is central to writing and revising the application's code, interface, and documentation, with a human directing requirements and providing feedback. This is an AI-developed project, not merely an app with an AI feature. AI-assisted development does not imply that changes have been independently reviewed or automatically tested; follow the manual verification guidance below.
+> [!IMPORTANT]
+> **Dynamic Learner is intentionally developed as an AI-generated workspace.** The project owner directs the product, requirements, priorities, and feedback; AI coding agents — primarily OpenAI Codex — create and revise much of the implementation and repository content in response.
 
-A modular browser-native Vue 3 application with a collapsible navigation drawer, an Index Cards library with editable card stacks, and a Word Search library for creating and playing puzzles with saved progress. JavaScript uses native ES modules and plain Vue component objects, with no application build step or npm dependencies.
+This repository does not follow a conventional workflow where most changes are hand-written and maintained through manual pull requests. Development is generally directed in natural language, carried out by AI agents, reviewed through the resulting behavior and diffs, and iterated from there.
 
-The interface uses a Microsoft Fluent-inspired visual system: compact shared controls, neutral adjoining panels, blue selection accents, and animated drawers. Ruled index cards retain their red and blue lines. See [design conventions](docs/design.md) for the shared styling rules; no Fluent package or external font is required.
+That distinction matters when reading the codebase:
 
-## Start
+- AI-generated code should not be assumed to have received independent line-by-line human review.
+- A commit or pull request may represent an agent's implementation of a human-directed change rather than a hand-authored patch.
+- Bug reports, ideas, and feedback are useful even when the eventual implementation is performed by an AI agent.
+- [`AGENTS.md`](AGENTS.md) contains instructions for coding agents. This README is the human-facing project overview and is not an agent scratchpad, QA log, or task-memory file.
 
-With a current Node.js LTS installation (including npm):
+## What is Dynamic Learner?
 
-```sh
+Dynamic Learner is a lightweight study workspace that runs in the browser. It is designed around small, focused tools that share one workspace instead of trying to turn studying into one giant all-purpose editor.
+
+The current application includes:
+
+| Tool | What it does |
+| --- | --- |
+| **Notebook** | Organizes documents into a nested library. Markdown documents currently support source and preview workflows, with additional document types planned. |
+| **Index Cards** | Creates nested groups and card sets with editable fronts and backs, review modes, appearance controls, and resumable workspace storage. |
+| **Word Search** | Builds custom word-search puzzles with configurable difficulty and appearance, saved grids, hints, answer reveal, and persistent progress. |
+
+The interface uses a Fluent-inspired visual language with neutral surfaces, compact controls, blue accents, and responsive layouts. The tools are meant to feel related without forcing every feature into the same interaction model.
+
+## Try it
+
+The latest published GitHub Pages snapshot is available here:
+
+**[Open Dynamic Learner →](https://firecontroller1847.github.io/ai-dynamic-learner/)**
+
+GitHub Pages is deployed manually, so the published site may occasionally lag behind the latest commit on `main`.
+
+To run the current source locally, install a current Node.js LTS release and run:
+
+```powershell
 npm start
 ```
 
-Open `http://127.0.0.1:3000`. No `npm install` is needed. Stop with Ctrl+C. Override the address when needed:
+Then open <http://127.0.0.1:3000>.
 
-```sh
-HOST=127.0.0.1 PORT=8080 npm start
+There is no application build step and no `npm install` is currently required. The local Node server uses built-in modules, while the browser loads Vue 3.5.13 from jsDelivr at runtime. An internet connection is therefore required for Vue to load.
+
+To use a different address or port in PowerShell:
+
+```powershell
+$env:HOST = "127.0.0.1"
+$env:PORT = "8080"
+npm start
 ```
 
-## Rename and extend
+## Your workspace data
 
-Home provides launcher cards for Index Cards and Word Search, using the same destinations as the navigation drawer. New feature definitions automatically join the responsive grid; add an icon and description alongside the label and path. Word Search includes a persistent library with nested groups and a staged form for creating and editing puzzle settings. The Home footer includes the Apache-2.0 notice, repository link, current local date, and a browser-storage reminder. Repository and license metadata live in `src/app/app-config.js`.
+Dynamic Learner stores workspace content locally in the browser rather than in an account or remote database.
 
-For publishing, see [GitHub Pages setup](docs/github-pages.md). The repository includes a manually triggered **Deploy to GitHub Pages** workflow. It packages the static app without bundling, supports repository-prefixed URLs, and creates direct-link entry points for each feature. Select **GitHub Actions** in the repository's Pages settings, then use **Actions → Deploy to GitHub Pages → Run workflow**. Ordinary pushes do not publish.
+The navigation drawer includes **Download backup** and **Upload backup** controls for moving or preserving the workspace as JSON. A restore replaces the current saved workspace after review. Browser-local UI preferences, such as panel sizing, may be stored separately from the content backup.
 
-Change `name` in `src/app/app-config.js` to update the Home heading, navigation drawer identity, and browser title. Feature pages display their own title in a compact header instead of a persistent app-name banner. Update the package name in `package.json` and this README if renaming the project itself.
+If the browser's site data is cleared without a backup, locally stored learning content may be lost.
 
-Add real functionality under `src/features`, define its ID, label, and path in `src/features/feature-definitions.js`, and register its component in `src/features/feature-registry.js`. Restart the server after adding paths. Compose application behavior in `src/app`. Use `src/components` for reusable, feature-neutral Vue components (currently the icon component) and `src/core` for neutral utilities (currently shared ID helpers).
+More detail about the saved format is available in [`docs/workspace-data.md`](docs/workspace-data.md).
 
-Index Cards and Word Search have their own directories under `src/features`. Home lives at `/`, Index Cards at `/index-cards/`, and Word Search at `/word-search/`. Use the three-bar menu to navigate; links also support opening in new tabs. Direct links, refreshes, and browser Back/Forward select the matching view. Switching views retains temporary UI state; reloading restores saved workspace data and keeps the selected URL.
+## Project shape
 
-## Groups, sets, and backups
+Dynamic Learner deliberately keeps its runtime simple:
 
-On Index Cards, the folder and stacked-card buttons create a group or set relative to the current selection: selecting a group creates the new item inside it, selecting a set creates the new item immediately after it in the same parent, and creating with no selection uses the top level. The library fills the available page height and its tree scrolls independently. On desktop, drag the divider between the Library and content to resize the Library; the browser remembers that width locally across reloads, the divider supports Left/Right and Home/End from the keyboard, and double-clicking it resets the default width. Use the minimize button in its toolbar to hide the library completely and give the content the full width. A floating icon at the upper left restores it without losing open groups or selection. The library slides open and closed; reduced-motion preferences disable the animation. Groups contain nested groups and sets. Click a pencil to rename; Enter or leaving the field saves, Escape cancels, and a blank name keeps the old name. Select a set to work with its cards on the right.
+- Vue 3 is loaded directly in the browser.
+- JavaScript uses native ES modules.
+- `server.mjs` provides the local static server.
+- There is no bundler, TypeScript compilation, or Vue single-file-component build pipeline.
+- Features live under `src/features`; shared application composition lives under `src/app`.
+- GitHub Pages preparation copies the browser-ready application into `dist/` and creates direct-link entry points without compiling the source.
 
-The trash can beside each pencil deletes an empty set or group immediately. A set is empty when it has no cards; a group is empty when it has no child entries. Populated sets and groups open a fullscreen deletion prompt. Cancel or Escape keeps the item. The red Delete button permanently removes it; deleting a group also removes all nested groups and sets. Download a backup first if you may need to restore it.
+For technical structure, see [architecture](docs/architecture.md). For where a particular kind of change belongs, see [change routing](docs/change-routing.md). Deployment details live in [GitHub Pages setup](docs/github-pages.md).
 
-Drag a row onto the center of a group to move it inside, or near a row's top/bottom edge to place it before/after that row. Blue indicators show the destination. Drop on **Top level** to move to the start of the root, or the bottom drop area to append there. Each group keeps its own manual order. Selecting an item also provides **Move to group**, **Move up**, and **Move down** controls for keyboard and touch use.
+If you are an AI coding agent working in this repository, start with [`AGENTS.md`](AGENTS.md).
 
-Changes save locally in this browser. Open the main navigation drawer and find **Workspace** at the bottom: **Download backup** exports the workspace as JSON, and **Upload backup** validates a file and shows a replacement review. Confirm to replace the entire workspace, or cancel to keep current data. Closing the drawer also dismisses an unconfirmed review. Back up first if you need to keep both copies. Files contain the saved content and order, not temporary UI state. See [workspace data](docs/workspace-data.md) for format details and storage limits.
+## License
 
-Use [change routing](docs/change-routing.md) to find the files for an edit and [architecture](docs/architecture.md) for ownership and dependency rules.
-
-## Word Search setup
-
-Word Search has its own persistent Library containing nested groups and word-search records. Groups and word searches can be renamed, deleted, dragged, reordered, moved between groups, and backed up with the rest of the workspace. The Library can be minimized or resized on desktop, remembers its browser-local width across reloads, resets to its default width on divider double-click, and becomes an overlay on phones and touch tablets.
-
-Choose **New word search**, enter a title and 3–40 words, then choose a grid size and difficulty. Paste words one per line or separate them with commas or semicolons. The form converts English letters to uppercase, removes spaces, apostrophes, and hyphens, and combines duplicates. A live preview shows the saved words and flags those too long for the grid. Optional instructions describe the activity.
-
-**Create word search** saves the definition in the selected group, the selected word search's parent, or the top level, then generates a playable grid. Every word must fit; if generation cannot place them all, retry or edit the puzzle to choose a larger grid or fewer words. Existing settings-only puzzles generate when opened. **Edit puzzle** stages changes; **Save changes** commits them and **Cancel** leaves saved data untouched. Changing words, size, or difficulty starts a fresh grid and clears progress. Title and instruction changes keep your current game. Creation drafts do not add library records.
-
-Drag across a word with a mouse, or tap/click its first and last letters in either order. Words must form a straight horizontal, vertical, or diagonal line. Easy places words across and down; Medium adds forward diagonals; Hard uses all eight directions. With a keyboard, Tab into the grid, use arrow keys to move, and press Enter or Space at each endpoint; Escape cancels. Home/End moves within a row, or use Ctrl with Home/End for the whole grid. The grid fits available width and viewport height where practical, retaining cells at least 30 pixels wide (larger when needed for the selected letter size). Larger puzzles scroll instead of squeezing letters below that minimum. The outer frame follows the grid exactly, without internal gridlines.
-
-Found words are highlighted and checked off in the word bank. **Hint** identifies an unfound word's starting letter. **Show answers** highlights solutions and lists endpoint coordinates without counting them as found; hide answers to resume play. Find every word to complete the puzzle. **Start over** clears progress on the same grid; **New layout** generates a fresh arrangement. Both ask for confirmation. If a new layout cannot be generated, the existing game remains intact. Grid letters and found words save locally and travel in workspace backups; reopen a puzzle to resume it.
-
-Each selection attempt gives the recognized letters one smooth pulse: the highlight color for a matching word, red for a miss. The status message also spells out the selected sequence. Non-straight selections briefly mark the endpoints red and explain that no sequence was recognized. Feedback uses a single smooth 550ms pulse, with a softer red glow for misses, and works independently of the outline-movement setting, and uses a brief static color with reduced motion. Manually try correct, incorrect, repeated, backward, and non-straight selections, including rapid attempts and keyboard/touch input; check the pulse returns cleanly to the usual letter color without changing saved progress for misses.
-
-TODO: Add customizable grid dimensions, including rectangular grids. For now, choose 10 × 10, 15 × 15, 20 × 20, or 24 × 24.
-
-Open **Settings** in the Word Search library footer to choose font, font weight, letter size, preferred cell size, fit mode, highlight color, and smooth/instant movement. Defaults use regular-weight monospace letters at 95% and instant movement. Preferred cell size is disabled in fit mode, which sizes cells automatically; all fonts use equally sized square cells. A live preview shows the result. Appearance saves across puzzles and in backups; **Reset display defaults** leaves the puzzle and progress intact. Highlights use continuous rounded outlines, including diagonals and overlaps. While selecting, the outline follows the mouse; smooth mode fades found words into place. Highlighted letters use the highlight color, and found/revealed words have a tiny upright left-to-right label beneath their outline, even when the grid spells the word backward. The word list sits immediately beside the grid and wraps below when space is tight. System reduced-motion preferences disable animations regardless of the motion setting.
-
-## Writing and reviewing cards
-
-Reloading Index Cards reopens the last selected set and expands its parent groups. Browsing a group does not replace the remembered set. The restored set starts on the first card's front in normal browsing mode; card position and review state are not saved.
-
-Manual check: select a nested set, move to a later card or start Review, then reload. Confirm the set and parent groups return, with the first card showing its front outside Review. Try deleting the remembered set or restoring an older backup without a saved selection; the page should remain usable without a stale selection.
-
-Open **Settings** at the bottom of the Index Cards library to configure **Serif/Sans**, text size, card size, ink darkness, and vertical text alignment. A live sample shows the result. Options apply across sets, save locally, and are included in backups. **Reset display defaults** restores appearance without changing any cards. Font adjustments keep the card's ruling and margins fixed; card scaling keeps its 5:3 aspect ratio.
-
-Select a set and add its first card. Write directly on the large ruled card, then use **Show back** or **Show front** to write or reveal the other side. Click the title at the top of either side to edit it independently. The back title starts blank; existing titles remain on the front. The card list uses the chosen starting side’s title, or a card number when blank. Flipping rotates the paper; reduced-motion preferences disable the animation. Both sides are always editable; there is no separate editing mode. Changes save locally as you type and are included in workspace backups.
-
-Controls below the stack navigate previous/next, add a card after the current one, duplicate both titles and both sides, or immediately delete an individual card without confirmation. Review setup is above the card alongside the current position. Review first asks for Front or Back, then Sequential — forward, Sequential — backward, or Shuffle. Start review begins at the first card in that sequence; choosing forward restores saved order. Cancel or Escape keeps the current review unchanged. New cards have a fresh ID; duplicates do not share text state. Each new selection during review starts on your chosen side, and both sides remain editable. Focus the card frame to use Left/Right arrows and Space; these shortcuts leave typing and native controls alone.
-
-The workspace supports 1,000 cards total and 2,000 characters per side. Cards use landscape 5:3 proportions modeled on a 3 × 5-inch index card, with ten quarter-inch-spaced writing rows. Text, lines, and margins scale together when the workspace resizes. Longer text scrolls within the paper without stretching it or losing content. Set placement controls remain available under **Location and order**. A different set or restored workspace starts with fresh review state.
-
-## External runtime dependencies
-
-The browser loads Vue **3.5.13** from jsDelivr over HTTPS. Internet access to `cdn.jsdelivr.net` is required; without it, the app will not render. Node serves local files using only built-in modules. Icons are inline SVGs and require no external font or service. No Bootstrap, jQuery, router, or state library is included.
-
-## Manual verification
-
-On phones and touch tablets, opening a library item dismisses the library; tap the floating icon to reopen it, or tap the backdrop to close it. New-item naming and renaming keep the library open. A restored set starts with the library tucked away. The editor, controls, and horizontal card strip share a vertical scrolling workspace, including when the keyboard reduces available height. Try portrait/landscape, touch sliders in Settings, and the bottom card row. Desktop mouse layouts keep their existing sizing.
-
-Start or restart the app and open `/`. Confirm Home, then use the drawer to visit `/index-cards/` and `/word-search/` and check the matching headings and active navigation markers. Refresh each URL, paste each into a new tab, and use Back/Forward. Confirm links can open in a new tab, `/index-cards` redirects to `/index-cards/`, and an unknown URL returns 404.
-
-Confirm the full-height drawer slides over a dimmed backdrop. Check Tab stays inside; use Escape, the close button, and the backdrop to dismiss it. Confirm focus returns to the menu after dismissal or to content after navigation. Check a narrow window, reduced-motion settings, and the browser console for errors.
-
-On Word Search, create nested groups, rename them, drag/reorder them, resize and minimize the Library, and confirm they survive refresh and backup restore. Create a word search in a group and at the top level; confirm the correct destination, playable grid, and saved title, words, size, difficulty, and instructions. Try duplicate words, unsupported characters, too few/many words, and a word longer than the grid. Cancel creation and editing to confirm saved data stays intact. Reload and reopen the record, download/restore it, and try an older backup without puzzle settings. Check the form on a narrow screen, with the keyboard open, and using keyboard navigation only. Confirm the letter-grid icon with its highlighted word is clear on Home, in navigation, and in the library.
-
-Play each difficulty and grid size. Find horizontal, vertical, diagonal, and backward words where applicable, using mouse drag, two endpoint taps, and keyboard controls. Try selecting either end first, a non-straight selection, a non-word, an already found word, and a reversed word pair such as CAT/TAC. Check hints, answer reveal/hide, progress, and completion. Confirm Start over and New layout cancel safely and reset only when confirmed. Find words, switch puzzles, reload and reopen, and restore a backup to confirm the same grid and progress return. Verify title/instruction edits preserve progress while word/difficulty/size edits replace the grid. Try a dense list that cannot fit, retry or edit it, and switch away during generation. On touch devices, scroll large grids sideways, scroll the page vertically, and confirm every cell and action stays reachable. Inspect the browser console manually.
-
-Try Word Search Settings from the library footer, including an empty library. Check font/size extremes, fit versus preferred sizing, all highlight colors, smooth/instant motion, and reset. Resize the window and library; confirm the outline stays snug to the grid and letters remain readable. Check short windows, touch scrolling, diagonal/overlapping rounded highlights, mouse tracking, keyboard selection, and system reduced motion. Close the dialog with Done/Escape, check focus restoration, and reload/restore a backup to confirm appearance and puzzle progress persist.
-
-On Index Cards, create several groups and sets, rename with Enter/blur, cancel with Escape, and try a blank name. Nest groups and sets, reorder siblings, return an item to the root, and confirm a group cannot move into itself or a descendant. Try the selection-based move controls without dragging. Refresh and confirm names, structure, and order remain.
-
-Resize the Library by dragging its divider and with the divider's Left/Right and Home/End keys, reload and confirm the width is remembered, then double-click the divider and confirm the default width returns. Minimize and restore it and confirm selection and expanded groups remain. With a long tree, confirm its toolbar stays visible while the tree scrolls and reaches the bottom of the available page. Check narrow and short windows. Confirm backup controls appear only in the navigation drawer's Workspace section, and that its review controls remain reachable by scrolling.
-
-Download a backup, change the workspace, then upload the backup: first cancel and check the current data stays, then confirm replacement and check the original tree is restored, including after refresh. Upload malformed JSON or an unsupported format and confirm an error leaves current data untouched.
-
-Check that an empty set and an empty group delete without a prompt. Then try deleting a populated set and a group with nested items. Check the fullscreen prompt names the correct item, focuses Cancel, and keeps keyboard focus inside. Cancel and Escape should preserve all data. Confirm deletion, check the affected selection clears or moves to a surviving item, and refresh to confirm the removal was saved. Check the prompt at a narrow width and inspect the browser console.
-
-For cards, write multiline text on both sides, flip, navigate, duplicate, and edit the duplicate independently. Shuffle and restore the original order. Delete individual cards, including a populated card and the last card in a set, and confirm no prompt appears and selection moves appropriately. Refresh, reselect the set, and confirm text remains. Download and restore a populated backup and also try an older empty-set backup. Confirm malformed card data is rejected without replacing the workspace. Check a narrow window, a long card, reduced motion, keyboard controls, and the browser console.
-
-The right-hand Cards panel lists every card in the current set, with its title and a preview of the chosen starting side. On desktop, drag its divider to resize the panel; the browser remembers the width locally across reloads, focus the divider and use Left/Right or Home/End for keyboard resizing, or double-click the divider to reset its default width. Click any card to jump to it, or use the arrow keys and Home/End while a list item is focused. The active card stays visible as you review; the list follows forward, backward, or shuffled review order without changing saved order. The plus button adds a card. On narrow workspaces, the list becomes a horizontally scrolling strip below the editor.
-
-Manually resize the Cards panel with its divider and keyboard controls, switch between sets and reload to confirm the browser remembers the width, double-click the divider to reset it, then check title edits from both sides, live list updates, list selection and keyboard navigation, duplication, shuffle, refresh, and backup round-trips. Confirm older backups without titles still load and check narrow-screen scrolling and the browser console.
-
-For Review, try Front and Back with all three order choices. Confirm forward starts at the first saved card, backward at the last, and shuffle contains every card exactly once. Flip, then move next/previous or select from the list and confirm the chosen starting side returns. Cancel setup from either step, edit while reviewing, and check keyboard focus and the browser console.
-
-Review is a guided pass through the existing cards, not a separate editor or a scored quiz. The status above the card shows whether a review is running, its starting side, order, and current position. Reveal the other side, then choose **Next card**. The last card offers **Finish review**; **End review** leaves early and restores saved-order browsing without discarding edits. **Change setup** restarts with new choices after confirmation.
-
-Manually start a back-first review, confirm the visible summary and side labels, reveal and advance, finish at the last card, and end another review early. Confirm edited text remains and canceling Change setup leaves the current review intact.
-
-The vertical text alignment setting also adjusts titles against the red rule. Manually check independent titles, both flip directions, duplication, reload, older backups, and reduced motion.
-
-Manual Word Search appearance follow-up: reset defaults and confirm 95%, Regular, and Instant. In fit mode, confirm the preferred-size slider is disabled and grey; switch to preferred sizing to enable it. Check all font weights, square cells at the 30px minimum, and the adjacent word list at narrow and wide widths. Find a backward word and check its colored letters and upright label, including diagonal, vertical, overlapping, and bottom-row words. Restore an older backup without a weight or with a 28px preference; it should load with regular weight and a 30px minimum.
-
-Manual layout regression check: alternate correct and incorrect selections, reveal/hide answers, use hints, scroll, and finish the puzzle. Grid dimensions should stay unchanged throughout play. Resize the window/library or change a sizing setting to confirm intentional resizing still works. Check centered grid/word-bank grouping and controls on wide and narrow screens, and confirm Settings appears only in the library footer.
+Dynamic Learner is licensed under the [Apache License 2.0](LICENSE).
