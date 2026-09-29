@@ -18,9 +18,17 @@
   min-width: 0; max-width: 100%; width: calc(var(--puzzle-size) * var(--search-cell-size) + 10px);
   flex: 0 1 auto; display: grid; gap: 12px;
 }
-.word-search-board-scroll { overflow: auto; max-width: 100%; padding-bottom: 4px; }
+.word-search-board-scroll {
+  max-width: 100%;
+  overflow: auto;
+  padding-bottom: 4px;
+}
+.word-search-board-scroll.is-screen-fit {
+  overflow: clip;
+  padding-bottom: 0;
+}
 .word-search-board-area.is-rotating .word-search-board-scroll {
-  overflow: hidden;
+  overflow: clip;
   scrollbar-width: none;
 }
 .word-search-board-area.is-rotating .word-search-board-scroll::-webkit-scrollbar {
@@ -32,6 +40,7 @@
   min-width: 100%;
   padding: 4px;
   place-items: center;
+  contain: paint;
 }
 .word-search-board-rotator {
   transform: rotate(var(--board-to));
