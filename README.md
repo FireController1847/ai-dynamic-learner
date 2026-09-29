@@ -1,5 +1,23 @@
 # Dynamic Learner
 
+## Notebook Markdown
+
+Create a Markdown document or use the upload icon beside **New document** in the Library to import a UTF-8 `.md` file (up to 8 MB). Imports create a new document at the selected library location. Lined Paper and Graph Paper show **Coming soon!** and cannot be created yet. Existing documents of those types remain available.
+
+The editor provides **Split**, **Source**, and **Preview** modes; **Rich** is reserved for a future editor and is disabled. The download icon immediately after **Preview** exports the current document as `.md`. It shows a loading icon and stays disabled while the file is prepared, then hands the download to the browser.
+
+Use **Contents** in the preview header to show an optional floating table of contents on the right. Entries follow Markdown heading levels and jump to the corresponding preview heading without navigating away. On narrow previews, Contents moves above the text so it remains readable. Headings inside code fences are excluded; repeated headings have distinct targets.
+
+The client-side preview supports GitHub Flavored Markdown (GFM), including tables, task lists, strikethrough, and autolinks, plus nested lists and fenced code. Safe HTML such as `<u>underlined text</u>`, `<sup>`, `<sub>`, and `<details>` is rendered too. Scripts, event handlers, embedded frames, and custom styles are stripped from the preview. Task checkboxes reflect the Markdown source and are read-only; edit `[ ]` / `[x]` in Source to change them. Saved and downloaded Markdown keeps the original source.
+
+Use **Cheatsheet** in the Source header for a compact, scrollable syntax reference with beginner-friendly examples. Close it with **Close** or Escape. Blockquotes use a neutral gray border and muted text. Manual checks: open the cheatsheet in Split and Source modes, including after swapping panels; check keyboard focus returns to the trigger after closing, and that examples remain readable on narrow or short screens. Preview a quote with multiple paragraphs and a nested quote to check spacing and borders.
+
+Empty documents (including whitespace-only Markdown) delete without confirmation; documents with content and populated groups still require confirmation. Notebook **Settings** and **Rich** are unavailable and show **Coming soon!** tooltips on hover or keyboard focus. Manual checks: delete blank, whitespace-only, and populated documents; confirm Settings and Rich do nothing when clicked or activated with Enter/Space, and their tooltips remain visible within narrow layouts.
+
+Manual GFM checks: preview a table with left/center/right alignment, nested task lists, a bare URL, strikethrough, and HTML underline/details. Confirm HTML headings appear in Contents and fenced HTML stays literal. Try `<script>alert(1)</script>`, an image with `onerror`, and a `javascript:` link: none should execute. Check wide tables scroll within a narrow preview, then download/re-import to confirm the source survives unchanged.
+
+Manual checks: create/import Markdown with nested and repeated headings, inline formatting, fenced code, and underlined headings. Toggle Contents, select its links with mouse and keyboard, switch modes, swap panels, and resize to a narrow screen. Download non-ASCII text and reopen the `.md` file to compare it with the source. Import an empty file, reject a non-`.md` or oversized/binary file, and verify imports land in the selected group without overwriting existing names. Check Rich stays disabled and paper-type tooltips appear on hover/focus; reload and round-trip a workspace backup to confirm imported content persists.
+
 Licensed under [Apache License 2.0](LICENSE).
 
 ## AI development disclosure
