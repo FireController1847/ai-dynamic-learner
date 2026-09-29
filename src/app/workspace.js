@@ -1,10 +1,12 @@
 import { validateNotebook } from '../features/notebook/library-model.js';
 import { validateIndexCards } from '../features/index-cards/tree-model.js';
 import { validateWordSearch } from '../features/word-search/library-model.js';
+import { SQLiteWorkspaceStorage } from '../core/storage/sqlite-client.js';
+import { readLegacyWorkspace, clearLegacyWorkspace } from './legacy-workspace.js';
 
-const { ref, watch } = window.Vue;
-const STORAGE_KEY = 'dynamic-learner.workspace.v1';
+const { ref, toRaw, watch } = window.Vue;
 const MAX_BACKUP_BYTES = 32 * 1024 * 1024;
+const SAVE_DELAY_MS = 80;
 
 function emptyWorkspace() {
   return {
@@ -18,11 +20,7 @@ function emptyWorkspace() {
   };
 }
 
-function parseWorkspace(text) {
-  if (new Blob([text]).size > MAX_BACKUP_BYTES) throw new Error('Backups must be smaller than 32 MB.');
-  let value;
-  try { value = JSON.parse(text); }
-  catch { throw new Error('This file is not valid JSON.'); }
+function validateWorkspace(value) {
   if (!value || value.format !== 'dynamic-learner' || value.version !== 1 ||
       Object.keys(value).some((key) => !['format', 'version', 'features'].includes(key)) ||
       !value.features || !value.features['index-cards'] ||
@@ -37,51 +35,121 @@ function parseWorkspace(text) {
   return value;
 }
 
+function parseWorkspace(text) {
+  if (new Blob([text]).size > MAX_BACKUP_BYTES) throw new Error('Backups must be smaller than 32 MB.');
+  let value;
+  try { value = JSON.parse(text); }
+  catch { throw new Error('This file is not valid JSON.'); }
+  return validateWorkspace(value);
+}
+
+function migrationSummary(report) {
+  const details = [];
+  if (report.repaired) details.push(`${report.repaired} repaired`);
+  if (report.skipped) details.push(`${report.skipped} skipped`);
+  return `Legacy browser data was migrated into SQLite. ${report.recovered} records were recovered${details.length ? ` (${details.join(', ')})` : ''}.`;
+}
+
 export function useWorkspace() {
   const state = ref(emptyWorkspace());
+  const ready = ref(false);
   const storageProblem = ref('');
+  const migrationNotice = ref('');
   const revision = ref(0);
-  let protectStoredCopy = false;
+  const storage = new SQLiteWorkspaceStorage();
+  let savingEnabled = false;
+  let saveTimer = null;
 
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved !== null) state.value = parseWorkspace(saved);
-  } catch {
-    protectStoredCopy = true;
-    storageProblem.value = 'The saved workspace could not be loaded. The stored copy has been left untouched. Download your work before leaving, or upload a valid backup to restore saving.';
+  function storageError(problem) {
+    storageProblem.value = `SQLite storage is unavailable. Changes remain in memory; download a backup before leaving. ${problem?.message || ''}`.trim();
   }
 
-  function save() {
-    if (protectStoredCopy) return;
+  async function persistNow() {
+    if (!savingEnabled) return;
+    if (saveTimer !== null) {
+      clearTimeout(saveTimer);
+      saveTimer = null;
+    }
     try {
-      const text = JSON.stringify(state.value);
-      if (new Blob([text]).size > MAX_BACKUP_BYTES) throw new Error('Workspace too large');
-      localStorage.setItem(STORAGE_KEY, text);
+      await storage.saveWorkspace(toRaw(state.value));
       storageProblem.value = '';
-    } catch {
-      storageProblem.value = 'Browser storage is unavailable or full. Your changes are in memory; download a backup before leaving.';
+    } catch (problem) {
+      storageError(problem);
     }
   }
 
-  watch(state, save, { deep: true });
+  function scheduleSave() {
+    if (!savingEnabled) return;
+    if (saveTimer !== null) clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      saveTimer = null;
+      persistNow();
+    }, SAVE_DELAY_MS);
+  }
+
+  watch(state, scheduleSave, { deep: true });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') persistNow();
+  });
+
+  async function initialize() {
+    try {
+      await storage.initialize();
+      const saved = await storage.loadWorkspace();
+      if (saved) {
+        state.value = validateWorkspace(saved);
+        savingEnabled = true;
+        return;
+      }
+
+      const legacy = readLegacyWorkspace();
+      if (legacy.status === 'unreadable') {
+        storageProblem.value = `${legacy.error} Upload a valid backup to replace it and enable SQLite saving.`;
+        return;
+      }
+
+      const initial = legacy.status === 'ready'
+        ? validateWorkspace(legacy.workspace)
+        : emptyWorkspace();
+      await storage.saveWorkspace(initial);
+      state.value = initial;
+      savingEnabled = true;
+
+      if (legacy.status === 'ready') {
+        migrationNotice.value = migrationSummary(legacy.report);
+        try { clearLegacyWorkspace(); }
+        catch { /* SQLite is already authoritative; a leftover legacy copy is harmless. */ }
+      }
+    } catch (problem) {
+      storageError(problem);
+    } finally {
+      ready.value = true;
+    }
+  }
+
+  initialize();
 
   async function readBackup(file) {
     if (file.size > MAX_BACKUP_BYTES) throw new Error('Backups must be smaller than 32 MB.');
     return parseWorkspace(await file.text());
   }
 
-  function replaceWorkspace(value) {
-    // Revalidate and copy before touching live state; an invalid upload is never applied.
-    const replacement = parseWorkspace(JSON.stringify(value));
-    protectStoredCopy = false;
+  async function replaceWorkspace(value) {
+    const replacement = validateWorkspace(structuredClone(value));
+    await storage.saveWorkspace(replacement);
     state.value = replacement;
+    savingEnabled = true;
+    storageProblem.value = '';
+    migrationNotice.value = '';
     revision.value += 1;
-    save();
+    try { clearLegacyWorkspace(); }
+    catch { /* The confirmed SQLite replacement is still complete. */ }
   }
 
   function downloadBackup() {
-    const text = JSON.stringify(state.value);
-    // Keep exported files within the same limits as imports.
+    const text = JSON.stringify(toRaw(state.value));
+    // JSON remains the portable backup interchange format, not the live storage format.
     parseWorkspace(text);
     const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
     const link = document.createElement('a');
@@ -93,5 +161,15 @@ export function useWorkspace() {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
-  return { state, revision, storageProblem, readBackup, replaceWorkspace, downloadBackup };
+  return {
+    state,
+    ready,
+    revision,
+    storageProblem,
+    migrationNotice,
+    readBackup,
+    replaceWorkspace,
+    downloadBackup,
+    persistNow,
+  };
 }
