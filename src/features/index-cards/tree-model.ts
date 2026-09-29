@@ -1,17 +1,29 @@
 import { isRecord } from '../../core/validation.ts';
+import { createTreeOperations, type TreeGroupOption, type TreeItemLocation, type TreeMovePosition } from '../../core/tree.ts';
 import type { Card } from './card-model.ts';
 import type { DisplayOptions } from './display-options.ts';
 export interface CardSet { id: string; kind: 'set'; name: string; cards: Card[] }
 export interface Group { id: string; kind: 'group'; name: string; children: LibraryItem[] }
 export type LibraryItem = Group | CardSet;
 export interface IndexCards { items: LibraryItem[]; display?: DisplayOptions; lastSelectedSetId?: string | null }
-export interface ItemLocation { item: LibraryItem; siblings: LibraryItem[]; index: number; parentId: string | null; depth: number }
-export type MovePosition = 'before' | 'after' | 'inside';
-export interface GroupOption { id: string; label: string }
+export type ItemLocation = TreeItemLocation<LibraryItem>;
+export type MovePosition = TreeMovePosition;
+export type GroupOption = TreeGroupOption;
 
 export const MAX_ITEMS = 5000;
 export const MAX_DEPTH = 32;
 export const MAX_NAME_LENGTH = 120;
+
+const libraryTree = createTreeOperations<LibraryItem>({
+  children: (item) => item.kind === 'group' ? item.children : null,
+  maxDepth: MAX_DEPTH,
+});
+export const findItem = libraryTree.findItem;
+export const countItems = libraryTree.countItems;
+export const deleteItem = libraryTree.deleteItem;
+export const canMove = libraryTree.canMove;
+export const moveItem = libraryTree.moveItem;
+export const groupOptions = libraryTree.groupOptions;
 
 export function createItem(kind: 'group'): Group;
 export function createItem(kind: 'set'): CardSet;
@@ -23,82 +35,9 @@ export function createItem(kind: 'group' | 'set'): LibraryItem {
     : { id, kind: 'set', name: 'New set', cards: [] };
 }
 
-export function findItem(items: LibraryItem[], id: string | null | undefined, parentId: string | null = null, depth = 1): ItemLocation | null {
-  for (let index = 0; index < items.length; index += 1) {
-    const item = items[index];
-    if (item.id === id) return { item, siblings: items, index, parentId, depth };
-    if (item.kind === 'group') {
-      const found = findItem(item.children, id, item.id, depth + 1);
-      if (found) return found;
-    }
-  }
-  return null;
-}
-
-export function countItems(items: LibraryItem[]): number {
-  return items.reduce((count, item) => count + 1 +
-    (item.kind === 'group' ? countItems(item.children) : 0), 0);
-}
-
-export function deleteItem(items: LibraryItem[], id: string): LibraryItem | null {
-  const found = findItem(items, id);
-  if (!found) return null;
-  return found.siblings.splice(found.index, 1)[0];
-}
-
 export function countCards(items: LibraryItem[]): number {
   return items.reduce((count, item) => count +
     (item.kind === 'group' ? countCards(item.children) : item.cards.length), 0);
-}
-
-function subtreeDepth(item: LibraryItem): number {
-  return item.kind === 'group' && item.children.length
-    ? 1 + Math.max(...item.children.map(subtreeDepth)) : 1;
-}
-
-function planMove(items: LibraryItem[], sourceId: string, targetId: string | null, position: MovePosition) {
-  const source = findItem(items, sourceId);
-  const target = targetId ? findItem(items, targetId) : null;
-  if (!source || (targetId && !target) || sourceId === targetId) return null;
-  if (!['before', 'after', 'inside'].includes(position)) return null;
-  if (target && position === 'inside' && target.item.kind !== 'group') return null;
-
-  const parentId = target ? (position === 'inside' ? targetId : target.parentId) : null;
-  if (parentId === sourceId || (source.item.kind === 'group' &&
-      findItem(source.item.children, parentId))) return null;
-
-  const depth = target ? target.depth + (position === 'inside' ? 1 : 0) : 1;
-  if (depth + subtreeDepth(source.item) - 1 > MAX_DEPTH) return null;
-
-  const destination = !target ? items
-    : position === 'inside' && target.item.kind === 'group' ? target.item.children : target.siblings;
-  const index = !target ? (position === 'before' ? 0 : items.length)
-    : position === 'inside' ? destination.length
-      : target.index + (position === 'after' ? 1 : 0);
-  return { source, destination, index };
-}
-
-export function canMove(items: LibraryItem[], sourceId: string, targetId: string | null, position: MovePosition) {
-  return Boolean(planMove(items, sourceId, targetId, position));
-}
-
-export function moveItem(items: LibraryItem[], sourceId: string, targetId: string | null, position: MovePosition) {
-  const plan = planMove(items, sourceId, targetId, position);
-  if (!plan) return false;
-  let { source, destination, index } = plan;
-  if (source.siblings === destination && source.index < index) index -= 1;
-  source.siblings.splice(source.index, 1);
-  destination.splice(index, 0, source.item);
-  return true;
-}
-
-export function groupOptions(items: LibraryItem[], excludedId: string | null, trail: string[] = []): GroupOption[] {
-  return items.flatMap((item) => {
-    if (item.kind !== 'group' || item.id === excludedId) return [];
-    const path = [...trail, item.name];
-    return [{ id: item.id, label: path.join(' / ') },
-      ...groupOptions(item.children, excludedId, path)];
-  });
 }
 
 export function validateIndexCards(value: unknown): asserts value is IndexCards {
