@@ -4,6 +4,21 @@ import {
   isDocumentType,
   validateDocumentData,
 } from '../features/notebook/document-types.js';
+import {
+  MAX_DEPTH as MAX_NOTEBOOK_DEPTH,
+  MAX_DOCUMENTS,
+  MAX_ITEMS as MAX_NOTEBOOK_ITEMS,
+} from '../features/notebook/library-model.js';
+import {
+  MAX_DEPTH as MAX_INDEX_DEPTH,
+  MAX_ITEMS as MAX_INDEX_ITEMS,
+} from '../features/index-cards/tree-model.js';
+import { MAX_CARDS } from '../features/index-cards/card-model.js';
+import {
+  MAX_DEPTH as MAX_WORD_SEARCH_DEPTH,
+  MAX_ITEMS as MAX_WORD_SEARCH_ITEMS,
+  MAX_WORD_SEARCHES,
+} from '../features/word-search/library-model.js';
 import { validateDisplayOptions as validateIndexCardDisplay } from '../features/index-cards/display-options.js';
 import { validateDisplayOptions as validateWordSearchDisplay } from '../features/word-search/display-options.js';
 import { validatePuzzle } from '../features/word-search/puzzle-model.js';
@@ -56,9 +71,15 @@ function optionalDisplay(value, validate, report) {
 function migrateNotebook(raw, report) {
   const ids = new Set();
   const documentIdMap = new Map();
+  let itemCount = 0;
+  let documentCount = 0;
 
-  function visit(list) {
+  function visit(list, depth = 1) {
     if (!Array.isArray(list)) return [];
+    if (depth > MAX_NOTEBOOK_DEPTH) {
+      report.skipped += list.length;
+      return [];
+    }
     return list.flatMap((source) => {
       source = object(source);
       if (!source) {
@@ -78,6 +99,13 @@ function migrateNotebook(raw, report) {
         return [];
       }
 
+      if (itemCount >= MAX_NOTEBOOK_ITEMS ||
+          (kind === 'document' && documentCount >= MAX_DOCUMENTS)) {
+        report.skipped += 1;
+        return [];
+      }
+      itemCount += 1;
+      if (kind === 'document') documentCount += 1;
       const id = claimId(source.id, ids, report);
 
       if (kind === 'group') {
@@ -86,7 +114,7 @@ function migrateNotebook(raw, report) {
           id,
           kind: 'group',
           name: name(source.name, 'Recovered group', report),
-          children: visit(source.children),
+          children: visit(source.children, depth + 1),
         }];
       }
 
@@ -137,8 +165,14 @@ function migrateNotebook(raw, report) {
 function migrateIndexCards(raw, report) {
   const ids = new Set();
   const setIdMap = new Map();
+  let itemCount = 0;
+  let cardCount = 0;
 
   function card(source) {
+    if (cardCount >= MAX_CARDS) {
+      report.skipped += 1;
+      return null;
+    }
     source = object(source);
     if (!source || typeof source.front !== 'string' || typeof source.back !== 'string' ||
         source.front.length > 2000 || source.back.length > 2000) {
@@ -155,12 +189,17 @@ function migrateIndexCards(raw, report) {
       if (typeof source[key] === 'string' && source[key].length <= 120) result[target] = source[key];
       else report.repaired += 1;
     }
+    cardCount += 1;
     report.recovered += 1;
     return result;
   }
 
-  function visit(list) {
+  function visit(list, depth = 1) {
     if (!Array.isArray(list)) return [];
+    if (depth > MAX_INDEX_DEPTH) {
+      report.skipped += list.length;
+      return [];
+    }
     return list.flatMap((source) => {
       source = object(source);
       if (!source) {
@@ -177,6 +216,18 @@ function migrateIndexCards(raw, report) {
         return [];
       }
 
+      if (itemCount >= MAX_INDEX_ITEMS) {
+        report.skipped += 1;
+        return [];
+      }
+      itemCount += 1;
+      if (itemCount >= MAX_WORD_SEARCH_ITEMS ||
+          (kind === 'word-search' && searchCount >= MAX_WORD_SEARCHES)) {
+        report.skipped += 1;
+        return [];
+      }
+      itemCount += 1;
+      if (kind === 'word-search') searchCount += 1;
       const id = claimId(source.id, ids, report);
       report.recovered += 1;
       if (kind === 'group') {
@@ -184,7 +235,7 @@ function migrateIndexCards(raw, report) {
           id,
           kind: 'group',
           name: name(source.name, 'Recovered group', report),
-          children: visit(source.children),
+          children: visit(source.children, depth + 1),
         }];
       }
       if (isValidId(source.id) && !setIdMap.has(source.id)) setIdMap.set(source.id, id);
@@ -247,6 +298,7 @@ function migratePuzzle(value, report) {
     return null;
   }
 
+  if (words.length > 40) report.repaired += 1;
   const puzzle = {
     words: words.slice(0, 40),
     size,
@@ -289,9 +341,15 @@ function migratePuzzle(value, report) {
 
 function migrateWordSearch(raw, report) {
   const ids = new Set();
+  let itemCount = 0;
+  let searchCount = 0;
 
-  function visit(list) {
+  function visit(list, depth = 1) {
     if (!Array.isArray(list)) return [];
+    if (depth > MAX_WORD_SEARCH_DEPTH) {
+      report.skipped += list.length;
+      return [];
+    }
     return list.flatMap((source) => {
       source = object(source);
       if (!source) {
@@ -315,7 +373,7 @@ function migrateWordSearch(raw, report) {
           id,
           kind: 'group',
           name: name(source.name, 'Recovered group', report),
-          children: visit(source.children),
+          children: visit(source.children, depth + 1),
         }];
       }
 
