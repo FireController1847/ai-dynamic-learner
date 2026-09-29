@@ -5,20 +5,24 @@ export const tipsCatalog = {
     version: 1,
     steps: [
       {
-        title: 'Keep your notes organized',
-        body: 'Use the library to group related notebook documents together. Select an item whenever you want to open it in the workspace.',
+        title: 'Build your notebook library',
+        body: 'Use groups to organize documents by class, subject, project, or anything else that fits your workflow. New documents are created in the location you are currently browsing.',
       },
       {
-        title: 'Create what you need',
-        body: 'New documents are created inside the location you are currently browsing, so you can build a hierarchy that matches the way you think.',
+        title: 'Choose a document type',
+        body: 'Creating a document opens the Notebook builder. Markdown Paper is available now, while Lined Paper and Graph Paper are already represented as future document types.',
       },
       {
-        title: 'Your workspace stays yours',
-        body: 'Dynamic Learner keeps your notebook data in your workspace. You can use the workspace tools in the navigation drawer to back it up or restore it.',
+        title: 'Write Markdown with a live preview',
+        body: 'Markdown documents open with source and preview side by side. Switch between Split, Source, and Preview views, swap the panels, or resize them to fit the way you work.',
       },
       {
-        title: 'Adjust the layout',
-        body: 'Resize workspace panels when you want more room to read or write. Double-click supported dividers to return them to their default size.',
+        title: 'Use the built-in writing tools',
+        body: 'Open the Markdown cheatsheet when you need syntax help, use Contents to navigate headings in the preview, and download a document as a Markdown file whenever you want a copy outside Dynamic Learner.',
+      },
+      {
+        title: 'Make the workspace comfortable',
+        body: 'Resize the Notebook library for more writing room and double-click supported dividers to reset them. Your document contents and organization stay saved in the Dynamic Learner workspace.',
       },
     ],
   },
