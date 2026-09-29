@@ -63,6 +63,14 @@ export const PuzzleGrid = {
       return { x, y };
     }
 
+    function visualPointToSource(x, y) {
+      const extent = size.value;
+      if (rotation.value === 1) return { x: y, y: extent - x };
+      if (rotation.value === 2) return { x: extent - x, y: extent - y };
+      if (rotation.value === 3) return { x: extent - y, y: x };
+      return { x, y };
+    }
+
     function sourceCellToVisualIndex(cell) {
       const row = Math.floor(cell / size.value);
       const col = cell % size.value;
@@ -139,11 +147,7 @@ export const PuzzleGrid = {
         (event.clientX - bounds.left) / bounds.width * size.value));
       const visualY = Math.max(0.5, Math.min(size.value - 0.5,
         (event.clientY - bounds.top) / bounds.height * size.value));
-      const source = visualToSource(Math.floor(visualY), Math.floor(visualX));
-      pointerPoint.value = {
-        x: source.col + (visualX % 1),
-        y: source.row + (visualY % 1),
-      };
+      pointerPoint.value = visualPointToSource(visualX, visualY);
     }
 
     function pointerUp(event) {
@@ -246,7 +250,7 @@ export const PuzzleGrid = {
               ? ['word-search-attempt-letter', { 'attempt-miss': !props.attempt.matched }]
               : []),
           ],
-          style: settling.value ? { '--letter-delay': `${delay}ms` } : null,
+          style: { '--letter-delay': `${delay}ms` },
         }, letter)]);
       }));
     }
