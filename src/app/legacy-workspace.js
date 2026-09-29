@@ -55,7 +55,7 @@ function optionalDisplay(value, validate, report) {
 
 function migrateNotebook(raw, report) {
   const ids = new Set();
-  const idMap = new Map();
+  const documentIdMap = new Map();
 
   function visit(list) {
     if (!Array.isArray(list)) return [];
@@ -79,7 +79,6 @@ function migrateNotebook(raw, report) {
       }
 
       const id = claimId(source.id, ids, report);
-      if (isValidId(source.id) && !idMap.has(source.id)) idMap.set(source.id, id);
 
       if (kind === 'group') {
         report.recovered += 1;
@@ -114,6 +113,7 @@ function migrateNotebook(raw, report) {
         return [];
       }
 
+      if (isValidId(source.id) && !documentIdMap.has(source.id)) documentIdMap.set(source.id, id);
       report.recovered += 1;
       return [{
         id,
@@ -128,7 +128,7 @@ function migrateNotebook(raw, report) {
   raw = object(raw) ?? {};
   const result = { items: visit(raw.items) };
   if (Object.hasOwn(raw, 'lastSelectedDocumentId')) {
-    result.lastSelectedDocumentId = idMap.get(raw.lastSelectedDocumentId) ?? null;
+    result.lastSelectedDocumentId = documentIdMap.get(raw.lastSelectedDocumentId) ?? null;
     if (raw.lastSelectedDocumentId !== null && result.lastSelectedDocumentId === null) report.repaired += 1;
   }
   return result;
@@ -136,7 +136,7 @@ function migrateNotebook(raw, report) {
 
 function migrateIndexCards(raw, report) {
   const ids = new Set();
-  const idMap = new Map();
+  const setIdMap = new Map();
 
   function card(source) {
     source = object(source);
@@ -150,7 +150,6 @@ function migrateIndexCards(raw, report) {
       front: source.front,
       back: source.back,
     };
-    if (isValidId(source.id) && !idMap.has(source.id)) idMap.set(source.id, result.id);
     for (const [key, target] of [['title', 'title'], ['backTitle', 'backTitle']]) {
       if (!Object.hasOwn(source, key)) continue;
       if (typeof source[key] === 'string' && source[key].length <= 120) result[target] = source[key];
@@ -179,7 +178,6 @@ function migrateIndexCards(raw, report) {
       }
 
       const id = claimId(source.id, ids, report);
-      if (isValidId(source.id) && !idMap.has(source.id)) idMap.set(source.id, id);
       report.recovered += 1;
       if (kind === 'group') {
         return [{
@@ -189,6 +187,7 @@ function migrateIndexCards(raw, report) {
           children: visit(source.children),
         }];
       }
+      if (isValidId(source.id) && !setIdMap.has(source.id)) setIdMap.set(source.id, id);
       return [{
         id,
         kind: 'set',
@@ -205,7 +204,7 @@ function migrateIndexCards(raw, report) {
     if (display) result.display = display;
   }
   if (Object.hasOwn(raw, 'lastSelectedSetId')) {
-    result.lastSelectedSetId = idMap.get(raw.lastSelectedSetId) ?? null;
+    result.lastSelectedSetId = setIdMap.get(raw.lastSelectedSetId) ?? null;
     if (raw.lastSelectedSetId !== null && result.lastSelectedSetId === null) report.repaired += 1;
   }
   return result;
