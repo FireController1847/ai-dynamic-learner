@@ -211,7 +211,10 @@ export const PuzzleGrid = {
         '--puzzle-size': size.value,
       },
     }, [
-      h('div', { class: 'word-search-board-scroll', 'aria-label': 'Scrollable puzzle' }, [
+      h('div', {
+        class: ['word-search-board-scroll', { 'is-screen-fit': props.options.fit === 'screen' }],
+        'aria-label': props.options.fit === 'screen' ? 'Puzzle board' : 'Scrollable puzzle',
+      }, [
         h('div', { class: 'word-search-board-stage' }, [
           h('div', {
             class: ['word-search-board-rotator', { 'is-rotating': props.rotating }],
