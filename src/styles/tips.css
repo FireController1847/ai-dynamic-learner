@@ -65,6 +65,22 @@
 .tips-header {
   justify-content: space-between;
   gap: 16px;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.tips-card.is-dragging {
+  transition: none;
+}
+
+.tips-card.is-dragging .tips-header {
+  cursor: grabbing;
+}
+
+.tips-header button,
+.tips-header a {
+  cursor: pointer;
 }
 
 .tips-heading-group { gap: 8px; min-width: 0; }

@@ -65,6 +65,7 @@ export const TipsExperience = {
     const targetRect = ref(null);
     const cardPlacement = ref('center');
     const cardStyle = ref(centeredCardStyle());
+    const dragging = ref(false);
 
     let returnFocus = null;
     let currentTarget = null;
@@ -73,6 +74,10 @@ export const TipsExperience = {
     let updateFrame = 0;
     let autoFrame = 0;
     let returnToMenu = false;
+    let manualPosition = false;
+    let dragPointerId = null;
+    let dragOffsetX = 0;
+    let dragOffsetY = 0;
 
     const tutorial = computed(() => tipsCatalog[props.feature?.id] ?? null);
     const sections = computed(() => tutorial.value?.sections ?? []);
@@ -145,6 +150,7 @@ export const TipsExperience = {
       activeSectionId.value = null;
       stepIndex.value = 0;
       targetRect.value = null;
+      manualPosition = false;
       cardPlacement.value = 'center';
       cardStyle.value = centeredCardStyle();
       openState.value = true;
@@ -153,6 +159,7 @@ export const TipsExperience = {
     function startSection(section, fromMenu = false) {
       if (!section || !sectionAvailable(section)) return;
       returnToMenu = fromMenu;
+      manualPosition = false;
       mode.value = 'tour';
       activeSectionId.value = section.id;
       stepIndex.value = 0;
@@ -178,6 +185,7 @@ export const TipsExperience = {
       stepIndex.value = 0;
       trackTarget(null);
       targetRect.value = null;
+      manualPosition = false;
       cardPlacement.value = 'center';
       cardStyle.value = centeredCardStyle();
       nextTick(() => primaryFocus.value?.focus());
@@ -247,6 +255,63 @@ export const TipsExperience = {
       };
     }
 
+    function overlapArea(first, second) {
+      const width = Math.max(0, Math.min(first.right, second.right) - Math.max(first.left, second.left));
+      const height = Math.max(0, Math.min(first.bottom, second.bottom) - Math.max(first.top, second.top));
+      return width * height;
+    }
+
+    function candidatePosition(rect, placement, cardWidth, cardHeight) {
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const maxLeft = Math.max(VIEWPORT_MARGIN, viewportWidth - cardWidth - VIEWPORT_MARGIN);
+      const maxTop = Math.max(VIEWPORT_MARGIN, viewportHeight - cardHeight - VIEWPORT_MARGIN);
+      const centerX = (rect.left + rect.right) / 2;
+      const centerY = (rect.top + rect.bottom) / 2;
+      let left;
+      let top;
+
+      if (placement === 'right') {
+        left = rect.right + CARD_GAP;
+        top = centerY - cardHeight / 2;
+      } else if (placement === 'left') {
+        left = rect.left - CARD_GAP - cardWidth;
+        top = centerY - cardHeight / 2;
+      } else if (placement === 'bottom') {
+        left = centerX - cardWidth / 2;
+        top = rect.bottom + CARD_GAP;
+      } else if (placement === 'top') {
+        left = centerX - cardWidth / 2;
+        top = rect.top - CARD_GAP - cardHeight;
+      } else {
+        left = (viewportWidth - cardWidth) / 2;
+        top = (viewportHeight - cardHeight) / 2;
+      }
+
+      left = clamp(left, VIEWPORT_MARGIN, maxLeft);
+      top = clamp(top, VIEWPORT_MARGIN, maxTop);
+      return {
+        placement,
+        left,
+        top,
+        right: left + cardWidth,
+        bottom: top + cardHeight,
+      };
+    }
+
+    function clampManualCard() {
+      const element = card.value;
+      if (!element || !manualPosition) return;
+      const bounds = element.getBoundingClientRect();
+      const maxLeft = Math.max(VIEWPORT_MARGIN, window.innerWidth - bounds.width - VIEWPORT_MARGIN);
+      const maxTop = Math.max(VIEWPORT_MARGIN, window.innerHeight - bounds.height - VIEWPORT_MARGIN);
+      cardStyle.value = {
+        top: `${Math.round(clamp(bounds.top, VIEWPORT_MARGIN, maxTop))}px`,
+        left: `${Math.round(clamp(bounds.left, VIEWPORT_MARGIN, maxLeft))}px`,
+        transform: 'none',
+      };
+    }
+
     function positionCard(rect) {
       const element = card.value;
       if (!element || !rect) {
@@ -254,58 +319,111 @@ export const TipsExperience = {
         cardStyle.value = centeredCardStyle();
         return;
       }
+      if (manualPosition) {
+        clampManualCard();
+        return;
+      }
 
       const bounds = element.getBoundingClientRect();
       const cardWidth = bounds.width;
       const cardHeight = bounds.height;
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
-      const centerX = (rect.left + rect.right) / 2;
-      const centerY = (rect.top + rect.bottom) / 2;
       const preferred = step.value?.placement;
       const placements = [preferred, 'right', 'left', 'bottom', 'top']
         .filter((value, index, values) => value && values.indexOf(value) === index);
 
       const fits = {
-        right: viewportWidth - rect.right - CARD_GAP - VIEWPORT_MARGIN >= cardWidth,
+        right: window.innerWidth - rect.right - CARD_GAP - VIEWPORT_MARGIN >= cardWidth,
         left: rect.left - CARD_GAP - VIEWPORT_MARGIN >= cardWidth,
-        bottom: viewportHeight - rect.bottom - CARD_GAP - VIEWPORT_MARGIN >= cardHeight,
+        bottom: window.innerHeight - rect.bottom - CARD_GAP - VIEWPORT_MARGIN >= cardHeight,
         top: rect.top - CARD_GAP - VIEWPORT_MARGIN >= cardHeight,
       };
 
-      const placement = placements.find((candidate) => fits[candidate]) ?? 'center';
-      cardPlacement.value = placement;
+      let choice = placements.find((placement) => fits[placement]);
+      if (!choice) {
+        const center = candidatePosition(rect, 'center', cardWidth, cardHeight);
+        const centerOverlap = overlapArea(center, rect);
 
-      if (placement === 'center') {
-        cardStyle.value = centeredCardStyle();
-        return;
+        if (centerOverlap === 0) {
+          choice = 'center';
+        } else {
+          const alternatives = placements.map((placement, index) => {
+            const candidate = candidatePosition(rect, placement, cardWidth, cardHeight);
+            return {
+              ...candidate,
+              overlap: overlapArea(candidate, rect),
+              preference: index,
+            };
+          });
+          alternatives.sort((a, b) => a.overlap - b.overlap || a.preference - b.preference);
+          choice = alternatives[0]?.placement ?? 'center';
+        }
       }
 
-      let top;
-      let left;
-      if (placement === 'right' || placement === 'left') {
-        top = clamp(centerY - cardHeight / 2, VIEWPORT_MARGIN, viewportHeight - cardHeight - VIEWPORT_MARGIN);
-        left = placement === 'right' ? rect.right + CARD_GAP : rect.left - CARD_GAP - cardWidth;
-      } else {
-        left = clamp(centerX - cardWidth / 2, VIEWPORT_MARGIN, viewportWidth - cardWidth - VIEWPORT_MARGIN);
-        top = placement === 'bottom' ? rect.bottom + CARD_GAP : rect.top - CARD_GAP - cardHeight;
-      }
-
+      const candidate = candidatePosition(rect, choice, cardWidth, cardHeight);
+      cardPlacement.value = choice;
       cardStyle.value = {
-        top: `${Math.round(top)}px`,
-        left: `${Math.round(left)}px`,
+        top: `${Math.round(candidate.top)}px`,
+        left: `${Math.round(candidate.left)}px`,
         transform: 'none',
       };
     }
 
+    function beginCardDrag(event) {
+      if (event.button !== 0 || event.target.closest('button, a, input, select, textarea')) return;
+      const element = card.value;
+      if (!element) return;
+
+      const bounds = element.getBoundingClientRect();
+      manualPosition = true;
+      dragging.value = true;
+      dragPointerId = event.pointerId;
+      dragOffsetX = event.clientX - bounds.left;
+      dragOffsetY = event.clientY - bounds.top;
+      cardPlacement.value = 'manual';
+      cardStyle.value = {
+        top: `${Math.round(bounds.top)}px`,
+        left: `${Math.round(bounds.left)}px`,
+        transform: 'none',
+      };
+      event.currentTarget.setPointerCapture(event.pointerId);
+      event.preventDefault();
+    }
+
+    function dragCard(event) {
+      if (!dragging.value || event.pointerId !== dragPointerId || !card.value) return;
+      const bounds = card.value.getBoundingClientRect();
+      const maxLeft = Math.max(VIEWPORT_MARGIN, window.innerWidth - bounds.width - VIEWPORT_MARGIN);
+      const maxTop = Math.max(VIEWPORT_MARGIN, window.innerHeight - bounds.height - VIEWPORT_MARGIN);
+      cardStyle.value = {
+        top: `${Math.round(clamp(event.clientY - dragOffsetY, VIEWPORT_MARGIN, maxTop))}px`,
+        left: `${Math.round(clamp(event.clientX - dragOffsetX, VIEWPORT_MARGIN, maxLeft))}px`,
+        transform: 'none',
+      };
+    }
+
+    function endCardDrag(event) {
+      if (!dragging.value || event.pointerId !== dragPointerId) return;
+      dragging.value = false;
+      dragPointerId = null;
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+    }
+
     function updatePosition() {
-      if (!openState.value || mode.value !== 'tour') return;
+      if (!openState.value) return;
+      if (manualPosition && mode.value !== 'tour') {
+        clampManualCard();
+        return;
+      }
+      if (mode.value !== 'tour') return;
       const element = visibleTarget(step.value?.target);
       trackTarget(element);
 
       if (!element) {
         targetRect.value = null;
-        positionCard(null);
+        if (manualPosition) clampManualCard();
+        else positionCard(null);
         return;
       }
 
@@ -381,6 +499,7 @@ export const TipsExperience = {
 
     watch(stepIndex, async () => {
       if (!openState.value || mode.value !== 'tour') return;
+      manualPosition = false;
       await nextTick();
       updatePosition();
       focusPrimaryControl();
@@ -388,6 +507,7 @@ export const TipsExperience = {
 
     watch(activeSectionId, async () => {
       if (!openState.value || mode.value !== 'tour') return;
+      manualPosition = false;
       await nextTick();
       updatePosition();
       focusPrimaryControl();
@@ -512,14 +632,25 @@ export const TipsExperience = {
         }) : null,
         h('section', {
           ref: card,
-          class: ['tips-card', { 'is-centered': isMenu || cardPlacement.value === 'center', 'is-menu': isMenu }],
+          class: ['tips-card', {
+            'is-centered': (isMenu && !manualPosition) || cardPlacement.value === 'center',
+            'is-menu': isMenu,
+            'is-dragging': dragging.value,
+          }],
           role: 'dialog',
           'aria-labelledby': 'tips-heading',
           'aria-describedby': 'tips-copy',
           'data-placement': isMenu ? 'center' : cardPlacement.value,
-          style: isMenu ? centeredCardStyle() : cardStyle.value,
+          style: isMenu && !manualPosition ? centeredCardStyle() : cardStyle.value,
         }, [
-          h('header', { class: 'tips-header' }, [
+          h('header', {
+            class: 'tips-header',
+            title: 'Drag to move tips',
+            onPointerdown: beginCardDrag,
+            onPointermove: dragCard,
+            onPointerup: endCardDrag,
+            onPointercancel: endCardDrag,
+          }, [
             h('div', { class: 'tips-heading-group' }, [
               h('span', { class: 'tips-badge' }, 'TIPS'),
               h('span', { class: 'tips-app-name' }, props.feature.label),
