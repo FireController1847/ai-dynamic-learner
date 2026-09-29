@@ -1,9 +1,13 @@
+import { workspaceToRows } from './workspace-relational.js';
+import { createWorkspaceDelta, isWorkspaceDeltaEmpty } from './workspace-delta.js';
+
 export class SQLiteWorkspaceStorage {
   constructor() {
     this.worker = new Worker(new URL('./sqlite-worker.js', import.meta.url), { type: 'module' });
     this.pending = new Map();
     this.nextId = 1;
     this.failed = null;
+    this.confirmedRows = null;
 
     this.worker.onmessage = (event) => {
       const { id, ok, result, error } = event.data ?? {};
@@ -44,12 +48,23 @@ export class SQLiteWorkspaceStorage {
     return this.call('initialize');
   }
 
-  loadWorkspace() {
-    return this.call('load');
+  async loadWorkspace() {
+    const workspace = await this.call('load');
+    this.confirmedRows = workspace ? workspaceToRows(workspace) : null;
+    return workspace;
   }
 
-  saveWorkspace(workspace) {
-    return this.call('save', { workspace });
+  async saveWorkspace(workspace) {
+    const rows = workspaceToRows(workspace);
+    const delta = createWorkspaceDelta(this.confirmedRows, rows);
+
+    if (!isWorkspaceDeltaEmpty(delta)) {
+      await this.call('save-delta', { delta });
+    }
+    // Only advance the comparison baseline after SQLite confirms the write.
+    // Concurrent saves are answered in Worker order; later deltas may contain
+    // harmless redundant changes relative to an older confirmed baseline.
+    this.confirmedRows = rows;
   }
 
   exportBackup() {
