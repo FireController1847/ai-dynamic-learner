@@ -1,5 +1,6 @@
 # Maintenance rules
 
+- `README.md` is the public, human-facing project overview. Do not use it as agent memory, a task journal, a regression checklist, a manual QA dump, or a place to persist implementation notes. Put durable coding-agent rules in this `AGENTS.md`, specialized technical documentation in `docs/`, and transient task context in the active work session. Update the README only when human-facing project description, setup, behavior, or usage materially changes.
 - Runtime: `npm start` runs `node server.mjs`; `HOST` and `PORT` override `127.0.0.1:3000`. No build step, bundler, TypeScript, or compiled Vue single-file components.
 - GitHub Pages: `npm run pages:prepare` copies browser assets into ignored `dist/` and creates route entry points; it does not compile the app. Publishing uses the manually dispatched `.github/workflows/deploy-pages.yml`. See `docs/github-pages.md` before changing deployment behavior.
 - Read [docs/change-routing.md](docs/change-routing.md) before changing code. Read [docs/architecture.md](docs/architecture.md) for dependency or structural changes, not every routine edit.
