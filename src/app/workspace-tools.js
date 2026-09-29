@@ -77,7 +77,8 @@ export const WorkspaceTools = {
         h('button', {
           type: 'button',
           class: 'quiet-button',
-          disabled: busy.value || !props.workspace.storageAvailable.value,
+          disabled: busy.value || !props.workspace.initialized.value ||
+            !props.workspace.storageAvailable.value,
           onClick: () => fileInput.value.click(),
         }, [h(Icon, { name: 'upload' }), busy.value ? 'Reading backup…' : 'Upload backup']),
         h('input', {
