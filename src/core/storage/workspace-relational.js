@@ -142,22 +142,41 @@ export function workspaceToRows(workspace) {
   return rows;
 }
 
-function buildTree(itemRows, createNode) {
+function buildTree(itemRows, createNode, label) {
   const nodes = new Map(itemRows.map((row) => [row.id, createNode(row)]));
+  if (nodes.size !== itemRows.length) throw new Error(`${label} contains duplicate relational IDs.`);
+
   const order = new Map(itemRows.map((row) => [row.id, row.sort_order]));
   const roots = [];
 
   for (const row of itemRows) {
     const node = nodes.get(row.id);
-    if (row.parent_id === null) roots.push(node);
-    else nodes.get(row.parent_id).children.push(node);
+    if (row.parent_id === null) {
+      roots.push(node);
+      continue;
+    }
+
+    const parent = nodes.get(row.parent_id);
+    if (!parent || parent.kind !== 'group' || !Array.isArray(parent.children)) {
+      throw new Error(`${label} contains an invalid parent relationship.`);
+    }
+    parent.children.push(node);
   }
 
+  const visited = new Set();
   function sort(items) {
     items.sort((left, right) => order.get(left.id) - order.get(right.id));
-    for (const item of items) if (item.kind === 'group') sort(item.children);
+    for (const item of items) {
+      if (visited.has(item.id)) throw new Error(`${label} contains a hierarchy cycle.`);
+      visited.add(item.id);
+      if (item.kind === 'group') sort(item.children);
+    }
   }
   sort(roots);
+
+  if (visited.size !== nodes.size) {
+    throw new Error(`${label} contains a disconnected hierarchy or parent cycle.`);
+  }
   return { roots, nodes };
 }
 
@@ -172,7 +191,27 @@ function groupBy(rows, key) {
 }
 
 export function rowsToWorkspace(rows) {
+  const notebookItemsById = new Map(rows.notebookItems.map((row) => [row.id, row]));
   const markdownByItem = new Map(rows.notebookMarkdown.map((row) => [row.item_id, row.markdown]));
+  for (const markdown of rows.notebookMarkdown) {
+    const item = notebookItemsById.get(markdown.item_id);
+    if (!item || item.kind !== 'document' || item.document_type !== 'markdown') {
+      throw new Error('Notebook Markdown content is attached to an invalid document.');
+    }
+  }
+  for (const item of rows.notebookItems) {
+    if (item.kind === 'document' && item.document_type === 'markdown' &&
+        !markdownByItem.has(item.id)) {
+      throw new Error('A Markdown Notebook document is missing its content row.');
+    }
+  }
+  if (rows.notebookState?.selection_present && rows.notebookState.last_selected_document_id !== null) {
+    const selected = notebookItemsById.get(rows.notebookState.last_selected_document_id);
+    if (!selected || selected.kind !== 'document') {
+      throw new Error('The Notebook remembered selection does not reference a document.');
+    }
+  }
+
   const notebookTree = buildTree(rows.notebookItems, (row) => row.kind === 'group'
     ? { id: row.id, kind: 'group', name: row.name, children: [] }
     : {
@@ -183,7 +222,18 @@ export function rowsToWorkspace(rows) {
       data: row.document_type === 'markdown'
         ? { markdown: markdownByItem.get(row.id) ?? '' }
         : {},
-    });
+    }, 'Notebook');
+
+  const indexItemsById = new Map(rows.indexCardItems.map((row) => [row.id, row]));
+  for (const card of rows.indexCards) {
+    if (indexItemsById.get(card.set_id)?.kind !== 'set') {
+      throw new Error('An Index Card is attached to an invalid set.');
+    }
+  }
+  if (rows.indexCardState?.selection_present && rows.indexCardState.last_selected_set_id !== null &&
+      indexItemsById.get(rows.indexCardState.last_selected_set_id)?.kind !== 'set') {
+    throw new Error('The remembered Index Cards selection does not reference a set.');
+  }
 
   const cardsBySet = groupBy(rows.indexCards, 'set_id');
   const indexTree = buildTree(rows.indexCardItems, (row) => row.kind === 'group'
@@ -201,7 +251,19 @@ export function rowsToWorkspace(rows) {
           front: card.front,
           back: card.back,
         })),
-    });
+    }, 'Index Cards');
+
+  const wordSearchItemsById = new Map(rows.wordSearchItems.map((row) => [row.id, row]));
+  for (const item of rows.wordSearchItems) {
+    if (item.kind === 'group' && item.board_rotation !== null) {
+      throw new Error('A Word Search group contains word-search-only state.');
+    }
+  }
+  for (const puzzle of rows.wordSearchPuzzles) {
+    if (wordSearchItemsById.get(puzzle.item_id)?.kind !== 'word-search') {
+      throw new Error('Word Search puzzle settings are attached to an invalid library item.');
+    }
+  }
 
   const puzzleByItem = new Map(rows.wordSearchPuzzles.map((row) => [row.item_id, row]));
   const wordsByItem = groupBy(rows.wordSearchWords, 'item_id');
@@ -209,6 +271,19 @@ export function rowsToWorkspace(rows) {
   const gameRowsByItem = groupBy(rows.wordSearchGameRows, 'item_id');
   const placementsByItem = groupBy(rows.wordSearchPlacements, 'item_id');
   const foundByItem = groupBy(rows.wordSearchFound, 'item_id');
+
+  for (const word of rows.wordSearchWords) {
+    const puzzle = puzzleByItem.get(word.item_id);
+    if (!puzzle) throw new Error('A Word Search word is missing its puzzle settings.');
+    if (!puzzle.hints_present && word.hint !== null) {
+      throw new Error('A Word Search contains hint data without a hints collection.');
+    }
+  }
+  for (const game of rows.wordSearchGames) {
+    if (!puzzleByItem.has(game.item_id)) {
+      throw new Error('A saved Word Search game is missing its puzzle settings.');
+    }
+  }
 
   const wordSearchTree = buildTree(rows.wordSearchItems, (row) => {
     if (row.kind === 'group') return { id: row.id, kind: 'group', name: row.name, children: [] };
@@ -254,7 +329,7 @@ export function rowsToWorkspace(rows) {
       };
     }
     return item;
-  });
+  }, 'Word Search');
 
   const notebook = { items: notebookTree.roots };
   if (rows.notebookState?.selection_present) {
