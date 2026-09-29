@@ -1,28 +1,27 @@
-// TIPS content is separate from feature components so onboarding can evolve without
-// coupling application behavior to tutorial copy. Apps can define multiple contextual
-// sections. A section becomes available when its `when` target is visible.
+// TIPS content is separate from feature components so onboarding can change without
+// changing the apps themselves. Each section appears when that part of the app is open.
 export const tipsCatalog = {
   notebook: {
-    version: 4,
+    version: 5,
     sections: [
       {
         id: 'library',
         title: 'Notebook library',
-        description: 'Organize your notes and start new documents.',
+        description: 'Keep your groups and documents organized.',
         when: '#notebook-library',
         steps: [
           {
-            title: 'Keep everything organized here',
-            body: 'The library holds both groups and documents. Groups can be nested, so you can organize notes around classes, projects, subjects, or whatever structure works for you.',
+            title: 'Your notes live here',
+            body: 'This list holds your groups and documents. You can put groups inside other groups to keep things easy to find.',
             target: '#notebook-library',
             targetLabel: 'Notebook library',
             placement: 'right',
           },
           {
-            title: 'Create or import documents',
-            body: 'Use these controls to create a new document or bring in a supported document file. New documents are placed relative to what you currently have selected.',
+            title: 'Make or import a document',
+            body: 'Use these buttons to make a new group, make a new document, or import a supported file.',
             target: '#notebook-library .directory-create-actions',
-            targetLabel: 'Document controls',
+            targetLabel: 'New and import buttons',
             placement: 'right',
           },
         ],
@@ -30,14 +29,14 @@ export const tipsCatalog = {
       {
         id: 'creation',
         title: 'Choose a document type',
-        description: 'Pick the kind of document you want to create.',
+        description: 'Pick the kind of page you want.',
         when: '.notebook-builder',
         steps: [
           {
-            title: 'Choose the paper that fits the job',
-            body: 'Each document type has its own editor and tools. Pick an available type to create it; more document types can be added here as Notebook grows.',
+            title: 'Pick the kind of page you want',
+            body: 'Each type of document has its own tools. Pick one of the available choices to make that document.',
             target: '.notebook-type-grid',
-            targetLabel: 'Document type choices',
+            targetLabel: 'Document choices',
             placement: 'left',
           },
         ],
@@ -45,28 +44,28 @@ export const tipsCatalog = {
       {
         id: 'markdown',
         title: 'Markdown Paper',
-        description: 'Learn the source, preview, and layout tools for Markdown documents.',
+        description: 'Learn the main tools for Markdown Paper.',
         when: '.markdown-workspace',
         steps: [
           {
-            title: 'Write source and see the result',
-            body: 'Markdown Paper keeps the editable Markdown source and its rendered preview together. In Split mode, changes on the source side appear in the preview beside it.',
+            title: 'Write on one side and see the result',
+            body: 'In Split view, you type Markdown on one side. The other side shows what the finished page will look like.',
             target: '.markdown-workspace',
             targetLabel: 'Markdown editor',
             placement: 'top',
           },
           {
-            title: 'Change the editor layout',
-            body: 'Use Split, Source, or Preview depending on what you want to focus on. In Split mode you can also swap the panels and resize the divider.',
+            title: 'Pick the view you like',
+            body: 'Split shows both sides. Source shows only what you type. Preview shows only the finished page. You can also swap the two sides.',
             target: '.markdown-toolbar',
-            targetLabel: 'Markdown layout controls',
+            targetLabel: 'View buttons',
             placement: 'bottom',
           },
           {
-            title: 'Use the helpers when you need them',
-            body: 'Cheatsheet gives you Markdown syntax help, Contents navigates headings in the preview, and the download control saves the current document as a Markdown file.',
+            title: 'Help is built in',
+            body: 'Cheatsheet shows Markdown examples. Contents helps you jump to headings. Download saves a copy of the file.',
             target: ['.markdown-source-panel', '.markdown-preview-panel', '.markdown-toolbar'],
-            targetLabel: 'Markdown document tools',
+            targetLabel: 'Markdown tools',
             placement: 'top',
           },
         ],
@@ -75,24 +74,24 @@ export const tipsCatalog = {
   },
 
   'index-cards': {
-    version: 4,
+    version: 5,
     sections: [
       {
         id: 'library',
         title: 'Card library',
-        description: 'Organize groups and sets, then open the set you want to study.',
+        description: 'Keep your groups and card sets organized.',
         when: '#index-cards-library',
         steps: [
           {
-            title: 'Organize subjects and sets here',
-            body: 'Groups keep related material together, while sets contain the cards you actually study. Select a set to open it.',
+            title: 'Your card sets live here',
+            body: 'Groups help you sort things. Sets hold the cards you study. Pick a set to open it.',
             target: '#index-cards-library',
-            targetLabel: 'Index Cards library',
+            targetLabel: 'Card library',
             placement: 'right',
           },
           {
-            title: 'Create a set when you are ready',
-            body: 'Use the set button to create cards in the location you are currently browsing. The folder button beside it creates another group.',
+            title: 'Make a new set',
+            body: 'Press this button to make a new set. The folder button next to it makes a new group.',
             target: '#index-cards-library [aria-label="New set"]',
             targetLabel: 'New set button',
             placement: 'right',
@@ -101,30 +100,48 @@ export const tipsCatalog = {
       },
       {
         id: 'set',
-        title: 'Working with a set',
-        description: 'Write cards, review them, and move through the set.',
+        title: 'Making cards',
+        description: 'Add cards and write what you want to study.',
         when: '.index-cards-detail.is-set',
+        continueToAvailable: true,
         steps: [
           {
-            title: 'Write directly on your cards',
-            body: 'The main card is your editor. Use Show back or Show front to switch sides, and Previous or Next to move through the set.',
-            target: ['.ruled-card-stack', '.card-set-empty', '.card-review-controls'],
-            targetLabel: 'Card editor',
+            title: 'Add a card and write on it',
+            body: 'A card has a front and a back. Add your first card, then type what you want to study.',
+            target: ['.card-set-empty', '.ruled-card-stack'],
+            targetLabel: 'Card',
             placement: 'left',
           },
           {
-            title: 'Review changes how you study, not what you saved',
-            body: 'Review lets you choose which side appears first and whether cards run forward, backward, or shuffled. Your card contents stay unchanged.',
-            target: ['.card-review-session', '.index-cards-detail.is-set'],
-            targetLabel: 'Review controls',
+            title: 'See all your cards here',
+            body: 'This list shows every card in the set. Press a card to jump to it.',
+            target: ['.card-list-panel', '.index-cards-detail.is-set'],
+            targetLabel: 'Cards list',
+            placement: 'left',
+          },
+        ],
+      },
+      {
+        id: 'review',
+        title: 'Flip and review',
+        description: 'Flip a card, then try Review mode.',
+        when: '.card-flip-button',
+        finishLabel: 'Open Review',
+        finishAction: { click: '.card-review-button' },
+        steps: [
+          {
+            title: 'Flip the card',
+            body: 'Press this button to switch between the front and back of the card.',
+            target: '.card-flip-button',
+            targetLabel: 'Flip button',
             placement: 'bottom',
           },
           {
-            title: 'Jump to any card from the Cards panel',
-            body: 'The Cards panel shows the whole set at a glance. Select any card to jump straight to it, or add another card from the panel.',
-            target: '.card-list-panel',
-            targetLabel: 'Cards panel',
-            placement: 'left',
+            title: 'Review helps you practice',
+            body: 'Review can show the front or back first. It can also go in order or mix the cards. We will open Review for you next.',
+            target: '.card-review-button',
+            targetLabel: 'Review button',
+            placement: 'bottom',
           },
         ],
       },
@@ -132,24 +149,24 @@ export const tipsCatalog = {
   },
 
   'word-search': {
-    version: 4,
+    version: 5,
     sections: [
       {
         id: 'library',
         title: 'Word Search library',
-        description: 'Organize groups and puzzles, then open or create one.',
+        description: 'Keep your puzzles organized.',
         when: '#word-search-library',
         steps: [
           {
-            title: 'Keep your puzzles organized here',
-            body: 'The library holds both groups and word searches. Use groups for subjects, units, classes, or any other structure that helps you find a puzzle again.',
+            title: 'Your puzzles live here',
+            body: 'This list holds your groups and word searches. Use groups to keep similar puzzles together.',
             target: '#word-search-library',
             targetLabel: 'Word Search library',
             placement: 'right',
           },
           {
-            title: 'Create a new puzzle here',
-            body: 'This button opens the puzzle builder. Nothing is saved until you finish the form and create the word search.',
+            title: 'Make a new word search',
+            body: 'Press this button to start making a puzzle.',
             target: '#word-search-library [aria-label="New word search"]',
             targetLabel: 'New word search button',
             placement: 'right',
@@ -158,27 +175,27 @@ export const tipsCatalog = {
       },
       {
         id: 'creation',
-        title: 'Creating a puzzle',
-        description: 'Choose the words and the learning experience you want.',
+        title: 'Making a puzzle',
+        description: 'Choose the words and how hard the puzzle should be.',
         when: '.word-search-form',
         steps: [
           {
-            title: 'Start with the words learners should find',
-            body: 'Enter the answer words here. The builder checks duplicates and warns when a word will not fit the selected grid.',
+            title: 'Add the words to find',
+            body: 'Type the words you want in the puzzle here. You can put one word on each line.',
             target: '#puzzle-words',
-            targetLabel: 'Words to find',
+            targetLabel: 'Words box',
             placement: 'right',
           },
           {
-            title: 'Control how difficult the search is',
-            body: 'Grid size controls the available space, while difficulty changes the directions and patterns used to hide words.',
+            title: 'Pick the size and difficulty',
+            body: 'A bigger grid gives words more room. Difficulty changes the ways words can be hidden.',
             target: ['.word-search-difficulty', '#puzzle-size'],
-            targetLabel: 'Grid size and difficulty',
+            targetLabel: 'Size and difficulty',
             placement: 'left',
           },
           {
-            title: 'Choose words or clues',
-            body: 'Study display decides whether learners see the answers they are looking for or work from clue-style hints instead.',
+            title: 'Show words or clues',
+            body: 'You can show the words people need to find, or give them clues instead.',
             target: '.word-search-study-mode',
             targetLabel: 'Study display',
             placement: 'left',
@@ -188,28 +205,28 @@ export const tipsCatalog = {
       {
         id: 'play',
         title: 'Solving a puzzle',
-        description: 'Learn the grid, answer bank, and puzzle actions.',
+        description: 'Learn how to find words and use puzzle help.',
         when: '.word-search-game',
         steps: [
           {
-            title: 'Select words directly on the grid',
-            body: 'Drag across a word or choose its two endpoints. Found words are tracked automatically as you solve the puzzle.',
+            title: 'Find a word on the grid',
+            body: 'Drag across a word. You can also pick the first letter and then the last letter.',
             target: ['.word-search-play-layout', '.word-search-game'],
             targetLabel: 'Puzzle grid',
             placement: 'left',
           },
           {
-            title: 'Follow the word list or clues',
-            body: 'This panel shows either the words to find or clue-style prompts, depending on how the puzzle was created.',
+            title: 'Check what is left',
+            body: 'This box shows the words to find, or the clues you need to solve.',
             target: '.word-search-word-bank',
-            targetLabel: 'Word or clue bank',
+            targetLabel: 'Words or clues',
             placement: 'left',
           },
           {
-            title: 'Use puzzle actions when you need them',
-            body: 'Hint can point you in the right direction. You can also reveal answers, restart the current grid, or generate a new arrangement.',
+            title: 'Use help if you need it',
+            body: 'Hint gives you a small clue. You can also show answers, start over, or make a new layout.',
             target: '.word-search-game-actions',
-            targetLabel: 'Puzzle actions',
+            targetLabel: 'Puzzle buttons',
             placement: 'top',
           },
         ],

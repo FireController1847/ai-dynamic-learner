@@ -1,4 +1,3 @@
-import { Icon } from '../components/icon.js';
 import { tipsCatalog } from './tips-content.js';
 
 const { computed, h, nextTick, onBeforeUnmount, onMounted, ref, watch } = window.Vue;
@@ -166,10 +165,25 @@ export const TipsExperience = {
       openState.value = true;
     }
 
-    function finishSection() {
-      markSectionSeen();
+    async function finishSection() {
+      const section = activeSection.value;
+      markSectionSeen(section);
+
+      if (section?.finishAction?.click) {
+        close();
+        await nextTick();
+        visibleTarget(section.finishAction.click)?.click();
+        return;
+      }
+
+      const continueToAvailable = Boolean(section?.continueToAvailable) && !returnToMenu;
       if (returnToMenu) showMenu();
       else close();
+
+      if (continueToAvailable) {
+        await nextTick();
+        requestAutoStart();
+      }
     }
 
     function skipSection() {
@@ -531,20 +545,28 @@ export const TipsExperience = {
 
     expose({ open });
 
-    function menuContent() {
-      const guide = tutorial.value;
-      if (!guide) return null;
+    function progressDots(section) {
+      return h('div', {
+        class: 'tips-progress',
+        role: 'progressbar',
+        'aria-label': `Step ${stepIndex.value + 1} of ${section.steps.length}`,
+        'aria-valuemin': 1,
+        'aria-valuemax': section.steps.length,
+        'aria-valuenow': stepIndex.value + 1,
+      }, section.steps.map((_, index) => h('span', {
+        key: index,
+        class: ['tips-progress-dot', {
+          active: index === stepIndex.value,
+          complete: index < stepIndex.value,
+        }],
+      })));
+    }
 
+    function menuContent() {
       let firstAvailableAssigned = false;
       return [
         h('div', { class: 'tips-menu-intro' }, [
-          h('div', { class: 'tips-illustration', 'aria-hidden': 'true' }, [
-            h(Icon, { name: 'lightbulb' }),
-          ]),
-          h('p', { class: 'tips-step-count' }, 'Choose a guide'),
           h('h2', { id: 'tips-heading' }, `${props.feature.label} tips`),
-          h('p', { id: 'tips-copy', class: 'tips-copy' },
-            'Tips are split into sections so the guide can match the part of the app you are using right now.'),
         ]),
         h('div', { class: 'tips-section-list' }, sections.value.map((section) => {
           const available = availableNow(section);
@@ -564,7 +586,7 @@ export const TipsExperience = {
               h('span', section.description),
             ]),
             h('span', { class: ['tips-section-state', { complete: seen }] },
-              !available ? 'Open this part of the app' : seen ? 'Seen · View again' : 'Available now'),
+              !available ? 'Open this screen first' : seen ? 'Done · Show again' : 'Start'),
           ]);
         })),
       ];
@@ -576,28 +598,29 @@ export const TipsExperience = {
       if (!section || !currentStep) return null;
       return [
         h('div', { class: 'tips-body' }, [
-          h('div', { class: 'tips-illustration', 'aria-hidden': 'true' }, [
-            h(Icon, { name: 'lightbulb' }),
-          ]),
-          h('p', { class: 'tips-step-count' },
-            `${section.title} · Tip ${stepIndex.value + 1} of ${section.steps.length}`),
+          progressDots(section),
           h('h2', { id: 'tips-heading' }, currentStep.title),
           h('p', { id: 'tips-copy', class: 'tips-copy' }, currentStep.body),
-          hasSpotlight.value && currentStep.targetLabel ? h('p', { class: 'tips-target-caption' },
-            `Highlighted: ${currentStep.targetLabel}`) : null,
-          h('div', {
-            class: 'tips-progress',
-            role: 'progressbar',
-            'aria-label': 'Tutorial progress',
-            'aria-valuemin': 1,
-            'aria-valuemax': section.steps.length,
-            'aria-valuenow': stepIndex.value + 1,
-          }, section.steps.map((_, index) => h('span', {
-            key: index,
-            class: ['tips-progress-dot', { active: index === stepIndex.value, complete: index < stepIndex.value }],
-          }))),
         ]),
       ];
+    }
+
+    function moreMenu() {
+      return h('details', { class: 'tips-more' }, [
+        h('summary', 'More'),
+        h('div', { class: 'tips-more-menu' }, [
+          h('button', {
+            type: 'button',
+            class: 'quiet-button',
+            onClick: showMenu,
+          }, 'All guides'),
+          h('button', {
+            type: 'button',
+            class: 'quiet-button',
+            onClick: toggleAutomaticTips,
+          }, preferences.value.enabled ? 'Stop automatic tips' : 'Show tips automatically'),
+        ]),
+      ]);
     }
 
     return () => {
@@ -639,62 +662,41 @@ export const TipsExperience = {
           }],
           role: 'dialog',
           'aria-labelledby': 'tips-heading',
-          'aria-describedby': 'tips-copy',
           'data-placement': isMenu ? 'center' : cardPlacement.value,
           style: isMenu && !manualPosition ? centeredCardStyle() : cardStyle.value,
         }, [
           h('header', {
             class: 'tips-header',
-            title: 'Drag to move tips',
+            title: 'Drag to move',
             onPointerdown: beginCardDrag,
             onPointermove: dragCard,
             onPointerup: endCardDrag,
             onPointercancel: endCardDrag,
           }, [
-            h('div', { class: 'tips-heading-group' }, [
-              h('span', { class: 'tips-badge' }, 'TIPS'),
-              h('span', { class: 'tips-app-name' }, props.feature.label),
-              !isMenu && section ? h('span', { class: 'tips-section-name' }, section.title) : null,
-            ]),
+            h('span', { class: 'tips-drag-handle', 'aria-hidden': 'true' }, '•••'),
             h('button', {
               type: 'button',
               class: 'quiet-button tips-skip',
               onClick: isMenu ? close : skipSection,
-            }, isMenu ? 'Close' : 'Skip section'),
+            }, isMenu ? 'Close' : 'Skip'),
           ]),
           ...(isMenu ? menuContent() : tourContent()),
-          h('footer', { class: 'tips-footer' }, [
-            h('div', { class: 'tips-preference' }, [
-              h('button', {
+          !isMenu ? h('footer', { class: 'tips-footer' }, [
+            moreMenu(),
+            h('div', { class: 'tips-navigation' }, [
+              stepIndex.value > 0 ? h('button', {
                 type: 'button',
                 class: 'quiet-button',
-                onClick: toggleAutomaticTips,
-              }, preferences.value.enabled ? 'Disable automatic tips' : 'Enable automatic tips'),
-              h('span', { class: 'tips-preference-status' },
-                preferences.value.enabled
-                  ? 'Each section appears once when you first reach it.'
-                  : 'Automatic tips are off. You can still open any available section here.'),
-            ]),
-            !isMenu ? h('div', { class: 'tips-navigation' }, [
-              returnToMenu ? h('button', {
-                type: 'button',
-                class: 'quiet-button',
-                onClick: showMenu,
-              }, 'All guides') : null,
-              h('button', {
-                type: 'button',
-                class: 'quiet-button',
-                disabled: stepIndex.value === 0,
                 onClick: previous,
-              }, 'Back'),
+              }, 'Back') : null,
               h('button', {
                 ref: primaryFocus,
                 type: 'button',
                 class: 'card-primary-button',
                 onClick: next,
-              }, isLastStep ? 'Done' : 'Next'),
-            ]) : null,
-          ]),
+              }, isLastStep ? (section.finishLabel ?? 'Done') : 'Next'),
+            ]),
+          ]) : null,
         ]),
       ]);
     };
