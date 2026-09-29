@@ -37,7 +37,7 @@ export const NotebookLibrary = {
       event.target.value = '';
       if (!file || uploading.value) return;
       uploading.value = true;
-      uploadMessage.value = 'Reading Markdown…';
+      uploadMessage.value = 'Importing document…';
       try {
         const contents = await readMarkdownFile(file);
         if (disposed) return;
@@ -265,7 +265,7 @@ export const NotebookLibrary = {
           }, [h(Icon, { name: 'document' })]),
           h('button', {
             type: 'button', class: ['icon-button', { 'markdown-is-loading': uploading.value }],
-            disabled: uploading.value, title: 'Upload Markdown (.md)', 'aria-label': 'Upload Markdown file',
+            disabled: uploading.value, title: 'Import document', 'aria-label': 'Import document',
             onClick: () => {
               uploadTarget = { selectedId: props.selectedId };
               uploadInput.value?.click();

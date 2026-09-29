@@ -235,3 +235,116 @@
 
   .tips-trigger-label { display: none; }
 }
+
+
+/* Contextual TIPS section picker. */
+.tips-card.is-menu {
+  width: min(620px, calc(100vw - 32px));
+}
+
+.tips-menu-intro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 20px 18px;
+  text-align: center;
+}
+
+.tips-menu-intro .tips-copy {
+  max-width: 500px;
+}
+
+.tips-section-name {
+  min-width: 0;
+  padding-left: 8px;
+  border-left: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tips-section-list {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.tips-section-choice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  min-height: 68px;
+  padding: 12px 14px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius);
+  color: inherit;
+  background: var(--page-background);
+  text-align: left;
+  transition: background-color var(--motion-fast), border-color var(--motion-fast);
+}
+
+.tips-section-choice:hover:not(:disabled) {
+  background: var(--surface-hover);
+  border-color: var(--text-secondary);
+}
+
+.tips-section-choice:disabled {
+  cursor: default;
+  opacity: 0.58;
+}
+
+.tips-section-choice-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.tips-section-choice-copy strong {
+  font-size: 14px;
+}
+
+.tips-section-choice-copy > span {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.tips-section-state {
+  flex: 0 0 auto;
+  max-width: 150px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: right;
+}
+
+.tips-section-state.complete {
+  color: var(--brand-text);
+}
+
+@media (max-width: 560px) {
+  .tips-card.is-menu {
+    width: calc(100% - 20px);
+  }
+
+  .tips-menu-intro {
+    align-items: flex-start;
+    padding: 20px 6px 16px;
+    text-align: left;
+  }
+
+  .tips-section-choice {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .tips-section-state {
+    max-width: none;
+    text-align: left;
+  }
+}

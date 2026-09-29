@@ -1,7 +1,7 @@
 import { Icon } from '../components/icon.js';
 import { tipsCatalog } from './tips-content.js';
 
-const { computed, h, nextTick, onBeforeUnmount, ref, watch } = window.Vue;
+const { computed, h, nextTick, onBeforeUnmount, onMounted, ref, watch } = window.Vue;
 
 const STORAGE_KEY = 'dynamic-learner.tips.v1';
 const SPOTLIGHT_PADDING = 8;
@@ -56,26 +56,29 @@ export const TipsExperience = {
   },
   setup(props, { expose }) {
     const card = ref(null);
-    const nextButton = ref(null);
+    const primaryFocus = ref(null);
     const openState = ref(false);
+    const mode = ref('menu');
+    const activeSectionId = ref(null);
     const stepIndex = ref(0);
     const preferences = ref(readPreferences());
     const targetRect = ref(null);
     const cardPlacement = ref('center');
-    const cardStyle = ref({
-      top: '50%',
-      left: '50%',
-      transform: 'translate(-50%, -50%)',
-    });
+    const cardStyle = ref(centeredCardStyle());
 
     let returnFocus = null;
     let currentTarget = null;
-    let mutationObserver = null;
     let resizeObserver = null;
+    let contextObserver = null;
     let updateFrame = 0;
+    let autoFrame = 0;
+    let returnToMenu = false;
 
     const tutorial = computed(() => tipsCatalog[props.feature?.id] ?? null);
-    const step = computed(() => tutorial.value?.steps[stepIndex.value] ?? null);
+    const sections = computed(() => tutorial.value?.sections ?? []);
+    const activeSection = computed(() =>
+      sections.value.find((section) => section.id === activeSectionId.value) ?? null);
+    const step = computed(() => activeSection.value?.steps[stepIndex.value] ?? null);
     const hasSpotlight = computed(() => Boolean(targetRect.value));
 
     const scrims = computed(() => {
@@ -91,9 +94,34 @@ export const TipsExperience = {
       ];
     });
 
-    function hasSeenCurrentTutorial() {
-      return Boolean(props.feature?.id && tutorial.value &&
-        preferences.value.seen[props.feature.id] === tutorial.value.version);
+    function centeredCardStyle() {
+      return {
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+      };
+    }
+
+    function seenKey(section) {
+      return props.feature?.id && section ? `${props.feature.id}:${section.id}` : '';
+    }
+
+    function hasSeenSection(section) {
+      const key = seenKey(section);
+      return Boolean(key && tutorial.value &&
+        preferences.value.seen[key] === tutorial.value.version);
+    }
+
+    function markSectionSeen(section = activeSection.value) {
+      const key = seenKey(section);
+      if (!key || !tutorial.value) return;
+      savePreferences({
+        ...preferences.value,
+        seen: {
+          ...preferences.value.seen,
+          [key]: tutorial.value.version,
+        },
+      });
     }
 
     function savePreferences(nextPreferences) {
@@ -101,31 +129,61 @@ export const TipsExperience = {
       writePreferences(nextPreferences);
     }
 
-    function markCurrentTutorialSeen() {
-      if (!props.feature?.id || !tutorial.value) return;
-      savePreferences({
-        ...preferences.value,
-        seen: {
-          ...preferences.value.seen,
-          [props.feature.id]: tutorial.value.version,
-        },
-      });
+    function sectionAvailable(section) {
+      return !section.when || Boolean(visibleTarget(section.when));
+    }
+
+    function availableNow(section) {
+      return sectionAvailable(section);
     }
 
     function open(trigger = null) {
       if (!tutorial.value) return;
       returnFocus = trigger;
+      returnToMenu = false;
+      mode.value = 'menu';
+      activeSectionId.value = null;
+      stepIndex.value = 0;
+      targetRect.value = null;
+      cardPlacement.value = 'center';
+      cardStyle.value = centeredCardStyle();
+      openState.value = true;
+    }
+
+    function startSection(section, fromMenu = false) {
+      if (!section || !sectionAvailable(section)) return;
+      returnToMenu = fromMenu;
+      mode.value = 'tour';
+      activeSectionId.value = section.id;
       stepIndex.value = 0;
       openState.value = true;
     }
 
-    function skip() {
-      markCurrentTutorialSeen();
-      openState.value = false;
+    function finishSection() {
+      markSectionSeen();
+      if (returnToMenu) showMenu();
+      else close();
     }
 
-    function finish() {
-      markCurrentTutorialSeen();
+    function skipSection() {
+      markSectionSeen();
+      if (returnToMenu) showMenu();
+      else close();
+    }
+
+    function showMenu() {
+      returnToMenu = false;
+      mode.value = 'menu';
+      activeSectionId.value = null;
+      stepIndex.value = 0;
+      trackTarget(null);
+      targetRect.value = null;
+      cardPlacement.value = 'center';
+      cardStyle.value = centeredCardStyle();
+      nextTick(() => primaryFocus.value?.focus());
+    }
+
+    function close() {
       openState.value = false;
     }
 
@@ -134,8 +192,8 @@ export const TipsExperience = {
     }
 
     function next() {
-      if (!tutorial.value) return;
-      if (stepIndex.value >= tutorial.value.steps.length - 1) finish();
+      if (!activeSection.value) return;
+      if (stepIndex.value >= activeSection.value.steps.length - 1) finishSection();
       else stepIndex.value += 1;
     }
 
@@ -149,6 +207,21 @@ export const TipsExperience = {
     function requestPositionUpdate() {
       cancelAnimationFrame(updateFrame);
       updateFrame = requestAnimationFrame(updatePosition);
+    }
+
+    function requestAutoStart() {
+      cancelAnimationFrame(autoFrame);
+      autoFrame = requestAnimationFrame(maybeAutoStartSection);
+    }
+
+    function maybeAutoStartSection() {
+      if (openState.value || !preferences.value.enabled || !tutorial.value) return;
+      const section = sections.value.find((candidate) =>
+        candidate.auto !== false && sectionAvailable(candidate) && !hasSeenSection(candidate));
+      if (section) {
+        returnFocus = null;
+        startSection(section, false);
+      }
     }
 
     function trackTarget(element) {
@@ -178,11 +251,7 @@ export const TipsExperience = {
       const element = card.value;
       if (!element || !rect) {
         cardPlacement.value = 'center';
-        cardStyle.value = {
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-        };
+        cardStyle.value = centeredCardStyle();
         return;
       }
 
@@ -208,11 +277,7 @@ export const TipsExperience = {
       cardPlacement.value = placement;
 
       if (placement === 'center') {
-        cardStyle.value = {
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-        };
+        cardStyle.value = centeredCardStyle();
         return;
       }
 
@@ -234,7 +299,7 @@ export const TipsExperience = {
     }
 
     function updatePosition() {
-      if (!openState.value) return;
+      if (!openState.value || mode.value !== 'tour') return;
       const element = visibleTarget(step.value?.target);
       trackTarget(element);
 
@@ -256,47 +321,57 @@ export const TipsExperience = {
       positionCard(targetRect.value);
     }
 
+    function focusPrimaryControl() {
+      nextTick(() => primaryFocus.value?.focus());
+    }
+
     function handleKeydown(event) {
       if (event.key !== 'Escape' || !openState.value) return;
       event.preventDefault();
       event.stopPropagation();
-      skip();
+      if (mode.value === 'menu') close();
+      else skipSection();
     }
 
-    function installTracking() {
+    function installGlobalTracking() {
       window.addEventListener('resize', requestPositionUpdate);
       document.addEventListener('scroll', requestPositionUpdate, true);
       document.addEventListener('keydown', handleKeydown, true);
+
       const appLayout = document.querySelector('.app-layout');
       if (appLayout && window.MutationObserver) {
-        mutationObserver = new MutationObserver(requestPositionUpdate);
-        mutationObserver.observe(appLayout, { childList: true, subtree: true, attributes: true });
+        contextObserver = new MutationObserver(() => {
+          if (openState.value && mode.value === 'tour') requestPositionUpdate();
+          else requestAutoStart();
+        });
+        contextObserver.observe(appLayout, { childList: true, subtree: true, attributes: true });
       }
     }
 
-    function removeTracking() {
+    function removeGlobalTracking() {
       window.removeEventListener('resize', requestPositionUpdate);
       document.removeEventListener('scroll', requestPositionUpdate, true);
       document.removeEventListener('keydown', handleKeydown, true);
-      mutationObserver?.disconnect();
+      contextObserver?.disconnect();
       resizeObserver?.disconnect();
-      mutationObserver = null;
+      contextObserver = null;
       resizeObserver = null;
       currentTarget = null;
       cancelAnimationFrame(updateFrame);
+      cancelAnimationFrame(autoFrame);
       updateFrame = 0;
+      autoFrame = 0;
       targetRect.value = null;
     }
 
     watch(openState, async (isOpen) => {
       if (isOpen) {
-        installTracking();
         await nextTick();
-        updatePosition();
-        await nextTick();
-        nextButton.value?.focus();
+        if (mode.value === 'tour') updatePosition();
+        focusPrimaryControl();
       } else {
-        removeTracking();
+        trackTarget(null);
+        targetRect.value = null;
         await nextTick();
         const target = returnFocus;
         returnFocus = null;
@@ -305,34 +380,112 @@ export const TipsExperience = {
     });
 
     watch(stepIndex, async () => {
-      if (!openState.value) return;
+      if (!openState.value || mode.value !== 'tour') return;
       await nextTick();
       updatePosition();
+      focusPrimaryControl();
+    });
+
+    watch(activeSectionId, async () => {
+      if (!openState.value || mode.value !== 'tour') return;
       await nextTick();
-      nextButton.value?.focus();
+      updatePosition();
+      focusPrimaryControl();
     });
 
     watch(() => props.feature?.id, async () => {
       openState.value = false;
+      mode.value = 'menu';
+      activeSectionId.value = null;
       stepIndex.value = 0;
       returnFocus = null;
       await nextTick();
-      if (tutorial.value && preferences.value.enabled && !hasSeenCurrentTutorial()) {
-        openState.value = true;
-      }
+      requestAutoStart();
     }, { immediate: true });
 
-    onBeforeUnmount(removeTracking);
+    onMounted(() => {
+      installGlobalTracking();
+      requestAutoStart();
+    });
+    onBeforeUnmount(removeGlobalTracking);
+
     expose({ open });
 
-    return () => {
-      if (!openState.value) return null;
+    function menuContent() {
       const guide = tutorial.value;
-      const currentStep = step.value;
-      if (!guide || !currentStep || !props.feature) return null;
+      if (!guide) return null;
 
-      const isLastStep = stepIndex.value === guide.steps.length - 1;
-      const spotlight = targetRect.value;
+      let firstAvailableAssigned = false;
+      return [
+        h('div', { class: 'tips-menu-intro' }, [
+          h('div', { class: 'tips-illustration', 'aria-hidden': 'true' }, [
+            h(Icon, { name: 'lightbulb' }),
+          ]),
+          h('p', { class: 'tips-step-count' }, 'Choose a guide'),
+          h('h2', { id: 'tips-heading' }, `${props.feature.label} tips`),
+          h('p', { id: 'tips-copy', class: 'tips-copy' },
+            'Tips are split into sections so the guide can match the part of the app you are using right now.'),
+        ]),
+        h('div', { class: 'tips-section-list' }, sections.value.map((section) => {
+          const available = availableNow(section);
+          const seen = hasSeenSection(section);
+          const assignFocus = available && !firstAvailableAssigned;
+          if (assignFocus) firstAvailableAssigned = true;
+          return h('button', {
+            key: section.id,
+            ref: assignFocus ? primaryFocus : undefined,
+            type: 'button',
+            class: 'tips-section-choice',
+            disabled: !available,
+            onClick: () => startSection(section, true),
+          }, [
+            h('span', { class: 'tips-section-choice-copy' }, [
+              h('strong', section.title),
+              h('span', section.description),
+            ]),
+            h('span', { class: ['tips-section-state', { complete: seen }] },
+              !available ? 'Open this part of the app' : seen ? 'Seen · View again' : 'Available now'),
+          ]);
+        })),
+      ];
+    }
+
+    function tourContent() {
+      const section = activeSection.value;
+      const currentStep = step.value;
+      if (!section || !currentStep) return null;
+      return [
+        h('div', { class: 'tips-body' }, [
+          h('div', { class: 'tips-illustration', 'aria-hidden': 'true' }, [
+            h(Icon, { name: 'lightbulb' }),
+          ]),
+          h('p', { class: 'tips-step-count' },
+            `${section.title} · Tip ${stepIndex.value + 1} of ${section.steps.length}`),
+          h('h2', { id: 'tips-heading' }, currentStep.title),
+          h('p', { id: 'tips-copy', class: 'tips-copy' }, currentStep.body),
+          hasSpotlight.value && currentStep.targetLabel ? h('p', { class: 'tips-target-caption' },
+            `Highlighted: ${currentStep.targetLabel}`) : null,
+          h('div', {
+            class: 'tips-progress',
+            role: 'progressbar',
+            'aria-label': 'Tutorial progress',
+            'aria-valuemin': 1,
+            'aria-valuemax': section.steps.length,
+            'aria-valuenow': stepIndex.value + 1,
+          }, section.steps.map((_, index) => h('span', {
+            key: index,
+            class: ['tips-progress-dot', { active: index === stepIndex.value, complete: index < stepIndex.value }],
+          }))),
+        ]),
+      ];
+    }
+
+    return () => {
+      if (!openState.value || !tutorial.value || !props.feature) return null;
+      const isMenu = mode.value === 'menu';
+      const section = activeSection.value;
+      const isLastStep = !isMenu && section && stepIndex.value === section.steps.length - 1;
+      const spotlight = !isMenu ? targetRect.value : null;
 
       return h('div', { class: 'tips-layer' }, [
         ...scrims.value.map((bounds, index) => h('div', {
@@ -345,7 +498,7 @@ export const TipsExperience = {
             width: `${bounds.width}px`,
             height: `${bounds.height}px`,
           },
-          onClick: skip,
+          onClick: isMenu ? close : skipSection,
         })),
         spotlight ? h('div', {
           class: 'tips-spotlight',
@@ -359,45 +512,26 @@ export const TipsExperience = {
         }) : null,
         h('section', {
           ref: card,
-          class: ['tips-card', { 'is-centered': cardPlacement.value === 'center' }],
+          class: ['tips-card', { 'is-centered': isMenu || cardPlacement.value === 'center', 'is-menu': isMenu }],
           role: 'dialog',
           'aria-labelledby': 'tips-heading',
           'aria-describedby': 'tips-copy',
-          'data-placement': cardPlacement.value,
-          style: cardStyle.value,
+          'data-placement': isMenu ? 'center' : cardPlacement.value,
+          style: isMenu ? centeredCardStyle() : cardStyle.value,
         }, [
           h('header', { class: 'tips-header' }, [
             h('div', { class: 'tips-heading-group' }, [
               h('span', { class: 'tips-badge' }, 'TIPS'),
               h('span', { class: 'tips-app-name' }, props.feature.label),
+              !isMenu && section ? h('span', { class: 'tips-section-name' }, section.title) : null,
             ]),
             h('button', {
               type: 'button',
               class: 'quiet-button tips-skip',
-              onClick: skip,
-            }, 'Skip'),
+              onClick: isMenu ? close : skipSection,
+            }, isMenu ? 'Close' : 'Skip section'),
           ]),
-          h('div', { class: 'tips-body' }, [
-            h('div', { class: 'tips-illustration', 'aria-hidden': 'true' }, [
-              h(Icon, { name: 'lightbulb' }),
-            ]),
-            h('p', { class: 'tips-step-count' }, `Tip ${stepIndex.value + 1} of ${guide.steps.length}`),
-            h('h2', { id: 'tips-heading' }, currentStep.title),
-            h('p', { id: 'tips-copy', class: 'tips-copy' }, currentStep.body),
-            hasSpotlight.value && currentStep.targetLabel ? h('p', { class: 'tips-target-caption' },
-              `Highlighted: ${currentStep.targetLabel}`) : null,
-            h('div', {
-              class: 'tips-progress',
-              role: 'progressbar',
-              'aria-label': 'Tutorial progress',
-              'aria-valuemin': 1,
-              'aria-valuemax': guide.steps.length,
-              'aria-valuenow': stepIndex.value + 1,
-            }, guide.steps.map((_, index) => h('span', {
-              key: index,
-              class: ['tips-progress-dot', { active: index === stepIndex.value, complete: index < stepIndex.value }],
-            }))),
-          ]),
+          ...(isMenu ? menuContent() : tourContent()),
           h('footer', { class: 'tips-footer' }, [
             h('div', { class: 'tips-preference' }, [
               h('button', {
@@ -406,9 +540,16 @@ export const TipsExperience = {
                 onClick: toggleAutomaticTips,
               }, preferences.value.enabled ? 'Disable automatic tips' : 'Enable automatic tips'),
               h('span', { class: 'tips-preference-status' },
-                preferences.value.enabled ? 'Tips appear once for each app.' : 'Automatic tips are off.'),
+                preferences.value.enabled
+                  ? 'Each section appears once when you first reach it.'
+                  : 'Automatic tips are off. You can still open any available section here.'),
             ]),
-            h('div', { class: 'tips-navigation' }, [
+            !isMenu ? h('div', { class: 'tips-navigation' }, [
+              returnToMenu ? h('button', {
+                type: 'button',
+                class: 'quiet-button',
+                onClick: showMenu,
+              }, 'All guides') : null,
               h('button', {
                 type: 'button',
                 class: 'quiet-button',
@@ -416,12 +557,12 @@ export const TipsExperience = {
                 onClick: previous,
               }, 'Back'),
               h('button', {
-                ref: nextButton,
+                ref: primaryFocus,
                 type: 'button',
                 class: 'card-primary-button',
                 onClick: next,
               }, isLastStep ? 'Done' : 'Next'),
-            ]),
+            ]) : null,
           ]),
         ]),
       ]);
