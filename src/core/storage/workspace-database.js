@@ -218,8 +218,14 @@ function selectOne(db, table, workspaceId) {
 }
 
 export function loadWorkspaceFromDatabase(db, workspaceId) {
-  const exists = db.selectValue('SELECT 1 FROM workspaces WHERE id = ? LIMIT 1', [workspaceId]);
-  if (!exists) return null;
+  const header = db.selectObjects(
+    'SELECT format, format_version FROM workspaces WHERE id = ? LIMIT 1',
+    [workspaceId],
+  )[0] ?? null;
+  if (!header) return null;
+  if (header.format !== 'dynamic-learner' || header.format_version !== 1) {
+    throw new Error('The database contains an unsupported Dynamic Learner workspace format.');
+  }
 
   return rowsToWorkspace({
     notebookState: selectOne(db, 'notebook_state', workspaceId),
