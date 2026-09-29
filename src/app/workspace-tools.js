@@ -90,7 +90,9 @@ export const WorkspaceTools = {
       ]),
       pending.value ? h('div', { class: 'backup-review', role: 'region', 'aria-label': 'Review backup' }, [
         h('p', `Replace this workspace with “${pending.value.name}”? This backup contains ${countNotebookItems(pending.value.data.features.notebook.items)} Notebook groups and documents with ${countDocuments(pending.value.data.features.notebook.items)} documents, ${countIndexCardItems(pending.value.data.features['index-cards'].items)} Index Cards groups and sets with ${countCards(pending.value.data.features['index-cards'].items)} cards, plus ${countWordSearchItems(pending.value.data.features['word-search'].items)} Word Search library items with ${countWordSearches(pending.value.data.features['word-search'].items)} word searches. Current data will be replaced, not merged.`),
-        h('p', 'Download a backup first if you want to keep the current workspace.'),
+        h('p', props.workspace.ready.value
+          ? 'Download a backup first if you want to keep the current workspace.'
+          : 'The current workspace is unavailable; replacing it will overwrite the stored workspace after this backup is validated.'),
         h('div', { class: 'workspace-actions' }, [
           h('button', {
             type: 'button', class: 'quiet-button', disabled: busy.value, onClick: replace,
