@@ -44,10 +44,19 @@
   --attempt-shadow: 0 0 4px color-mix(in srgb, var(--attempt-color) 34%, transparent);
   animation: search-attempt-pulse 220ms ease-in-out both;
 }
-.word-search-attempt-letter.attempt-miss { --attempt-color: var(--danger); --attempt-shadow: none; }
+.word-search-attempt-letter.attempt-miss {
+  --attempt-color: var(--danger);
+  --attempt-shadow: none;
+  animation: search-attempt-miss 1800ms linear both;
+}
 @keyframes search-attempt-pulse {
   0%, 100% { color: inherit; text-shadow: none; }
   20%, 78% { color: var(--attempt-color); text-shadow: var(--attempt-shadow); }
+}
+@keyframes search-attempt-miss {
+  0% { color: inherit; }
+  16.667%, 72.222% { color: var(--danger); }
+  100% { color: inherit; }
 }
 @media (prefers-reduced-motion: reduce) {
   .word-search-attempt-letter { color: var(--attempt-color); text-shadow: none; }
