@@ -5,7 +5,7 @@ import { getDocumentType } from './document-types.js';
 import { MarkdownEditor } from './markdown-editor.js';
 import { NotebookLibrary } from './library.js';
 import {
-  canMove, countDocuments, countItems, findItem, groupOptions, insertDocument,
+  canMove, countDocuments, countItems, deleteItem, findItem, groupOptions, insertDocument,
   MAX_DOCUMENTS, MAX_ITEMS, moveItem,
 } from './library-model.js';
 
@@ -15,6 +15,7 @@ const MIN_LIBRARY_WIDTH = 248;
 const MAX_LIBRARY_WIDTH = 640;
 const MIN_DETAIL_WIDTH = 320;
 const LIBRARY_WIDTH_KEY = 'dynamic-learner.ui.notebook.library-width';
+const TIPS_ACTION_EVENT = 'dynamic-learner:tips-action';
 
 export const Notebook = {
   name: 'Notebook',
@@ -119,8 +120,12 @@ export const Notebook = {
       if (selectedId.value) library.value?.reveal(selectedId.value);
       keepLibraryWidthInBounds();
       window.addEventListener('resize', keepLibraryWidthInBounds);
+      window.addEventListener(TIPS_ACTION_EVENT, handleTipsAction);
     });
-    onBeforeUnmount(() => window.removeEventListener('resize', keepLibraryWidthInBounds));
+    onBeforeUnmount(() => {
+      window.removeEventListener('resize', keepLibraryWidthInBounds);
+      window.removeEventListener(TIPS_ACTION_EVENT, handleTipsAction);
+    });
 
     async function setLibraryCollapsed(collapsed) {
       libraryCollapsed.value = collapsed;
@@ -174,6 +179,55 @@ export const Notebook = {
       creationTarget.value = null;
       library.value?.reveal(item.id);
       if (libraryOverlay.value) setLibraryCollapsed(true);
+    }
+
+    async function restoreTipsState(previous, temporaryId = null) {
+      if (temporaryId) deleteItem(props.model.items, temporaryId);
+      creationTarget.value = previous.creationTarget;
+      const previousSelection = previous.selectedId && findItem(props.model.items, previous.selectedId);
+      selectedId.value = previousSelection ? previous.selectedId : null;
+      libraryCollapsed.value = previous.libraryCollapsed;
+      await nextTick();
+      const remembered = previous.lastSelectedDocumentId &&
+        findItem(props.model.items, previous.lastSelectedDocumentId);
+      props.model.lastSelectedDocumentId = remembered?.item.kind === 'document'
+        ? previous.lastSelectedDocumentId : null;
+    }
+
+    async function prepareTipsAction(action) {
+      const previous = {
+        selectedId: selectedId.value,
+        lastSelectedDocumentId: props.model.lastSelectedDocumentId ?? null,
+        creationTarget: creationTarget.value,
+        libraryCollapsed: libraryCollapsed.value,
+      };
+
+      if (action === 'creation') {
+        beginDocumentCreation();
+        await nextTick();
+        return () => restoreTipsState(previous);
+      }
+
+      if (action === 'markdown') {
+        const item = insertDocument(props.model.items, { selectedId: null }, 'markdown');
+        item.name = 'Lorem ipsum';
+        item.data.markdown = '# Lorem ipsum\n\nLorem ipsum dolor sit amet, consectetur adipiscing elit.\n\n## Dolor sit amet\n\nSed do eiusmod tempor incididunt ut labore et dolore magna aliqua.';
+        creationTarget.value = null;
+        selectedId.value = item.id;
+        if (libraryOverlay.value) libraryCollapsed.value = true;
+        library.value?.reveal(item.id);
+        await nextTick();
+        return () => restoreTipsState(previous, item.id);
+      }
+
+      throw new Error('Unknown Notebook tutorial action.');
+    }
+
+    function handleTipsAction(event) {
+      const detail = event.detail;
+      if (detail?.featureId !== 'notebook') return;
+      detail.handled = true;
+      prepareTipsAction(detail.action).then(detail.resolve, detail.reject);
     }
 
     function moveToGroup(event) {

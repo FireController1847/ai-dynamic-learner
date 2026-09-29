@@ -31,6 +31,7 @@ export const tipsCatalog = {
         title: 'Choose a document type',
         description: 'Pick the kind of page you want.',
         when: '.notebook-builder',
+        prepare: 'creation',
         steps: [
           {
             title: 'Pick the kind of page you want',
@@ -46,6 +47,7 @@ export const tipsCatalog = {
         title: 'Markdown Paper',
         description: 'Learn the main tools for Markdown Paper.',
         when: '.markdown-workspace',
+        prepare: 'markdown',
         steps: [
           {
             title: 'Write on one side and see the result',
@@ -103,6 +105,7 @@ export const tipsCatalog = {
         title: 'Making cards',
         description: 'Add cards and write what you want to study.',
         when: '.index-cards-detail.is-set',
+        prepare: 'set',
         continueToAvailable: true,
         steps: [
           {
@@ -126,6 +129,7 @@ export const tipsCatalog = {
         title: 'Flip and review',
         description: 'Flip a card, then try Review mode.',
         when: '.card-flip-button',
+        prepare: 'review',
         finishLabel: 'Open Review',
         finishAction: { click: '.card-review-button' },
         steps: [
@@ -178,6 +182,7 @@ export const tipsCatalog = {
         title: 'Making a puzzle',
         description: 'Choose the words and how hard the puzzle should be.',
         when: '.word-search-form',
+        prepare: 'creation',
         steps: [
           {
             title: 'Add the words to find',
@@ -207,6 +212,7 @@ export const tipsCatalog = {
         title: 'Solving a puzzle',
         description: 'Learn how to find words and use puzzle help.',
         when: '.word-search-game',
+        prepare: 'play',
         steps: [
           {
             title: 'Find a word on the grid',

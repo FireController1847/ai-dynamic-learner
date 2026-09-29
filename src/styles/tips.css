@@ -291,3 +291,10 @@
     display: none;
   }
 }
+
+
+.tips-section-state.is-action {
+  color: var(--brand);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
