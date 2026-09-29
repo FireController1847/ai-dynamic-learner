@@ -27,31 +27,25 @@
   place-items: center;
 }
 .word-search-board-rotator {
-  transform: rotate(var(--board-to));
+  transform: rotate(0deg);
   transform-origin: center;
   will-change: transform;
 }
 .word-search-board-rotator.is-rotating {
   pointer-events: none;
-  animation: word-search-quarter-turn 620ms cubic-bezier(0.22, 0.78, 0.22, 1) both;
+  animation: word-search-quarter-turn 660ms cubic-bezier(0.16, 0.84, 0.24, 1) both;
 }
 @keyframes word-search-quarter-turn {
   0% {
-    transform: rotate(var(--board-from)) scale(1);
+    transform: rotate(0deg) scale(1);
     filter: drop-shadow(0 0 0 transparent);
   }
-  20% {
-    transform: rotate(calc(var(--board-from) + 12deg)) scale(0.82);
-  }
   50% {
-    transform: rotate(calc(var(--board-from) + 45deg)) scale(0.7);
-    filter: drop-shadow(0 10px 12px rgb(0 0 0 / 16%));
-  }
-  80% {
-    transform: rotate(calc(var(--board-from) + 78deg)) scale(0.82);
+    transform: rotate(45deg) scale(0.92);
+    filter: drop-shadow(0 10px 14px rgb(0 0 0 / 14%));
   }
   100% {
-    transform: rotate(var(--board-to)) scale(1);
+    transform: rotate(90deg) scale(1);
     filter: drop-shadow(0 0 0 transparent);
   }
 }
@@ -74,7 +68,32 @@
   font: var(--search-letter-weight) var(--search-letter-size)/1 var(--search-letter-font);
   -webkit-tap-highlight-color: transparent;
 }
-.word-search-cell > span { position: relative; z-index: 2; pointer-events: none; }
+.word-search-cell > span {
+  position: relative;
+  z-index: 2;
+  display: inline-block;
+  pointer-events: none;
+  transform-origin: center;
+}
+.word-search-board-rotator.is-rotating .word-search-cell > span {
+  animation: word-search-letter-counterturn 660ms cubic-bezier(0.16, 0.84, 0.24, 1) both;
+}
+@keyframes word-search-letter-counterturn {
+  0% { transform: rotate(0deg) scale(1); }
+  48% { transform: rotate(-43deg) scale(0.9); }
+  78% { transform: rotate(-76deg) scale(1.06); }
+  100% { transform: rotate(-90deg) scale(1); }
+}
+.word-search-letter-settle {
+  animation: word-search-letter-settle 420ms cubic-bezier(0.2, 0.9, 0.22, 1.2) both;
+  animation-delay: var(--letter-delay, 0ms);
+}
+@keyframes word-search-letter-settle {
+  0% { transform: translateY(-4px) scale(0.9); opacity: 0.3; }
+  55% { transform: translateY(1px) scale(1.08); opacity: 1; }
+  78% { transform: translateY(-1px) scale(0.98); }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
 .word-search-attempt-letter {
   --attempt-color: var(--search-highlight);
   --attempt-shadow: 0 0 4px color-mix(in srgb, var(--attempt-color) 34%, transparent);
@@ -98,6 +117,10 @@
   .word-search-attempt-letter { color: var(--attempt-color); text-shadow: none; }
   .outline-miss { animation: none; opacity: 1; }
   .word-search-board-rotator.is-rotating,
+  .word-search-board-rotator.is-rotating .word-search-cell > span,
+  .word-search-letter-settle,
+  .word-search-board-rotator.is-rotating .word-search-outline-label,
+  .is-settling .word-search-outline-label,
   .word-search-rotate-button.is-rotating .ui-icon { animation: none; }
 }
 .word-search-cell:hover { color: var(--search-highlight); }
@@ -112,6 +135,19 @@
 .word-search-outline-label {
   fill: var(--search-highlight); font: 400 0.2px/1 ui-monospace, Consolas, monospace;
   stroke: var(--page-background); stroke-width: 0.07; paint-order: stroke fill; stroke-linejoin: round;
+}
+.word-search-board-rotator.is-rotating .word-search-outline-label {
+  animation: word-search-outline-label-out 180ms ease-out both;
+}
+.is-settling .word-search-outline-label {
+  animation: word-search-outline-label-in 320ms 80ms cubic-bezier(0.2, 0.9, 0.22, 1.15) both;
+}
+@keyframes word-search-outline-label-out {
+  to { opacity: 0; }
+}
+@keyframes word-search-outline-label-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 .word-search-outline rect { fill: var(--search-highlight); fill-opacity: 0.1; stroke: var(--search-highlight); stroke-width: 0.055; }
 .outline-selection rect { fill-opacity: 0.16; stroke-width: 0.07; transition: width 65ms linear; }
