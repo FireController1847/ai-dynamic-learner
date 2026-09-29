@@ -21,7 +21,7 @@ Every route in `src/features/feature-definitions.js` gets an actual `index.html`
 
 For manual local inspection, run `PAGES_BASE_PATH=/dynamic-learner PAGES_BASE_URL=https://example.test/dynamic-learner/ npm run pages:prepare` and serve `dist/` mounted at `/dynamic-learner/` with a static host; the default base is `/`. Do not use `npm start` as a preview of `dist/`: it serves the source app instead.
 
-Browser storage is scoped to the origin. A published Pages site has separate storage from localhost; download a local workspace backup and upload it on the published site to transfer your cards. Projects on the same Pages origin currently share the app's storage key.
+Workspace SQLite/OPFS storage is scoped to the origin. A published Pages site therefore has separate workspace data from localhost; download a local workspace backup and upload it on the published site to transfer data. Dynamic Learner uses the OPFS SyncAccessHandle Pool VFS specifically so Pages does not need cross-origin isolation response headers. Deployments sharing the same browser origin and app path also share the app's OPFS storage namespace, so do not treat separate routes as separate databases.
 
 ## Manual checklist
 
