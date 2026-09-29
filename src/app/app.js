@@ -15,10 +15,7 @@ const featureImageSrc = (feature) => feature?.image
   ? new URL(feature.image, document.baseURI).href
   : '';
 
-const navigationItems = [
-  { id: 'home', label: 'Home', path: '/', imageSrc: appLogoSrc },
-  ...features.filter((feature) => !feature.hidden),
-].map((item) => ({
+const navigationItems = features.filter((feature) => !feature.hidden).map((item) => ({
   ...item,
   href: pageHref(item.path),
   imageSrc: item.imageSrc ?? featureImageSrc(item),
@@ -84,6 +81,7 @@ const App = {
         open: sidebarOpen.value,
         title: appConfig.name,
         logoSrc: appLogoSrc,
+        homeHref: pageHref('/'),
         items: navigationItems,
         activePath: currentPath.value,
         onClose: closeSidebar,

@@ -69,7 +69,7 @@ body:has(.navigation-drawer[open]) { overflow: hidden; }
   margin-bottom: 12px;
   padding-left: 12px;
 }
-.drawer-brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.drawer-brand { display: flex; align-items: center; gap: 10px; min-width: 0; border-radius: var(--radius); color: inherit; text-decoration: none; }
 .drawer-logo { width: 32px; height: 32px; }
 .drawer-title { font-weight: 600; overflow-wrap: anywhere; }
 .drawer-header .menu-toggle { font-size: 24px; font-weight: 400; }

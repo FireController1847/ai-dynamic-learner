@@ -8,6 +8,7 @@ export const NavigationDrawer = {
     open: Boolean,
     title: { type: String, required: true },
     logoSrc: { type: String, default: '' },
+    homeHref: { type: String, required: true },
     items: { type: Array, required: true },
     activePath: { type: String, required: true },
   },
@@ -31,7 +32,12 @@ export const NavigationDrawer = {
         },
       }, [h('div', { class: 'drawer-panel' }, [
         h('div', { class: 'drawer-header' }, [
-          h('div', { class: 'drawer-brand' }, [
+          h('a', {
+            class: 'drawer-brand',
+            href: props.homeHref,
+            'aria-label': `Go to ${props.title} home`,
+            onClick: (event) => emit('navigate', event, '/'),
+          }, [
             props.logoSrc ? h('img', { class: 'app-logo drawer-logo', src: props.logoSrc, alt: '', 'aria-hidden': 'true' }) : null,
             h('span', { class: 'drawer-title' }, props.title),
           ]),
