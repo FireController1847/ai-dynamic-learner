@@ -26,6 +26,10 @@ Adjust text independently of the paper: line spacing, rule positions, horizontal
 
 ## Manual review
 
+App artwork uses matching glossy blue-and-white icons with tight square framing, exported at 512×512 for crisp Home, sidebar, and header rendering. Browser branding includes a multi-resolution ICO, a 180×180 Apple touch icon, and a refreshed ICNS asset. The social splash is `src/assets/dynamic-learner-social-v2.jpg`, exported at 1200×630; its metadata lives in `src/app/app-config.js`. The versioned filename separates it from previously cached link-preview artwork.
+
+Manually inspect all app icons on Home, in the sidebar, and in the header at normal and high display density. Check the browser favicon and saved home-screen icon. After a Pages deployment, check the generated Open Graph image URL and the banner crop in a shared-link preview. Social preview services may retain previously scraped metadata until they refresh it.
+
 Mobile/tablet overrides live in `styles/mobile.css`: phone widths ≤700px and coarse-pointer tablet widths ≤1100px. Avoid changing shared desktop metrics for device-specific fixes. Small screens use a dismissible library overlay, a single scrolling card workspace, horizontal card navigation, 44px touch targets, safe-area padding, and scrollable dialogs. The viewport permits normal zoom and requests keyboard-driven content resizing where supported. Font sizes on the paper still follow the user's proportional display settings.
 
 On a phone and touch tablet, check portrait/landscape, restored and newly created sets, library backdrop/Escape dismissal, renaming, nested groups, Settings, and keyboard-open editing on both card sides. Make sure the editor, card strip, location controls, and dialog actions remain reachable. Check short landscape windows and notched-device safe areas. On a desktop with a mouse, confirm the existing side-by-side layout and sizing remain unchanged. No browser automation is required unless requested.

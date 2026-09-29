@@ -1,9 +1,9 @@
 const socialImage = Object.freeze({
-  path: 'src/assets/dynamic-learner-social.jpg',
+  path: 'src/assets/dynamic-learner-social-v2.jpg',
   type: 'image/jpeg',
   width: 1200,
   height: 630,
-  alt: 'Dynamic Learner — a flexible learning workspace for organizing, studying, and reviewing knowledge.',
+  alt: 'Dynamic Learner — Notes. Cards. Word searches. Blue notebook, index cards, and letter-grid artwork.',
 });
 
 export const appConfig = Object.freeze({
