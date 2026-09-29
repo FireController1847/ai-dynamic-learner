@@ -6,6 +6,7 @@ export const ReviewSetup = {
     initialSide: { type: String, required: true },
     initialOrder: { type: String, required: true },
     cardCount: { type: Number, required: true },
+    modal: { type: Boolean, default: true },
   },
   emits: ['cancel', 'start'],
   setup(props, { emit }) {
@@ -18,7 +19,10 @@ export const ReviewSetup = {
     function close() {
       if (dialog.value?.open) dialog.value.close();
     }
-    onMounted(() => dialog.value.showModal());
+    onMounted(() => {
+      if (props.modal) dialog.value.showModal();
+      else dialog.value.show();
+    });
     onBeforeUnmount(close);
     onDeactivated(close);
 
@@ -67,8 +71,14 @@ export const ReviewSetup = {
         ]),
       ]),
       h('div', { class: 'review-setup-actions' }, [
-        h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel') }, 'Cancel'),
-        step.value === 2 ? h('button', { type: 'button', class: 'quiet-button', onClick: () => changeStep(1) }, 'Previous step') : null,
+        h('button', {
+          type: 'button', class: 'quiet-button review-cancel-button',
+          onClick: () => emit('cancel'),
+        }, 'Cancel'),
+        step.value === 2 ? h('button', {
+          type: 'button', class: 'quiet-button review-previous-button',
+          onClick: () => changeStep(1),
+        }, 'Previous step') : null,
         h('button', { type: 'submit', class: 'card-primary-button' }, step.value === 1 ? 'Next' : 'Start review'),
       ]),
     ])]);

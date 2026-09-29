@@ -255,13 +255,33 @@ export const TipsExperience = {
       openState.value = false;
     }
 
-    function previous() {
-      stepIndex.value = Math.max(0, stepIndex.value - 1);
+    async function runStepAction(action) {
+      if (!action) return true;
+      if (action.click) {
+        const target = visibleTarget(action.click);
+        if (!target) return false;
+        target.click();
+        await nextTick();
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        return true;
+      }
+      return true;
     }
 
-    function next() {
-      if (!activeSection.value) return;
-      if (stepIndex.value >= activeSection.value.steps.length - 1) finishSection();
+    async function previous() {
+      const currentStep = step.value;
+      if (!currentStep || stepIndex.value === 0) return;
+      const completed = await runStepAction(currentStep.backAction);
+      if (completed) stepIndex.value -= 1;
+    }
+
+    async function next() {
+      const section = activeSection.value;
+      const currentStep = step.value;
+      if (!section || !currentStep) return;
+      const completed = await runStepAction(currentStep.nextAction);
+      if (!completed) return;
+      if (stepIndex.value >= section.steps.length - 1) finishSection();
       else stepIndex.value += 1;
     }
 
@@ -685,6 +705,7 @@ export const TipsExperience = {
       if (!openState.value || !tutorial.value || !props.feature) return null;
       const isMenu = mode.value === 'menu';
       const section = activeSection.value;
+      const currentStep = step.value;
       const isLastStep = !isMenu && section && stepIndex.value === section.steps.length - 1;
       const spotlight = !isMenu ? targetRect.value : null;
 
@@ -742,7 +763,7 @@ export const TipsExperience = {
           !isMenu ? h('footer', { class: 'tips-footer' }, [
             moreMenu(),
             h('div', { class: 'tips-navigation' }, [
-              stepIndex.value > 0 ? h('button', {
+              stepIndex.value > 0 && currentStep?.back !== false ? h('button', {
                 type: 'button',
                 class: 'quiet-button',
                 onClick: previous,
@@ -752,7 +773,7 @@ export const TipsExperience = {
                 type: 'button',
                 class: 'card-primary-button',
                 onClick: next,
-              }, isLastStep ? (section.finishLabel ?? 'Done') : 'Next'),
+              }, currentStep?.nextLabel ?? (isLastStep ? (section.finishLabel ?? 'Done') : 'Next')),
             ]),
           ]) : null,
         ]),
