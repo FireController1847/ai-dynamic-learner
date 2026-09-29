@@ -75,11 +75,10 @@ Then open <http://127.0.0.1:3000>.
 
 The webpack development server rebuilds and reloads the page as source files change. Vue, Marked, and DOMPurify are bundled locally; loading the application does not require a runtime CDN connection. Installing dependencies requires network access.
 
-To create and preview a production build:
+To create a production build:
 
 ```powershell
 npm run build
-npm run preview
 ```
 
 The build checks TypeScript and writes the complete static site to `dist/`. Run `npm run typecheck` for type checking alone. GitHub Actions builds this output for each manual deployment, so generated files do not need to be committed and no separate deployment branch is needed.
@@ -108,8 +107,7 @@ Dynamic Learner deliberately keeps its runtime simple:
 
 - Vue 3 and other browser dependencies are installed through npm and bundled with webpack.
 - Source uses strict TypeScript ES modules and plain Vue components. No single-file component compilation is required.
-- `webpack.config.mts` owns the development server and production build.
-- `server.mts` previews only the generated `dist/` site.
+- `webpack.config.mts` owns both the live-reloading development server and the production build.
 - Features live under `src/features`; shared application composition lives under `src/app`.
 - GitHub Pages uses the webpack production build, with direct-link entry points and metadata for every feature route.
 

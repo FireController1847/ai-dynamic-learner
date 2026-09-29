@@ -1,12 +1,12 @@
 # GitHub Pages
 
-The app deploys as static HTML, CSS, images, and webpack JavaScript bundles. Vue, Marked, and DOMPurify ship in the bundles; visitors do not need a runtime CDN connection. Node.js is used to build and preview the site, not to run the published application.
+The app deploys as static HTML, CSS, images, and webpack JavaScript bundles. Vue, Marked, and DOMPurify ship in the bundles; visitors do not need a runtime CDN connection. Node.js is used for development and builds, not to run the published application.
 
 ## Source and deployment strategy
 
 Commit source, `package.json`, and `package-lock.json`. Keep `dist/` ignored. No built-output commit or dedicated deployment branch is needed: the manually dispatched `.github/workflows/deploy-pages.yml` installs locked dependencies with `npm ci`, type-checks TypeScript, runs the webpack production build, and uploads `dist/` to GitHub Pages. Each deployment builds the selected source commit, so there is no requirement to build locally before every commit. A failed install, type check, or build prevents the deployment job from running.
 
-Pushes and pull requests do not publish automatically. Local production previews must be rebuilt after source changes; `npm start` handles development rebuilds automatically.
+Pushes and pull requests do not publish automatically. `npm start` handles local development serving, rebuilds, and live reload automatically.
 
 ## First publication
 
@@ -29,37 +29,16 @@ Every route in `src/features/feature-definitions.ts` gets an actual `index.html`
 
 Install dependencies once with `npm ci` using Node.js 24 or newer. Run `npm start` for development at `http://127.0.0.1:3000`. Set `HOST` and `PORT` to override the address. Restart the development server after changing build configuration or feature route definitions.
 
-For a production preview at the origin root:
+To inspect a production build locally, run `npm run build` and inspect the generated `dist/` contents. The normal interactive local workflow is `npm start`, which serves webpack's in-memory development build with live reload.
 
-```sh
-npm run build
-npm run preview
-```
-
-To preview a GitHub Pages repository prefix in a POSIX shell:
-
-```sh
-PAGES_BASE_PATH=/dynamic-learner PAGES_BASE_URL=https://example.test/dynamic-learner/ npm run pages:prepare
-npm run preview
-```
-
-In PowerShell:
-
-```powershell
-$env:PAGES_BASE_PATH = "/dynamic-learner"
-$env:PAGES_BASE_URL = "https://example.test/dynamic-learner/"
-npm run pages:prepare
-npm run preview
-```
-
-The preview server reads the base path from the built HTML and serves only `dist/`; open `http://127.0.0.1:3000/dynamic-learner/` for the prefixed example. Stop a development server using the same port first, or set another `PORT`. Clear the Pages environment variables before building at `/` again. The example public URL is only for inspecting metadata; Actions supplies the real URL during publication.
+GitHub Pages base-path behavior is supplied by the deployment workflow through `PAGES_BASE_PATH` and `PAGES_BASE_URL`; Actions provides the real values during publication.
 
 Browser storage is scoped to the origin. The default development address is unchanged, so existing local data remains accessible. A published site has separate storage from localhost; use a downloaded workspace backup to transfer data. Projects on the same Pages origin currently share the app's storage key.
 
 ## Manual checklist
 
 - Start development and confirm source edits rebuild and reload the page.
-- Preview root and repository-prefixed production builds. Open Home, Notebook, Index Cards, and Word Search directly and refresh each; check Back/Forward and open-in-new-tab links.
+- Open Home, Notebook, Index Cards, and Word Search directly through the development server and refresh each; check Back/Forward and open-in-new-tab links.
 - Inspect icons, styles, canonical/social metadata, and the generated social image URL. Check that an unknown route returns 404 with a working Home link.
 - Try Markdown rendering, Settings, card flipping, and workspace download/upload; inspect the console and asset requests.
 - After a manual deployment, repeat the direct-route checks at the real Pages URL. Confirm ordinary pushes do not deploy and no generated files need committing.

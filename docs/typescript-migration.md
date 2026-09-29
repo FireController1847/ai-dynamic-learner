@@ -4,7 +4,7 @@ The JavaScript-to-TypeScript migration is complete on `migration/typescript`. Th
 
 ## Final state
 
-All owned browser implementation modules under `src/` are strict TypeScript. Build configuration, page metadata generation, site configuration, and the production preview server use `.mts` where they run directly under Node.js 24.
+All owned browser implementation modules under `src/` are strict TypeScript. Build configuration, page metadata generation, and site configuration use `.mts` where they run directly under Node.js 24.
 
 `tsconfig.json` contains the shared strict options. `tsconfig.app.json` checks browser source and `tsconfig.node.json` checks Node/build tooling. There is no `allowJs` or `checkJs` migration boundary left. Webpack enters through `src/app/app.ts`; `ts-loader` compiles TypeScript and rewrites explicit `.ts` imports for the browser bundle.
 
@@ -39,7 +39,6 @@ For the production Pages path, the build can additionally be prepared with:
 
 ```sh
 PAGES_BASE_PATH=/ai-dynamic-learner PAGES_BASE_URL=https://firecontroller1847.github.io/ai-dynamic-learner/ npm run pages:prepare
-npm run preview
 ```
 
 A focused manual migration pass should cover direct route loads/reloads, navigation, backup export/import replacement, Index Cards editing/review/display preferences, Notebook Markdown editing/preview/Contents/import/export, Word Search creation/editing/play/display preferences, and the Tips flows touched by the extracted coordinator modules.
