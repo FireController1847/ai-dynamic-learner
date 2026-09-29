@@ -10,6 +10,8 @@ export class SQLiteWorkspaceStorage {
     this.confirmedRows = null;
     this.projectedRows = null;
     this.forceReplace = false;
+    this.saveSequence = 0;
+    this.projectedSequence = 0;
 
     this.worker.onmessage = (event) => {
       const { id, ok, result, error } = event.data ?? {};
@@ -55,6 +57,7 @@ export class SQLiteWorkspaceStorage {
     this.confirmedRows = workspace ? workspaceToRows(workspace) : null;
     this.projectedRows = this.confirmedRows;
     this.forceReplace = false;
+    this.projectedSequence = this.saveSequence;
     return workspace;
   }
 
@@ -62,10 +65,12 @@ export class SQLiteWorkspaceStorage {
     const rows = workspaceToRows(workspace);
     const base = this.forceReplace ? null : this.projectedRows;
     const delta = createWorkspaceDelta(base, rows);
+    const sequence = ++this.saveSequence;
 
     // Advance the projected state before posting so rapid edit/revert sequences
     // compare against what is already queued, not only what SQLite has confirmed.
     this.projectedRows = rows;
+    this.projectedSequence = sequence;
     if (isWorkspaceDeltaEmpty(delta)) return;
 
     try {
@@ -76,7 +81,9 @@ export class SQLiteWorkspaceStorage {
       // A later delta may have been calculated from the failed projected state.
       // The Worker rejects those dependent deltas; the next attempt must replace
       // the relational workspace from a complete current row set.
-      this.projectedRows = this.confirmedRows;
+      if (this.projectedSequence === sequence) {
+        this.projectedRows = this.confirmedRows;
+      }
       this.forceReplace = true;
       throw problem;
     }
