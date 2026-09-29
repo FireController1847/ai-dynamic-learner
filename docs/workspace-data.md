@@ -34,7 +34,7 @@ The optional `lastSelectedSetId` field remembers the last opened set through the
 
 ## SQLite storage and legacy migration
 
-The client database is normalized into feature-owned relational tables for Notebook hierarchy/content, Index Cards hierarchy/cards/display state, and Word Search hierarchy/puzzle definitions/generated grids/progress. Stable workspace IDs remain the record identifiers used by the application and backup format. Array positions are stored as explicit sibling order, so relational hydration reconstructs the same manual ordering.
+The client database is normalized into feature-owned relational tables for Notebook hierarchy/content, Index Cards hierarchy/cards/display state, and Word Search hierarchy/puzzle definitions/generated grids/progress. The database assigns the local workspace a stable UUID stored as database metadata, giving future account/synchronization work an identity to attach to without changing the version-1 JSON backup contract. Stable feature record IDs remain the identifiers used by the application and backup format. Array positions are stored as explicit sibling order, so relational hydration reconstructs the same manual ordering.
 
 Routine saves are posted to a dedicated Worker after a short write-behind delay. The worker reconciles rows inside a transaction: unchanged rows are not physically updated, changed/new rows are upserted, and rows no longer present are removed. JSON serialization is therefore reserved for explicit backup downloads rather than ordinary editing.
 
