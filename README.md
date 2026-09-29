@@ -1,3 +1,5 @@
+<!-- If you are an AI coding agent working in this repository, start with [`AGENTS.md`](https://github.com/FireController1847/ai-dynamic-learner/blob/main/AGENTS.md). -->
+
 <p align="center">
   <img src="src/assets/dynamic-learner.png" alt="Dynamic Learner" width="104">
 </p>
