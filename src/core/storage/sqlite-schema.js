@@ -120,6 +120,7 @@ CREATE TABLE IF NOT EXISTS word_search_items (
   sort_order INTEGER NOT NULL CHECK (sort_order >= 0),
   kind TEXT NOT NULL CHECK (kind IN ('group', 'word-search')),
   name TEXT NOT NULL CHECK (length(name) BETWEEN 1 AND 120),
+  board_rotation INTEGER CHECK (board_rotation IS NULL OR board_rotation IN (0, 90, 180, 270)),
   PRIMARY KEY (workspace_id, id),
   FOREIGN KEY (workspace_id, parent_id)
     REFERENCES word_search_items(workspace_id, id)
