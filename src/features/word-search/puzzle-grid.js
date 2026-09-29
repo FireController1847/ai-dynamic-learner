@@ -15,7 +15,6 @@ export const PuzzleGrid = {
     helpId: { type: String, default: 'word-search-play-help' },
     attempt: { type: Object, default: null },
     rotationTurns: { type: Number, default: 0 },
-    rotationFrom: { type: Number, default: 0 },
     rotating: Boolean,
   },
   emits: ['select'],
@@ -217,9 +216,7 @@ export const PuzzleGrid = {
           h('div', {
             class: ['word-search-board-rotator', { 'is-rotating': props.rotating }],
             style: {
-              '--board-from': `${props.rotationFrom * 90}deg`,
               '--board-to': `${props.rotationTurns * 90}deg`,
-              '--letter-from': `${-props.rotationFrom * 90}deg`,
               '--letter-to': `${-props.rotationTurns * 90}deg`,
             },
           }, [
