@@ -8,6 +8,8 @@ export class SQLiteWorkspaceStorage {
     this.nextId = 1;
     this.failed = null;
     this.confirmedRows = null;
+    this.projectedRows = null;
+    this.forceReplace = false;
 
     this.worker.onmessage = (event) => {
       const { id, ok, result, error } = event.data ?? {};
@@ -51,20 +53,33 @@ export class SQLiteWorkspaceStorage {
   async loadWorkspace() {
     const workspace = await this.call('load');
     this.confirmedRows = workspace ? workspaceToRows(workspace) : null;
+    this.projectedRows = this.confirmedRows;
+    this.forceReplace = false;
     return workspace;
   }
 
   async saveWorkspace(workspace) {
     const rows = workspaceToRows(workspace);
-    const delta = createWorkspaceDelta(this.confirmedRows, rows);
+    const base = this.forceReplace ? null : this.projectedRows;
+    const delta = createWorkspaceDelta(base, rows);
 
-    if (!isWorkspaceDeltaEmpty(delta)) {
+    // Advance the projected state before posting so rapid edit/revert sequences
+    // compare against what is already queued, not only what SQLite has confirmed.
+    this.projectedRows = rows;
+    if (isWorkspaceDeltaEmpty(delta)) return;
+
+    try {
       await this.call('save-delta', { delta });
+      this.confirmedRows = rows;
+      if (delta.replace) this.forceReplace = false;
+    } catch (problem) {
+      // A later delta may have been calculated from the failed projected state.
+      // The Worker rejects those dependent deltas; the next attempt must replace
+      // the relational workspace from a complete current row set.
+      this.projectedRows = this.confirmedRows;
+      this.forceReplace = true;
+      throw problem;
     }
-    // Only advance the comparison baseline after SQLite confirms the write.
-    // Concurrent saves are answered in Worker order; later deltas may contain
-    // harmless redundant changes relative to an older confirmed baseline.
-    this.confirmedRows = rows;
   }
 
   exportBackup() {
