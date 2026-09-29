@@ -70,7 +70,7 @@ npm start
 
 Then open <http://127.0.0.1:3000>.
 
-There is no application build step and no `npm install` is currently required. The local Node server uses built-in modules, while the browser loads Vue 3.5.13 from jsDelivr at runtime. An internet connection is therefore required for Vue to load.
+There is no application build step and no `npm install` is currently required. The local Node server uses built-in modules, while the browser loads Vue 3.5.13 and the pinned official SQLite WASM package from jsDelivr at runtime. An internet connection is therefore required for those browser dependencies to load.
 
 To use a different address or port in PowerShell:
 
@@ -82,11 +82,13 @@ npm start
 
 ## Your workspace data
 
-Dynamic Learner stores workspace content locally in the browser rather than in an account or remote database.
+Dynamic Learner stores workspace content locally in a relational SQLite database backed by the browser's Origin Private File System (OPFS), rather than in an account or remote database. SQLite runs in a Worker so routine persistence does not repeatedly serialize and synchronously rewrite the whole workspace on the UI thread.
 
-The navigation drawer includes **Download backup** and **Upload backup** controls for moving or preserving the workspace as JSON. A restore replaces the current saved workspace after review. Browser-local UI preferences, such as panel sizing, may be stored separately from the content backup.
+The navigation drawer includes **Download backup** and **Upload backup** controls for moving or preserving the workspace as portable JSON. JSON is an interchange/backup format rather than the live database format. Browser-local UI preferences, such as panel sizing and TIPS state, remain separate from workspace content.
 
-If the browser's site data is cleared without a backup, locally stored learning content may be lost.
+Existing workspaces saved by older versions under `dynamic-learner.workspace.v1` are migrated into SQLite on first successful startup. The migration recovers features and records independently where possible, so one damaged legacy record does not necessarily discard otherwise valid content. The legacy copy is removed only after the recovered workspace has been committed successfully.
+
+If the browser's site data is cleared without a backup, locally stored learning content may be lost. SQLite's current OPFS storage mode is designed around one active database connection, so editing the same origin in multiple tabs at once is not supported.
 
 More detail about the saved format is available in [`docs/workspace-data.md`](docs/workspace-data.md).
 
@@ -94,7 +96,8 @@ More detail about the saved format is available in [`docs/workspace-data.md`](do
 
 Dynamic Learner deliberately keeps its runtime simple:
 
-- Vue 3 is loaded directly in the browser.
+- Vue 3 and SQLite WASM are loaded directly in the browser.
+- Workspace content is persisted relationally in SQLite/OPFS; JSON is reserved for portable backups.
 - JavaScript uses native ES modules.
 - `server.mjs` provides the local static server.
 - There is no bundler, TypeScript compilation, or Vue single-file-component build pipeline.
