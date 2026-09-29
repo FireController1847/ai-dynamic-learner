@@ -382,6 +382,10 @@ function migrateWordSearch(raw, report) {
         kind: 'word-search',
         name: name(source.name, 'Recovered word search', report),
       };
+      if (Object.hasOwn(source, 'boardRotation')) {
+        if ([0, 90, 180, 270].includes(source.boardRotation)) item.boardRotation = source.boardRotation;
+        else report.repaired += 1;
+      }
       if (Object.hasOwn(source, 'puzzle')) {
         const puzzle = migratePuzzle(source.puzzle, report);
         if (puzzle) {
