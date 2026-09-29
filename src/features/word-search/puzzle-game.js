@@ -81,7 +81,7 @@ export const PuzzleGame = {
       const text = wordOnLine(game.value.rows, start, end);
       clearAttempt();
       attempt.value = { id: ++attemptId, cells: cells.length ? cells : [start, end], matched: Boolean(match) };
-      attemptTimer = setTimeout(clearAttempt, 230);
+      attemptTimer = setTimeout(clearAttempt, match ? 230 : 1800);
       const recognized = text ? `Selected “${text}”. ` : '';
       if (!match) {
         message.value = text ? `${recognized}No matching word. Try again.`
