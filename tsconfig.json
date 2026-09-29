@@ -5,14 +5,19 @@
     "moduleResolution": "NodeNext",
     "strict": true,
     "noEmit": true,
-    "allowJs": true,
-    "checkJs": false,
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "erasableSyntaxOnly": true,
     "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "lib": [
+      "ES2023",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "types": []
   },
-  "files": [],
-  "references": []
+  "include": [
+    "src/**/*.ts"
+  ]
 }

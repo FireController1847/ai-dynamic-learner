@@ -23,7 +23,7 @@ export default (_env: unknown, argv: { mode?: Configuration['mode'] }): Configur
 
   return {
     context: root,
-    entry: { app: './src/app/app.js' },
+    entry: { app: './src/app/app.ts' },
     target: ['web', 'es2022'],
     output: {
       path: fileURLToPath(new URL('dist/', import.meta.url)),

@@ -21,12 +21,12 @@ export const MAX_INSTRUCTIONS_LENGTH = 500;
 export const MAX_WORD_INPUT_LENGTH = 4000;
 // TODO: Support custom grid dimensions, including rectangular puzzles.
 export const GRID_SIZES = [10, 15, 20, 24];
-export const DIFFICULTIES = [
+export const DIFFICULTIES: { value: Difficulty; label: string; description: string }[] = [
   { value: 'easy', label: 'Easy', description: 'Across and down, reading forward.' },
   { value: 'medium', label: 'Medium', description: 'Adds diagonal words, reading forward.' },
   { value: 'hard', label: 'Hard', description: 'All eight directions, including backward.' },
 ];
-export const STUDY_MODES = [
+export const STUDY_MODES: { value: StudyMode; label: string; description: string }[] = [
   { value: 'words', label: 'Show word list', description: 'Show each answer in the sidebar while you search.' },
   { value: 'hints', label: 'Show descriptive hints', description: 'Hide the answers behind clue-style hints with an optional reveal button.' },
 ];

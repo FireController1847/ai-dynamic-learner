@@ -1,0 +1,51 @@
+import { isRecord } from '../core/validation.ts';
+import type { Notebook } from '../features/notebook/library-model.ts';
+import type { IndexCards } from '../features/index-cards/tree-model.ts';
+import type { WordSearch } from '../features/word-search/library-model.ts';
+
+export interface Workspace {
+  format: 'dynamic-learner';
+  version: 1;
+  features: { notebook: Notebook; 'index-cards': IndexCards; 'word-search': WordSearch };
+}
+
+import { validateNotebook } from '../features/notebook/library-model.ts';
+import { validateIndexCards } from '../features/index-cards/tree-model.ts';
+import { validateWordSearch } from '../features/word-search/library-model.ts';
+
+export const MAX_BACKUP_BYTES = 32 * 1024 * 1024;
+
+export function emptyWorkspace(): Workspace {
+  return {
+    format: 'dynamic-learner',
+    version: 1,
+    features: {
+      notebook: { items: [] },
+      'index-cards': { items: [] },
+      'word-search': { items: [] },
+    },
+  };
+}
+
+export function parseWorkspace(text: string): Workspace {
+  if (new Blob([text]).size > MAX_BACKUP_BYTES) throw new Error('Backups must be smaller than 32 MB.');
+  let value: unknown;
+  try { value = JSON.parse(text); }
+  catch { throw new Error('This file is not valid JSON.'); }
+  if (!isRecord(value) || value.format !== 'dynamic-learner' || value.version !== 1 ||
+      Object.keys(value).some((key) => !['format', 'version', 'features'].includes(key)) ||
+      !isRecord(value.features) || !value.features['index-cards'] ||
+      Object.keys(value.features).some((key) => !['notebook', 'index-cards', 'word-search'].includes(key))) {
+    throw new Error('This is not a supported Dynamic Learner workspace backup (version 1).');
+  }
+  const notebook = value.features.notebook || { items: [] };
+  const indexCards = value.features['index-cards'];
+  const wordSearch = value.features['word-search'] || { items: [] };
+  validateNotebook(notebook);
+  validateIndexCards(indexCards);
+  validateWordSearch(wordSearch);
+  return { format: 'dynamic-learner', version: 1,
+    features: { notebook, 'index-cards': indexCards, 'word-search': wordSearch } };
+
+}
+

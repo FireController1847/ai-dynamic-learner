@@ -1,4 +1,4 @@
-import { MAX_NAME_LENGTH } from './library-model.js';
+import { MAX_NAME_LENGTH } from './library-model.ts';
 
 export const MAX_MARKDOWN_FILE_BYTES = 8 * 1024 * 1024;
 

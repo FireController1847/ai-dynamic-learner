@@ -16,7 +16,8 @@ export function directionsFor(difficulty: Difficulty): Direction[] {
   return difficulty === 'hard' ? [...forward, ...forward.map(([r, c]): Direction => [-r, -c])] : forward;
 }
 
-export function lineCells(start: number, end: number, size: number): number[] {
+export function lineCells(start: number | null, end: number | null, size: number): number[] {
+  if (start === null || end === null) return [];
   if (![start, end].every((cell) => Number.isInteger(cell) && cell >= 0 && cell < size * size)) return [];
   const row = Math.floor(start / size);
   const col = start % size;

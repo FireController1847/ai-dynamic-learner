@@ -4,6 +4,8 @@ import type { PageMetadataOverrides } from '../core/metadata.ts';
 export type FeatureId = 'notebook' | 'index-cards' | 'word-search';
 
 export interface FeatureDefinition {
+  hidden?: boolean;
+  imageSrc?: string;
   id: FeatureId;
   label: string;
   path: `/${string}/`;
