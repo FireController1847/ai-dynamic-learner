@@ -1,0 +1,178 @@
+.tips-trigger {
+  margin-left: auto;
+  border-color: transparent;
+  background: transparent;
+  font-weight: 500;
+}
+
+.tips-dialog {
+  width: min(560px, calc(100% - 32px));
+  max-width: none;
+  max-height: calc(100dvh - 32px);
+  padding: 0;
+  border: 1px solid var(--border-color);
+  border-radius: calc(var(--radius) * 2);
+  color: var(--text-color);
+  background: var(--page-background);
+  box-shadow: var(--shadow-overlay);
+  overflow: auto;
+}
+
+.tips-dialog::backdrop { background: var(--scrim); }
+
+.tips-card { padding: 20px; }
+
+.tips-header,
+.tips-footer,
+.tips-heading-group,
+.tips-navigation,
+.tips-preference {
+  display: flex;
+  align-items: center;
+}
+
+.tips-header {
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.tips-heading-group { gap: 8px; min-width: 0; }
+
+.tips-badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  color: var(--brand-text);
+  background: var(--brand-tint);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.tips-app-name {
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tips-skip { border-color: transparent; }
+
+.tips-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 28px 20px 24px;
+  text-align: center;
+}
+
+.tips-illustration {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 16px;
+  border-radius: 50%;
+  color: var(--brand);
+  background: var(--brand-tint);
+}
+
+.tips-illustration .ui-icon { width: 28px; height: 28px; }
+
+.tips-step-count {
+  margin: 0 0 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.tips-body h2 { max-width: 440px; }
+
+.tips-copy {
+  max-width: 440px;
+  margin: 10px 0 0;
+  color: var(--text-secondary);
+}
+
+.tips-progress {
+  display: flex;
+  gap: 6px;
+  margin-top: 24px;
+}
+
+.tips-progress-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--control-border);
+  transition: width var(--motion-fast), background-color var(--motion-fast);
+}
+
+.tips-progress-dot.complete { background: var(--brand-tint); }
+.tips-progress-dot.active { width: 22px; background: var(--brand); }
+
+.tips-footer {
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+}
+
+.tips-preference {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tips-preference > .quiet-button {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  color: var(--text-secondary);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.tips-preference > .quiet-button:hover:not(:disabled) {
+  color: var(--text-color);
+  background: transparent;
+  text-decoration: underline;
+}
+
+.tips-preference-status {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.tips-navigation { gap: 8px; flex-shrink: 0; }
+
+@media (max-width: 560px) {
+  .tips-dialog {
+    width: calc(100% - 20px);
+    max-height: calc(100dvh - 20px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  }
+
+  .tips-card { padding: 16px; }
+  .tips-body { padding: 22px 8px 20px; }
+
+  .tips-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .tips-navigation { width: 100%; }
+  .tips-navigation > button { flex: 1; min-height: 44px; }
+}
+
+@media (max-width: 420px) {
+  .tips-trigger {
+    width: var(--control-height);
+    min-width: var(--control-height);
+    padding-inline: 0;
+  }
+
+  .tips-trigger-label { display: none; }
+}
