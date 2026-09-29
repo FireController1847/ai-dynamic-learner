@@ -1,6 +1,5 @@
 import { workspaceToRows, rowsToWorkspace } from './workspace-relational.js';
 
-export const LOCAL_WORKSPACE_ID = 'local';
 
 const LIST_TABLES = [
   {
@@ -176,7 +175,7 @@ function deleteMissing(db, workspaceId, descriptor) {
   });
 }
 
-export function saveWorkspaceToDatabase(db, workspace, workspaceId = LOCAL_WORKSPACE_ID) {
+export function saveWorkspaceToDatabase(db, workspace, workspaceId) {
   const rows = workspaceToRows(workspace);
   const descriptorsByTable = new Map(LIST_TABLES.map((descriptor) => [descriptor.table, descriptor]));
 
@@ -218,7 +217,7 @@ function selectOne(db, table, workspaceId) {
   return db.selectObjects(`SELECT * FROM ${table} WHERE workspace_id = ? LIMIT 1`, [workspaceId])[0] ?? null;
 }
 
-export function loadWorkspaceFromDatabase(db, workspaceId = LOCAL_WORKSPACE_ID) {
+export function loadWorkspaceFromDatabase(db, workspaceId) {
   const exists = db.selectValue('SELECT 1 FROM workspaces WHERE id = ? LIMIT 1', [workspaceId]);
   if (!exists) return null;
 
