@@ -51,19 +51,19 @@ export const ReviewSetup = {
       },
     }, [
       h('p', { class: 'review-setup-step' }, `Set up review · Step ${step.value} of 2 · ${props.cardCount} ${props.cardCount === 1 ? 'card' : 'cards'}`),
-      h('h2', { ref: heading, id: 'review-setup-heading', tabindex: -1 }, step.value === 1 ? 'Which side first?' : 'Choose the order'),
+      h('h2', { ref: heading, id: 'review-setup-heading', tabindex: -1 }, step.value === 1 ? 'Which side should you see first?' : 'What order should the cards use?'),
       h('p', { class: 'review-setup-description' }, step.value === 1
-        ? 'Look at one side, reveal the other, then go to the next card. Which side should you see first? Editing stays available.'
-        : `Each card opens on the ${side.value}. Choose the sequence for this review; your saved card order will not change.`),
+        ? 'You will see one side first. Try to remember the other side, then flip the card.'
+        : `Each card will start on the ${side.value}. Pick the order you want to study them in.`),
       h('fieldset', { class: 'review-choices', key: step.value }, [
         h('legend', { class: 'visually-hidden' }, step.value === 1 ? 'Starting side' : 'Review order'),
         ...(step.value === 1 ? [
-          choice('front', 'Front', 'Show the front before the back.'),
-          choice('back', 'Back', 'Show the back before the front.'),
+          choice('front', 'Front first', 'See the front, then flip to the back.'),
+          choice('back', 'Back first', 'See the back, then flip to the front.'),
         ] : [
-          choice('forward', 'Sequential — forward', 'Start at the first saved card and work toward the last.'),
-          choice('backward', 'Sequential — backward', 'Start at the last saved card and work toward the first.'),
-          choice('shuffle', 'Shuffle', 'A fresh random order for this review.'),
+          choice('forward', 'First to last', 'Start with your first card.'),
+          choice('backward', 'Last to first', 'Start with your last card.'),
+          choice('shuffle', 'Mix them up', 'Use a new random order.'),
         ]),
       ]),
       h('div', { class: 'review-setup-actions' }, [

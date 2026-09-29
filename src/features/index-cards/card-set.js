@@ -226,7 +226,7 @@ export const CardSet = {
           ]),
           h('div', { class: 'card-review-session-actions' }, [
             h('button', {
-              ref: reviewButton, type: 'button', class: 'quiet-button', 'aria-haspopup': 'dialog',
+              ref: reviewButton, type: 'button', class: 'quiet-button card-review-button', 'aria-haspopup': 'dialog',
               onClick: () => { reviewSetupOpen.value = true; },
             }, reviewActive.value ? 'Change setup' : 'Review'),
             reviewActive.value ? h('button', {

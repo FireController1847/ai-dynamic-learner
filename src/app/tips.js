@@ -166,10 +166,25 @@ export const TipsExperience = {
       openState.value = true;
     }
 
-    function finishSection() {
-      markSectionSeen();
+    async function finishSection() {
+      const section = activeSection.value;
+      markSectionSeen(section);
+
+      if (section?.finishAction?.click) {
+        close();
+        await nextTick();
+        visibleTarget(section.finishAction.click)?.click();
+        return;
+      }
+
+      const continueToAvailable = Boolean(section?.continueToAvailable) && !returnToMenu;
       if (returnToMenu) showMenu();
       else close();
+
+      if (continueToAvailable) {
+        await nextTick();
+        requestAutoStart();
+      }
     }
 
     function skipSection() {
@@ -544,7 +559,7 @@ export const TipsExperience = {
           h('p', { class: 'tips-step-count' }, 'Choose a guide'),
           h('h2', { id: 'tips-heading' }, `${props.feature.label} tips`),
           h('p', { id: 'tips-copy', class: 'tips-copy' },
-            'Tips are split into sections so the guide can match the part of the app you are using right now.'),
+            'Pick what you want help with.'),
         ]),
         h('div', { class: 'tips-section-list' }, sections.value.map((section) => {
           const available = availableNow(section);
@@ -564,7 +579,7 @@ export const TipsExperience = {
               h('span', section.description),
             ]),
             h('span', { class: ['tips-section-state', { complete: seen }] },
-              !available ? 'Open this part of the app' : seen ? 'Seen · View again' : 'Available now'),
+              !available ? 'Open this screen first' : seen ? 'Done · Show again' : 'Start'),
           ]);
         })),
       ];
@@ -669,11 +684,11 @@ export const TipsExperience = {
                 type: 'button',
                 class: 'quiet-button',
                 onClick: toggleAutomaticTips,
-              }, preferences.value.enabled ? 'Disable automatic tips' : 'Enable automatic tips'),
+              }, preferences.value.enabled ? 'Stop showing tips automatically' : 'Show tips automatically'),
               h('span', { class: 'tips-preference-status' },
                 preferences.value.enabled
-                  ? 'Each section appears once when you first reach it.'
-                  : 'Automatic tips are off. You can still open any available section here.'),
+                  ? 'Tips show the first time you reach each part.'
+                  : 'Tips will not pop up. You can still open them here.'),
             ]),
             !isMenu ? h('div', { class: 'tips-navigation' }, [
               returnToMenu ? h('button', {
@@ -692,7 +707,7 @@ export const TipsExperience = {
                 type: 'button',
                 class: 'card-primary-button',
                 onClick: next,
-              }, isLastStep ? 'Done' : 'Next'),
+              }, isLastStep ? (section.finishLabel ?? 'Done') : 'Next'),
             ]) : null,
           ]),
         ]),
