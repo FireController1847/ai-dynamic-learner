@@ -88,7 +88,7 @@ Dynamic Learner stores workspace content locally in a relational SQLite database
 
 The navigation drawer includes **Download backup** and **Upload backup** controls for moving or preserving the workspace. New backups are gzip-compressed SQLite database files using the `.bak` extension, so large workspaces do not need to be serialized through JSON just to make a backup. Older version-1 JSON backups remain importable for compatibility. Browser-local UI preferences, such as panel sizing and TIPS state, remain separate from workspace content.
 
-Existing workspaces saved by older versions under `dynamic-learner.workspace.v1` are migrated into SQLite on first successful startup. The migration recovers features and records independently where possible, so one damaged legacy record does not necessarily discard otherwise valid content. The legacy copy is removed only after the recovered workspace has been committed successfully.
+Existing workspaces saved by older versions under `dynamic-learner.workspace.v1` are migrated into SQLite on first successful startup. The migration recovers features and records independently where possible, so one damaged legacy record does not necessarily discard otherwise valid content. After the recovered workspace has been committed successfully, Dynamic Learner moves the old JSON into a dormant legacy archive key when browser storage has room; that archive is never auto-imported.
 
 If the browser's site data is cleared without a backup, locally stored learning content may be lost. SQLite's current OPFS storage mode is designed around one active database connection, so editing the same origin in multiple tabs at once is not supported.
 
