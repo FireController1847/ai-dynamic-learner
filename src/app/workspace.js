@@ -2,7 +2,11 @@ import { validateNotebook } from '../features/notebook/library-model.js';
 import { validateIndexCards } from '../features/index-cards/tree-model.js';
 import { validateWordSearch } from '../features/word-search/library-model.js';
 import { SQLiteWorkspaceStorage } from '../core/storage/sqlite-client.js';
-import { readLegacyWorkspace, clearLegacyWorkspace } from './legacy-workspace.js';
+import {
+  readLegacyWorkspace,
+  archiveLegacyWorkspace,
+  clearLegacyWorkspace,
+} from './legacy-workspace.js';
 
 const { ref, toRaw, watch } = window.Vue;
 const MAX_LEGACY_JSON_BACKUP_BYTES = 32 * 1024 * 1024;
@@ -182,8 +186,8 @@ export function useWorkspace() {
 
       if (legacy.status === 'ready') {
         migrationNotice.value = migrationSummary(legacy.report);
-        try { clearLegacyWorkspace(); }
-        catch { /* SQLite is already authoritative; a leftover legacy copy is harmless. */ }
+        try { archiveLegacyWorkspace(); }
+        catch { /* If archiving cannot fit, leave the original legacy copy untouched. */ }
       }
     } catch (problem) {
       if (storageAvailable.value) {
