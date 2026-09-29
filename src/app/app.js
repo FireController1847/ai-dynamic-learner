@@ -5,6 +5,7 @@ import { pageHref, useNavigation } from './navigation.js';
 import { useWorkspace } from './workspace.js';
 import { WorkspaceTools } from './workspace-tools.js';
 import { HomePage } from './home-page.js';
+import { TipsExperience } from './tips.js';
 import { Icon } from '../components/icon.js';
 
 const { computed, createApp, h, KeepAlive, nextTick, ref } = window.Vue;
@@ -29,6 +30,7 @@ const App = {
     const workspace = useWorkspace();
     const sidebarOpen = ref(false);
     const menuButton = ref(null);
+    const tipsExperience = ref(null);
     const main = ref(null);
     let focusContentOnClose = false;
     const { currentPath, navigate } = useNavigation(onNavigate);
@@ -76,6 +78,16 @@ const App = {
             ? h(Icon, { name: activeFeature.value.icon })
             : h('img', { class: 'app-logo app-header-logo', src: appLogoSrc, alt: '', 'aria-hidden': 'true' }),
         h('h1', activeFeature.value?.label ?? (currentPath.value === '/' ? appConfig.name : 'Page not found')),
+        activeFeature.value ? h('button', {
+          type: 'button',
+          class: 'quiet-button tips-trigger',
+          title: `Show ${activeFeature.value.label} tips`,
+          'aria-haspopup': 'dialog',
+          onClick: (event) => tipsExperience.value?.open(event.currentTarget),
+        }, [
+          h(Icon, { name: 'lightbulb' }),
+          h('span', { class: 'tips-trigger-label' }, 'Tips'),
+        ]) : null,
       ]),
       h(NavigationDrawer, {
         open: sidebarOpen.value,
@@ -90,6 +102,7 @@ const App = {
       }, {
         footer: () => h(WorkspaceTools, { workspace }),
       }),
+      h(TipsExperience, { ref: tipsExperience, feature: activeFeature.value }),
       workspace.storageProblem.value ? h('p', {
         class: 'workspace-storage-warning', role: 'alert',
       }, workspace.storageProblem.value) : null,

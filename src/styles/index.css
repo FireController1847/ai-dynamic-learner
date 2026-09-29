@@ -1,6 +1,7 @@
 @import './tokens.css';
 @import './base.css';
 @import './shell.css';
+@import './tips.css';
 @import './home.css';
 @import '../features/notebook/notebook.css';
 @import '../features/index-cards/index-cards.css';
