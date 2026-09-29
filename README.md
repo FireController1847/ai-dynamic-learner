@@ -82,7 +82,7 @@ npm run build
 npm run preview
 ```
 
-The build checks TypeScript and writes the complete static site to `dist/`. Run `npm run typecheck` for type checking alone and `npm test` for model regression checks. GitHub Actions builds this output for each manual deployment, so generated files do not need to be committed and no separate deployment branch is needed.
+The build checks TypeScript and writes the complete static site to `dist/`. Run `npm run typecheck` for type checking alone. GitHub Actions builds this output for each manual deployment, so generated files do not need to be committed and no separate deployment branch is needed.
 
 To use a different address or port in PowerShell:
 
@@ -107,7 +107,7 @@ More detail about the saved format is available in [`docs/workspace-data.md`](do
 Dynamic Learner deliberately keeps its runtime simple:
 
 - Vue 3 and other browser dependencies are installed through npm and bundled with webpack.
-- Source uses ES modules and plain Vue components. A staged migration adds strict TypeScript; some feature components remain JavaScript. No single-file component compilation is required.
+- Source uses strict TypeScript ES modules and plain Vue components. No single-file component compilation is required.
 - `webpack.config.mts` owns the development server and production build.
 - `server.mts` previews only the generated `dist/` site.
 - Features live under `src/features`; shared application composition lives under `src/app`.

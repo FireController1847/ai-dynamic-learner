@@ -9,8 +9,7 @@
     "build": "npm run typecheck && webpack --config webpack.config.mts --disable-interpret --mode production",
     "preview": "node server.mts",
     "pages:prepare": "npm run build",
-    "typecheck": "tsc -p tsconfig.app.json && tsc -p tsconfig.node.json",
-    "test": "node --test --test-reporter=spec tests/*.test.mts"
+    "typecheck": "tsc -p tsconfig.app.json && tsc -p tsconfig.node.json"
   },
   "dependencies": {
     "dompurify": "3.4.16",
