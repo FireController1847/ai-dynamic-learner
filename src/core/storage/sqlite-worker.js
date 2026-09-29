@@ -1,7 +1,7 @@
 import sqlite3InitModule from 'https://cdn.jsdelivr.net/npm/@sqlite.org/sqlite-wasm@3.53.4-build1/dist/index.mjs';
 import { gzipCompress, gzipDecompress } from './gzip.js';
 import { SQLITE_SCHEMA, SQLITE_SCHEMA_VERSION } from './sqlite-schema.js';
-import { loadWorkspaceFromDatabase, saveWorkspaceToDatabase } from './workspace-database.js';
+import { applyWorkspaceDelta, loadWorkspaceFromDatabase } from './workspace-database.js';
 
 const DATABASE_FILENAME = '/dynamic-learner.sqlite3';
 const BACKUP_DATABASE_FILENAME = '/dynamic-learner-backup.sqlite3';
@@ -100,8 +100,8 @@ async function handle(type, payload) {
       return { sqliteVersion: version, schemaVersion: SQLITE_SCHEMA_VERSION, workspaceId };
     case 'load':
       return loadWorkspaceFromDatabase(db, workspaceId);
-    case 'save':
-      saveWorkspaceToDatabase(db, payload.workspace, workspaceId);
+    case 'save-delta':
+      applyWorkspaceDelta(db, payload.delta, workspaceId);
       return null;
     case 'export-backup':
       return gzipCompress(await pool.exportFile(DATABASE_FILENAME));
