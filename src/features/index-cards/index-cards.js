@@ -3,7 +3,8 @@ import { CardSet } from './card-set.js';
 import { DisplaySettings } from './display-settings.js';
 import { defaultDisplayOptions, displayStyles } from './display-options.js';
 import { Icon } from '../../components/icon.js';
-import { canMove, countCards, findItem, groupOptions, moveItem } from './tree-model.js';
+import { canMove, countCards, createItem, deleteItem, findItem, groupOptions, moveItem } from './tree-model.js';
+import { createCard } from './card-model.js';
 import { clearPreference, readNumberPreference, writeNumberPreference } from '../../core/ui-preferences.js';
 
 const { computed, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref, watch } = window.Vue;
@@ -13,6 +14,7 @@ const MAX_LIBRARY_WIDTH = 640;
 const MIN_DETAIL_WIDTH = 320;
 const LIBRARY_WIDTH_KEY = 'dynamic-learner.ui.index-cards.library-width';
 const CARD_LIST_WIDTH_KEY = 'dynamic-learner.ui.index-cards.card-list-width';
+const TIPS_ACTION_EVENT = 'dynamic-learner:tips-action';
 
 export const IndexCards = {
   name: 'IndexCards',
@@ -135,8 +137,12 @@ export const IndexCards = {
       if (selectedId.value) tree.value?.reveal(selectedId.value);
       keepLibraryWidthInBounds();
       window.addEventListener('resize', keepLibraryWidthInBounds);
+      window.addEventListener(TIPS_ACTION_EVENT, handleTipsAction);
     });
-    onBeforeUnmount(() => window.removeEventListener('resize', keepLibraryWidthInBounds));
+    onBeforeUnmount(() => {
+      window.removeEventListener('resize', keepLibraryWidthInBounds);
+      window.removeEventListener(TIPS_ACTION_EVENT, handleTipsAction);
+    });
 
     async function setLibraryCollapsed(collapsed) {
       libraryCollapsed.value = collapsed;
@@ -159,6 +165,98 @@ export const IndexCards = {
       if (neighbor && moveItem(props.model.items, item.id, neighbor.id, offset < 0 ? 'before' : 'after')) {
         message.value = `Moved ${item.name} ${offset < 0 ? 'up' : 'down'}.`;
       }
+    }
+
+    async function restoreTipsState(previous, temporaryId) {
+      if (temporaryId) deleteItem(props.model.items, temporaryId);
+      const previousSelection = previous.selectedId && findItem(props.model.items, previous.selectedId);
+      selectedId.value = previousSelection ? previous.selectedId : null;
+      libraryCollapsed.value = previous.libraryCollapsed;
+      await nextTick();
+      const remembered = previous.lastSelectedSetId &&
+        findItem(props.model.items, previous.lastSelectedSetId);
+      props.model.lastSelectedSetId = remembered?.item.kind === 'set'
+        ? previous.lastSelectedSetId : null;
+    }
+
+    function cleanupAfterReview(previous, temporaryId) {
+      let finished = false;
+      let observer;
+      async function remove() {
+        if (finished) return;
+        finished = true;
+        observer?.disconnect();
+        await restoreTipsState(previous, temporaryId);
+      }
+      function check() {
+        const setupOpen = Boolean(document.querySelector('.review-setup[open]'));
+        const reviewActive = document.querySelector('.card-review-session strong')?.textContent?.trim() === 'Review in progress';
+        if (!setupOpen && !reviewActive) remove();
+      }
+      observer = new MutationObserver(check);
+      observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+      requestAnimationFrame(check);
+    }
+
+    async function prepareTipsAction(action) {
+      const previous = {
+        selectedId: selectedId.value,
+        lastSelectedSetId: props.model.lastSelectedSetId ?? null,
+        libraryCollapsed: libraryCollapsed.value,
+      };
+
+      if (action === 'set') {
+        const item = createItem('set');
+        item.name = 'Lorem ipsum';
+        props.model.items.unshift(item);
+        selectedId.value = item.id;
+        if (libraryOverlay.value) libraryCollapsed.value = true;
+        tree.value?.reveal(item.id);
+        await nextTick();
+        return () => restoreTipsState(previous, item.id);
+      }
+
+      if (action === 'review') {
+        const item = createItem('set');
+        item.name = 'Lorem ipsum';
+        item.cards.push(
+          createCard({
+            title: 'Lorem ipsum',
+            front: 'Lorem ipsum dolor sit amet.',
+            back: 'Consectetur adipiscing elit.',
+          }),
+          createCard({
+            title: 'Dolor sit amet',
+            front: 'Sed do eiusmod tempor incididunt.',
+            back: 'Ut labore et dolore magna aliqua.',
+          }),
+          createCard({
+            title: 'Magna aliqua',
+            front: 'Ut enim ad minim veniam.',
+            back: 'Quis nostrud exercitation ullamco.',
+          }),
+        );
+        props.model.items.unshift(item);
+        selectedId.value = item.id;
+        if (libraryOverlay.value) libraryCollapsed.value = true;
+        tree.value?.reveal(item.id);
+        await nextTick();
+        return () => {
+          const setupOpen = Boolean(document.querySelector('.review-setup[open]'));
+          const reviewActive = document.querySelector('.card-review-session strong')?.textContent?.trim() === 'Review in progress';
+          if (setupOpen || reviewActive) cleanupAfterReview(previous, item.id);
+          else return restoreTipsState(previous, item.id);
+        };
+      }
+
+      throw new Error('Unknown Index Cards tutorial action.');
+    }
+
+    function handleTipsAction(event) {
+      const detail = event.detail;
+      if (detail?.featureId !== 'index-cards') return;
+      detail.handled = true;
+      prepareTipsAction(detail.action).then(detail.resolve, detail.reject);
     }
 
     return () => h('section', {

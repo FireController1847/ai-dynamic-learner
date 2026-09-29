@@ -3,6 +3,7 @@ import { tipsCatalog } from './tips-content.js';
 const { computed, h, nextTick, onBeforeUnmount, onMounted, ref, watch } = window.Vue;
 
 const STORAGE_KEY = 'dynamic-learner.tips.v1';
+const TIPS_ACTION_EVENT = 'dynamic-learner:tips-action';
 const SPOTLIGHT_PADDING = 8;
 const CARD_GAP = 14;
 const VIEWPORT_MARGIN = 12;
@@ -77,6 +78,7 @@ export const TipsExperience = {
     let dragPointerId = null;
     let dragOffsetX = 0;
     let dragOffsetY = 0;
+    let activeCleanup = null;
 
     const tutorial = computed(() => tipsCatalog[props.feature?.id] ?? null);
     const sections = computed(() => tutorial.value?.sections ?? []);
@@ -141,6 +143,44 @@ export const TipsExperience = {
       return sectionAvailable(section);
     }
 
+    function requestTutorialAction(action) {
+      return new Promise((resolve, reject) => {
+        const detail = {
+          featureId: props.feature?.id,
+          action,
+          handled: false,
+          resolve,
+          reject,
+        };
+        window.dispatchEvent(new CustomEvent(TIPS_ACTION_EVENT, { detail }));
+        if (!detail.handled) reject(new Error('This guide cannot be opened automatically.'));
+      });
+    }
+
+    async function cleanupActiveDemo() {
+      const cleanup = activeCleanup;
+      activeCleanup = null;
+      if (typeof cleanup !== 'function') return;
+      try { await cleanup(); }
+      catch (error) { console.warn('TIPS example cleanup failed.', error); }
+    }
+
+    async function prepareAndStart(section) {
+      if (!section?.prepare) return;
+      await cleanupActiveDemo();
+      try {
+        const cleanup = await requestTutorialAction(section.prepare);
+        activeCleanup = typeof cleanup === 'function' ? cleanup : null;
+        await nextTick();
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        if (!sectionAvailable(section)) throw new Error('The requested guide did not open.');
+        startSection(section, true);
+      } catch (error) {
+        await cleanupActiveDemo();
+        console.warn('TIPS could not open this guide.', error);
+      }
+    }
+
     function open(trigger = null) {
       if (!tutorial.value) return;
       returnFocus = trigger;
@@ -173,11 +213,15 @@ export const TipsExperience = {
         close();
         await nextTick();
         visibleTarget(section.finishAction.click)?.click();
+        await nextTick();
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        await cleanupActiveDemo();
         return;
       }
 
       const continueToAvailable = Boolean(section?.continueToAvailable) && !returnToMenu;
-      if (returnToMenu) showMenu();
+      await cleanupActiveDemo();
+      if (returnToMenu) await showMenu();
       else close();
 
       if (continueToAvailable) {
@@ -186,13 +230,15 @@ export const TipsExperience = {
       }
     }
 
-    function skipSection() {
+    async function skipSection() {
       markSectionSeen();
-      if (returnToMenu) showMenu();
+      await cleanupActiveDemo();
+      if (returnToMenu) await showMenu();
       else close();
     }
 
-    function showMenu() {
+    async function showMenu() {
+      await cleanupActiveDemo();
       returnToMenu = false;
       mode.value = 'menu';
       activeSectionId.value = null;
@@ -528,6 +574,7 @@ export const TipsExperience = {
     });
 
     watch(() => props.feature?.id, async () => {
+      await cleanupActiveDemo();
       openState.value = false;
       mode.value = 'menu';
       activeSectionId.value = null;
@@ -541,7 +588,10 @@ export const TipsExperience = {
       installGlobalTracking();
       requestAutoStart();
     });
-    onBeforeUnmount(removeGlobalTracking);
+    onBeforeUnmount(() => {
+      cleanupActiveDemo();
+      removeGlobalTracking();
+    });
 
     expose({ open });
 
@@ -570,23 +620,31 @@ export const TipsExperience = {
         ]),
         h('div', { class: 'tips-section-list' }, sections.value.map((section) => {
           const available = availableNow(section);
+          const canPrepare = Boolean(section.prepare);
           const seen = hasSeenSection(section);
-          const assignFocus = available && !firstAvailableAssigned;
+          const canOpen = available || canPrepare;
+          const assignFocus = canOpen && !firstAvailableAssigned;
           if (assignFocus) firstAvailableAssigned = true;
           return h('button', {
             key: section.id,
             ref: assignFocus ? primaryFocus : undefined,
             type: 'button',
             class: 'tips-section-choice',
-            disabled: !available,
-            onClick: () => startSection(section, true),
+            disabled: !canOpen,
+            onClick: () => available ? startSection(section, true) : prepareAndStart(section),
           }, [
             h('span', { class: 'tips-section-choice-copy' }, [
               h('strong', section.title),
               h('span', section.description),
             ]),
-            h('span', { class: ['tips-section-state', { complete: seen }] },
-              !available ? 'Open this screen first' : seen ? 'Done · Show again' : 'Start'),
+            h('span', {
+              class: ['tips-section-state', {
+                complete: seen,
+                'is-action': !available && canPrepare,
+              }],
+            }, !available
+              ? canPrepare ? 'Open for me' : 'Open this screen first'
+              : seen ? 'Done · Show again' : 'Start'),
           ]);
         })),
       ];

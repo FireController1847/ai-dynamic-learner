@@ -4,7 +4,7 @@ import { PuzzleForm, PuzzleSummary } from './puzzle-form.js';
 import { PuzzleGame } from './puzzle-game.js';
 import { DisplaySettings } from './display-settings.js';
 import { resolvedDisplayOptions } from './display-options.js';
-import { canMove, findItem, groupOptions, moveItem, saveWordSearch } from './library-model.js';
+import { canMove, deleteItem, findItem, groupOptions, moveItem, saveWordSearch } from './library-model.js';
 import { clearPreference, readNumberPreference, writeNumberPreference } from '../../core/ui-preferences.js';
 
 const { computed, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref } = window.Vue;
@@ -13,6 +13,7 @@ const MIN_LIBRARY_WIDTH = 248;
 const MAX_LIBRARY_WIDTH = 640;
 const MIN_DETAIL_WIDTH = 320;
 const LIBRARY_WIDTH_KEY = 'dynamic-learner.ui.word-search.library-width';
+const TIPS_ACTION_EVENT = 'dynamic-learner:tips-action';
 
 export const WordSearch = {
   name: 'WordSearch',
@@ -121,8 +122,12 @@ export const WordSearch = {
     onMounted(() => {
       keepLibraryWidthInBounds();
       window.addEventListener('resize', keepLibraryWidthInBounds);
+      window.addEventListener(TIPS_ACTION_EVENT, handleTipsAction);
     });
-    onBeforeUnmount(() => window.removeEventListener('resize', keepLibraryWidthInBounds));
+    onBeforeUnmount(() => {
+      window.removeEventListener('resize', keepLibraryWidthInBounds);
+      window.removeEventListener(TIPS_ACTION_EVENT, handleTipsAction);
+    });
 
     async function setLibraryCollapsed(collapsed) {
       libraryCollapsed.value = collapsed;
@@ -167,6 +172,58 @@ export const WordSearch = {
       library.value?.reveal(item.id);
       message.value = `Saved ${item.name}.`;
       nextTick(() => workspaceHeading.value?.focus());
+    }
+
+    async function restoreTipsState(previous, temporaryId = null) {
+      if (temporaryId) deleteItem(props.model.items, temporaryId);
+      setupTarget.value = previous.setupTarget;
+      const previousSelection = previous.selectedId && findItem(props.model.items, previous.selectedId);
+      selectedId.value = previousSelection ? previous.selectedId : null;
+      libraryCollapsed.value = previous.libraryCollapsed;
+      await nextTick();
+    }
+
+    async function prepareTipsAction(action) {
+      const previous = {
+        selectedId: selectedId.value,
+        setupTarget: setupTarget.value,
+        libraryCollapsed: libraryCollapsed.value,
+      };
+
+      if (action === 'creation') {
+        openNewWordSearch({ parentId: null, parentName: 'Top level' });
+        await nextTick();
+        return () => restoreTipsState(previous);
+      }
+
+      if (action === 'play') {
+        const item = saveWordSearch(props.model.items, {
+          parentId: null,
+          parentName: 'Top level',
+        }, 'Lorem ipsum', {
+          words: ['LOREM', 'IPSUM', 'DOLOR', 'AMET'],
+          size: 10,
+          difficulty: 'easy',
+          instructions: 'Lorem ipsum dolor sit amet.',
+          studyMode: 'words',
+          hints: {},
+        });
+        setupTarget.value = null;
+        selectedId.value = item.id;
+        if (libraryOverlay.value) libraryCollapsed.value = true;
+        library.value?.reveal(item.id);
+        await nextTick();
+        return () => restoreTipsState(previous, item.id);
+      }
+
+      throw new Error('Unknown Word Search tutorial action.');
+    }
+
+    function handleTipsAction(event) {
+      const detail = event.detail;
+      if (detail?.featureId !== 'word-search') return;
+      detail.handled = true;
+      prepareTipsAction(detail.action).then(detail.resolve, detail.reject);
     }
 
     function moveToGroup(event) {
