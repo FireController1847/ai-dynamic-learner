@@ -44,6 +44,7 @@ export const IndexCards = {
     const showLibraryButton = ref(null);
     const message = ref('');
     const settingsOpen = ref(false);
+    const tutorialReviewSetId = ref(null);
     const settingsButton = ref(null);
     const displayOptions = computed(() => props.model.display ?? defaultDisplayOptions());
     onDeactivated(() => { settingsOpen.value = false; });
@@ -169,6 +170,7 @@ export const IndexCards = {
 
     async function restoreTipsState(previous, temporaryId) {
       if (temporaryId) deleteItem(props.model.items, temporaryId);
+      if (tutorialReviewSetId.value === temporaryId) tutorialReviewSetId.value = null;
       const previousSelection = previous.selectedId && findItem(props.model.items, previous.selectedId);
       selectedId.value = previousSelection ? previous.selectedId : null;
       libraryCollapsed.value = previous.libraryCollapsed;
@@ -177,25 +179,6 @@ export const IndexCards = {
         findItem(props.model.items, previous.lastSelectedSetId);
       props.model.lastSelectedSetId = remembered?.item.kind === 'set'
         ? previous.lastSelectedSetId : null;
-    }
-
-    function cleanupAfterReview(previous, temporaryId) {
-      let finished = false;
-      let observer;
-      async function remove() {
-        if (finished) return;
-        finished = true;
-        observer?.disconnect();
-        await restoreTipsState(previous, temporaryId);
-      }
-      function check() {
-        const setupOpen = Boolean(document.querySelector('.review-setup[open]'));
-        const reviewActive = document.querySelector('.card-review-session strong')?.textContent?.trim() === 'Review in progress';
-        if (!setupOpen && !reviewActive) remove();
-      }
-      observer = new MutationObserver(check);
-      observer.observe(document.body, { childList: true, subtree: true, characterData: true });
-      requestAnimationFrame(check);
     }
 
     async function prepareTipsAction(action) {
@@ -240,13 +223,9 @@ export const IndexCards = {
         selectedId.value = item.id;
         if (libraryOverlay.value) libraryCollapsed.value = true;
         tree.value?.reveal(item.id);
+        tutorialReviewSetId.value = item.id;
         await nextTick();
-        return () => {
-          const setupOpen = Boolean(document.querySelector('.review-setup[open]'));
-          const reviewActive = document.querySelector('.card-review-session strong')?.textContent?.trim() === 'Review in progress';
-          if (setupOpen || reviewActive) cleanupAfterReview(previous, item.id);
-          else return restoreTipsState(previous, item.id);
-        };
+        return () => restoreTipsState(previous, item.id);
       }
 
       throw new Error('Unknown Index Cards tutorial action.');
@@ -331,6 +310,7 @@ export const IndexCards = {
             set: selection.value.item,
             totalCards: totalCards.value,
             cardListWidth: cardListWidth.value,
+            tutorialReview: tutorialReviewSetId.value === selection.value.item.id,
             onResizeCardList: setCardListWidth,
             onResetCardList: resetCardListWidth,
           }) : null,

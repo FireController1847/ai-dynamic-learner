@@ -16,6 +16,7 @@ export const CardSet = {
     set: { type: Object, required: true },
     totalCards: { type: Number, required: true },
     cardListWidth: { type: Number, default: null },
+    tutorialReview: Boolean,
   },
   emits: ['resize-card-list', 'reset-card-list'],
   setup(props, { emit }) {
@@ -290,6 +291,7 @@ export const CardSet = {
         reviewSetupOpen.value ? h(ReviewSetup, {
           initialSide: reviewSide.value, initialOrder: reviewOrder.value,
           cardCount: props.set.cards.length,
+          modal: !props.tutorialReview,
           onCancel: cancelReview, onStart: startReview,
         }) : null,
         ]),
