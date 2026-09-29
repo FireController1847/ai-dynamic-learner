@@ -1,119 +1,9 @@
-import { workspaceToRows, rowsToWorkspace } from './workspace-relational.js';
+import { rowsToWorkspace } from './workspace-relational.js';
+import { DELETE_ORDER, LIST_TABLES, SINGLETONS } from './workspace-delta.js';
 
-
-const LIST_TABLES = [
-  {
-    table: 'notebook_items',
-    source: 'notebookItems',
-    columns: ['id', 'parent_id', 'sort_order', 'kind', 'name', 'document_type'],
-    keys: ['id'],
-  },
-  {
-    table: 'notebook_markdown',
-    source: 'notebookMarkdown',
-    columns: ['item_id', 'markdown'],
-    keys: ['item_id'],
-  },
-  {
-    table: 'index_card_items',
-    source: 'indexCardItems',
-    columns: ['id', 'parent_id', 'sort_order', 'kind', 'name'],
-    keys: ['id'],
-  },
-  {
-    table: 'index_cards',
-    source: 'indexCards',
-    columns: ['id', 'set_id', 'sort_order', 'title', 'back_title', 'front', 'back'],
-    keys: ['id'],
-  },
-  {
-    table: 'word_search_items',
-    source: 'wordSearchItems',
-    columns: ['id', 'parent_id', 'sort_order', 'kind', 'name', 'board_rotation'],
-    keys: ['id'],
-  },
-  {
-    table: 'word_search_puzzles',
-    source: 'wordSearchPuzzles',
-    columns: ['item_id', 'size', 'difficulty', 'instructions', 'study_mode', 'hints_present'],
-    keys: ['item_id'],
-  },
-  {
-    table: 'word_search_words',
-    source: 'wordSearchWords',
-    columns: ['item_id', 'word', 'sort_order', 'hint'],
-    keys: ['item_id', 'word'],
-  },
-  {
-    table: 'word_search_games',
-    source: 'wordSearchGames',
-    columns: ['item_id'],
-    keys: ['item_id'],
-  },
-  {
-    table: 'word_search_game_rows',
-    source: 'wordSearchGameRows',
-    columns: ['item_id', 'row_index', 'letters'],
-    keys: ['item_id', 'row_index'],
-  },
-  {
-    table: 'word_search_game_placements',
-    source: 'wordSearchPlacements',
-    columns: ['item_id', 'word', 'sort_order', 'start_cell', 'end_cell'],
-    keys: ['item_id', 'word'],
-  },
-  {
-    table: 'word_search_game_found',
-    source: 'wordSearchFound',
-    columns: ['item_id', 'word', 'sort_order', 'start_cell', 'end_cell'],
-    keys: ['item_id', 'word'],
-  },
-];
-
-const DELETE_ORDER = [
-  'word_search_game_found',
-  'word_search_game_placements',
-  'word_search_game_rows',
-  'word_search_games',
-  'word_search_words',
-  'word_search_puzzles',
-  'word_search_items',
-  'index_cards',
-  'index_card_items',
-  'notebook_markdown',
-  'notebook_items',
-];
-
-const SINGLETONS = [
-  {
-    table: 'notebook_state',
-    source: 'notebookState',
-    columns: ['selection_present', 'last_selected_document_id'],
-  },
-  {
-    table: 'index_card_state',
-    source: 'indexCardState',
-    columns: ['selection_present', 'last_selected_set_id'],
-  },
-  {
-    table: 'index_card_display',
-    source: 'indexCardDisplay',
-    columns: ['font', 'text_size', 'card_size', 'ink', 'baseline'],
-  },
-  {
-    table: 'word_search_display',
-    source: 'wordSearchDisplay',
-    columns: ['font', 'weight', 'text_size', 'cell_size', 'fit', 'highlight', 'motion'],
-  },
-];
-
-function keyFor(row, columns) {
-  return columns.map((column) => String(row[column])).join('\u001f');
-}
-
-function keyExpression(columns) {
-  return columns.map((column) => `CAST(${column} AS TEXT)`).join(" || char(31) || ");
-}
+const LIST_BY_SOURCE = new Map(LIST_TABLES.map((descriptor) => [descriptor.source, descriptor]));
+const LIST_BY_TABLE = new Map(LIST_TABLES.map((descriptor) => [descriptor.table, descriptor]));
+const SINGLETON_BY_SOURCE = new Map(SINGLETONS.map((descriptor) => [descriptor.source, descriptor]));
 
 function upsertSql(descriptor) {
   const allColumns = ['workspace_id', ...descriptor.columns];
@@ -124,10 +14,7 @@ function upsertSql(descriptor) {
   if (!updates.length) return `${base} ON CONFLICT (${conflict.join(', ')}) DO NOTHING`;
 
   const assignments = updates.map((column) => `${column} = excluded.${column}`).join(', ');
-  const changed = updates
-    .map((column) => `${descriptor.table}.${column} IS NOT excluded.${column}`)
-    .join(' OR ');
-  return `${base} ON CONFLICT (${conflict.join(', ')}) DO UPDATE SET ${assignments} WHERE ${changed}`;
+  return `${base} ON CONFLICT (${conflict.join(', ')}) DO UPDATE SET ${assignments}`;
 }
 
 function upsertSingleton(db, workspaceId, descriptor, row) {
@@ -135,76 +22,75 @@ function upsertSingleton(db, workspaceId, descriptor, row) {
     db.exec({ sql: `DELETE FROM ${descriptor.table} WHERE workspace_id = ?`, bind: [workspaceId] });
     return;
   }
+
   const columns = ['workspace_id', ...descriptor.columns];
   const updates = descriptor.columns.map((column) => `${column} = excluded.${column}`).join(', ');
-  const changed = descriptor.columns
-    .map((column) => `${descriptor.table}.${column} IS NOT excluded.${column}`)
-    .join(' OR ');
   db.exec({
     sql: `INSERT INTO ${descriptor.table} (${columns.join(', ')})
       VALUES (${columns.map(() => '?').join(', ')})
-      ON CONFLICT (workspace_id) DO UPDATE SET ${updates} WHERE ${changed}`,
+      ON CONFLICT (workspace_id) DO UPDATE SET ${updates}`,
     bind: [workspaceId, ...descriptor.columns.map((column) => row[column])],
   });
 }
 
-function writeList(db, workspaceId, descriptor, list) {
+function upsertRows(db, workspaceId, descriptor, rows) {
+  if (!rows.length) return;
   const sql = upsertSql(descriptor);
-  for (const row of list) {
+  for (const row of rows) {
     db.exec({
       sql,
       bind: [workspaceId, ...descriptor.columns.map((column) => row[column])],
     });
-    db.exec({
-      sql: 'INSERT OR IGNORE INTO save_seen (table_name, row_key) VALUES (?, ?)',
-      bind: [descriptor.table, keyFor(row, descriptor.keys)],
-    });
   }
 }
 
-function deleteMissing(db, workspaceId, descriptor) {
+function deleteRows(db, workspaceId, descriptor, keys) {
+  if (!keys.length) return;
+  const where = descriptor.keys.map((key) => `${key} = ?`).join(' AND ');
+  const sql = `DELETE FROM ${descriptor.table} WHERE workspace_id = ? AND ${where}`;
+  for (const values of keys) db.exec({ sql, bind: [workspaceId, ...values] });
+}
+
+function writeWorkspaceHeader(db, workspaceId, replace) {
+  if (replace) {
+    db.exec({ sql: 'DELETE FROM workspaces WHERE id = ?', bind: [workspaceId] });
+  }
   db.exec({
-    sql: `DELETE FROM ${descriptor.table}
-      WHERE workspace_id = ?
-        AND NOT EXISTS (
-          SELECT 1 FROM save_seen
-          WHERE table_name = ?
-            AND row_key = ${keyExpression(descriptor.keys)}
-        )`,
-    bind: [workspaceId, descriptor.table],
+    sql: `INSERT INTO workspaces (id, format, format_version)
+      VALUES (?, 'dynamic-learner', 1)
+      ON CONFLICT (id) DO UPDATE SET
+        format = excluded.format,
+        format_version = excluded.format_version,
+        updated_at = CURRENT_TIMESTAMP`,
+    bind: [workspaceId],
   });
 }
 
-export function saveWorkspaceToDatabase(db, workspace, workspaceId) {
-  const rows = workspaceToRows(workspace);
-  const descriptorsByTable = new Map(LIST_TABLES.map((descriptor) => [descriptor.table, descriptor]));
-
+export function applyWorkspaceDelta(db, delta, workspaceId) {
   db.transaction(() => {
-    db.exec({
-      sql: `INSERT INTO workspaces (id, format, format_version)
-        VALUES (?, 'dynamic-learner', 1)
-        ON CONFLICT (id) DO UPDATE SET
-          format = excluded.format,
-          format_version = excluded.format_version,
-          updated_at = CURRENT_TIMESTAMP`,
-      bind: [workspaceId],
-    });
+    writeWorkspaceHeader(db, workspaceId, delta.replace);
 
-    db.exec(`CREATE TEMP TABLE IF NOT EXISTS save_seen (
-      table_name TEXT NOT NULL,
-      row_key TEXT NOT NULL,
-      PRIMARY KEY (table_name, row_key)
-    ) WITHOUT ROWID`);
-    db.exec('DELETE FROM save_seen');
+    for (const change of delta.singletonChanges) {
+      const descriptor = SINGLETON_BY_SOURCE.get(change.source);
+      if (!descriptor) throw new Error(`Unknown workspace singleton source: ${change.source}`);
+      upsertSingleton(db, workspaceId, descriptor, change.row);
+    }
 
-    for (const descriptor of SINGLETONS) {
-      upsertSingleton(db, workspaceId, descriptor, rows[descriptor.source]);
+    const changesByTable = new Map();
+    for (const change of delta.listChanges) {
+      const descriptor = LIST_BY_SOURCE.get(change.source);
+      if (!descriptor) throw new Error(`Unknown workspace list source: ${change.source}`);
+      changesByTable.set(descriptor.table, change);
+      upsertRows(db, workspaceId, descriptor, change.upserts);
     }
-    for (const descriptor of LIST_TABLES) {
-      writeList(db, workspaceId, descriptor, rows[descriptor.source]);
-    }
-    for (const table of DELETE_ORDER) {
-      deleteMissing(db, workspaceId, descriptorsByTable.get(table));
+
+    if (!delta.replace) {
+      for (const table of DELETE_ORDER) {
+        const change = changesByTable.get(table);
+        if (change?.deletes.length) {
+          deleteRows(db, workspaceId, LIST_BY_TABLE.get(table), change.deletes);
+        }
+      }
     }
   });
 }
