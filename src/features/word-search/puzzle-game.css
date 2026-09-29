@@ -18,13 +18,29 @@
   min-width: 0; max-width: 100%; width: calc(var(--puzzle-size) * var(--search-cell-size) + 10px);
   flex: 0 1 auto; display: grid; gap: 12px;
 }
-.word-search-board-scroll { overflow: auto; max-width: 100%; padding-bottom: 4px; }
+.word-search-board-scroll {
+  max-width: 100%;
+  overflow: auto;
+  padding-bottom: 4px;
+}
+.word-search-board-scroll.is-screen-fit {
+  overflow: clip;
+  padding-bottom: 0;
+}
+.word-search-board-area.is-rotating .word-search-board-scroll {
+  overflow: clip;
+  scrollbar-width: none;
+}
+.word-search-board-area.is-rotating .word-search-board-scroll::-webkit-scrollbar {
+  display: none;
+}
 .word-search-board-stage {
   display: grid;
   width: max-content;
   min-width: 100%;
   padding: 4px;
   place-items: center;
+  contain: paint;
 }
 .word-search-board-rotator {
   transform: rotate(var(--board-to));
@@ -38,7 +54,8 @@
 }
 @keyframes word-search-board-breathe {
   0%, 100% { transform: scale(1); filter: drop-shadow(0 0 0 transparent); }
-  50% { transform: scale(0.84); filter: drop-shadow(0 10px 12px rgb(0 0 0 / 14%)); }
+  28%, 72% { transform: scale(0.76); }
+  50% { transform: scale(0.7); filter: drop-shadow(0 10px 12px rgb(0 0 0 / 14%)); }
 }
 .word-search-board-frame {
   position: relative; width: max-content; padding: 4px;
@@ -67,7 +84,10 @@
   pointer-events: none;
   transform: rotate(var(--letter-to));
   transform-origin: center;
-  transition: transform 780ms cubic-bezier(0.18, 0.72, 0.24, 1);
+  transition-property: transform;
+  transition-duration: 690ms;
+  transition-timing-function: cubic-bezier(0.16, 0.86, 0.24, 1.08);
+  transition-delay: var(--letter-delay, 0ms);
   will-change: transform;
 }
 .word-search-letter-glyph {
@@ -75,15 +95,15 @@
   transform-origin: center;
 }
 .word-search-board-area.is-rotating .word-search-letter-glyph {
-  animation: word-search-letter-bounce 720ms cubic-bezier(0.2, 0.9, 0.22, 1.12) both;
-  animation-delay: var(--letter-delay, 0ms);
+  animation: word-search-letter-bounce 620ms cubic-bezier(0.18, 0.9, 0.22, 1.16) both;
+  animation-delay: calc(var(--letter-delay, 0ms) + 90ms);
 }
 @keyframes word-search-letter-bounce {
   0% { transform: translate(0, 0); }
-  38% { transform: translate(-1px, 2px); }
-  66% { transform: translate(1px, -3px); }
-  82% { transform: translate(-0.5px, 1px); }
-  92% { transform: translate(0.25px, -0.5px); }
+  30% { transform: translate(0, -2px); }
+  58% { transform: translate(0, 3px); }
+  76% { transform: translate(0, -1.5px); }
+  90% { transform: translate(0, 0.75px); }
   100% { transform: translate(0, 0); }
 }
 .word-search-attempt-letter {

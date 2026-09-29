@@ -298,3 +298,77 @@
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+
+
+.tips-menu-reset {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+}
+
+.tips-reset-button {
+  min-height: 34px;
+}
+
+
+/* TIPS phone layout: keep the lesson readable without hiding the whole page. */
+@media (max-width: 560px) {
+  .tips-card:not(.is-menu) {
+    max-height: min(60dvh, calc(100dvh - 20px - env(safe-area-inset-top) - env(safe-area-inset-bottom)));
+    overscroll-behavior: contain;
+  }
+
+  .tips-card.is-menu {
+    max-height: calc(100dvh - 20px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    overscroll-behavior: contain;
+  }
+
+  .tips-header {
+    min-height: 44px;
+  }
+
+  .tips-skip,
+  .tips-more > summary,
+  .tips-more-menu .quiet-button,
+  .tips-reset-button {
+    min-height: 44px;
+  }
+
+  .tips-more > summary {
+    display: inline-flex;
+    align-items: center;
+    padding-inline: 4px;
+  }
+
+  .tips-more-menu {
+    min-width: min(220px, calc(100vw - 48px));
+  }
+
+  .tips-section-choice {
+    min-height: 72px;
+    padding: 12px;
+  }
+
+  .tips-menu-reset {
+    position: sticky;
+    bottom: -14px;
+    margin-inline: -14px;
+    padding: 12px 14px max(12px, env(safe-area-inset-bottom));
+    background: var(--page-background);
+  }
+}
+
+@media (pointer: coarse) {
+  .tips-header {
+    min-height: 44px;
+  }
+
+  .tips-skip,
+  .tips-more > summary,
+  .tips-more-menu .quiet-button,
+  .tips-reset-button {
+    min-height: 44px;
+  }
+}

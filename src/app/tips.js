@@ -292,6 +292,18 @@ export const TipsExperience = {
       });
     }
 
+    function resetCurrentTips() {
+      const featureId = props.feature?.id;
+      if (!featureId) return;
+      const prefix = `${featureId}:`;
+      const seen = Object.fromEntries(Object.entries(preferences.value.seen)
+        .filter(([key]) => key !== featureId && !key.startsWith(prefix)));
+      savePreferences({
+        ...preferences.value,
+        seen,
+      });
+    }
+
     function requestPositionUpdate() {
       cancelAnimationFrame(updateFrame);
       updateFrame = requestAnimationFrame(updatePosition);
@@ -407,9 +419,14 @@ export const TipsExperience = {
       const bounds = element.getBoundingClientRect();
       const cardWidth = bounds.width;
       const cardHeight = bounds.height;
-      const preferred = step.value?.placement;
-      const placements = [preferred, 'right', 'left', 'bottom', 'top']
-        .filter((value, index, values) => value && values.indexOf(value) === index);
+      const compact = window.innerWidth <= 560;
+      const targetCenterY = (rect.top + rect.bottom) / 2;
+      const compactPrimary = targetCenterY < window.innerHeight / 2 ? 'bottom' : 'top';
+      const preferred = compact ? compactPrimary : step.value?.placement;
+      const placements = compact
+        ? [compactPrimary, compactPrimary === 'bottom' ? 'top' : 'bottom']
+        : [preferred, 'right', 'left', 'bottom', 'top']
+          .filter((value, index, values) => value && values.indexOf(value) === index);
 
       const fits = {
         right: window.innerWidth - rect.right - CARD_GAP - VIEWPORT_MARGIN >= cardWidth,
@@ -660,13 +677,22 @@ export const TipsExperience = {
             h('span', {
               class: ['tips-section-state', {
                 complete: seen,
-                'is-action': !available && canPrepare,
+                'is-action': !seen && !available && canPrepare,
               }],
-            }, !available
-              ? canPrepare ? 'Open for me' : 'Open this screen first'
-              : seen ? 'Done · Show again' : 'Start'),
+            }, seen
+              ? 'Done · Show again'
+              : !available
+                ? canPrepare ? 'Open for me' : 'Open this screen first'
+                : 'Start'),
           ]);
         })),
+        h('div', { class: 'tips-menu-reset' }, [
+          h('button', {
+            type: 'button',
+            class: 'delete-confirm-button tips-reset-button',
+            onClick: resetCurrentTips,
+          }, 'Reset tips'),
+        ]),
       ];
     }
 
