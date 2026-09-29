@@ -5,22 +5,53 @@
   font-weight: 500;
 }
 
-.tips-dialog {
-  width: min(560px, calc(100% - 32px));
-  max-width: none;
-  max-height: calc(100dvh - 32px);
-  padding: 0;
+.tips-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.tips-scrim {
+  position: fixed;
+  z-index: 0;
+  background: var(--scrim);
+  cursor: default;
+  pointer-events: auto;
+}
+
+.tips-spotlight {
+  position: fixed;
+  z-index: 1;
+  border: 2px solid var(--brand);
+  border-radius: calc(var(--radius) + 4px);
+  box-shadow: 0 0 0 4px var(--brand-tint), var(--shadow-overlay);
+  pointer-events: none;
+  transition:
+    top var(--motion-fast),
+    left var(--motion-fast),
+    width var(--motion-fast),
+    height var(--motion-fast);
+}
+
+.tips-card {
+  position: fixed;
+  z-index: 2;
+  width: min(420px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+  padding: 20px;
   border: 1px solid var(--border-color);
   border-radius: calc(var(--radius) * 2);
   color: var(--text-color);
   background: var(--page-background);
   box-shadow: var(--shadow-overlay);
   overflow: auto;
+  pointer-events: auto;
+  transition:
+    top var(--motion-fast),
+    left var(--motion-fast),
+    transform var(--motion-fast);
 }
-
-.tips-dialog::backdrop { background: var(--scrim); }
-
-.tips-card { padding: 20px; }
 
 .tips-header,
 .tips-footer,
@@ -63,6 +94,12 @@
 .tips-body {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
+  padding: 22px 8px 20px;
+  text-align: left;
+}
+
+.tips-card.is-centered .tips-body {
   align-items: center;
   padding: 28px 20px 24px;
   text-align: center;
@@ -71,15 +108,22 @@
 .tips-illustration {
   display: grid;
   place-items: center;
-  width: 56px;
-  height: 56px;
-  margin-bottom: 16px;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 14px;
   border-radius: 50%;
   color: var(--brand);
   background: var(--brand-tint);
 }
 
-.tips-illustration .ui-icon { width: 28px; height: 28px; }
+.tips-card.is-centered .tips-illustration {
+  width: 56px;
+  height: 56px;
+  margin-bottom: 16px;
+}
+
+.tips-illustration .ui-icon { width: 24px; height: 24px; }
+.tips-card.is-centered .tips-illustration .ui-icon { width: 28px; height: 28px; }
 
 .tips-step-count {
   margin: 0 0 6px;
@@ -96,10 +140,20 @@
   color: var(--text-secondary);
 }
 
+.tips-target-caption {
+  margin: 12px 0 0;
+  padding: 5px 8px;
+  border-radius: 999px;
+  color: var(--brand-text);
+  background: var(--brand-tint);
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .tips-progress {
   display: flex;
   gap: 6px;
-  margin-top: 24px;
+  margin-top: 20px;
 }
 
 .tips-progress-dot {
@@ -150,13 +204,18 @@
 .tips-navigation { gap: 8px; flex-shrink: 0; }
 
 @media (max-width: 560px) {
-  .tips-dialog {
+  .tips-card {
     width: calc(100% - 20px);
     max-height: calc(100dvh - 20px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    padding: 16px;
   }
 
-  .tips-card { padding: 16px; }
-  .tips-body { padding: 22px 8px 20px; }
+  .tips-body,
+  .tips-card.is-centered .tips-body {
+    align-items: flex-start;
+    padding: 20px 6px 18px;
+    text-align: left;
+  }
 
   .tips-footer {
     align-items: stretch;
