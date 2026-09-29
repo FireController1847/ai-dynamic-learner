@@ -60,13 +60,13 @@ const LIST_TABLES = [
   {
     table: 'word_search_game_placements',
     source: 'wordSearchPlacements',
-    columns: ['item_id', 'word', 'start_cell', 'end_cell'],
+    columns: ['item_id', 'word', 'sort_order', 'start_cell', 'end_cell'],
     keys: ['item_id', 'word'],
   },
   {
     table: 'word_search_game_found',
     source: 'wordSearchFound',
-    columns: ['item_id', 'word', 'start_cell', 'end_cell'],
+    columns: ['item_id', 'word', 'sort_order', 'start_cell', 'end_cell'],
     keys: ['item_id', 'word'],
   },
 ];
