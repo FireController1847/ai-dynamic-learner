@@ -4,6 +4,7 @@ import { migrateLegacyIndexCards } from './legacy-workspace/index-cards.js';
 import { migrateLegacyWordSearch } from './legacy-workspace/word-search.js';
 
 export const LEGACY_WORKSPACE_KEY = 'dynamic-learner.workspace.v1';
+export const LEGACY_WORKSPACE_ARCHIVE_KEY = 'dynamic-learner.workspace.legacy-archive.v1';
 
 export function readLegacyWorkspace() {
   let text;
@@ -49,6 +50,17 @@ export function readLegacyWorkspace() {
       },
     },
   };
+}
+
+export function archiveLegacyWorkspace() {
+  const value = localStorage.getItem(LEGACY_WORKSPACE_KEY);
+  if (value === null) return false;
+
+  // Copy first. If quota prevents the archive write, keep the original source
+  // rather than deleting the only legacy recovery copy.
+  localStorage.setItem(LEGACY_WORKSPACE_ARCHIVE_KEY, value);
+  localStorage.removeItem(LEGACY_WORKSPACE_KEY);
+  return true;
 }
 
 export function clearLegacyWorkspace() {
