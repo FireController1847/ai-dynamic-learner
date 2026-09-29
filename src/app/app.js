@@ -69,8 +69,18 @@ const App = {
           'aria-expanded': sidebarOpen.value,
           'aria-controls': 'app-navigation',
           onClick: () => { sidebarOpen.value = true; },
-        }, [h('span', { class: 'menu-icon', 'aria-hidden': 'true' }, [
-          h('span'), h('span'), h('span'),
+        }, [h('svg', {
+          class: 'menu-icon',
+          viewBox: '0 0 18 14',
+          width: 18,
+          height: 14,
+          fill: 'currentColor',
+          'aria-hidden': 'true',
+          focusable: 'false',
+        }, [
+          h('rect', { x: 0, y: 0, width: 18, height: 2, rx: 1 }),
+          h('rect', { x: 0, y: 6, width: 18, height: 2, rx: 1 }),
+          h('rect', { x: 0, y: 12, width: 18, height: 2, rx: 1 }),
         ])]),
         activeLogoSrc.value
           ? h('img', { class: 'app-logo app-header-logo', src: activeLogoSrc.value, alt: '', 'aria-hidden': 'true' })
