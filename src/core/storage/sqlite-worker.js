@@ -59,10 +59,10 @@ async function inspectBackup(sqlite3, compressedBytes) {
   const rawBuffer = await gzipDecompress(compressedBytes);
   const pool = await openBackupPool(sqlite3);
   pool.unlink(BACKUP_DATABASE_FILENAME);
-  await pool.importDb(BACKUP_DATABASE_FILENAME, new Uint8Array(rawBuffer));
 
   let db = null;
   try {
+    await pool.importDb(BACKUP_DATABASE_FILENAME, new Uint8Array(rawBuffer));
     db = new pool.OpfsSAHPoolDb(BACKUP_DATABASE_FILENAME);
     const integrity = db.selectValue('PRAGMA integrity_check');
     if (integrity !== 'ok') throw new Error('The SQLite backup failed its integrity check.');
