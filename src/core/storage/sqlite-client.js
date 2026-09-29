@@ -26,13 +26,13 @@ export class SQLiteWorkspaceStorage {
     this.worker.onmessageerror = fail;
   }
 
-  call(type, payload = {}) {
+  call(type, payload = {}, transfer = []) {
     if (this.failed) return Promise.reject(this.failed);
     const id = this.nextId++;
     return new Promise((resolve, reject) => {
       this.pending.set(id, { resolve, reject });
       try {
-        this.worker.postMessage({ id, type, payload });
+        this.worker.postMessage({ id, type, payload }, transfer);
       } catch (problem) {
         this.pending.delete(id);
         reject(problem);
@@ -50,6 +50,17 @@ export class SQLiteWorkspaceStorage {
 
   saveWorkspace(workspace) {
     return this.call('save', { workspace });
+  }
+
+  exportBackup() {
+    return this.call('export-backup');
+  }
+
+  inspectBackup(bytes) {
+    const buffer = bytes instanceof ArrayBuffer
+      ? bytes
+      : bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+    return this.call('inspect-backup', { bytes: buffer }, [buffer]);
   }
 
   close() {
