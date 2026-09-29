@@ -155,8 +155,12 @@ export function validateWordSearch(value) {
         }
         visit(item.children, depth + 1);
       } else {
-        if (Object.keys(item).some((key) => !['id', 'kind', 'name', 'puzzle', 'game'].includes(key))) {
+        if (Object.keys(item).some((key) => !['id', 'kind', 'name', 'puzzle', 'game', 'boardRotation'].includes(key))) {
           throw new Error('A word search contains unsupported data.');
+        }
+        if (Object.hasOwn(item, 'boardRotation') &&
+            ![0, 90, 180, 270].includes(item.boardRotation)) {
+          throw new Error('A word search contains an invalid board rotation.');
         }
         if (Object.hasOwn(item, 'puzzle')) validatePuzzle(item.puzzle);
         if (Object.hasOwn(item, 'game')) validateGame(item.puzzle, item.game);
