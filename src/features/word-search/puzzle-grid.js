@@ -137,6 +137,13 @@ export const PuzzleGrid = {
         ...(props.revealed ? props.game.placements.filter(({ word }) => !props.game.found.some((entry) => entry.word === word))
           .map(({ word, start, end }) => wordOutline(start, end, size.value, `answer-${word}`, 'answer', null, word)) : []),
         props.hint !== null ? wordOutline(props.hint, props.hint, size.value, 'hint', 'hint') : null,
+        props.attempt && !props.attempt.matched ? wordOutline(
+          props.attempt.start,
+          props.attempt.end,
+          size.value,
+          `miss-${props.attempt.id}`,
+          'miss',
+        ) : null,
         anchor.value !== null ? wordOutline(anchor.value, endpoint.value ?? anchor.value, size.value,
           'selection', 'selection', pointerPoint.value) : null,
       ]);
