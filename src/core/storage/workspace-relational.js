@@ -93,6 +93,9 @@ export function workspaceToRows(workspace) {
       sort_order: sortOrder,
       kind: item.kind,
       name: item.name,
+      board_rotation: item.kind === 'word-search' && Object.hasOwn(item, 'boardRotation')
+        ? item.boardRotation
+        : null,
     });
     if (item.kind !== 'word-search' || !Object.hasOwn(item, 'puzzle')) return;
 
@@ -209,7 +212,12 @@ export function rowsToWorkspace(rows) {
 
   const wordSearchTree = buildTree(rows.wordSearchItems, (row) => {
     if (row.kind === 'group') return { id: row.id, kind: 'group', name: row.name, children: [] };
-    const item = { id: row.id, kind: 'word-search', name: row.name };
+    const item = {
+      id: row.id,
+      kind: 'word-search',
+      name: row.name,
+      ...(row.board_rotation === null ? {} : { boardRotation: row.board_rotation }),
+    };
     const puzzleRow = puzzleByItem.get(row.id);
     if (!puzzleRow) return item;
 
