@@ -86,7 +86,7 @@ npm start
 
 Dynamic Learner stores workspace content locally in a relational SQLite database backed by the browser's Origin Private File System (OPFS), rather than in an account or remote database. SQLite runs in a Worker so routine persistence does not repeatedly serialize and synchronously rewrite the whole workspace on the UI thread.
 
-The navigation drawer includes **Download backup** and **Upload backup** controls for moving or preserving the workspace as portable JSON. JSON is an interchange/backup format rather than the live database format. Browser-local UI preferences, such as panel sizing and TIPS state, remain separate from workspace content.
+The navigation drawer includes **Download backup** and **Upload backup** controls for moving or preserving the workspace. New backups are gzip-compressed SQLite database files using the `.bak` extension, so large workspaces do not need to be serialized through JSON just to make a backup. Older version-1 JSON backups remain importable for compatibility. Browser-local UI preferences, such as panel sizing and TIPS state, remain separate from workspace content.
 
 Existing workspaces saved by older versions under `dynamic-learner.workspace.v1` are migrated into SQLite on first successful startup. The migration recovers features and records independently where possible, so one damaged legacy record does not necessarily discard otherwise valid content. The legacy copy is removed only after the recovered workspace has been committed successfully.
 
@@ -99,7 +99,7 @@ More detail about the saved format is available in [`docs/workspace-data.md`](do
 Dynamic Learner deliberately keeps its runtime simple:
 
 - Vue 3 and SQLite WASM are loaded directly in the browser.
-- Workspace content is persisted relationally in SQLite/OPFS; JSON is reserved for portable backups.
+- Workspace content is persisted relationally in SQLite/OPFS; normal backups are gzip-compressed SQLite `.bak` files, with JSON retained only for legacy import compatibility.
 - JavaScript uses native ES modules.
 - `server.mjs` provides the local static server.
 - There is no bundler, TypeScript compilation, or Vue single-file-component build pipeline.
