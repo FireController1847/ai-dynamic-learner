@@ -1,4 +1,6 @@
-const socialImage = Object.freeze({
+import type { SocialImage } from '../core/metadata.ts';
+
+const socialImage: Readonly<SocialImage> = Object.freeze({
   path: 'assets/dynamic-learner-social-v2.jpg',
   type: 'image/jpeg',
   width: 1200,

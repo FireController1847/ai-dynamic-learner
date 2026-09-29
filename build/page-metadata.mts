@@ -1,18 +1,18 @@
-import { featureDefinitions } from '../src/features/feature-definitions.js';
-import { appConfig } from '../src/app/app-config.js';
+import { featureDefinitions } from '../src/features/feature-definitions.ts';
+import type { SiteConfig } from './site-config.mts';
+import { appConfig } from '../src/app/app-config.ts';
 
-const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (character) => ({
-  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-}[character]));
-const escapeJson = (value) => JSON.stringify(value).replace(/</g, '\\u003c');
-const meta = (name, content, property = false) =>
+const htmlEntities: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+const escapeHtml = (value: unknown) => String(value).replace(/[&<>"']/g, (character) => htmlEntities[character] ?? character);
+const escapeJson = (value: ReturnType<typeof pageMetadata>['structuredData']) => JSON.stringify(value).replace(/</g, '\\u003c');
+const meta = (name: string, content: string | number, property = false) =>
   `<meta ${property ? 'property' : 'name'}="${escapeHtml(name)}" content="${escapeHtml(content)}">`;
 
-function absoluteUrl(path, baseUrl) {
+function absoluteUrl(path: string, baseUrl: URL | null) {
   return baseUrl ? new URL(path.replace(/^\//, ''), baseUrl).href : null;
 }
 
-function pageMetadata(route, baseUrl) {
+function pageMetadata(route: string, baseUrl: URL | null) {
   const feature = featureDefinitions.find((candidate) => candidate.path === route);
   const overrides = feature?.metadata ?? {};
   const title = overrides.title ?? (feature ? `${feature.label} · ${appConfig.name}` : appConfig.name);
@@ -66,7 +66,7 @@ function pageMetadata(route, baseUrl) {
   return { title, description, canonicalUrl, keywords, socialImage, socialImageUrl, structuredData };
 }
 
-function renderRichMetadata(metadata) {
+function renderRichMetadata(metadata: ReturnType<typeof pageMetadata>) {
   const { title, description, canonicalUrl, keywords, socialImage, socialImageUrl } = metadata;
   const tags = [
     meta('description', description),
@@ -109,7 +109,7 @@ function renderRichMetadata(metadata) {
   return tags.join('\n    ');
 }
 
-export function pageTemplateData(route, { basePath, baseUrl }) {
+export function pageTemplateData(route: string, { basePath, baseUrl }: Pick<SiteConfig, 'basePath' | 'baseUrl'>) {
   const metadata = pageMetadata(route, baseUrl);
   return {
     basePath: escapeHtml(basePath),
@@ -119,7 +119,7 @@ export function pageTemplateData(route, { basePath, baseUrl }) {
   };
 }
 
-export function notFoundPage(basePath) {
+export function notFoundPage(basePath: string) {
   return `<!doctype html>
 <html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow"><title>Page not found</title><main><h1>Page not found</h1><a href="${escapeHtml(basePath)}">Return to ${escapeHtml(appConfig.name)}</a></main></html>\n`;

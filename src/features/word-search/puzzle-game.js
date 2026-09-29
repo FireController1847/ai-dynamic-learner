@@ -1,6 +1,6 @@
-import { DIFFICULTIES } from './puzzle-model.js';
-import { lineCells, matchSelection, wordOnLine } from './game-model.js';
-import { generatePuzzle } from './puzzle-generator.js';
+import { DIFFICULTIES } from './puzzle-model.ts';
+import { lineCells, matchSelection, wordOnLine } from './game-model.ts';
+import { generatePuzzle } from './puzzle-generator.ts';
 import { PuzzleGrid } from './puzzle-grid.js';
 import { Icon } from '../../components/icon.js';
 import { defaultDisplayOptions, displayStyles } from './display-options.js';

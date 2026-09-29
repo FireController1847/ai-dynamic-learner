@@ -11,9 +11,8 @@ const notFound = await readFile(resolve(root, '404.html'));
 const baseMatch = index.match(/<base\s+href=(?:"([^"]+)"|'([^']+)'|([^\s>]+))/i);
 const encodedBase = baseMatch?.[1] ?? baseMatch?.[2] ?? baseMatch?.[3];
 if (!encodedBase) throw new Error('The built index.html is missing its base path. Run npm run build.');
-const basePath = encodedBase.replace(/&(amp|lt|gt|quot|#39);/g, (_, name) => ({
-  amp: '&', lt: '<', gt: '>', quot: '"', '#39': "'",
-}[name]));
+const htmlEntities: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', '#39': "'" };
+const basePath = encodedBase.replace(/&(amp|lt|gt|quot|#39);/g, (_, name: string) => htmlEntities[name] ?? name);
 const host = process.env.HOST ?? '127.0.0.1';
 const port = Number(process.env.PORT ?? 3000);
 
@@ -21,7 +20,7 @@ if (!Number.isInteger(port) || port < 0 || port > 65535) {
   throw new Error('PORT must be an integer between 0 and 65535.');
 }
 
-const mimeTypes = {
+const mimeTypes: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
@@ -43,13 +42,13 @@ const mimeTypes = {
   '.wasm': 'application/wasm',
 };
 
-function isInsideRoot(path) {
+function isInsideRoot(path: string) {
   const location = relative(root, path);
   return location !== '..' && !location.startsWith(`..${sep}`) && !isAbsolute(location);
 }
 
 const server = createServer(async (request, response) => {
-  function reply(status, message) {
+  function reply(status: number, message: string) {
     response.writeHead(status, { 'Content-Type': 'text/plain; charset=utf-8' });
     response.end(request.method === 'HEAD' ? undefined : message);
   }
@@ -60,10 +59,10 @@ const server = createServer(async (request, response) => {
     return;
   }
 
-  let pathname;
-  let requestUrl;
+  let pathname: string;
+  let requestUrl: URL;
   try {
-    requestUrl = new URL(request.url, 'http://localhost');
+    requestUrl = new URL(request.url ?? '/', 'http://localhost');
     pathname = decodeURIComponent(requestUrl.pathname);
     if (pathname.includes('\0')) throw new Error('Invalid path');
   } catch {
@@ -116,10 +115,11 @@ const server = createServer(async (request, response) => {
     });
     response.end(request.method === 'HEAD' ? undefined : content);
   } catch (error) {
-    if (['ENOENT', 'ENOTDIR', 'EISDIR'].includes(error.code)) {
+    const code = error instanceof Error && 'code' in error ? error.code : undefined;
+    if (typeof code === 'string' && ['ENOENT', 'ENOTDIR', 'EISDIR'].includes(code)) {
       response.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
       response.end(request.method === 'HEAD' ? undefined : notFound);
-    } else if (['EACCES', 'EPERM'].includes(error.code)) {
+    } else if (typeof code === 'string' && ['EACCES', 'EPERM'].includes(code)) {
       reply(403, 'Forbidden');
     } else {
       console.error(error);
@@ -130,6 +130,7 @@ const server = createServer(async (request, response) => {
 
 server.listen(port, host, () => {
   const address = server.address();
+  if (!address || typeof address === 'string') throw new Error('Expected a TCP listening address.');
   const displayHost = host.includes(':') ? `[${host}]` : host;
   console.log(`Build preview: http://${displayHost}:${address.port}${basePath}`);
 });

@@ -1,8 +1,8 @@
 import '../styles/index.css';
-import { appConfig } from './app-config.js';
+import { appConfig } from './app-config.ts';
 import { features } from '../features/feature-registry.js';
 import { NavigationDrawer } from './navigation-drawer.js';
-import { pageHref, useNavigation } from './navigation.js';
+import { pageHref, useNavigation } from './navigation.ts';
 import { useWorkspace } from './workspace.js';
 import { WorkspaceTools } from './workspace-tools.js';
 import { HomePage } from './home-page.js';

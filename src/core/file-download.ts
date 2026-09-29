@@ -1,7 +1,7 @@
 // Standard browser downloads work without a platform-specific filesystem API.
-export async function downloadText(filename, text, type = 'text/plain;charset=utf-8') {
+export async function downloadText(filename: string, text: string, type = 'text/plain;charset=utf-8'): Promise<void> {
   // Give the initiating button a chance to paint its busy state before preparing the file.
-  await new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
+  await new Promise<void>((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
   const blob = new Blob([text], { type });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');

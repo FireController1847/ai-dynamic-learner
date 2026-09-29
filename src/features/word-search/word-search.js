@@ -5,7 +5,7 @@ import { PuzzleGame } from './puzzle-game.js';
 import { DisplaySettings } from './display-settings.js';
 import { resolvedDisplayOptions } from './display-options.js';
 import { canMove, deleteItem, findItem, groupOptions, moveItem, saveWordSearch } from './library-model.js';
-import { clearPreference, readNumberPreference, writeNumberPreference } from '../../core/ui-preferences.js';
+import { clearPreference, readNumberPreference, writeNumberPreference } from '../../core/ui-preferences.ts';
 
 import { computed, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref } from 'vue';
 

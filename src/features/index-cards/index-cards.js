@@ -4,8 +4,8 @@ import { DisplaySettings } from './display-settings.js';
 import { defaultDisplayOptions, displayStyles } from './display-options.js';
 import { Icon } from '../../components/icon.js';
 import { canMove, countCards, createItem, deleteItem, findItem, groupOptions, moveItem } from './tree-model.js';
-import { createCard } from './card-model.js';
-import { clearPreference, readNumberPreference, writeNumberPreference } from '../../core/ui-preferences.js';
+import { createCard } from './card-model.ts';
+import { clearPreference, readNumberPreference, writeNumberPreference } from '../../core/ui-preferences.ts';
 
 import { computed, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue';
 

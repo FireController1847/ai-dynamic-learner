@@ -3,7 +3,7 @@ import { MAX_NAME_LENGTH } from './library-model.js';
 import {
   DIFFICULTIES, GRID_SIZES, MAX_HINT_LENGTH, MAX_INSTRUCTIONS_LENGTH, MAX_WORD_INPUT_LENGTH,
   MAX_WORDS, MIN_WORDS, STUDY_MODES, parseWords, validatePuzzle,
-} from './puzzle-model.js';
+} from './puzzle-model.ts';
 
 import { computed, h, nextTick, onMounted, ref } from 'vue';
 

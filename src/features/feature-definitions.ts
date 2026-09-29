@@ -1,5 +1,19 @@
 // Shared by the browser registry and webpack build; keep this data browser-neutral.
-export const featureDefinitions = [
+import type { PageMetadataOverrides } from '../core/metadata.ts';
+
+export type FeatureId = 'notebook' | 'index-cards' | 'word-search';
+
+export interface FeatureDefinition {
+  id: FeatureId;
+  label: string;
+  path: `/${string}/`;
+  icon: string;
+  image: string;
+  description: string;
+  metadata?: PageMetadataOverrides;
+}
+
+export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'notebook', label: 'Notebook', path: '/notebook/', icon: 'document',
     image: 'assets/notebook.png',

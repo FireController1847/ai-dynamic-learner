@@ -4,7 +4,7 @@ The app deploys as static HTML, CSS, images, and webpack JavaScript bundles. Vue
 
 ## Source and deployment strategy
 
-Commit source, `package.json`, and `package-lock.json`. Keep `dist/` ignored. No built-output commit or dedicated deployment branch is needed: the manually dispatched `.github/workflows/deploy-pages.yml` installs locked dependencies with `npm ci`, runs the webpack production build, and uploads `dist/` to GitHub Pages. Each deployment builds the selected source commit, so there is no requirement to build locally before every commit. A failed install or build prevents the deployment job from running.
+Commit source, `package.json`, and `package-lock.json`. Keep `dist/` ignored. No built-output commit or dedicated deployment branch is needed: the manually dispatched `.github/workflows/deploy-pages.yml` installs locked dependencies with `npm ci`, type-checks TypeScript, runs the webpack production build, and uploads `dist/` to GitHub Pages. Each deployment builds the selected source commit, so there is no requirement to build locally before every commit. A failed install, type check, or build prevents the deployment job from running.
 
 Pushes and pull requests do not publish automatically. Local production previews must be rebuilt after source changes; `npm start` handles development rebuilds automatically.
 
@@ -21,9 +21,9 @@ The workflow uses Node.js 24, npm's lockfile cache, GitHub's built-in token, Pag
 
 `npm run pages:prepare` is an alias for `npm run build`. Webpack cleans and recreates `dist/` with hashed JavaScript/CSS bundles, images in `assets/`, third-party licenses, the project `LICENSE`, generated HTML route entry points, a 404 page, and `.nojekyll`. Repository metadata, documentation, source trees, the preview server, and workspace backups are not copied into the site artifact. Production source maps are disabled; development serves source maps in memory.
 
-The workflow reads `PAGES_BASE_PATH` and `PAGES_BASE_URL` from `actions/configure-pages`. Project sites use `/repository-name/`; user/organization sites and custom domains usually use `/`. `build/site-config.mjs` validates these values and requires their paths to agree. Webpack uses that path for bundle URLs and the HTML base element. Browser navigation reads the same root from `document.baseURI`, so ordinary links, modified-click/new-tab links, images, and browser history stay under the deployed root.
+The workflow reads `PAGES_BASE_PATH` and `PAGES_BASE_URL` from `actions/configure-pages`. Project sites use `/repository-name/`; user/organization sites and custom domains usually use `/`. `build/site-config.mts` validates these values and requires their paths to agree. Webpack uses that path for bundle URLs and the HTML base element. Browser navigation reads the same root from `document.baseURI`, so ordinary links, modified-click/new-tab links, images, and browser history stay under the deployed root.
 
-Every route in `src/features/feature-definitions.js` gets an actual `index.html`, including Notebook, Index Cards, and Word Search. `build/page-metadata.mjs` supplies route-specific titles/descriptions, canonical URLs, Open Graph and Twitter metadata, and JSON-LD. The generated 404 page is marked `noindex, nofollow`. Direct links and refreshes work without a rewrite or hash router. Configure custom domains in GitHub's Pages settings before dispatching deployment.
+Every route in `src/features/feature-definitions.ts` gets an actual `index.html`, including Notebook, Index Cards, and Word Search. `build/page-metadata.mts` supplies route-specific titles/descriptions, canonical URLs, Open Graph and Twitter metadata, and JSON-LD. The generated 404 page is marked `noindex, nofollow`. Direct links and refreshes work without a rewrite or hash router. Configure custom domains in GitHub's Pages settings before dispatching deployment.
 
 ## Local use
 

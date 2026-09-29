@@ -1,15 +1,18 @@
 import { fileURLToPath } from 'node:url';
+import type { IncomingMessage, ServerResponse } from 'node:http';
 import webpack from 'webpack';
+import type { Configuration } from 'webpack';
+import type { Configuration as DevServerConfiguration } from 'webpack-dev-server';
 import HtmlWebpackPlugin from 'html-webpack-plugin';
 import CopyPlugin from 'copy-webpack-plugin';
 import MiniCssExtractPlugin from 'mini-css-extract-plugin';
 import CssMinimizerPlugin from 'css-minimizer-webpack-plugin';
-import { siteConfig } from './build/site-config.mjs';
-import { notFoundPage, pageTemplateData } from './build/page-metadata.mjs';
+import { siteConfig } from './build/site-config.mts';
+import { notFoundPage, pageTemplateData } from './build/page-metadata.mts';
 
 const root = fileURLToPath(new URL('.', import.meta.url));
 
-export default (_env, argv) => {
+export default (_env: unknown, argv: { mode?: Configuration['mode'] }): Configuration & { devServer: DevServerConfiguration } => {
   const production = argv.mode === 'production';
   const site = siteConfig();
   const publicRoutes = new Set(site.routes.map((route) => `${site.basePath}${route.slice(1)}`));
@@ -30,8 +33,20 @@ export default (_env, argv) => {
       clean: true,
     },
     devtool: production ? false : 'source-map',
+    resolve: { extensionAlias: { '.js': ['.ts', '.js'] } },
     module: {
       rules: [
+        {
+          test: /\.ts$/i,
+          exclude: /node_modules/,
+          use: {
+            loader: 'ts-loader',
+            options: {
+              configFile: 'tsconfig.app.json',
+              compilerOptions: { noEmit: false, rewriteRelativeImportExtensions: true },
+            },
+          },
+        },
         { test: /\.css$/i, use: [MiniCssExtractPlugin.loader, 'css-loader'] },
         { test: /\.(png|jpe?g|gif|svg|webp|ico|woff2?)$/i, type: 'asset/resource' },
       ],
@@ -79,9 +94,9 @@ export default (_env, argv) => {
       setupMiddlewares(middlewares) {
         middlewares.unshift({
           name: 'canonical-page-paths',
-          middleware(request, response, next) {
-            const url = new URL(request.url, 'http://localhost');
-            if (['GET', 'HEAD'].includes(request.method) && !url.pathname.endsWith('/') &&
+          middleware(request: IncomingMessage, response: ServerResponse, next: () => void) {
+            const url = new URL(request.url ?? '/', 'http://localhost');
+            if (['GET', 'HEAD'].includes(request.method ?? '') && !url.pathname.endsWith('/') &&
                 publicRoutes.has(`${url.pathname}/`)) {
               response.writeHead(308, { Location: `${url.pathname}/${url.search}` });
               response.end();

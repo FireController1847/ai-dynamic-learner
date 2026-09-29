@@ -26,7 +26,7 @@ Adjust text independently of the paper: line spacing, rule positions, horizontal
 
 ## Manual review
 
-App artwork uses matching glossy blue-and-white icons with tight square framing, exported at 512×512 for crisp Home, sidebar, and header rendering. Browser branding includes a multi-resolution ICO, a 180×180 Apple touch icon, and a refreshed ICNS asset. The social splash is `src/assets/dynamic-learner-social-v2.jpg`, exported at 1200×630; its metadata lives in `src/app/app-config.js`. The versioned filename separates it from previously cached link-preview artwork.
+App artwork uses matching glossy blue-and-white icons with tight square framing, exported at 512×512 for crisp Home, sidebar, and header rendering. Browser branding includes a multi-resolution ICO, a 180×180 Apple touch icon, and a refreshed ICNS asset. The social splash is `src/assets/dynamic-learner-social-v2.jpg`, exported at 1200×630; its metadata lives in `src/app/app-config.ts`. The versioned filename separates it from previously cached link-preview artwork.
 
 Manually inspect all app icons on Home, in the sidebar, and in the header at normal and high display density. Check the browser favicon and saved home-screen icon. After a Pages deployment, check the generated Open Graph image URL and the banner crop in a shared-link preview. Social preview services may retain previously scraped metadata until they refresh it.
 

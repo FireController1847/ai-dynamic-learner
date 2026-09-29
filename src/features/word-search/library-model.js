@@ -1,6 +1,6 @@
-import { createId, isValidId } from '../../core/ids.js';
-import { validatePuzzle } from './puzzle-model.js';
-import { validateGame } from './game-model.js';
+import { createId, isValidId } from '../../core/ids.ts';
+import { validatePuzzle } from './puzzle-model.ts';
+import { validateGame } from './game-model.ts';
 import { validateDisplayOptions } from './display-options.js';
 
 export const MAX_ITEMS = 5000;

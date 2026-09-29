@@ -1,8 +1,9 @@
-import { directionsFor, validateGame } from './game-model.js';
-import { validatePuzzle } from './puzzle-model.js';
+import { directionsFor, validateGame } from './game-model.ts';
+import { validatePuzzle } from './puzzle-model.ts';
+import type { Direction, Game, WordPlacement } from './game-model.ts';
 
-function candidates(word, size, directions) {
-  const result = [];
+function candidates(word: string, size: number, directions: readonly Direction[]): number[][] {
+  const result: number[][] = [];
   for (const [dr, dc] of directions) {
     for (let row = 0; row < size; row += 1) {
       for (let col = 0; col < size; col += 1) {
@@ -18,21 +19,21 @@ function candidates(word, size, directions) {
 
 // Bounded randomized packing: longer words first, favoring compatible intersections.
 // Yield between attempts so dense/impossible setups keep the interface responsive.
-export async function generatePuzzle(puzzle, signal) {
+export async function generatePuzzle(puzzle: unknown, signal?: AbortSignal): Promise<Game | null> {
   validatePuzzle(puzzle);
   const { size, words, difficulty } = puzzle;
   const options = new Map(words.map((word) => [word, candidates(word, size, directionsFor(difficulty))]));
   for (let attempt = 0; attempt < 48; attempt += 1) {
     await new Promise((resolve) => setTimeout(resolve, 0));
     if (signal?.aborted) return null;
-    const cells = Array(size * size).fill('');
-    const placements = [];
+    const cells: string[] = Array<string>(size * size).fill('');
+    const placements: WordPlacement[] = [];
     const order = words.map((word) => ({ word, priority: word.length + Math.random() * 2 }))
       .sort((a, b) => b.priority - a.priority);
     for (const { word } of order) {
-      let best = null;
+      let best: number[] | null = null;
       let bestScore = -Infinity;
-      for (const path of options.get(word)) {
+      for (const path of options.get(word) ?? []) {
         let overlap = 0;
         let fits = true;
         for (let index = 0; index < path.length; index += 1) {
@@ -45,7 +46,7 @@ export async function generatePuzzle(puzzle, signal) {
       }
       if (!best) break;
       best.forEach((cell, index) => { cells[cell] = word[index]; });
-      placements.push({ word, start: best[0], end: best.at(-1) });
+      placements.push({ word, start: best[0], end: best[best.length - 1] });
     }
     if (placements.length !== words.length) continue;
     const letters = cells.map((letter) => letter || String.fromCharCode(65 + Math.floor(Math.random() * 26)));

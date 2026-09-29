@@ -1,5 +1,5 @@
 import { Icon } from '../../components/icon.js';
-import { createCard, MAX_CARDS, MAX_CARD_TEXT_LENGTH, shuffledCardIds } from './card-model.js';
+import { createCard, MAX_CARDS, MAX_CARD_TEXT_LENGTH, shuffledCardIds } from './card-model.ts';
 import { CardList } from './card-list.js';
 import { CardPaper } from './card-paper.js';
 import { ReviewSetup } from './review-setup.js';

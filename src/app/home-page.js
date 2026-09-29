@@ -1,6 +1,6 @@
-import { appConfig } from './app-config.js';
-import { pageHref } from './navigation.js';
-import { featureDefinitions } from '../features/feature-definitions.js';
+import { appConfig } from './app-config.ts';
+import { pageHref } from './navigation.ts';
+import { featureDefinitions } from '../features/feature-definitions.ts';
 import { Icon } from '../components/icon.js';
 
 import { h, onMounted, onBeforeUnmount, ref } from 'vue';

@@ -1,9 +1,9 @@
 import { Icon } from '../../components/icon.js';
-import { renderMarkdown } from './markdown-renderer.js';
-import { MarkdownOutline } from './markdown-outline.js';
+import { renderMarkdown } from './markdown-renderer.ts';
+import { MarkdownOutline } from './markdown-outline.ts';
 import { MarkdownCheatsheet } from './markdown-cheatsheet.js';
-import { markdownFilename } from './document-files.js';
-import { downloadText } from '../../core/file-download.js';
+import { markdownFilename } from './document-files.ts';
+import { downloadText } from '../../core/file-download.ts';
 
 import { computed, h, ref } from 'vue';
 

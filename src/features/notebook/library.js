@@ -1,6 +1,6 @@
 import { Icon } from '../../components/icon.js';
 import { DeleteConfirmation } from './delete-confirmation.js';
-import { readMarkdownFile } from './document-files.js';
+import { readMarkdownFile } from './document-files.ts';
 import {
   countItems, createItem, deleteItem, findItem, MAX_DEPTH, MAX_ITEMS, MAX_NAME_LENGTH,
 } from './library-model.js';

@@ -2,7 +2,7 @@ import { onUnmounted, ref } from 'vue';
 
 // The generated HTML supplies the site root, including a Pages repository prefix.
 const basePath = new URL(document.baseURI).pathname;
-export function pageHref(path) {
+export function pageHref(path: string): string {
   return `${basePath}${path.slice(1)}`;
 }
 
@@ -11,7 +11,7 @@ function localPath() {
   return pathname.startsWith(basePath) ? `/${pathname.slice(basePath.length)}` : pathname;
 }
 
-export function useNavigation(onNavigate) {
+export function useNavigation(onNavigate: () => void) {
   const currentPath = ref(localPath());
 
   function syncLocation() {
@@ -19,7 +19,7 @@ export function useNavigation(onNavigate) {
     onNavigate();
   }
 
-  function navigate(event, path) {
+  function navigate(event: MouseEvent, path: string) {
     // Preserve native open-in-new-tab/window and modified-click behavior.
     if (event.defaultPrevented || event.button !== 0 || event.metaKey ||
         event.ctrlKey || event.shiftKey || event.altKey) return;

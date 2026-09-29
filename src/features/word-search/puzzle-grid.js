@@ -1,7 +1,7 @@
-import { lineCells } from './game-model.js';
+import { lineCells } from './game-model.ts';
 import { defaultDisplayOptions, displayStyles } from './display-options.js';
 import { useGridSizing } from './grid-sizing.js';
-import { wordOutline } from './word-outline.js';
+import { wordOutline } from './word-outline.ts';
 
 import { computed, h, nextTick, onDeactivated, ref, watch } from 'vue';
 

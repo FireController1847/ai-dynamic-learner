@@ -1,4 +1,4 @@
-import { MAX_CARD_TEXT_LENGTH, MAX_CARD_TITLE_LENGTH } from './card-model.js';
+import { MAX_CARD_TEXT_LENGTH, MAX_CARD_TITLE_LENGTH } from './card-model.ts';
 
 import { h } from 'vue';
 

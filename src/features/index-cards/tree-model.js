@@ -126,6 +126,6 @@ export function validateIndexCards(value) {
   }
   visit(value.items, 1);
 }
-import { createId, isValidId } from '../../core/ids.js';
-import { MAX_CARDS, validateCards } from './card-model.js';
+import { createId, isValidId } from '../../core/ids.ts';
+import { MAX_CARDS, validateCards } from './card-model.ts';
 import { validateDisplayOptions } from './display-options.js';

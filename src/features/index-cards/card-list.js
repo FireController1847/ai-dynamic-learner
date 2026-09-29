@@ -1,5 +1,5 @@
 import { Icon } from '../../components/icon.js';
-import { cardTitle } from './card-model.js';
+import { cardTitle } from './card-model.ts';
 
 import { h, nextTick, onMounted, ref, watch } from 'vue';
 

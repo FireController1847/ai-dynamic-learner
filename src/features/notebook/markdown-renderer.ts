@@ -2,6 +2,13 @@ import { Marked } from 'marked';
 import DOMPurify from 'dompurify';
 
 import { h } from 'vue';
+import type { VNodeChild } from 'vue';
+
+export interface MarkdownHeading {
+  id: string;
+  level: number;
+  title: string;
+}
 const parser = new Marked({ gfm: true, breaks: false, async: false });
 const allowedTags = [
   'a', 'abbr', 'b', 'blockquote', 'br', 'caption', 'code', 'dd', 'del', 'details',
@@ -16,14 +23,14 @@ const allowedAttributes = [
 ];
 const booleanAttributes = new Set(['checked', 'disabled', 'open', 'reversed']);
 
-function previewNode(node, headings) {
+function previewNode(node: Node, headings: MarkdownHeading[]): VNodeChild {
   if (node.nodeType === Node.TEXT_NODE) return node.textContent;
-  if (node.nodeType !== Node.ELEMENT_NODE) return null;
+  if (!(node instanceof Element)) return null;
 
   const tag = node.localName;
   // HTML inputs are display-only task checkboxes, never interactive form controls.
   if (tag === 'input' && node.getAttribute('type') !== 'checkbox') return null;
-  const props = {};
+  const props: Record<string, string | boolean> = {};
   for (const attribute of node.attributes) {
     // Copy only these DOM attributes: never let HTML supply Vue props or handlers.
     if (allowedAttributes.includes(attribute.name)) {
@@ -31,7 +38,7 @@ function previewNode(node, headings) {
     }
   }
   if (tag === 'input') props.disabled = true;
-  if (tag === 'a' && props.href && !props.href.startsWith('#')) {
+  if (tag === 'a' && typeof props.href === 'string' && !props.href.startsWith('#')) {
     props.target = '_blank';
     props.rel = 'noopener noreferrer';
   }
@@ -44,18 +51,18 @@ function previewNode(node, headings) {
   }
   if (/^h[1-6]$/.test(tag)) {
     props.id = `notebook-heading-${headings.length + 1}`;
-    props.tabindex = -1;
-    headings.push({ id: props.id, level: Number(tag[1]), title: node.textContent.trim() });
+    props.tabindex = '-1';
+    headings.push({ id: props.id, level: Number(tag[1]), title: (node.textContent ?? '').trim() });
   }
   const children = Array.from(node.childNodes, (child) => previewNode(child, headings)).filter((child) => child !== null);
   return h(tag, props, children);
 }
 
-export function renderMarkdown(markdown, headings = []) {
+export function renderMarkdown(markdown: string, headings: MarkdownHeading[] = []): VNodeChild[] {
   if (!markdown.trim()) {
     return [h('p', { class: 'markdown-preview-empty' }, 'Start typing Markdown to see the preview.')];
   }
-  const fragment = DOMPurify.sanitize(parser.parse(markdown), {
+  const fragment = DOMPurify.sanitize(parser.parse(markdown, { async: false }), {
     ALLOWED_TAGS: allowedTags,
     ALLOWED_ATTR: allowedAttributes,
     ALLOW_ARIA_ATTR: false,

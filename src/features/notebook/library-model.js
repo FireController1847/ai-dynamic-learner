@@ -1,5 +1,5 @@
-import { createId, isValidId } from '../../core/ids.js';
-import { DEFAULT_DOCUMENT_TYPE, createDocumentData, isDocumentType, validateDocumentData } from './document-types.js';
+import { createId, isValidId } from '../../core/ids.ts';
+import { DEFAULT_DOCUMENT_TYPE, createDocumentData, isDocumentType, validateDocumentData } from './document-types.ts';
 
 export const MAX_ITEMS = 5000;
 export const MAX_DEPTH = 32;

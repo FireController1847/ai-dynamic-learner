@@ -1,7 +1,7 @@
 import { Icon } from '../../components/icon.js';
-import { clearPreference, readNumberPreference, writeNumberPreference } from '../../core/ui-preferences.js';
+import { clearPreference, readNumberPreference, writeNumberPreference } from '../../core/ui-preferences.ts';
 import { DocumentBuilder } from './document-builder.js';
-import { getDocumentType } from './document-types.js';
+import { getDocumentType } from './document-types.ts';
 import { MarkdownEditor } from './markdown-editor.js';
 import { NotebookLibrary } from './library.js';
 import {

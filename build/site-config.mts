@@ -1,6 +1,12 @@
-import { featureDefinitions } from '../src/features/feature-definitions.js';
+import { featureDefinitions } from '../src/features/feature-definitions.ts';
 
-export function siteConfig(env = process.env) {
+export interface SiteConfig {
+  basePath: string;
+  baseUrl: URL | null;
+  routes: string[];
+}
+
+export function siteConfig(env: Record<string, string | undefined> = process.env): SiteConfig {
   const rawBase = env.PAGES_BASE_PATH ?? '';
   if (rawBase && (!rawBase.startsWith('/') || rawBase.startsWith('//') ||
       /[?#\\\s%]/.test(rawBase) || rawBase.split('/').some((part) => part === '.' || part === '..'))) {
@@ -9,7 +15,7 @@ export function siteConfig(env = process.env) {
   const basePath = `${rawBase.replace(/\/+$/, '')}/`;
 
   const rawBaseUrl = env.PAGES_BASE_URL ?? '';
-  let baseUrl = null;
+  let baseUrl: URL | null = null;
   if (rawBaseUrl) {
     baseUrl = new URL(rawBaseUrl);
     if (!['http:', 'https:'].includes(baseUrl.protocol) || baseUrl.search || baseUrl.hash) {

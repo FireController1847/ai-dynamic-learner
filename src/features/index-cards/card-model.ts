@@ -1,21 +1,32 @@
-import { createId, isValidId } from '../../core/ids.js';
+import { createId, isValidId } from '../../core/ids.ts';
+import { isRecord } from '../../core/validation.ts';
+
+export interface Card {
+  id: string;
+  title?: string;
+  backTitle?: string;
+  front: string;
+  back: string;
+}
+
+export type CardSide = 'front' | 'back';
 
 export const MAX_CARDS = 1000;
 export const MAX_CARD_TEXT_LENGTH = 2000;
 export const MAX_CARD_TITLE_LENGTH = 120;
 
-export function createCard(source = null) {
+export function createCard(source: Partial<Omit<Card, 'id'>> | null = null): Card {
   return {
     id: createId(), title: source?.title ?? '', backTitle: source?.backTitle ?? '',
     front: source?.front ?? '', back: source?.back ?? '',
   };
 }
 
-export function cardTitle(card, fallback = 'Untitled card', side = 'front') {
+export function cardTitle(card: Card, fallback = 'Untitled card', side: CardSide = 'front'): string {
   return (side === 'back' ? card.backTitle : card.title)?.trim() || fallback;
 }
 
-export function shuffledCardIds(cards) {
+export function shuffledCardIds(cards: readonly Pick<Card, 'id'>[]): string[] {
   const ids = cards.map((card) => card.id);
   for (let index = ids.length - 1; index > 0; index -= 1) {
     const other = Math.floor(Math.random() * (index + 1));
@@ -24,12 +35,13 @@ export function shuffledCardIds(cards) {
   return ids;
 }
 
-export function validateCards(cards, ids) {
+export function validateCards(cards: unknown, ids: Set<string>): asserts cards is Card[] {
   if (!Array.isArray(cards) || cards.length > MAX_CARDS) {
     throw new Error(`A workspace supports up to ${MAX_CARDS} cards.`);
   }
-  for (const card of cards) {
-    if (!card || !isValidId(card.id) || ids.has(card.id) ||
+  const entries: unknown[] = cards;
+  for (const card of entries) {
+    if (!isRecord(card) || !isValidId(card.id) || ids.has(card.id) ||
         Object.keys(card).some((key) => !['id', 'title', 'backTitle', 'front', 'back'].includes(key)) ||
         ['title', 'backTitle'].some((key) => card[key] !== undefined &&
           (typeof card[key] !== 'string' || card[key].length > MAX_CARD_TITLE_LENGTH)) ||

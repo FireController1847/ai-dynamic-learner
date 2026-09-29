@@ -1,6 +1,9 @@
 import { h } from 'vue';
+import type { VNode } from 'vue';
 
-function readableAngle(angle) {
+export interface GridPoint { x: number; y: number }
+
+function readableAngle(angle: number): number {
   let value = ((angle % 360) + 360) % 360;
   if (value > 180) value -= 360;
   if (value > 90) value -= 180;
@@ -9,7 +12,8 @@ function readableAngle(angle) {
 }
 
 // One rounded capsule per word, including diagonal and overlapping words.
-export function wordOutline(start, end, size, key, kind, point = null, word = '', boardRotation = 0) {
+export function wordOutline(start: number, end: number, size: number, key: string | number,
+  kind: string, point: GridPoint | null = null, word = '', boardRotation = 0): VNode {
   const x = start % size + 0.5;
   const y = Math.floor(start / size) + 0.5;
   const dx = (point?.x ?? end % size + 0.5) - x;

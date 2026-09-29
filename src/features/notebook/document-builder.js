@@ -1,4 +1,4 @@
-import { DOCUMENT_TYPES } from './document-types.js';
+import { DOCUMENT_TYPES } from './document-types.ts';
 
 import { h } from 'vue';
 
