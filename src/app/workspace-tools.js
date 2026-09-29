@@ -35,10 +35,18 @@ export const WorkspaceTools = {
       }
     }
 
-    function download() {
+    async function download() {
+      busy.value = true;
       error.value = '';
-      try { props.workspace.downloadBackup(); }
-      catch (problem) { error.value = problem.message || 'The backup could not be downloaded.'; }
+      message.value = '';
+      try {
+        await props.workspace.downloadBackup();
+        message.value = 'Backup downloaded.';
+      } catch (problem) {
+        error.value = problem.message || 'The backup could not be downloaded.';
+      } finally {
+        busy.value = false;
+      }
     }
 
     async function replace() {
@@ -61,19 +69,22 @@ export const WorkspaceTools = {
         h('button', {
           type: 'button',
           class: 'quiet-button',
-          disabled: !props.workspace.ready.value,
+          disabled: busy.value || !props.workspace.ready.value,
           onClick: download,
         }, [
-          h(Icon, { name: 'download' }), 'Download backup',
+          h(Icon, { name: 'download' }), busy.value ? 'Working…' : 'Download backup',
         ]),
         h('button', {
           type: 'button',
           class: 'quiet-button',
-          disabled: busy.value || !props.workspace.ready.value,
+          disabled: busy.value || !props.workspace.storageAvailable.value,
           onClick: () => fileInput.value.click(),
         }, [h(Icon, { name: 'upload' }), busy.value ? 'Reading backup…' : 'Upload backup']),
         h('input', {
-          ref: fileInput, type: 'file', accept: '.json,application/json', hidden: true,
+          ref: fileInput,
+          type: 'file',
+          accept: '.bak,.json,application/gzip,application/json',
+          hidden: true,
           onChange: upload,
         }),
       ]),
