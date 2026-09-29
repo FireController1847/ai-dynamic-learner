@@ -1,15 +1,22 @@
 import { createId, isValidId } from '../../core/ids.js';
+import { DEFAULT_DOCUMENT_TYPE, createDocumentData, isDocumentType, validateDocumentData } from './document-types.js';
 
 export const MAX_ITEMS = 5000;
 export const MAX_DEPTH = 32;
 export const MAX_NAME_LENGTH = 120;
 export const MAX_DOCUMENTS = 2000;
 
-export function createItem(kind) {
+export function createItem(kind, documentType = DEFAULT_DOCUMENT_TYPE) {
   const id = createId();
   return kind === 'group'
     ? { id, kind, name: 'New group', children: [] }
-    : { id, kind: 'document', name: 'New document', markdown: '' };
+    : {
+      id,
+      kind: 'document',
+      name: 'New document',
+      type: documentType,
+      data: createDocumentData(documentType),
+    };
 }
 
 export function findItem(items, id, parentId = null, depth = 1) {
@@ -32,6 +39,30 @@ export function countItems(items) {
 export function countDocuments(items) {
   return items.reduce((count, item) => count +
     (item.kind === 'group' ? countDocuments(item.children) : 1), 0);
+}
+
+export function deleteItem(items, id) {
+  const found = findItem(items, id);
+  if (!found) return null;
+  return found.siblings.splice(found.index, 1)[0];
+}
+
+export function insertDocument(items, target, documentType) {
+  if (countItems(items) >= MAX_ITEMS || countDocuments(items) >= MAX_DOCUMENTS) {
+    throw new Error(`The Notebook supports ${MAX_ITEMS} library items and ${MAX_DOCUMENTS} documents.`);
+  }
+  const selected = target?.selectedId ? findItem(items, target.selectedId) : null;
+  if (target?.selectedId && !selected) throw new Error('The selected destination no longer exists. Choose another location.');
+  if (selected?.item.kind === 'group' && selected.depth >= MAX_DEPTH) {
+    throw new Error(`Notebook entries can be at most ${MAX_DEPTH} levels deep.`);
+  }
+  const item = createItem('document', documentType);
+
+  if (selected?.item.kind === 'group') selected.item.children.unshift(item);
+  else if (selected) selected.siblings.splice(selected.index + 1, 0, item);
+  else items.unshift(item);
+
+  return item;
 }
 
 function subtreeDepth(item) {
@@ -125,10 +156,26 @@ export function validateNotebook(value) {
         }
         visit(item.children, depth + 1);
       } else {
-        if (Object.keys(item).some((key) => !['id', 'kind', 'name', 'markdown'].includes(key)) ||
-            typeof item.markdown !== 'string') {
+        // Version-1 Notebook documents originally stored Markdown directly on the record.
+        // Normalize them in memory so older local data and backups continue to load.
+        if (!Object.hasOwn(item, 'type') && !Object.hasOwn(item, 'data') &&
+            Object.keys(item).every((key) => ['id', 'kind', 'name', 'markdown'].includes(key)) &&
+            typeof item.markdown === 'string') {
+          item.type = DEFAULT_DOCUMENT_TYPE;
+          item.data = { markdown: item.markdown };
+          delete item.markdown;
+        }
+
+        if (item.type === 'grid' && item.data && typeof item.data === 'object' &&
+            !Array.isArray(item.data) && Object.keys(item.data).length === 0) {
+          item.type = 'graph';
+        }
+
+        if (Object.keys(item).some((key) => !['id', 'kind', 'name', 'type', 'data'].includes(key)) ||
+            !isDocumentType(item.type)) {
           throw new Error('A Notebook document contains unsupported data.');
         }
+        validateDocumentData(item.type, item.data);
         documentCount += 1;
         if (documentCount > MAX_DOCUMENTS) {
           throw new Error(`A workspace supports up to ${MAX_DOCUMENTS} Notebook documents.`);

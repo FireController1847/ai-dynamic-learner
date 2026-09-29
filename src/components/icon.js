@@ -17,6 +17,7 @@ const paths = {
   'panel-close': 'M3 3h18v18H3ZM8 3v18m9-14-4 5 4 5',
   'panel-open': 'M3 3h18v18H3ZM8 3v18m5-14 4 5-4 5',
   download: 'M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5',
+  loading: 'M21 12a9 9 0 1 1-9-9',
   upload: 'M12 16V4m-5 5 5-5 5 5M4 16v5h16v-5',
 };
 
