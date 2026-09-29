@@ -80,8 +80,14 @@ export const PuzzleGame = {
       const cells = lineCells(start, end, props.item.puzzle.size);
       const text = wordOnLine(game.value.rows, start, end);
       clearAttempt();
-      attempt.value = { id: ++attemptId, cells: cells.length ? cells : [start, end], matched: Boolean(match) };
-      attemptTimer = setTimeout(clearAttempt, match ? 230 : 1800);
+      attempt.value = {
+        id: ++attemptId,
+        start,
+        end,
+        cells: cells.length ? cells : [start, end],
+        matched: Boolean(match),
+      };
+      attemptTimer = setTimeout(clearAttempt, match ? 230 : 2250);
       const recognized = text ? `Selected “${text}”. ` : '';
       if (!match) {
         message.value = text ? `${recognized}No matching word. Try again.`
