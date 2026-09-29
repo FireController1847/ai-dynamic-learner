@@ -72,7 +72,7 @@ export function useWorkspace() {
   let savedVersion = 0;
   let queuedVersion = -1;
   let queuedOperation = Promise.resolve();
-  let saveChain = Promise.resolve();
+  const pendingWrites = new Set();
 
   function clearSaveTimer() {
     if (saveTimer === null) return;
@@ -87,17 +87,26 @@ export function useWorkspace() {
   function queueSnapshot(snapshot, version) {
     if (queuedVersion === version) return queuedOperation;
 
-    const operation = saveChain.then(() => storage.saveWorkspace(snapshot));
+    // Post immediately. The Worker serializes operations in message order, which
+    // lets lifecycle flushes enter its queue before the page has a chance to close.
+    const operation = storage.saveWorkspace(snapshot);
+    pendingWrites.add(operation);
     queuedVersion = version;
     queuedOperation = operation.finally(() => {
+      pendingWrites.delete(operation);
       if (queuedVersion === version) queuedVersion = -1;
     });
-    saveChain = queuedOperation.catch(() => {});
 
     return queuedOperation.then(() => {
       savedVersion = Math.max(savedVersion, version);
       if (mutationVersion === version) storageProblem.value = '';
     });
+  }
+
+  async function waitForPendingWrites() {
+    while (pendingWrites.size) {
+      await Promise.allSettled([...pendingWrites]);
+    }
   }
 
   async function persistNow({ throwOnError = false } = {}) {
@@ -106,7 +115,7 @@ export function useWorkspace() {
 
     const version = mutationVersion;
     if (version <= savedVersion) {
-      await saveChain;
+      await waitForPendingWrites();
       return;
     }
 
@@ -207,8 +216,8 @@ export function useWorkspace() {
     savingEnabled = false;
     clearSaveTimer();
     try {
-      // Drain any snapshot already posted before placing the replacement after it.
-      await saveChain;
+      // Drain snapshots already posted, then place the replacement last.
+      await waitForPendingWrites();
       await storage.saveWorkspace(replacement);
 
       state.value = replacement;
@@ -232,7 +241,7 @@ export function useWorkspace() {
   async function downloadBackup() {
     if (!ready.value) throw new Error('The workspace is not available to back up.');
     await persistNow({ throwOnError: true });
-    await saveChain;
+    await waitForPendingWrites();
 
     const bytes = await storage.exportBackup();
     const url = URL.createObjectURL(new Blob([bytes], { type: 'application/gzip' }));
