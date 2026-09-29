@@ -120,15 +120,17 @@ export function workspaceToRows(workspace) {
       row_index: rowIndex,
       letters,
     }));
-    item.game.placements.forEach((placement) => rows.wordSearchPlacements.push({
+    item.game.placements.forEach((placement, placementOrder) => rows.wordSearchPlacements.push({
       item_id: item.id,
       word: placement.word,
+      sort_order: placementOrder,
       start_cell: placement.start,
       end_cell: placement.end,
     }));
-    item.game.found.forEach((found) => rows.wordSearchFound.push({
+    item.game.found.forEach((found, foundOrder) => rows.wordSearchFound.push({
       item_id: item.id,
       word: found.word,
+      sort_order: foundOrder,
       start_cell: found.start,
       end_cell: found.end,
     }));
@@ -231,12 +233,16 @@ export function rowsToWorkspace(rows) {
         rows: (gameRowsByItem.get(row.id) ?? [])
           .sort((left, right) => left.row_index - right.row_index)
           .map((entry) => entry.letters),
-        placements: (placementsByItem.get(row.id) ?? []).map((entry) => ({
-          word: entry.word, start: entry.start_cell, end: entry.end_cell,
-        })),
-        found: (foundByItem.get(row.id) ?? []).map((entry) => ({
-          word: entry.word, start: entry.start_cell, end: entry.end_cell,
-        })),
+        placements: (placementsByItem.get(row.id) ?? [])
+          .sort((left, right) => left.sort_order - right.sort_order)
+          .map((entry) => ({
+            word: entry.word, start: entry.start_cell, end: entry.end_cell,
+          })),
+        found: (foundByItem.get(row.id) ?? [])
+          .sort((left, right) => left.sort_order - right.sort_order)
+          .map((entry) => ({
+            word: entry.word, start: entry.start_cell, end: entry.end_cell,
+          })),
       };
     }
     return item;
