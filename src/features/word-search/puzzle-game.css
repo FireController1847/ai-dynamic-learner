@@ -307,6 +307,10 @@
   from { transform: rotate(0deg); }
   to { transform: rotate(90deg); }
 }
+@media (prefers-reduced-motion: reduce) {
+  .word-search-board-rotator.is-rotating,
+  .word-search-rotate-button.is-rotating .ui-icon { animation: none; }
+}
 .word-search-restart-review { padding: 16px; border: 1px solid var(--border-color); border-radius: var(--radius); background: var(--surface-subtle); }
 .word-search-restart-review p { margin: 0 0 12px; }
 .word-search-generation-error { color: var(--danger); }
