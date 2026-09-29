@@ -152,10 +152,19 @@ export function useWorkspace() {
     if (savingEnabled) persistNow();
   }
 
+  function warnIfUnsaved(event) {
+    if (!savingEnabled || mutationVersion <= savedVersion) return;
+    requestLifecycleFlush();
+    event.preventDefault();
+    // Required by older browsers; modern browsers show their own generic text.
+    event.returnValue = '';
+  }
+
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') requestLifecycleFlush();
   });
   window.addEventListener('pagehide', requestLifecycleFlush);
+  window.addEventListener('beforeunload', warnIfUnsaved);
 
   async function initialize() {
     try {
