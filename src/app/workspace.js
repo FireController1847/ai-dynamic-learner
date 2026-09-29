@@ -119,7 +119,9 @@ export function useWorkspace() {
       return;
     }
 
-    const snapshot = structuredClone(toRaw(state.value));
+    // postMessage() performs the single structured clone which freezes this
+    // version for the Worker; avoid cloning a large workspace twice.
+    const snapshot = toRaw(state.value);
     try {
       await queueSnapshot(snapshot, version);
     } catch (problem) {
