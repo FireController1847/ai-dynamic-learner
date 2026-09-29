@@ -221,13 +221,6 @@ function migrateIndexCards(raw, report) {
         return [];
       }
       itemCount += 1;
-      if (itemCount >= MAX_WORD_SEARCH_ITEMS ||
-          (kind === 'word-search' && searchCount >= MAX_WORD_SEARCHES)) {
-        report.skipped += 1;
-        return [];
-      }
-      itemCount += 1;
-      if (kind === 'word-search') searchCount += 1;
       const id = claimId(source.id, ids, report);
       report.recovered += 1;
       if (kind === 'group') {
@@ -366,6 +359,13 @@ function migrateWordSearch(raw, report) {
         return [];
       }
 
+      if (itemCount >= MAX_WORD_SEARCH_ITEMS ||
+          (kind === 'word-search' && searchCount >= MAX_WORD_SEARCHES)) {
+        report.skipped += 1;
+        return [];
+      }
+      itemCount += 1;
+      if (kind === 'word-search') searchCount += 1;
       const id = claimId(source.id, ids, report);
       report.recovered += 1;
       if (kind === 'group') {
