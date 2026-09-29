@@ -10,7 +10,7 @@ import {
 
 const { ref, toRaw, watch } = window.Vue;
 const MAX_LEGACY_JSON_BACKUP_BYTES = 32 * 1024 * 1024;
-const SAVE_DELAY_MS = 250;
+const SAVE_DELAY_MS = 500;
 
 function emptyWorkspace() {
   return {
