@@ -8,6 +8,7 @@ const BACKUP_DATABASE_FILENAME = '/dynamic-learner-backup.sqlite3';
 
 let databasePromise = null;
 let backupPoolPromise = null;
+let deltaRecoveryRequired = false;
 
 async function openDatabase() {
   if (databasePromise) return databasePromise;
@@ -101,8 +102,17 @@ async function handle(type, payload) {
     case 'load':
       return loadWorkspaceFromDatabase(db, workspaceId);
     case 'save-delta':
-      applyWorkspaceDelta(db, payload.delta, workspaceId);
-      return null;
+      if (deltaRecoveryRequired && !payload.delta?.replace) {
+        throw new Error('A previous SQLite save failed; a complete workspace retry is required.');
+      }
+      try {
+        applyWorkspaceDelta(db, payload.delta, workspaceId);
+        deltaRecoveryRequired = false;
+        return null;
+      } catch (problem) {
+        deltaRecoveryRequired = true;
+        throw problem;
+      }
     case 'export-backup':
       return gzipCompress(await pool.exportFile(DATABASE_FILENAME));
     case 'inspect-backup':
