@@ -138,7 +138,7 @@ export const PuzzleGame = {
       rotationTimer = setTimeout(() => {
         displayedTurns.value = boardTurns.value;
         rotating.value = false;
-      }, 680);
+      }, 820);
       message.value = `Board rotated to ${props.item.boardRotation}°.`;
     }
 
@@ -197,7 +197,8 @@ export const PuzzleGame = {
             revealed: revealed.value, hint: hint.value, onSelect: select,
             options: props.options,
             attempt: attempt.value,
-            rotationTurns: displayedTurns.value,
+            rotationTurns: boardTurns.value,
+            rotationFrom: displayedTurns.value,
             rotating: rotating.value,
           }),
           h('aside', {
