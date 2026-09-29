@@ -36,7 +36,9 @@ const App = {
     let focusContentOnClose = false;
     const { currentPath, navigate } = useNavigation(onNavigate);
     const activeFeature = computed(() => features.find((feature) => feature.path === currentPath.value));
-    const tipsFeature = computed(() => activeFeature.value ?? (currentPath.value === '/' ? homeTipsFeature : null));
+    const tipsFeature = computed(() => activeFeature.value
+      ? (workspace.ready.value ? activeFeature.value : null)
+      : (currentPath.value === '/' ? homeTipsFeature : null));
     const activeLogoSrc = computed(() => featureImageSrc(activeFeature.value));
 
     function closeSidebar() {
@@ -115,7 +117,7 @@ const App = {
         footer: () => h(WorkspaceTools, { workspace }),
       }),
       h(TipsExperience, { ref: tipsExperience, feature: tipsFeature.value }),
-      workspace.storageProblem.value ? h('p', {
+      workspace.storageProblem.value && (!activeFeature.value || workspace.ready.value) ? h('p', {
         class: 'workspace-storage-warning', role: 'alert',
       }, workspace.storageProblem.value) : null,
       h('div', { class: 'app-layout' }, [
@@ -127,13 +129,30 @@ const App = {
           tabindex: -1,
         }, [
           currentPath.value === '/' ? h(HomePage, { onNavigate: navigate }) : null,
-          h(KeepAlive, { key: workspace.revision.value }, {
-            default: () => activeFeature.value ? h(activeFeature.value.component, {
-              key: activeFeature.value.id,
-              title: activeFeature.value.label,
-              model: workspace.state.value.features[activeFeature.value.id],
-            }) : null,
-          }),
+          activeFeature.value && !workspace.initialized.value
+            ? h('p', { class: 'workspace-loading', role: 'status' }, 'Loading workspace…')
+            : activeFeature.value && !workspace.ready.value
+              ? h('section', {
+                class: 'workspace-unavailable',
+                role: 'alert',
+                'aria-labelledby': 'workspace-unavailable-heading',
+              }, [
+                h('h2', { id: 'workspace-unavailable-heading' }, 'Workspace unavailable'),
+                h('p', workspace.storageProblem.value ||
+                  'Dynamic Learner could not safely open the saved workspace.'),
+                h('button', {
+                  type: 'button',
+                  class: 'quiet-button',
+                  onClick: () => window.location.reload(),
+                }, 'Reload'),
+              ])
+              : h(KeepAlive, { key: workspace.revision.value }, {
+                default: () => activeFeature.value ? h(activeFeature.value.component, {
+                  key: activeFeature.value.id,
+                  title: activeFeature.value.label,
+                  model: workspace.state.value.features[activeFeature.value.id],
+                }) : null,
+              }),
         ]),
       ]),
     ]);

@@ -121,6 +121,22 @@ body:has(.navigation-drawer[open]) { overflow: hidden; }
 .workspace-message, .workspace-error { margin: 8px 12px; font-size: 12px; }
 .workspace-message:empty { display: none; }
 .workspace-error { color: var(--danger); }
+.workspace-loading,
+.workspace-unavailable {
+  align-self: center;
+  width: min(560px, calc(100% - 32px));
+  margin: auto;
+}
+.workspace-loading { color: var(--text-secondary); text-align: center; }
+.workspace-unavailable {
+  padding: 20px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius);
+  background: var(--page-background);
+  box-shadow: var(--shadow-overlay);
+}
+.workspace-unavailable h2 { margin-top: 0; }
+.workspace-unavailable p { color: var(--text-secondary); overflow-wrap: anywhere; }
 
 @media (pointer: coarse) {
   .navigation-link { min-height: 44px; }
