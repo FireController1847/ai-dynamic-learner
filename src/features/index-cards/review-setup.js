@@ -1,4 +1,4 @@
-const { h, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref } = window.Vue;
+import { h, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref } from 'vue';
 
 export const ReviewSetup = {
   name: 'ReviewSetup',

@@ -1,11 +1,19 @@
 import { createServer } from 'node:http';
-import { readFile, realpath } from 'node:fs/promises';
+import { readFile, realpath, stat } from 'node:fs/promises';
 import { dirname, extname, isAbsolute, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { featureDefinitions } from './src/features/feature-definitions.js';
 
-const root = await realpath(dirname(fileURLToPath(import.meta.url)));
-const pagePaths = new Set(['/', ...featureDefinitions.map((feature) => feature.path)]);
+const root = await realpath(resolve(dirname(fileURLToPath(import.meta.url)), 'dist')).catch(() => {
+  throw new Error('No dist/ directory found. Run npm run build before npm run preview.');
+});
+const index = await readFile(resolve(root, 'index.html'), 'utf8');
+const notFound = await readFile(resolve(root, '404.html'));
+const baseMatch = index.match(/<base\s+href=(?:"([^"]+)"|'([^']+)'|([^\s>]+))/i);
+const encodedBase = baseMatch?.[1] ?? baseMatch?.[2] ?? baseMatch?.[3];
+if (!encodedBase) throw new Error('The built index.html is missing its base path. Run npm run build.');
+const basePath = encodedBase.replace(/&(amp|lt|gt|quot|#39);/g, (_, name) => ({
+  amp: '&', lt: '<', gt: '>', quot: '"', '#39': "'",
+}[name]));
 const host = process.env.HOST ?? '127.0.0.1';
 const port = Number(process.env.PORT ?? 3000);
 
@@ -63,23 +71,41 @@ const server = createServer(async (request, response) => {
     return;
   }
 
-  if (!pathname.endsWith('/') && pagePaths.has(`${pathname}/`)) {
-    response.writeHead(308, { Location: `${pathname}/${requestUrl.search}` });
+  if (basePath !== '/' && pathname === basePath.slice(0, -1)) {
+    response.writeHead(308, { Location: `${basePath}${requestUrl.search}` });
     response.end();
     return;
   }
 
-  const path = resolve(root, `.${pagePaths.has(pathname) ? '/src/html/index.html' : pathname}`);
+  if (!pathname.startsWith(basePath)) {
+    reply(404, 'Not found');
+    return;
+  }
+
+  const path = resolve(root, pathname.slice(basePath.length));
   if (!isInsideRoot(path)) {
     reply(403, 'Forbidden');
     return;
   }
 
   try {
-    const canonicalPath = await realpath(path);
+    let canonicalPath = await realpath(path);
     if (!isInsideRoot(canonicalPath)) {
       reply(403, 'Forbidden');
       return;
+    }
+
+    if ((await stat(canonicalPath)).isDirectory()) {
+      canonicalPath = await realpath(resolve(canonicalPath, 'index.html'));
+      if (!isInsideRoot(canonicalPath)) {
+        reply(403, 'Forbidden');
+        return;
+      }
+      if (!pathname.endsWith('/')) {
+        response.writeHead(308, { Location: `${requestUrl.pathname}/${requestUrl.search}` });
+        response.end();
+        return;
+      }
     }
 
     const content = await readFile(canonicalPath);
@@ -91,7 +117,8 @@ const server = createServer(async (request, response) => {
     response.end(request.method === 'HEAD' ? undefined : content);
   } catch (error) {
     if (['ENOENT', 'ENOTDIR', 'EISDIR'].includes(error.code)) {
-      reply(404, 'Not found');
+      response.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
+      response.end(request.method === 'HEAD' ? undefined : notFound);
     } else if (['EACCES', 'EPERM'].includes(error.code)) {
       reply(403, 'Forbidden');
     } else {
@@ -104,5 +131,5 @@ const server = createServer(async (request, response) => {
 server.listen(port, host, () => {
   const address = server.address();
   const displayHost = host.includes(':') ? `[${host}]` : host;
-  console.log(`Local server: http://${displayHost}:${address.port}`);
+  console.log(`Build preview: http://${displayHost}:${address.port}${basePath}`);
 });

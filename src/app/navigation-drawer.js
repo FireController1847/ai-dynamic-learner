@@ -1,6 +1,6 @@
 import { Icon } from '../components/icon.js';
 
-const { h, Transition } = window.Vue;
+import { h, Transition } from 'vue';
 
 export const NavigationDrawer = {
   name: 'NavigationDrawer',

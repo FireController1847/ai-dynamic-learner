@@ -4,7 +4,7 @@ import { CardList } from './card-list.js';
 import { CardPaper } from './card-paper.js';
 import { ReviewSetup } from './review-setup.js';
 
-const { computed, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref, watch } = window.Vue;
+import { computed, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue';
 
 const MIN_CARD_LIST_WIDTH = 160;
 const MAX_CARD_LIST_WIDTH = 480;

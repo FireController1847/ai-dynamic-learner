@@ -9,7 +9,7 @@ import {
   MAX_DOCUMENTS, MAX_ITEMS, moveItem,
 } from './library-model.js';
 
-const { computed, h, nextTick, onBeforeUnmount, onMounted, ref, watch } = window.Vue;
+import { computed, h, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 const MIN_LIBRARY_WIDTH = 248;
 const MAX_LIBRARY_WIDTH = 640;

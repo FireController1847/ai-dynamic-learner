@@ -1,5 +1,5 @@
 const socialImage = Object.freeze({
-  path: 'src/assets/dynamic-learner-social-v2.jpg',
+  path: 'assets/dynamic-learner-social-v2.jpg',
   type: 'image/jpeg',
   width: 1200,
   height: 630,

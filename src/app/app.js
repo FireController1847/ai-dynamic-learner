@@ -1,3 +1,4 @@
+import '../styles/index.css';
 import { appConfig } from './app-config.js';
 import { features } from '../features/feature-registry.js';
 import { NavigationDrawer } from './navigation-drawer.js';
@@ -8,9 +9,9 @@ import { HomePage } from './home-page.js';
 import { TipsExperience } from './tips.js';
 import { Icon } from '../components/icon.js';
 
-const { computed, createApp, h, KeepAlive, nextTick, ref } = window.Vue;
+import { computed, createApp, h, KeepAlive, nextTick, ref } from 'vue';
 
-const appLogoSrc = new URL('../assets/dynamic-learner.png', import.meta.url).href;
+const appLogoSrc = new URL('assets/dynamic-learner.png', document.baseURI).href;
 const homeTipsFeature = Object.freeze({ id: 'home', label: appConfig.name });
 
 const featureImageSrc = (feature) => feature?.image

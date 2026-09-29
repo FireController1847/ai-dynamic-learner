@@ -5,7 +5,7 @@ import { MarkdownCheatsheet } from './markdown-cheatsheet.js';
 import { markdownFilename } from './document-files.js';
 import { downloadText } from '../../core/file-download.js';
 
-const { computed, h, ref } = window.Vue;
+import { computed, h, ref } from 'vue';
 
 const MIN_PANEL_PERCENT = 24;
 const MAX_PANEL_PERCENT = 76;

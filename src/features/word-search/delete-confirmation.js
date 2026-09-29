@@ -1,7 +1,7 @@
 import { Icon } from '../../components/icon.js';
 import { countItems, countWordSearches } from './library-model.js';
 
-const { h, onBeforeUnmount, onDeactivated, onMounted, ref } = window.Vue;
+import { h, onBeforeUnmount, onDeactivated, onMounted, ref } from 'vue';
 
 export const DeleteConfirmation = {
   name: 'WordSearchDeleteConfirmation',

@@ -6,7 +6,7 @@ import {
   countWordSearches,
 } from '../features/word-search/library-model.js';
 
-const { h, ref, shallowRef } = window.Vue;
+import { h, ref, shallowRef } from 'vue';
 
 export const WorkspaceTools = {
   name: 'WorkspaceTools',

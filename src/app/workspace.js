@@ -2,7 +2,7 @@ import { validateNotebook } from '../features/notebook/library-model.js';
 import { validateIndexCards } from '../features/index-cards/tree-model.js';
 import { validateWordSearch } from '../features/word-search/library-model.js';
 
-const { ref, watch } = window.Vue;
+import { ref, watch } from 'vue';
 const STORAGE_KEY = 'dynamic-learner.workspace.v1';
 const MAX_BACKUP_BYTES = 32 * 1024 * 1024;
 

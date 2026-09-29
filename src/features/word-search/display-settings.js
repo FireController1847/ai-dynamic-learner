@@ -1,7 +1,7 @@
 import { DISPLAY_FIELDS, defaultDisplayOptions } from './display-options.js';
 import { PuzzleGrid } from './puzzle-grid.js';
 
-const { h, onMounted, onBeforeUnmount, onDeactivated, ref } = window.Vue;
+import { h, onMounted, onBeforeUnmount, onDeactivated, ref } from 'vue';
 const preview = {
   rows: ['TACROW', 'ORIVEO', 'WONDER', 'LEAFSD', 'MOSSAS', 'FERNXT'],
   found: [{ word: 'CAT', start: 2, end: 0 }, { word: 'WONDER', start: 12, end: 17 }],

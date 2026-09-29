@@ -5,7 +5,7 @@ import { PuzzleGrid } from './puzzle-grid.js';
 import { Icon } from '../../components/icon.js';
 import { defaultDisplayOptions, displayStyles } from './display-options.js';
 
-const { computed, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref } = window.Vue;
+import { computed, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref } from 'vue';
 
 export const PuzzleGame = {
   name: 'PuzzleGame',

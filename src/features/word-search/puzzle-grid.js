@@ -3,7 +3,7 @@ import { defaultDisplayOptions, displayStyles } from './display-options.js';
 import { useGridSizing } from './grid-sizing.js';
 import { wordOutline } from './word-outline.js';
 
-const { computed, h, nextTick, onDeactivated, ref, watch } = window.Vue;
+import { computed, h, nextTick, onDeactivated, ref, watch } from 'vue';
 
 export const PuzzleGrid = {
   name: 'PuzzleGrid',

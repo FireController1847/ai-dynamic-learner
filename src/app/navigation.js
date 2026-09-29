@@ -1,7 +1,7 @@
-const { onUnmounted, ref } = window.Vue;
+import { onUnmounted, ref } from 'vue';
 
-// Derive the deployed root from this module, including a Pages repository prefix.
-const basePath = new URL('../../', import.meta.url).pathname;
+// The generated HTML supplies the site root, including a Pages repository prefix.
+const basePath = new URL(document.baseURI).pathname;
 export function pageHref(path) {
   return `${basePath}${path.slice(1)}`;
 }

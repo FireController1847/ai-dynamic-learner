@@ -1,4 +1,4 @@
-const { h } = window.Vue;
+import { h } from 'vue';
 
 export const MarkdownOutline = {
   name: 'MarkdownOutline',

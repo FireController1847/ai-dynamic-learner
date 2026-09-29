@@ -3,7 +3,7 @@ import { pageHref } from './navigation.js';
 import { featureDefinitions } from '../features/feature-definitions.js';
 import { Icon } from '../components/icon.js';
 
-const { h, onMounted, onBeforeUnmount, ref } = window.Vue;
+import { h, onMounted, onBeforeUnmount, ref } from 'vue';
 
 export const HomePage = {
   name: 'HomePage',

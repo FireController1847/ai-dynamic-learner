@@ -64,15 +64,25 @@ The latest published GitHub Pages snapshot is available here:
 
 GitHub Pages is deployed manually, so the published site may occasionally lag behind the latest commit on `main`.
 
-To run the current source locally, install a current Node.js LTS release and run:
+To run the current source locally, install Node.js 24 or newer and run:
 
 ```powershell
+npm ci
 npm start
 ```
 
 Then open <http://127.0.0.1:3000>.
 
-There is no application build step and no `npm install` is currently required. The local Node server uses built-in modules, while the browser loads Vue 3.5.13 from jsDelivr at runtime. An internet connection is therefore required for Vue to load.
+The webpack development server rebuilds and reloads the page as source files change. Vue, Marked, and DOMPurify are bundled locally; loading the application does not require a runtime CDN connection. Installing dependencies requires network access.
+
+To create and preview a production build:
+
+```powershell
+npm run build
+npm run preview
+```
+
+The build writes the complete static site to `dist/`. GitHub Actions builds this output for each manual deployment, so generated files do not need to be committed and no separate deployment branch is needed.
 
 To use a different address or port in PowerShell:
 
@@ -96,12 +106,12 @@ More detail about the saved format is available in [`docs/workspace-data.md`](do
 
 Dynamic Learner deliberately keeps its runtime simple:
 
-- Vue 3 is loaded directly in the browser.
-- JavaScript uses native ES modules.
-- `server.mjs` provides the local static server.
-- There is no bundler, TypeScript compilation, or Vue single-file-component build pipeline.
+- Vue 3 and other browser dependencies are installed through npm and bundled with webpack.
+- Source JavaScript uses ES modules and plain Vue components, without TypeScript or single-file component compilation.
+- `webpack.config.mjs` owns the development server and production build.
+- `server.mjs` previews only the generated `dist/` site.
 - Features live under `src/features`; shared application composition lives under `src/app`.
-- GitHub Pages preparation copies the browser-ready application into `dist/` and creates direct-link entry points without compiling the source.
+- GitHub Pages uses the webpack production build, with direct-link entry points and metadata for every feature route.
 
 For technical structure, see [architecture](docs/architecture.md). For where a particular kind of change belongs, see [change routing](docs/change-routing.md). Deployment details live in [GitHub Pages setup](docs/github-pages.md).
 

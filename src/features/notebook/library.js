@@ -5,7 +5,7 @@ import {
   countItems, createItem, deleteItem, findItem, MAX_DEPTH, MAX_ITEMS, MAX_NAME_LENGTH,
 } from './library-model.js';
 
-const { h, nextTick, onBeforeUnmount, onDeactivated, ref } = window.Vue;
+import { h, nextTick, onBeforeUnmount, onDeactivated, ref } from 'vue';
 
 export const NotebookLibrary = {
   name: 'NotebookLibrary',

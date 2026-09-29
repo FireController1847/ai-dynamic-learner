@@ -7,7 +7,7 @@ import { canMove, countCards, createItem, deleteItem, findItem, groupOptions, mo
 import { createCard } from './card-model.js';
 import { clearPreference, readNumberPreference, writeNumberPreference } from '../../core/ui-preferences.js';
 
-const { computed, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref, watch } = window.Vue;
+import { computed, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue';
 
 const MIN_LIBRARY_WIDTH = 248;
 const MAX_LIBRARY_WIDTH = 640;

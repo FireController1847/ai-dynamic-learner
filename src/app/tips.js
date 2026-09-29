@@ -1,6 +1,6 @@
 import { tipsCatalog } from './tips-content.js';
 
-const { computed, h, nextTick, onBeforeUnmount, onMounted, ref, watch } = window.Vue;
+import { computed, h, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 const STORAGE_KEY = 'dynamic-learner.tips.v1';
 const TIPS_ACTION_EVENT = 'dynamic-learner:tips-action';

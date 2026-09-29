@@ -3,19 +3,16 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
-    <title></title>
+    <title><%= htmlWebpackPlugin.options.page.title %></title>
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
-    <!-- page-rich-metadata -->
-    <!-- page-structured-data -->
-    <base href="/">
-    <link rel="icon" href="src/assets/dynamic-learner.ico" sizes="16x16 32x32 48x48 64x64 128x128 256x256">
-    <link rel="icon" type="image/png" href="src/assets/dynamic-learner.png" sizes="512x512">
-    <link rel="apple-touch-icon" href="src/assets/apple-touch-icon.png" sizes="180x180">
-    <link rel="stylesheet" href="src/styles/index.css">
+    <%= htmlWebpackPlugin.options.page.richMetadata %>
+    <%= htmlWebpackPlugin.options.page.structuredData %>
+    <base href="<%= htmlWebpackPlugin.options.page.basePath %>">
+    <link rel="icon" href="assets/dynamic-learner.ico" sizes="16x16 32x32 48x48 64x64 128x128 256x256">
+    <link rel="icon" type="image/png" href="assets/dynamic-learner.png" sizes="512x512">
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" sizes="180x180">
   </head>
   <body>
     <div id="app"></div>
-    <script src="https://cdn.jsdelivr.net/npm/vue@3.5.13/dist/vue.global.prod.js"></script>
-    <script type="module" src="src/app/app.js"></script>
   </body>
 </html>

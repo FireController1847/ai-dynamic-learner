@@ -2,7 +2,7 @@ import { Icon } from '../../components/icon.js';
 import { DeleteConfirmation } from './delete-confirmation.js';
 import { canMove, countItems, createItem, deleteItem, findItem, MAX_DEPTH, MAX_ITEMS, MAX_NAME_LENGTH, moveItem } from './tree-model.js';
 
-const { h, nextTick, onDeactivated, ref } = window.Vue;
+import { h, nextTick, onDeactivated, ref } from 'vue';
 
 export const DirectoryTree = {
   name: 'DirectoryTree',

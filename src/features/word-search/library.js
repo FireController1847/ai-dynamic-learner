@@ -5,7 +5,7 @@ import {
   MAX_DEPTH, MAX_ITEMS, MAX_NAME_LENGTH, moveItem,
 } from './library-model.js';
 
-const { h, nextTick, onDeactivated, ref } = window.Vue;
+import { h, nextTick, onDeactivated, ref } from 'vue';
 
 export const WordSearchLibrary = {
   name: 'WordSearchLibrary',

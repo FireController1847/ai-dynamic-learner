@@ -1,6 +1,6 @@
 import { DOCUMENT_TYPES } from './document-types.js';
 
-const { h } = window.Vue;
+import { h } from 'vue';
 
 function PaperIcon({ type }) {
   const common = {

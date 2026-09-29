@@ -1,4 +1,4 @@
-const { h, onBeforeUnmount, onDeactivated, onMounted, ref } = window.Vue;
+import { h, onBeforeUnmount, onDeactivated, onMounted, ref } from 'vue';
 
 export const DisplaySettings = {
   name: 'NotebookDisplaySettings',

@@ -1,4 +1,4 @@
-const { h, onBeforeUnmount, onDeactivated, onMounted, ref } = window.Vue;
+import { h, onBeforeUnmount, onDeactivated, onMounted, ref } from 'vue';
 
 const examples = [
   ['Headings', '# Title\n## Section\n### Subsection', 'Use one to six # signs, followed by a space.'],

@@ -1,7 +1,7 @@
 import { Icon } from '../../components/icon.js';
 import { cardTitle } from './card-model.js';
 
-const { h, nextTick, onMounted, ref, watch } = window.Vue;
+import { h, nextTick, onMounted, ref, watch } from 'vue';
 
 export const CardList = {
   name: 'CardList',

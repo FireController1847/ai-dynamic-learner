@@ -1,6 +1,6 @@
 import { DISPLAY_FIELDS, defaultDisplayOptions } from './display-options.js';
 
-const { h, onMounted, onBeforeUnmount, onDeactivated, ref } = window.Vue;
+import { h, onMounted, onBeforeUnmount, onDeactivated, ref } from 'vue';
 
 export const DisplaySettings = {
   name: 'DisplaySettings',

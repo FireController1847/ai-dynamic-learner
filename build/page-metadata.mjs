@@ -1,26 +1,5 @@
-import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
-import { featureDefinitions } from '../../src/features/feature-definitions.js';
-import { appConfig } from '../../src/app/app-config.js';
-
-const root = new URL('../../', import.meta.url);
-const output = new URL('dist/', root);
-const rawBase = process.env.PAGES_BASE_PATH ?? '';
-if (rawBase && (!rawBase.startsWith('/') || rawBase.startsWith('//') ||
-    /[?#\\\s]/.test(rawBase) || rawBase.split('/').some((part) => part === '.' || part === '..'))) {
-  throw new Error('PAGES_BASE_PATH must be an absolute URL path, such as /dynamic-learner.');
-}
-const basePath = `${rawBase.replace(/\/+$/, '')}/`;
-
-const rawBaseUrl = process.env.PAGES_BASE_URL ?? '';
-let baseUrl = null;
-if (rawBaseUrl) {
-  baseUrl = new URL(rawBaseUrl);
-  if (!['http:', 'https:'].includes(baseUrl.protocol) || baseUrl.search || baseUrl.hash) {
-    throw new Error('PAGES_BASE_URL must be an HTTP(S) URL without a query string or fragment.');
-  }
-  baseUrl.pathname = `${baseUrl.pathname.replace(/\/+$/, '')}/`;
-}
+import { featureDefinitions } from '../src/features/feature-definitions.js';
+import { appConfig } from '../src/app/app-config.js';
 
 const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (character) => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
@@ -29,26 +8,11 @@ const escapeJson = (value) => JSON.stringify(value).replace(/</g, '\\u003c');
 const meta = (name, content, property = false) =>
   `<meta ${property ? 'property' : 'name'}="${escapeHtml(name)}" content="${escapeHtml(content)}">`;
 
-const template = await readFile(new URL('src/html/index.html', root), 'utf8');
-for (const marker of [
-  '<base href="/">',
-  '<title></title>',
-  '<!-- page-rich-metadata -->',
-  '<!-- page-structured-data -->',
-]) {
-  if (!template.includes(marker)) throw new Error(`The HTML template is missing required metadata marker: ${marker}`);
-}
-
-const routes = ['/', ...featureDefinitions.map((feature) => feature.path)];
-for (const route of routes) {
-  if (!/^\/(?:[a-z0-9-]+\/)*$/.test(route)) throw new Error(`Unsupported page route: ${route}`);
-}
-
-function absoluteUrl(path) {
+function absoluteUrl(path, baseUrl) {
   return baseUrl ? new URL(path.replace(/^\//, ''), baseUrl).href : null;
 }
 
-function pageMetadata(route) {
+function pageMetadata(route, baseUrl) {
   const feature = featureDefinitions.find((candidate) => candidate.path === route);
   const overrides = feature?.metadata ?? {};
   const title = overrides.title ?? (feature ? `${feature.label} · ${appConfig.name}` : appConfig.name);
@@ -65,7 +29,7 @@ function pageMetadata(route) {
     ...appConfig.metadata.socialImage,
     ...(overrides.socialImage ?? {}),
   };
-  const socialImageUrl = absoluteUrl(socialImage.path);
+  const socialImageUrl = absoluteUrl(socialImage.path, baseUrl);
 
   const structuredData = feature ? {
     '@context': 'https://schema.org',
@@ -145,31 +109,18 @@ function renderRichMetadata(metadata) {
   return tags.join('\n    ');
 }
 
-function renderPage(route) {
-  const metadata = pageMetadata(route);
-  const jsonLd = `<script type="application/ld+json">${escapeJson(metadata.structuredData)}</script>`;
-
-  return template
-    .replace('<base href="/">', `<base href="${escapeHtml(basePath)}">`)
-    .replace('<title></title>', `<title>${escapeHtml(metadata.title)}</title>`)
-    .replace('<!-- page-rich-metadata -->', renderRichMetadata(metadata))
-    .replace('<!-- page-structured-data -->', jsonLd);
+export function pageTemplateData(route, { basePath, baseUrl }) {
+  const metadata = pageMetadata(route, baseUrl);
+  return {
+    basePath: escapeHtml(basePath),
+    title: escapeHtml(metadata.title),
+    richMetadata: renderRichMetadata(metadata),
+    structuredData: `<script type="application/ld+json">${escapeJson(metadata.structuredData)}</script>`,
+  };
 }
 
-// Package only browser assets, not the repository, docs, server, or workspace backups.
-await rm(output, { recursive: true, force: true });
-await mkdir(output, { recursive: true });
-await cp(new URL('LICENSE', root), new URL('LICENSE', output));
-for (const directory of ['app', 'assets', 'core', 'components', 'features', 'styles']) {
-  await cp(new URL(`src/${directory}/`, root), new URL(`src/${directory}/`, output), { recursive: true });
-}
-for (const route of routes) {
-  const destination = new URL(route.slice(1), output);
-  await mkdir(destination, { recursive: true });
-  await writeFile(new URL('index.html', destination), renderPage(route));
-}
-await writeFile(new URL('.nojekyll', output), '');
-await writeFile(new URL('404.html', output), `<!doctype html>
+export function notFoundPage(basePath) {
+  return `<!doctype html>
 <html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex, nofollow"><title>Page not found</title><main><h1>Page not found</h1><a href="${escapeHtml(basePath)}">Return to ${escapeHtml(appConfig.name)}</a></main></html>\n`);
-console.log(`Pages files prepared in ${fileURLToPath(output)} for ${basePath}`);
+<meta name="robots" content="noindex, nofollow"><title>Page not found</title><main><h1>Page not found</h1><a href="${escapeHtml(basePath)}">Return to ${escapeHtml(appConfig.name)}</a></main></html>\n`;
+}

@@ -7,7 +7,7 @@ import { resolvedDisplayOptions } from './display-options.js';
 import { canMove, deleteItem, findItem, groupOptions, moveItem, saveWordSearch } from './library-model.js';
 import { clearPreference, readNumberPreference, writeNumberPreference } from '../../core/ui-preferences.js';
 
-const { computed, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref } = window.Vue;
+import { computed, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref } from 'vue';
 
 const MIN_LIBRARY_WIDTH = 248;
 const MAX_LIBRARY_WIDTH = 640;

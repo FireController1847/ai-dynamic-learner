@@ -1,4 +1,4 @@
-const { h } = window.Vue;
+import { h } from 'vue';
 
 function readableAngle(angle) {
   let value = ((angle % 360) + 360) % 360;

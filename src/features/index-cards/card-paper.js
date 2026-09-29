@@ -1,6 +1,6 @@
 import { MAX_CARD_TEXT_LENGTH, MAX_CARD_TITLE_LENGTH } from './card-model.js';
 
-const { h } = window.Vue;
+import { h } from 'vue';
 
 // Keep both surfaces mounted so flipping rotates the paper, not mirrored text.
 export const CardPaper = {

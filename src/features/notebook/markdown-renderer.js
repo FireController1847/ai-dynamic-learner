@@ -1,7 +1,7 @@
-import { Marked } from '../../core/vendor/marked/marked.js';
-import DOMPurify from '../../core/vendor/dompurify/purify.js';
+import { Marked } from 'marked';
+import DOMPurify from 'dompurify';
 
-const { h } = window.Vue;
+import { h } from 'vue';
 const parser = new Marked({ gfm: true, breaks: false, async: false });
 const allowedTags = [
   'a', 'abbr', 'b', 'blockquote', 'br', 'caption', 'code', 'dd', 'del', 'details',

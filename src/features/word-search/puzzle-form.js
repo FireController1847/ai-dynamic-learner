@@ -5,7 +5,7 @@ import {
   MAX_WORDS, MIN_WORDS, STUDY_MODES, parseWords, validatePuzzle,
 } from './puzzle-model.js';
 
-const { computed, h, onMounted, ref } = window.Vue;
+import { computed, h, nextTick, onMounted, ref } from 'vue';
 
 export const PuzzleForm = {
   name: 'PuzzleForm',
@@ -47,7 +47,7 @@ export const PuzzleForm = {
         props.save(name.value, puzzle);
       } catch (problem) {
         error.value = problem.message;
-        await window.Vue.nextTick();
+        await nextTick();
         errorBox.value?.focus();
       }
     }

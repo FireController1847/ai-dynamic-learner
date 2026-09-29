@@ -1,4 +1,4 @@
-const { h } = window.Vue;
+import { h } from 'vue';
 
 // Small inline SVGs keep essential controls independent of icon fonts or CDNs.
 const paths = {

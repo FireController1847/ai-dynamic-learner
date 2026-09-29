@@ -1,6 +1,6 @@
 import { MIN_CELL_SIZE, MAX_CELL_SIZE } from './display-options.js';
 
-const { nextTick, onActivated, onBeforeUnmount, onMounted, ref, watch } = window.Vue;
+import { nextTick, onActivated, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 const WORD_BANK_WITH_GAP = 244;
 const HINT_BANK_WITH_GAP = 484;
