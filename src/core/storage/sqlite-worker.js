@@ -66,6 +66,9 @@ async function inspectBackup(sqlite3, compressedBytes) {
     db = new pool.OpfsSAHPoolDb(BACKUP_DATABASE_FILENAME);
     const integrity = db.selectValue('PRAGMA integrity_check');
     if (integrity !== 'ok') throw new Error('The SQLite backup failed its integrity check.');
+    if (db.selectObjects('PRAGMA foreign_key_check').length) {
+      throw new Error('The SQLite backup contains broken relational references.');
+    }
 
     const schemaVersion = Number(db.selectValue('PRAGMA user_version') ?? 0);
     if (schemaVersion !== SQLITE_SCHEMA_VERSION) {
