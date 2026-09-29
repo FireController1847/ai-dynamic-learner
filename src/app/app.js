@@ -115,13 +115,15 @@ const App = {
           tabindex: -1,
         }, [
           currentPath.value === '/' ? h(HomePage, { onNavigate: navigate }) : null,
-          h(KeepAlive, { key: workspace.revision.value }, {
-            default: () => activeFeature.value ? h(activeFeature.value.component, {
-              key: activeFeature.value.id,
-              title: activeFeature.value.label,
-              model: workspace.state.value.features[activeFeature.value.id],
-            }) : null,
-          }),
+          activeFeature.value && !workspace.ready.value
+            ? h('p', { class: 'workspace-loading', role: 'status' }, 'Loading workspace…')
+            : h(KeepAlive, { key: workspace.revision.value }, {
+              default: () => activeFeature.value ? h(activeFeature.value.component, {
+                key: activeFeature.value.id,
+                title: activeFeature.value.label,
+                model: workspace.state.value.features[activeFeature.value.id],
+              }) : null,
+            }),
         ]),
       ]),
     ]);
