@@ -123,8 +123,9 @@ export function useWorkspace() {
       return;
     }
 
-    // postMessage() performs the single structured clone which freezes this
-    // version for the Worker; avoid cloning a large workspace twice.
+    // The storage client synchronously extracts relational row references and
+    // posts only changed/new/deleted rows. Unchanged large document strings stay
+    // on the main thread instead of being cloned into every Worker save.
     const snapshot = toRaw(state.value);
     try {
       await queueSnapshot(snapshot, version);
