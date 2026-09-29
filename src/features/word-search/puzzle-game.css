@@ -47,7 +47,7 @@
 .word-search-attempt-letter.attempt-miss {
   --attempt-color: var(--danger);
   --attempt-shadow: none;
-  animation: search-attempt-miss 1800ms linear both;
+  animation: search-attempt-miss 2250ms linear both;
 }
 @keyframes search-attempt-pulse {
   0%, 100% { color: inherit; text-shadow: none; }
@@ -55,11 +55,12 @@
 }
 @keyframes search-attempt-miss {
   0% { color: inherit; }
-  16.667%, 72.222% { color: var(--danger); }
+  11.111%, 55.556% { color: var(--danger); }
   100% { color: inherit; }
 }
 @media (prefers-reduced-motion: reduce) {
   .word-search-attempt-letter { color: var(--attempt-color); text-shadow: none; }
+  .outline-miss { animation: none; opacity: 1; }
 }
 .word-search-cell:hover { color: var(--search-highlight); }
 .word-search-cell.is-found,
@@ -78,6 +79,20 @@
 .outline-selection rect { fill-opacity: 0.16; stroke-width: 0.07; transition: width 65ms linear; }
 .outline-answer rect { fill-opacity: 0.04; stroke-dasharray: 0.12 0.1; }
 .outline-hint rect { fill-opacity: 0.18; stroke-width: 0.08; }
+.outline-miss {
+  animation: search-attempt-outline-miss 2250ms linear both;
+}
+.outline-miss rect {
+  fill: var(--danger);
+  fill-opacity: 0.1;
+  stroke: var(--danger);
+  stroke-width: 0.07;
+}
+@keyframes search-attempt-outline-miss {
+  0% { opacity: 0; }
+  11.111%, 55.556% { opacity: 1; }
+  100% { opacity: 0; }
+}
 .instant-highlights .word-search-outline,
 .instant-highlights .word-search-outline rect { animation: none; transition: none; }
 @keyframes search-outline-appear { from { opacity: 0; } to { opacity: 1; } }
