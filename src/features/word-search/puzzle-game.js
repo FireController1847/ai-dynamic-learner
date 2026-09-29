@@ -2,6 +2,7 @@ import { DIFFICULTIES } from './puzzle-model.js';
 import { lineCells, matchSelection, wordOnLine } from './game-model.js';
 import { generatePuzzle } from './puzzle-generator.js';
 import { PuzzleGrid } from './puzzle-grid.js';
+import { Icon } from '../../components/icon.js';
 import { defaultDisplayOptions, displayStyles } from './display-options.js';
 
 const { computed, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref } = window.Vue;
@@ -24,7 +25,11 @@ export const PuzzleGame = {
     const grid = ref(null);
     const gridVersion = ref(0);
     const attempt = ref(null);
+    const boardTurns = ref((props.item.boardRotation ?? 0) / 90);
+    const rotationFrom = ref(boardTurns.value);
+    const rotating = ref(false);
     let attemptTimer;
+    let rotationTimer;
     let attemptId = 0;
     function clearAttempt() {
       clearTimeout(attemptTimer);
@@ -38,7 +43,11 @@ export const PuzzleGame = {
     const foundWords = computed(() => new Set(game.value?.found.map(({ word }) => word) ?? []));
     const hintMode = computed(() => (props.item.puzzle.studyMode ?? 'words') === 'hints');
     const complete = computed(() => foundWords.value.size === props.item.puzzle.words.length);
-    onBeforeUnmount(() => { controller?.abort(); clearAttempt(); });
+    onBeforeUnmount(() => {
+      controller?.abort();
+      clearAttempt();
+      clearTimeout(rotationTimer);
+    });
     onDeactivated(() => {
       pending.value = null;
       revealed.value = false;
@@ -118,6 +127,19 @@ export const PuzzleGame = {
       revealedWords.value = next;
     }
 
+    function rotateBoard() {
+      if (rotating.value || loading.value) return;
+      clearAttempt();
+      grid.value?.cancelSelection();
+      rotationFrom.value = boardTurns.value;
+      boardTurns.value += 1;
+      props.item.boardRotation = ((boardTurns.value % 4) + 4) % 4 * 90;
+      rotating.value = true;
+      clearTimeout(rotationTimer);
+      rotationTimer = setTimeout(() => { rotating.value = false; }, 640);
+      message.value = `Board rotated to ${props.item.boardRotation}°.`;
+    }
+
     async function requestAction(action, event) {
       actionTrigger = event.currentTarget;
       pending.value = action;
@@ -173,6 +195,9 @@ export const PuzzleGame = {
             revealed: revealed.value, hint: hint.value, onSelect: select,
             options: props.options,
             attempt: attempt.value,
+            rotationTurns: boardTurns.value,
+            rotationFrom: rotationFrom.value,
+            rotating: rotating.value,
           }),
           h('aside', {
             class: ['word-search-word-bank', { 'uses-hints': hintMode.value }],
@@ -237,6 +262,18 @@ export const PuzzleGame = {
         ]) : null,
         h('p', { class: 'word-search-game-message', role: 'status', 'aria-live': 'polite' }, message.value),
         game.value ? h('div', { class: 'word-search-game-actions' }, [
+          h('button', {
+            type: 'button',
+            class: ['quiet-button', 'word-search-rotate-button', { 'is-rotating': rotating.value }],
+            disabled: loading.value || rotating.value,
+            title: 'Rotate board 90° clockwise',
+            onClick: rotateBoard,
+          }, [
+            h(Icon, { name: 'rotate' }),
+            h('span', 'Rotate board'),
+            h('span', { class: 'word-search-rotation-angle', 'aria-hidden': 'true' },
+              `${props.item.boardRotation ?? 0}°`),
+          ]),
           h('button', {
             type: 'button', class: 'quiet-button', disabled: loading.value || complete.value || revealed.value,
             onClick: giveHint,
