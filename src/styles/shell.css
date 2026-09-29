@@ -131,9 +131,9 @@ body:has(.navigation-drawer[open]) { overflow: hidden; }
 .workspace-unavailable {
   padding: 20px;
   border: 1px solid var(--control-border);
-  border-radius: var(--radius-large);
+  border-radius: var(--radius);
   background: var(--page-background);
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--shadow-overlay);
 }
 .workspace-unavailable h2 { margin-top: 0; }
 .workspace-unavailable p { color: var(--text-secondary); overflow-wrap: anywhere; }
