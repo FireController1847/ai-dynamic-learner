@@ -93,8 +93,8 @@
   11.111%, 55.556% { opacity: 1; }
   100% { opacity: 0; }
 }
-.instant-highlights .word-search-outline,
-.instant-highlights .word-search-outline rect { animation: none; transition: none; }
+.instant-highlights .word-search-outline:not(.outline-miss),
+.instant-highlights .word-search-outline:not(.outline-miss) rect { animation: none; transition: none; }
 @keyframes search-outline-appear { from { opacity: 0; } to { opacity: 1; } }
 .word-search-word-bank {
   min-width: 0; flex: 0 1 220px; overflow: hidden;
