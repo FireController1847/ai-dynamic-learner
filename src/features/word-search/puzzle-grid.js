@@ -279,10 +279,10 @@ export const PuzzleGrid = {
                         { 'attempt-miss': !props.attempt.matched },
                       ] : []),
                     ],
+                    style: { '--letter-delay': `${delay}ms` },
                   }, [
                     h('span', {
                       class: 'word-search-letter-glyph',
-                      style: { '--letter-delay': `${delay}ms` },
                     }, letter),
                   ]),
                 ]);
