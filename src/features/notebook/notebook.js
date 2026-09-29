@@ -1,6 +1,5 @@
 import { Icon } from '../../components/icon.js';
 import { clearPreference, readNumberPreference, writeNumberPreference } from '../../core/ui-preferences.js';
-import { DisplaySettings } from './display-settings.js';
 import { DocumentBuilder } from './document-builder.js';
 import { getDocumentType } from './document-types.js';
 import { MarkdownEditor } from './markdown-editor.js';
@@ -10,7 +9,7 @@ import {
   MAX_DOCUMENTS, MAX_ITEMS, moveItem,
 } from './library-model.js';
 
-const { computed, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref, watch } = window.Vue;
+const { computed, h, nextTick, onBeforeUnmount, onMounted, ref, watch } = window.Vue;
 
 const MIN_LIBRARY_WIDTH = 248;
 const MAX_LIBRARY_WIDTH = 640;
@@ -34,8 +33,6 @@ export const Notebook = {
     const layout = ref(null);
     const library = ref(null);
     const showLibraryButton = ref(null);
-    const settingsButton = ref(null);
-    const settingsOpen = ref(false);
     const creationTarget = ref(null);
     const message = ref('');
 
@@ -50,7 +47,6 @@ export const Notebook = {
       }
     }, { immediate: true });
 
-    onDeactivated(() => { settingsOpen.value = false; });
 
     function updateLibraryLayout(event) {
       libraryOverlay.value = event.matches;
@@ -133,12 +129,6 @@ export const Notebook = {
       else library.value?.focusToggle();
     }
 
-    async function closeSettings() {
-      settingsOpen.value = false;
-      await nextTick();
-      settingsButton.value?.focus();
-    }
-
     function beginDocumentCreation() {
       const current = selection.value;
       let destination = 'Top level';
@@ -157,6 +147,7 @@ export const Notebook = {
     }
 
     function createDocument(type) {
+      if (!getDocumentType(type)?.available) return;
       if (countItems(props.model.items) >= MAX_ITEMS) {
         message.value = `The Notebook limit is ${MAX_ITEMS} groups and documents.`;
         return;
@@ -166,11 +157,23 @@ export const Notebook = {
         return;
       }
 
-      const item = insertDocument(props.model.items, creationTarget.value, type);
+      let item;
+      try { item = insertDocument(props.model.items, creationTarget.value, type); }
+      catch (error) { message.value = error.message; return; }
       selectedId.value = item.id;
       creationTarget.value = null;
       library.value?.reveal(item.id);
       nextTick(() => library.value?.beginRename(item.id));
+    }
+
+    function importDocument(contents, target) {
+      const item = insertDocument(props.model.items, target, 'markdown');
+      item.name = contents.name;
+      item.data.markdown = contents.markdown;
+      selectedId.value = item.id;
+      creationTarget.value = null;
+      library.value?.reveal(item.id);
+      if (libraryOverlay.value) setLibraryCollapsed(true);
     }
 
     function moveToGroup(event) {
@@ -268,18 +271,20 @@ export const Notebook = {
           items: props.model.items,
           selectedId: selectedId.value,
           collapsed: libraryCollapsed.value,
+          importDocument,
           onToggleLibrary: () => setLibraryCollapsed(true),
           onSelect: (id) => { selectedId.value = id; creationTarget.value = null; message.value = ''; },
           onOpenItem: () => { if (libraryOverlay.value) setLibraryCollapsed(true); },
           onNewDocument: beginDocumentCreation,
         }, {
           footer: () => h('button', {
-            ref: settingsButton,
             type: 'button',
-            class: 'quiet-button library-settings-button',
-            'aria-haspopup': 'dialog',
-            onClick: () => { settingsOpen.value = true; },
-          }, ['Settings', h(Icon, { name: 'settings' })]),
+            class: 'quiet-button library-settings-button notebook-coming-control',
+            'aria-disabled': true,
+            'aria-describedby': 'notebook-coming-settings',
+          }, ['Settings', h(Icon, { name: 'settings' }), h('span', {
+            id: 'notebook-coming-settings', class: 'notebook-coming-tooltip', role: 'tooltip',
+          }, 'Coming soon!')]),
         }),
         !libraryOverlay.value && !libraryCollapsed.value ? h('div', {
           class: 'library-resizer',
@@ -345,7 +350,6 @@ export const Notebook = {
           h('p', 'Use the document button in the Library to start a new note.'),
         ]),
       ]),
-      settingsOpen.value ? h(DisplaySettings, { onClose: closeSettings }) : null,
     ]);
   },
 };

@@ -108,6 +108,7 @@
   gap: 18px;
 }
 .notebook-type-card {
+  position: relative;
   display: grid;
   min-height: 280px;
   align-content: center;
@@ -127,7 +128,7 @@
     transform var(--motion-fast),
     box-shadow var(--motion-fast);
 }
-.notebook-type-card:hover {
+.notebook-type-card:not([aria-disabled='true']):hover {
   border-color: var(--brand);
   background: var(--brand-tint);
   transform: translateY(-2px);
@@ -137,6 +138,31 @@
   outline: 2px solid var(--brand);
   outline-offset: 3px;
 }
+.notebook-type-card[aria-disabled='true'] { cursor: not-allowed; color: var(--text-disabled); background: var(--surface-subtle); box-shadow: none; }
+.notebook-type-card[aria-disabled='true'] .notebook-type-icon,
+.notebook-type-card[aria-disabled='true'] .notebook-type-copy { opacity: 0.5; }
+.notebook-coming-tooltip {
+  position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+  padding: 4px 8px; border-radius: var(--radius); background: var(--text-color); color: var(--page-background);
+  font-size: 12px; white-space: nowrap; visibility: hidden; pointer-events: none;
+}
+.notebook-type-card:hover .notebook-coming-tooltip,
+.notebook-type-card:focus-visible .notebook-coming-tooltip { visibility: visible; }
+.notebook-coming-control,
+.notebook-coming-control:hover,
+.notebook-coming-control:active {
+  position: relative;
+  color: var(--text-disabled);
+  background: var(--surface-subtle);
+  cursor: not-allowed;
+}
+.notebook-coming-control .notebook-coming-tooltip { bottom: calc(100% + 6px); z-index: 10; }
+.notebook-coming-control.notebook-coming-below .notebook-coming-tooltip {
+  top: calc(100% + 6px); bottom: auto; left: 0; transform: none;
+}
+.notebook-coming-control:hover .notebook-coming-tooltip,
+.notebook-coming-control:focus-visible .notebook-coming-tooltip { visibility: visible; }
+.notebook-upload-status { margin: 0; padding: 8px 12px; font-size: 12px; overflow-wrap: anywhere; }
 .notebook-type-icon { width: 104px; height: 104px; color: var(--brand); }
 .notebook-type-copy { display: grid; gap: 8px; }
 .notebook-type-copy strong { font-size: 18px; }

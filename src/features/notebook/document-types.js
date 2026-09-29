@@ -3,16 +3,19 @@ export const DEFAULT_DOCUMENT_TYPE = 'markdown';
 export const DOCUMENT_TYPES = Object.freeze([
   Object.freeze({
     id: 'markdown',
+    available: true,
     label: 'Markdown Paper',
     description: 'A rich text document backed by Markdown source.',
   }),
   Object.freeze({
     id: 'lined',
+    available: false,
     label: 'Lined Paper',
     description: 'A ruled note page for free-form notes.',
   }),
   Object.freeze({
     id: 'graph',
+    available: false,
     label: 'Graph Paper',
     description: 'A square-grid page for diagrams, plots, equations, and spatial notes.',
   }),

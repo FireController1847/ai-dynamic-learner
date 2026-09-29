@@ -65,13 +65,18 @@ export const DocumentBuilder = {
           key: type.id,
           type: 'button',
           class: 'notebook-type-card',
-          onClick: () => emit('create', type.id),
+          'aria-disabled': !type.available,
+          'aria-describedby': !type.available ? `notebook-coming-${type.id}` : undefined,
+          onClick: () => { if (type.available) emit('create', type.id); },
         }, [
           h(PaperIcon, { type: type.id }),
           h('span', { class: 'notebook-type-copy' }, [
             h('strong', type.label),
             h('span', type.description),
           ]),
+          !type.available ? h('span', {
+            id: `notebook-coming-${type.id}`, class: 'notebook-coming-tooltip', role: 'tooltip',
+          }, 'Coming soon!') : null,
         ]))),
       h('div', { class: 'notebook-builder-actions' }, [
         h('button', {

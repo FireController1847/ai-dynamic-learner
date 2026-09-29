@@ -1,5 +1,9 @@
 import { Icon } from '../../components/icon.js';
 import { renderMarkdown } from './markdown-renderer.js';
+import { MarkdownOutline } from './markdown-outline.js';
+import { MarkdownCheatsheet } from './markdown-cheatsheet.js';
+import { markdownFilename } from './document-files.js';
+import { downloadText } from '../../core/file-download.js';
 
 const { computed, h, ref } = window.Vue;
 
@@ -17,11 +21,41 @@ export const MarkdownEditor = {
     const sourcePercent = ref(50);
     const resizing = ref(false);
     const workspace = ref(null);
+    const previewArticle = ref(null);
+    const showContents = ref(false);
+    const showCheatsheet = ref(false);
+    const downloading = ref(false);
+    const downloadMessage = ref('');
 
     const markdown = computed({
       get: () => props.document.data.markdown,
       set: (value) => { props.document.data.markdown = value; },
     });
+    const rendered = computed(() => {
+      const headings = [];
+      const blocks = renderMarkdown(markdown.value, headings);
+      return { headings, blocks };
+    });
+
+    async function download() {
+      if (downloading.value) return;
+      downloading.value = true;
+      downloadMessage.value = 'Preparing Markdown download…';
+      try {
+        await downloadText(markdownFilename(props.document.name), markdown.value, 'text/markdown;charset=utf-8');
+        downloadMessage.value = 'Markdown download handed to your browser.';
+      } catch {
+        downloadMessage.value = 'The download could not be prepared. Please try again.';
+      } finally { downloading.value = false; }
+    }
+
+    function navigateToHeading(id) {
+      const article = previewArticle.value;
+      const heading = article?.querySelector(`#${id}`);
+      if (!heading) return;
+      article.scrollTo({ top: article.scrollTop + heading.getBoundingClientRect().top - article.getBoundingClientRect().top - 16 });
+      heading.focus({ preventScroll: true });
+    }
 
     function setPercent(value) {
       sourcePercent.value = Math.round(Math.min(MAX_PANEL_PERCENT, Math.max(MIN_PANEL_PERCENT, value)));
@@ -74,7 +108,12 @@ export const MarkdownEditor = {
       }, [
         h('header', { class: 'markdown-panel-heading' }, [
           h('strong', 'Markdown'),
-          h('span', 'Raw source'),
+          h('button', {
+            type: 'button', class: 'quiet-button', 'aria-haspopup': 'dialog',
+            'aria-controls': 'notebook-markdown-cheatsheet',
+            'aria-expanded': showCheatsheet.value,
+            onClick: () => { showCheatsheet.value = true; },
+          }, 'Cheatsheet'),
         ]),
         h('textarea', {
           class: 'markdown-source',
@@ -94,9 +133,16 @@ export const MarkdownEditor = {
       }, [
         h('header', { class: 'markdown-panel-heading' }, [
           h('strong', 'Preview'),
-          h('span', 'Rendered Markdown'),
+          h('button', {
+            type: 'button', class: 'quiet-button', 'aria-expanded': showContents.value,
+            'aria-controls': 'notebook-markdown-toc',
+            onClick: () => { showContents.value = !showContents.value; },
+          }, 'Contents'),
         ]),
-        h('article', { class: 'markdown-preview' }, renderMarkdown(markdown.value)),
+        h('div', { class: ['markdown-preview-body', { 'has-contents': showContents.value }] }, [
+          h('article', { ref: previewArticle, class: 'markdown-preview' }, rendered.value.blocks),
+          showContents.value ? h(MarkdownOutline, { headings: rendered.value.headings, onNavigate: navigateToHeading }) : null,
+        ]),
       ]);
     }
 
@@ -110,8 +156,17 @@ export const MarkdownEditor = {
       const secondBasis = swapped.value ? sourceBasis : `${100 - sourcePercent.value}%`;
 
       return h('div', { class: 'markdown-editor' }, [
+        showCheatsheet.value ? h(MarkdownCheatsheet, {
+          onClose: () => { showCheatsheet.value = false; },
+        }) : null,
         h('div', { class: 'markdown-toolbar', 'aria-label': 'Markdown editor layout' }, [
           h('div', { class: 'markdown-view-switcher', role: 'group', 'aria-label': 'View mode' }, [
+            h('button', {
+              type: 'button', class: 'quiet-button notebook-coming-control notebook-coming-below',
+              'aria-disabled': true, 'aria-describedby': 'notebook-coming-rich',
+            }, ['Rich', h('span', {
+              id: 'notebook-coming-rich', class: 'notebook-coming-tooltip', role: 'tooltip',
+            }, 'Coming soon!')]),
             ...[
               ['split', 'Split'],
               ['source', 'Source'],
@@ -122,6 +177,12 @@ export const MarkdownEditor = {
               'aria-pressed': mode.value === value,
               onClick: () => { mode.value = value; },
             }, label)),
+            h('button', {
+              type: 'button', class: ['icon-button', { 'markdown-is-loading': downloading.value }],
+              disabled: downloading.value, 'aria-busy': downloading.value,
+              title: downloading.value ? 'Preparing download…' : 'Download Markdown',
+              'aria-label': downloading.value ? 'Preparing download' : 'Download Markdown', onClick: download,
+            }, [h(Icon, { name: downloading.value ? 'loading' : 'download' })]),
           ]),
           h('button', {
             type: 'button',
@@ -131,6 +192,7 @@ export const MarkdownEditor = {
             onClick: () => { swapped.value = !swapped.value; },
           }, [h(Icon, { name: 'flip' }), 'Swap sides']),
         ]),
+        downloadMessage.value ? h('p', { class: 'markdown-file-status', role: 'status' }, downloadMessage.value) : null,
         h('div', {
           ref: workspace,
           class: ['markdown-workspace', `mode-${mode.value}`, {

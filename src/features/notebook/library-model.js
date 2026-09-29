@@ -48,8 +48,15 @@ export function deleteItem(items, id) {
 }
 
 export function insertDocument(items, target, documentType) {
-  const item = createItem('document', documentType);
+  if (countItems(items) >= MAX_ITEMS || countDocuments(items) >= MAX_DOCUMENTS) {
+    throw new Error(`The Notebook supports ${MAX_ITEMS} library items and ${MAX_DOCUMENTS} documents.`);
+  }
   const selected = target?.selectedId ? findItem(items, target.selectedId) : null;
+  if (target?.selectedId && !selected) throw new Error('The selected destination no longer exists. Choose another location.');
+  if (selected?.item.kind === 'group' && selected.depth >= MAX_DEPTH) {
+    throw new Error(`Notebook entries can be at most ${MAX_DEPTH} levels deep.`);
+  }
+  const item = createItem('document', documentType);
 
   if (selected?.item.kind === 'group') selected.item.children.unshift(item);
   else if (selected) selected.siblings.splice(selected.index + 1, 0, item);

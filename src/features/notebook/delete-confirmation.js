@@ -27,9 +27,12 @@ export const DeleteConfirmation = {
     }, [h('div', { class: 'delete-confirmation-content' }, [
       h('div', { class: 'delete-confirmation-icon' }, [h(Icon, { name: 'trash' })]),
       h('p', { class: 'delete-confirmation-eyebrow' }, 'Dangerous action'),
-      h('h2', { id: 'notebook-delete-title' }, 'Delete this document?'),
+      h('h2', { id: 'notebook-delete-title' }, `Delete this ${props.item.kind}?`),
       h('div', { id: 'notebook-delete-description' }, [
         h('p', ['You are about to permanently delete ', h('strong', `“${props.item.name}”`), '.']),
+        props.item.kind === 'group'
+          ? h('p', 'This also deletes every document and nested group inside it.')
+          : null,
         h('p', 'This cannot be undone. You can cancel and download a backup first.'),
       ]),
       h('div', { class: 'delete-confirmation-actions' }, [
@@ -43,7 +46,7 @@ export const DeleteConfirmation = {
           type: 'button',
           class: 'delete-confirm-button',
           onClick: () => emit('confirm'),
-        }, 'Delete document'),
+        }, `Delete ${props.item.kind}`),
       ]),
     ])]);
   },
