@@ -71,7 +71,7 @@ export const TodoTaskEditor = defineComponent({
     }
     function celebrateTask(id: string) {
       stopTaskCelebration(id); celebratingTasks.add(id);
-      taskCelebrationTimers.set(id, window.setTimeout(() => stopTaskCelebration(id), 1650));
+      taskCelebrationTimers.set(id, window.setTimeout(() => stopTaskCelebration(id), 820));
     }
     function celebrateSection(id: string) {
       stopSectionCelebration(id); celebratingSections.add(id);

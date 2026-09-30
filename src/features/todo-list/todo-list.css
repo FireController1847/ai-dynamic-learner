@@ -153,11 +153,11 @@
 .todo-check-sparks {
   position: absolute; top: 50%; right: 19px; width: 0; height: 0; z-index: 2; pointer-events: none;
   transform-origin: 0 0;
-  animation: todo-check-spark-scale 1020ms forwards;
+  animation: todo-check-spark-scale 760ms forwards;
 }
 .todo-check-spark-ring {
   position: absolute; left: 0; top: 0; width: 0; height: 0; transform-origin: 0 0;
-  animation: todo-check-spark-orbit 1020ms forwards;
+  animation: todo-check-spark-orbit 760ms forwards;
 }
 .todo-check-spark {
   --spark-x: 0px; --spark-y: -22px;
@@ -180,15 +180,15 @@
   --fall-x: 0px; --fall-y: 28px; --fall-turn: 420deg;
   position: absolute; left: 0; top: 0; color: #ffd84d; opacity: 0;
   font: 800 9px/1 var(--font-family); text-shadow: 0 0 7px rgb(255 200 30 / 85%);
-  animation: todo-check-fallout 760ms forwards;
+  animation: todo-check-fallout 700ms forwards;
 }
-.todo-check-fallout-particle-1 { --fall-x: -22px; --fall-y: 20px; --fall-turn: -520deg; color: #ffc928; animation-delay: 8ms; }
-.todo-check-fallout-particle-2 { --fall-x: -12px; --fall-y: 32px; --fall-turn: 460deg; color: #ffe56b; animation-delay: 18ms; }
+.todo-check-fallout-particle-1 { --fall-x: -22px; --fall-y: 20px; --fall-turn: -520deg; color: #ffc928; animation-delay: 6ms; }
+.todo-check-fallout-particle-2 { --fall-x: -12px; --fall-y: 32px; --fall-turn: 460deg; color: #ffe56b; animation-delay: 14ms; }
 .todo-check-fallout-particle-3 { --fall-x: 0px; --fall-y: 37px; --fall-turn: -440deg; color: #ffd84d; animation-delay: 0ms; }
-.todo-check-fallout-particle-4 { --fall-x: 13px; --fall-y: 31px; --fall-turn: 540deg; color: #ffca2f; animation-delay: 22ms; }
-.todo-check-fallout-particle-5 { --fall-x: 23px; --fall-y: 19px; --fall-turn: -480deg; color: #ffe984; animation-delay: 12ms; }
-.todo-check-fallout-particle-6 { --fall-x: -17px; --fall-y: 42px; --fall-turn: 500deg; color: #ffd240; animation-delay: 28ms; }
-.todo-check-fallout-particle-7 { --fall-x: 18px; --fall-y: 43px; --fall-turn: -560deg; color: #ffdf59; animation-delay: 36ms; }
+.todo-check-fallout-particle-4 { --fall-x: 13px; --fall-y: 31px; --fall-turn: 540deg; color: #ffca2f; animation-delay: 18ms; }
+.todo-check-fallout-particle-5 { --fall-x: 23px; --fall-y: 19px; --fall-turn: -480deg; color: #ffe984; animation-delay: 10ms; }
+.todo-check-fallout-particle-6 { --fall-x: -17px; --fall-y: 42px; --fall-turn: 500deg; color: #ffd240; animation-delay: 22ms; }
+.todo-check-fallout-particle-7 { --fall-x: 18px; --fall-y: 43px; --fall-turn: -560deg; color: #ffdf59; animation-delay: 28ms; }
 @keyframes todo-checkbox-pop {
   0% { transform: scale(1); }
   30% { transform: scale(0.78) rotate(-4deg); }
