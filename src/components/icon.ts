@@ -37,9 +37,9 @@ export const Icon = defineComponent({
     }, props.name === 'verified' ? [
       h('path', {
         d: 'm12 2 2.1 1.8 2.8-.2 1.2 2.5 2.5 1.2-.2 2.8L22 12l-1.8 2.1.2 2.8-2.5 1.2-1.2 2.5-2.8-.2L12 22l-2.1-1.8-2.8.2-1.2-2.5-2.5-1.2.2-2.8L2 12l1.8-2.1-.2-2.8 2.5-1.2 1.2-2.5 2.8.2Z',
-        fill: 'currentColor', stroke: 'none',
+        fill: 'none',
       }),
-      h('path', { d: 'm7.4 12.2 2.8 2.8 6.4-6.4', stroke: '#fff', 'stroke-width': 2, fill: 'none' }),
+      h('path', { d: 'm7.4 12.2 2.8 2.8 6.4-6.4', fill: 'none', 'stroke-width': 2 }),
     ] : props.name === 'crossword' ? [
       h('rect', { x: 2, y: 2, width: 20, height: 20, rx: 1 }),
       ...[7, 12, 17].flatMap((position) => [

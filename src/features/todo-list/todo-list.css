@@ -99,7 +99,6 @@
   transform: translateY(var(--todo-text-offset));
 }
 .todo-task-section { position: relative; margin: 0; isolation: isolate; }
-.todo-task-paper.is-sorted .todo-task-section + .todo-task-section { margin-top: var(--todo-rule-spacing); }
 .todo-task-section.is-celebrating {
   z-index: 2;
   animation: todo-section-complete-glow 1900ms cubic-bezier(0.16, 1, 0.3, 1);

@@ -156,7 +156,7 @@ export const TodoTaskEditor = defineComponent({
       const following = ordered.slice(index);
       section.tasks = ordered.slice(0, index);
       if (following[0]?.id === task.id) following.shift();
-      next.tasks = following.length ? following : [];
+      next.tasks = following.length ? following : next.tasks;
       const sectionIndex = sections.value.indexOf(section);
       sections.value.splice(sectionIndex + 1, 0, next);
       syncSectionCompletion(section, false); syncSectionCompletion(next, false);
@@ -275,7 +275,22 @@ export const TodoTaskEditor = defineComponent({
               if (event.target instanceof HTMLTextAreaElement) size(event.target);
             },
             onKeydown: (event: KeyboardEvent) => {
-              if (event.key !== 'Enter' || event.shiftKey || event.isComposing) return;
+              if (event.isComposing) return;
+              if (event.key === 'Backspace' && !draft && !task.text && !task.done && !task.skipped &&
+                  event.target instanceof HTMLTextAreaElement && event.target.selectionStart === 0 && event.target.selectionEnd === 0) {
+                event.preventDefault();
+                const current = orderedTasks(section);
+                const currentIndex = current.findIndex(candidate => candidate.id === task.id);
+                const storedIndex = section.tasks.indexOf(task);
+                if (storedIndex >= 0) section.tasks.splice(storedIndex, 1);
+                stopTaskCelebration(task.id); syncSectionCompletion(section, false);
+                message.value = 'Empty task removed.';
+                const remaining = orderedTasks(section);
+                const target = remaining[currentIndex - 1] ?? remaining[currentIndex] ?? draftFor(section);
+                void focusTask(target.id);
+                return;
+              }
+              if (event.key !== 'Enter' || event.shiftKey) return;
               event.preventDefault();
               if (!task.text.trim() && !task.done && !task.skipped) { void splitSection(section, index, task); return; }
               if (storedCount.value >= MAX_TASKS || !(event.target instanceof HTMLTextAreaElement)) return;
@@ -331,7 +346,7 @@ export const TodoTaskEditor = defineComponent({
         }, `${completed.value}/${count.value} done${skipped.value ? ` · ${skipped.value} skipped` : ''}`),
         undo.value ? h('button', { type: 'button', class: 'quiet-button', disabled: storedCount.value >= MAX_TASKS, onClick: restoreTask }, 'Undo remove') : null,
       ]),
-      h('div', { class: ['todo-task-paper', { 'is-sorted': sortMode.value !== 'custom' }] }, [
+      h('div', { class: 'todo-task-paper' }, [
         h('h2', { class: 'todo-paper-title' }, props.item.name),
         ...displaySections.value.map((section, sectionIndex) => h('section', {
         key: section.id, class: ['todo-task-section', { 'is-celebrating': celebratingSections.has(section.id) }],
