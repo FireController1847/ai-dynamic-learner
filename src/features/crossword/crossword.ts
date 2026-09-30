@@ -6,7 +6,7 @@ import { usePersistedPanelResize } from '../../components/use-persisted-panel-re
 import { CrosswordLibrary } from './library.ts';
 import { canMove, findItem, groupOptions, moveItem } from './library-model.ts';
 
-import { defineComponent, type PropType, computed, h, onBeforeUnmount, ref } from 'vue';
+import { defineComponent, type PropType, computed, h, nextTick, onBeforeUnmount, ref } from 'vue';
 
 const MIN_LIBRARY_WIDTH = 248;
 const LIBRARY_WIDTH_KEY = 'dynamic-learner.ui.crossword.library-width';
@@ -61,7 +61,7 @@ export const Crossword = defineComponent({
 
     async function setLibraryCollapsed(collapsed: boolean) {
       libraryCollapsed.value = collapsed;
-      await import('vue').then(({ nextTick }) => nextTick());
+      await nextTick();
       if (collapsed) showLibraryButton.value?.focus();
       else library.value?.focusToggle();
     }
