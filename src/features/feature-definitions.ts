@@ -24,7 +24,7 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'todo-list', label: 'Todo List', path: '/todo-list/', icon: 'checklist',
     image: 'assets/todo-list.png',
-    description: 'Write tasks on lined paper with checkboxes, section priorities, and shared section-name prefixes. Lists are organized by creation date and fade into a configurable archive.',
+    description: 'Write, organize, and prioritize tasks in simple lists that archive automatically.',
     metadata: {
       keywords: ['todo list', 'tasks', 'checklist', 'task planning'],
       socialImage: {
