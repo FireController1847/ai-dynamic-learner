@@ -28,7 +28,52 @@ export const TodoTaskEditor = defineComponent({
     const pendingSection = ref<TodoSection | null>(null);
     const undo = ref<{ section: TodoSection; index: number; task: TodoTask } | null>(null);
     const message = ref('');
-    onDeactivated(() => { pendingSection.value = null; editingName.value = null; });
+    function isMeaningfulTask(task: TodoTask) { return !!(task.text.trim() || task.done || task.skipped); }
+    function isSectionComplete(section: TodoSection) {
+      const tasks = section.tasks.filter(isMeaningfulTask);
+      return tasks.length > 0 && tasks.every(task => task.done || task.skipped);
+    }
+    const completedSections = reactive(new Set<string>(sections.value.filter(isSectionComplete).map(section => section.id)));
+    const celebratingTasks = reactive(new Set<string>());
+    const celebratingSections = reactive(new Set<string>());
+    const taskCelebrationTimers = new Map<string, number>();
+    const sectionCelebrationTimers = new Map<string, number>();
+    function stopTaskCelebration(id: string) {
+      const timer = taskCelebrationTimers.get(id);
+      if (timer !== undefined) window.clearTimeout(timer);
+      taskCelebrationTimers.delete(id); celebratingTasks.delete(id);
+    }
+    function stopSectionCelebration(id: string) {
+      const timer = sectionCelebrationTimers.get(id);
+      if (timer !== undefined) window.clearTimeout(timer);
+      sectionCelebrationTimers.delete(id); celebratingSections.delete(id);
+    }
+    function celebrateTask(id: string) {
+      stopTaskCelebration(id); celebratingTasks.add(id);
+      taskCelebrationTimers.set(id, window.setTimeout(() => stopTaskCelebration(id), 760));
+    }
+    function celebrateSection(id: string) {
+      stopSectionCelebration(id); celebratingSections.add(id);
+      sectionCelebrationTimers.set(id, window.setTimeout(() => stopSectionCelebration(id), 2200));
+    }
+    function syncSectionCompletion(section: TodoSection, celebrate: boolean) {
+      const complete = isSectionComplete(section);
+      const wasComplete = completedSections.has(section.id);
+      if (!complete) {
+        completedSections.delete(section.id); stopSectionCelebration(section.id); return;
+      }
+      completedSections.add(section.id);
+      if (celebrate && !wasComplete) celebrateSection(section.id);
+    }
+    function clearCelebrations() {
+      for (const timer of taskCelebrationTimers.values()) window.clearTimeout(timer);
+      for (const timer of sectionCelebrationTimers.values()) window.clearTimeout(timer);
+      taskCelebrationTimers.clear(); sectionCelebrationTimers.clear();
+      celebratingTasks.clear(); celebratingSections.clear();
+    }
+    onDeactivated(() => {
+      pendingSection.value = null; editingName.value = null; clearCelebrations();
+    });
     function draftFor(section: TodoSection) {
       let draft = drafts.get(section.id);
       if (!draft) { draft = newTask(); drafts.set(section.id, draft); }
@@ -58,7 +103,7 @@ export const TodoTaskEditor = defineComponent({
       sectionElements.forEach(section => observer?.observe(section));
     });
     onUpdated(resize);
-    onBeforeUnmount(() => observer?.disconnect());
+    onBeforeUnmount(() => { observer?.disconnect(); clearCelebrations(); });
     async function focusTask(id: string) { await nextTick(); fields.get(id)?.focus(); }
     async function editName(taskId: string) {
       editingName.value = taskId; await nextTick(); names.get(taskId)?.focus(); names.get(taskId)?.select();
@@ -74,6 +119,7 @@ export const TodoTaskEditor = defineComponent({
       next.tasks = following.length ? following : [];
       const sectionIndex = sections.value.indexOf(section);
       sections.value.splice(sectionIndex + 1, 0, next);
+      syncSectionCompletion(section, false); syncSectionCompletion(next, false);
       drafts.delete(section.id);
       const first = orderedTasks(next)[0] ?? draftFor(next);
       await editName(first.id);
@@ -83,13 +129,14 @@ export const TodoTaskEditor = defineComponent({
       const task = orderedTasks(section)[index]; if (!task) return;
       const storedIndex = section.tasks.indexOf(task);
       undo.value = { section, index: storedIndex, task }; section.tasks.splice(storedIndex, 1);
+      stopTaskCelebration(task.id); syncSectionCompletion(section, false);
       message.value = 'Task removed. Undo is available.';
       const remaining = orderedTasks(section);
       await focusTask((remaining[index] ?? remaining[index - 1] ?? draftFor(section)).id);
     }
     async function restoreTask() {
       const saved = undo.value; if (!saved || storedCount.value >= MAX_TASKS || !sections.value.includes(saved.section)) return;
-      saved.section.tasks.splice(saved.index, 0, saved.task); undo.value = null;
+      saved.section.tasks.splice(saved.index, 0, saved.task); syncSectionCompletion(saved.section, false); undo.value = null;
       message.value = 'Task restored.'; await focusTask(saved.task.id);
     }
     async function moveTask(section: TodoSection, index: number, direction: number) {
@@ -102,9 +149,10 @@ export const TodoTaskEditor = defineComponent({
       const section = pendingSection.value; pendingSection.value = null;
       if (section) await focusTask((orderedTasks(section)[0] ?? draftFor(section)).id);
     }
-    async function toggleSkipped(task: TodoTask, trigger: EventTarget | null) {
+    async function toggleSkipped(section: TodoSection, task: TodoTask, trigger: EventTarget | null) {
       task.skipped = !task.skipped;
       if (task.skipped) task.done = false;
+      stopTaskCelebration(task.id); syncSectionCompletion(section, !!task.skipped);
       message.value = task.skipped ? 'Task skipped or deferred. It stays in this list, unchecked.' : 'Task restored to active.';
       await nextTick();
       if (trigger instanceof HTMLButtonElement && trigger.isConnected) trigger.focus();
@@ -120,15 +168,25 @@ export const TodoTaskEditor = defineComponent({
             type: 'button', class: ['todo-skip-button', { 'is-active': task.skipped }],
             title: task.skipped ? 'Restore task' : 'Skip / defer task', 'aria-pressed': !!task.skipped,
             'aria-label': `${task.skipped ? 'Restore' : 'Skip / defer'} task: ${task.text || 'Untitled task'}`,
-            onClick: (event: MouseEvent) => toggleSkipped(task, event.currentTarget),
+            onClick: (event: MouseEvent) => toggleSkipped(section, task, event.currentTarget),
           }, '×') : null,
-          !draft ? h('input', { type: 'checkbox', checked: task.done, 'aria-label': `${task.skipped ? 'Complete skipped/deferred task' : 'Complete task'}: ${section.title ? `${section.title}: ` : ''}${task.text || 'Untitled task'}`,
+          !draft ? h('input', { type: 'checkbox', checked: task.done,
+            class: { 'is-celebrating': celebratingTasks.has(task.id) },
+            'aria-label': `${task.skipped ? 'Complete skipped/deferred task' : 'Complete task'}: ${section.title ? `${section.title}: ` : ''}${task.text || 'Untitled task'}`,
             onChange: (event: Event) => {
               if (event.target instanceof HTMLInputElement) {
                 task.done = event.target.checked;
-                if (task.done) task.skipped = false;
+                if (task.done) {
+                  task.skipped = false; celebrateTask(task.id);
+                  message.value = 'Task completed. Nice work.';
+                } else {
+                  stopTaskCelebration(task.id); message.value = 'Task marked incomplete.';
+                }
+                syncSectionCompletion(section, task.done);
               }
             } }) : h('span', { class: 'todo-checkbox-space', 'aria-hidden': 'true' }),
+          !draft && celebratingTasks.has(task.id) ? h('span', { class: 'todo-check-sparks', 'aria-hidden': 'true' },
+            Array.from({ length: 8 }, (_, spark) => h('span', { class: `todo-check-spark todo-check-spark-${spark + 1}` }, '✦'))) : null,
         ]),
         h('div', { class: 'todo-task-writing' }, [
           h('span', { class: 'todo-task-dash', 'aria-hidden': 'true' }, '-'),
@@ -152,6 +210,7 @@ export const TodoTaskEditor = defineComponent({
             onInput: (event: Event) => {
               task.text = inputValue(event);
               if (draft && task.text && storedCount.value < MAX_TASKS) { section.tasks.push(task); drafts.delete(section.id); }
+              syncSectionCompletion(section, false);
               if (event.target instanceof HTMLTextAreaElement) size(event.target);
             },
             onKeydown: (event: KeyboardEvent) => {
@@ -199,7 +258,8 @@ export const TodoTaskEditor = defineComponent({
         undo.value ? h('button', { type: 'button', class: 'quiet-button', disabled: storedCount.value >= MAX_TASKS, onClick: restoreTask }, 'Undo remove') : null,
       ]),
       h('p', { class: 'todo-editor-hint' }, 'Click a section prefix to name it. Priority applies to that section. Enter adds a task; Enter on an empty task starts a section. Shift+Enter adds a line. Click × beside a checkbox to skip/defer; click again to restore.'),
-      h('div', { class: 'todo-task-paper' }, sections.value.map((section, sectionIndex) => h('section', { key: section.id, class: 'todo-task-section',
+      h('div', { class: 'todo-task-paper' }, sections.value.map((section, sectionIndex) => h('section', {
+        key: section.id, class: ['todo-task-section', { 'is-celebrating': celebratingSections.has(section.id) }],
         ref: element => {
           const previous = sectionElements.get(section.id);
           if (previous === element) return;
@@ -207,6 +267,10 @@ export const TodoTaskEditor = defineComponent({
           if (element instanceof HTMLElement) { sectionElements.set(section.id, element); observer?.observe(element); }
           else { sectionElements.delete(section.id); priorityHeights.delete(section.id); }
         }, 'aria-label': section.title || `Section ${sectionIndex + 1}` }, [
+        celebratingSections.has(section.id) ? h('div', { class: 'todo-section-celebration', 'aria-hidden': 'true' }, [
+          h('div', { class: 'todo-section-party' }, Array.from({ length: 18 }, (_, particle) =>
+            h('span', { class: ['todo-party-piece', { 'is-star': particle % 5 === 0 }] }, particle % 5 === 0 ? '✦' : ''))),
+        ]) : null,
         h('div', { class: 'todo-section-priority-area', style: { height: `${priorityHeights.get(section.id) ?? props.display.rowSpacing}px` } }, [
           h('label', { class: ['todo-section-priority-marker', { 'has-priority': !!sectionPriority(section) }] }, [
             h('span', { 'aria-hidden': 'true' }, 'P#'),
@@ -222,8 +286,10 @@ export const TodoTaskEditor = defineComponent({
       h('p', { class: 'visually-hidden', role: 'status' }, message.value),
       pendingSection.value ? h(DeleteConfirmation, { itemName: pendingSection.value.title || 'Untitled section', itemLabel: 'section', detail: 'All tasks in this section will be removed.', confirmLabel: 'Delete section',
         onCancel: cancelSectionDelete, onConfirm: async () => {
-          const index = sections.value.findIndex(section => section.id === pendingSection.value?.id);
+          const deleting = pendingSection.value;
+          const index = sections.value.findIndex(section => section.id === deleting?.id);
           if (index >= 0) sections.value.splice(index, 1);
+          if (deleting) { completedSections.delete(deleting.id); stopSectionCelebration(deleting.id); }
           if (!sections.value.length) sections.value.push(newSection());
           undo.value = null; pendingSection.value = null; message.value = 'Section deleted.';
           const section = sections.value[Math.max(0, index - 1)]!;
