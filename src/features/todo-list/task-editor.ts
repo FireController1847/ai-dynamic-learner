@@ -224,8 +224,10 @@ export const TodoTaskEditor = defineComponent({
               Array.from({ length: 7 }, (_, particle) => h('span', {
                 class: `todo-check-fallout-particle todo-check-fallout-particle-${particle + 1}`,
               }, '✦'))),
-            h('span', { class: 'todo-check-sparks', 'aria-hidden': 'true' },
-              Array.from({ length: 8 }, (_, spark) => h('span', { class: `todo-check-spark todo-check-spark-${spark + 1}` }, '✦'))),
+            h('span', { class: 'todo-check-sparks', 'aria-hidden': 'true' }, [
+              h('span', { class: 'todo-check-spark-ring' },
+                Array.from({ length: 8 }, (_, spark) => h('span', { class: `todo-check-spark todo-check-spark-${spark + 1}` }, '✦'))),
+            ]),
           ] : null,
         ]),
         h('div', { class: 'todo-task-writing' }, [
