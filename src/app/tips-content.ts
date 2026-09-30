@@ -152,7 +152,7 @@ export const tipsCatalog: Record<TipsFeatureId, Tutorial> = {
   },
 
   'todo-list': {
-    version: 2,
+    version: 3,
     sections: [
       {
         id: 'library',
@@ -179,14 +179,42 @@ export const tipsCatalog: Record<TipsFeatureId, Tutorial> = {
       {
         id: 'writing',
         title: 'Writing tasks',
-        description: 'Write tasks and mark what is done.',
+        description: 'Write and organize your tasks.',
         when: '.todo-task-editor',
         steps: [
           {
             title: 'Write your tasks',
-            body: 'Type a task and press Enter for the next one. Press Enter on a blank task to start a new section.',
+            body: 'Type a task and press Enter for the next one.',
             target: '.todo-task-writing',
             targetLabel: 'Task writing area',
+            placement: 'bottom',
+          },
+          {
+            title: 'Make a section',
+            body: 'Press Enter on an empty task to start a new section. Click its name to rename it.',
+            target: '.todo-section-prefix',
+            targetLabel: 'Section name',
+            placement: 'right',
+          },
+          {
+            title: 'Remove a task or section',
+            body: 'Open ⋯ for more options. You can remove a task or remove a section there.',
+            target: '.todo-row-tools',
+            targetLabel: 'Task and section options',
+            placement: 'right',
+          },
+          {
+            title: 'Set a priority',
+            body: 'Type a number next to P# to give the section a priority.',
+            target: '.todo-section-priority-marker',
+            targetLabel: 'Section priority',
+            placement: 'right',
+          },
+          {
+            title: 'Sort your sections',
+            body: 'Use Sort to keep sections in your own order, by name, or by priority.',
+            target: '.todo-sort-control',
+            targetLabel: 'Sort sections',
             placement: 'bottom',
           },
           {
