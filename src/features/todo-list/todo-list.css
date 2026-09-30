@@ -228,18 +228,18 @@
     animation-timing-function: cubic-bezier(0.42, 0, 1, 1);
   }
   17% {
-    transform: rotate(57deg);
+    transform: rotate(45deg);
     animation-timing-function: linear;
   }
   54% {
-    transform: rotate(323deg);
+    transform: rotate(254deg);
     animation-timing-function: cubic-bezier(0, 0, 0.58, 1);
   }
   72% {
-    transform: rotate(420deg);
+    transform: rotate(330deg);
   }
   100% {
-    transform: rotate(420deg);
+    transform: rotate(330deg);
   }
 }
 @keyframes todo-check-fallout {
