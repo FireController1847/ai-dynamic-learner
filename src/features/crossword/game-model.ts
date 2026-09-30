@@ -73,6 +73,7 @@ export function validateGame(puzzleValue: unknown, gameValue: unknown): asserts 
   const answers = new Set(puzzle.entries.map(({ answer }) => answer));
   const seen = new Set<string>();
   const used = new Set<number>();
+  const orientation = Array<number>(size * size).fill(0);
   const numbers = expectedNumbers(placements.map((placement) => {
     if (!isRecord(placement)) return { row: -1, column: -1 };
     return { row: Number(placement.row), column: Number(placement.column) };
@@ -92,9 +93,19 @@ export function validateGame(puzzleValue: unknown, gameValue: unknown): asserts 
     const endRow = typedPlacement.row + (typedPlacement.direction === 'down' ? typedPlacement.answer.length - 1 : 0);
     const endColumn = typedPlacement.column + (typedPlacement.direction === 'across' ? typedPlacement.answer.length - 1 : 0);
     const path = placementCells(typedPlacement, typedPlacement.answer.length, size);
+    const bit = typedPlacement.direction === 'across' ? 1 : 2;
+    const beforeRow = typedPlacement.row - (typedPlacement.direction === 'down' ? 1 : 0);
+    const beforeColumn = typedPlacement.column - (typedPlacement.direction === 'across' ? 1 : 0);
+    const afterRow = endRow + (typedPlacement.direction === 'down' ? 1 : 0);
+    const afterColumn = endColumn + (typedPlacement.direction === 'across' ? 1 : 0);
+    const openAt = (row: number, column: number) =>
+      row >= 0 && column >= 0 && row < size && column < size && rows[row][column] !== '#';
+
     if (typedPlacement.row < 0 || typedPlacement.column < 0 || endRow >= size || endColumn >= size ||
         path.some((cell) => cell < 0 || cell >= size * size) ||
-        path.some((cell, index) => rows[Math.floor(cell / size)][cell % size] !== typedPlacement.answer[index])) {
+        path.some((cell, index) => rows[Math.floor(cell / size)][cell % size] !== typedPlacement.answer[index]) ||
+        path.some((cell) => Boolean(orientation[cell] & bit)) ||
+        openAt(beforeRow, beforeColumn) || openAt(afterRow, afterColumn)) {
       throw new Error('A saved crossword answer does not match the grid.');
     }
 
@@ -102,7 +113,7 @@ export function validateGame(puzzleValue: unknown, gameValue: unknown): asserts 
     if (numbers.get(start) !== placement.number) {
       throw new Error('A saved crossword clue number does not match its grid position.');
     }
-    path.forEach((cell) => used.add(cell));
+    path.forEach((cell) => { used.add(cell); orientation[cell] |= bit; });
     seen.add(placement.answer);
   }
 
