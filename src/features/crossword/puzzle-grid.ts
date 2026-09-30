@@ -204,7 +204,7 @@ export const PuzzleGrid = defineComponent({
                 starts.value.has(cell) ? h('span', { class: 'crossword-cell-number', 'aria-hidden': 'true' }, starts.value.get(cell)) : null,
                 h('span', { class: 'crossword-cell-letter', 'aria-hidden': 'true' }, shown),
               ]);
-            }))),
+            })))),
       ]),
     ]);
   },
