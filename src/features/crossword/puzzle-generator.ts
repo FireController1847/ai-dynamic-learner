@@ -1,4 +1,4 @@
-import { validatePuzzle } from './puzzle-model.ts';
+import { validatePuzzleForGeneration } from './puzzle-model.ts';
 import type { Puzzle } from './puzzle-model.ts';
 import { expectedNumbers, placementCells, validateGame, type Direction, type Game, type Placement } from './game-model.ts';
 
@@ -10,8 +10,16 @@ interface Candidate {
   intersections: number;
 }
 
+interface EntryCandidates {
+  answer: string;
+  candidates: Candidate[];
+}
+
 const ACROSS = 1;
 const DOWN = 2;
+const MAX_WORK_GRID_SIZE = 45;
+const MIN_FINAL_GRID_SIZE = 5;
+const ATTEMPTS = 160;
 
 function shuffled<T>(values: readonly T[]): T[] {
   const result = [...values];
@@ -71,7 +79,7 @@ function evaluate(
     column,
     direction,
     intersections,
-    score: intersections * 20 - distance + Math.random() * 2,
+    score: intersections * 24 - distance + Math.random() * 2,
   };
 }
 
@@ -87,6 +95,7 @@ function crossingCandidates(
     if (!letter) continue;
     const row = Math.floor(cell / size);
     const column = cell % size;
+
     for (let index = 0; index < answer.length; index += 1) {
       if (answer[index] !== letter) continue;
       for (const direction of ['across', 'down'] as const) {
@@ -100,26 +109,6 @@ function crossingCandidates(
           usage,
         );
         if (candidate?.intersections) result.push(candidate);
-      }
-    }
-  }
-  return result;
-}
-
-function openCandidates(
-  answer: string,
-  size: number,
-  letters: readonly string[],
-  usage: readonly number[],
-): Candidate[] {
-  const result: Candidate[] = [];
-  for (const direction of ['across', 'down'] as const) {
-    const rows = direction === 'across' ? size : size - answer.length + 1;
-    const columns = direction === 'down' ? size : size - answer.length + 1;
-    for (let row = 0; row < rows; row += 1) {
-      for (let column = 0; column < columns; column += 1) {
-        const candidate = evaluate(answer, row, column, direction, size, letters, usage);
-        if (candidate) result.push(candidate);
       }
     }
   }
@@ -142,12 +131,82 @@ function commit(answer: string, candidate: Candidate, size: number, letters: str
   return placement;
 }
 
-export async function generatePuzzle(value: unknown, signal?: AbortSignal): Promise<Game | null> {
-  validatePuzzle(value);
-  const puzzle = value as Puzzle;
-  const size = puzzle.size;
+function compactGame(placements: Placement[], workSize: number): Game {
+  let minRow = workSize;
+  let maxRow = 0;
+  let minColumn = workSize;
+  let maxColumn = 0;
 
-  for (let attempt = 0; attempt < 72; attempt += 1) {
+  for (const placement of placements) {
+    const endRow = placement.row + (placement.direction === 'down' ? placement.answer.length - 1 : 0);
+    const endColumn = placement.column + (placement.direction === 'across' ? placement.answer.length - 1 : 0);
+    minRow = Math.min(minRow, placement.row);
+    maxRow = Math.max(maxRow, endRow);
+    minColumn = Math.min(minColumn, placement.column);
+    maxColumn = Math.max(maxColumn, endColumn);
+  }
+
+  const height = maxRow - minRow + 1;
+  const width = maxColumn - minColumn + 1;
+  const size = Math.max(MIN_FINAL_GRID_SIZE, height, width);
+  const rowPadding = Math.floor((size - height) / 2);
+  const columnPadding = Math.floor((size - width) / 2);
+  const shifted = placements.map((placement) => ({
+    ...placement,
+    row: placement.row - minRow + rowPadding,
+    column: placement.column - minColumn + columnPadding,
+    number: 0,
+  }));
+
+  const letters = Array<string>(size * size).fill('');
+  for (const placement of shifted) {
+    placementCells(placement, placement.answer.length, size).forEach((cell, index) => {
+      letters[cell] = placement.answer[index];
+    });
+  }
+
+  const numbers = expectedNumbers(shifted, size);
+  for (const placement of shifted) {
+    placement.number = numbers.get(placement.row * size + placement.column) ?? 0;
+  }
+  shifted.sort((left, right) =>
+    left.number - right.number || (left.direction === 'across' ? -1 : 1));
+
+  const rows = Array.from({ length: size }, (_, row) =>
+    letters.slice(row * size, (row + 1) * size).map((letter) => letter || '#').join(''));
+
+  return {
+    rows,
+    placements: shifted,
+    cells: Array<string>(size * size).fill(''),
+  };
+}
+
+function workGridSize(puzzle: Puzzle): number {
+  const longest = Math.max(...puzzle.entries.map(({ answer }) => answer.length));
+  const letters = puzzle.entries.reduce((total, entry) => total + entry.answer.length, 0);
+  const estimated = Math.ceil(Math.sqrt(letters) * 2.2);
+  return Math.min(MAX_WORK_GRID_SIZE, Math.max(15, longest * 2 + 1, estimated));
+}
+
+function difficultAnswers(puzzle: Puzzle): string[] {
+  const connectionCounts = puzzle.entries.map(({ answer }) => ({
+    answer,
+    connections: puzzle.entries.filter((entry) =>
+      entry.answer !== answer && [...new Set(answer)].some((letter) => entry.answer.includes(letter))).length,
+  }));
+  return connectionCounts
+    .sort((left, right) => left.connections - right.connections || right.answer.length - left.answer.length)
+    .slice(0, Math.min(3, connectionCounts.length))
+    .map(({ answer }) => answer);
+}
+
+export async function generatePuzzle(value: unknown, signal?: AbortSignal): Promise<Game | null> {
+  validatePuzzleForGeneration(value);
+  const puzzle = value as Puzzle;
+  const size = workGridSize(puzzle);
+
+  for (let attempt = 0; attempt < ATTEMPTS; attempt += 1) {
     await new Promise((resolve) => setTimeout(resolve, 0));
     if (signal?.aborted) return null;
 
@@ -155,11 +214,11 @@ export async function generatePuzzle(value: unknown, signal?: AbortSignal): Prom
     const usage = Array<number>(size * size).fill(0);
     const placements: Placement[] = [];
     const ordered = shuffled(puzzle.entries)
-      .map((entry) => ({ ...entry, priority: entry.answer.length + Math.random() * 2 }))
-      .sort((a, b) => b.priority - a.priority);
-
+      .map((entry) => ({ ...entry, priority: entry.answer.length + Math.random() * 4 }))
+      .sort((left, right) => right.priority - left.priority);
     const first = ordered.shift();
     if (!first) break;
+
     const firstDirection: Direction = attempt % 2 ? 'down' : 'across';
     const firstCandidate = evaluate(
       first.answer,
@@ -171,31 +230,48 @@ export async function generatePuzzle(value: unknown, signal?: AbortSignal): Prom
       usage,
     );
     if (!firstCandidate) continue;
-    placements.push(commit(first.answer, firstCandidate, size, letters, usage));
 
+    placements.push(commit(first.answer, firstCandidate, size, letters, usage));
+    const remaining = [...ordered];
     let failed = false;
-    for (const entry of ordered) {
-      const crossings = crossingCandidates(entry.answer, size, letters, usage);
-      const candidates = crossings.length ? crossings : openCandidates(entry.answer, size, letters, usage);
-      if (!candidates.length) { failed = true; break; }
-      candidates.sort((a, b) => b.score - a.score);
-      const window = candidates.slice(0, Math.min(8, candidates.length));
-      placements.push(commit(entry.answer, window[Math.floor(Math.random() * window.length)], size, letters, usage));
+
+    while (remaining.length) {
+      const viable: EntryCandidates[] = remaining
+        .map((entry) => ({
+          answer: entry.answer,
+          candidates: crossingCandidates(entry.answer, size, letters, usage),
+        }))
+        .filter(({ candidates }) => candidates.length > 0);
+
+      if (!viable.length) {
+        failed = true;
+        break;
+      }
+
+      viable.sort((left, right) =>
+        left.candidates.length - right.candidates.length ||
+        right.answer.length - left.answer.length ||
+        Math.random() - 0.5);
+      const choice = viable[0];
+      choice.candidates.sort((left, right) => right.score - left.score);
+      const candidateWindow = choice.candidates.slice(0, Math.min(6, choice.candidates.length));
+      const candidate = candidateWindow[Math.floor(Math.random() * candidateWindow.length)];
+      placements.push(commit(choice.answer, candidate, size, letters, usage));
+
+      const index = remaining.findIndex(({ answer }) => answer === choice.answer);
+      remaining.splice(index, 1);
     }
+
     if (failed || placements.length !== puzzle.entries.length) continue;
 
-    const numbers = expectedNumbers(placements, size);
-    for (const placement of placements) {
-      placement.number = numbers.get(placement.row * size + placement.column) ?? 0;
-    }
-    placements.sort((a, b) => a.number - b.number || (a.direction === 'across' ? -1 : 1));
-
-    const rows = Array.from({ length: size }, (_, row) =>
-      letters.slice(row * size, (row + 1) * size).map((letter) => letter || '#').join(''));
-    const game: Game = { rows, placements, cells: Array<string>(size * size).fill('') };
+    const game = compactGame(placements, size);
     validateGame(puzzle, game);
     return game;
   }
 
-  throw new Error('These answers could not fit cleanly in this grid. Try a larger grid, fewer answers, or shorter answers.');
+  const difficult = difficultAnswers(puzzle);
+  throw new Error(
+    `These answers share letters, but I couldn't arrange them into one clean connected crossword without collisions. ` +
+    `Try replacing, shortening, or adding a bridging answer around ${difficult.map((answer) => `“${answer}”`).join(', ')}.`,
+  );
 }
