@@ -167,14 +167,27 @@ export const PuzzleGame = defineComponent({
     function giveHint() {
       if (!game.value) return;
       const remaining = game.value.placements.filter((placement) => !placementSolved(game.value!, placement));
-      const placement = remaining[Math.floor(Math.random() * remaining.length)];
+      const preferred = activePlacement.value && !placementSolved(game.value, activePlacement.value)
+        ? activePlacement.value
+        : null;
+      const placement = preferred ?? remaining[Math.floor(Math.random() * remaining.length)];
       if (!placement) {
         message.value = 'Every clue is already solved.';
         return;
       }
-      focusPlacement(placement);
-      const clue = clueEntry(props.item.puzzle, placement.answer)?.clue ?? '';
-      message.value = `Try ${placement.number} ${placement.direction === 'across' ? 'Across' : 'Down'}: ${clue}`;
+
+      const path = placementCells(placement, placement.answer.length, game.value.rows.length);
+      const candidates = path
+        .map((cell, index) => ({ cell, index }))
+        .filter(({ cell, index }) => game.value!.cells[cell] !== placement.answer[index]);
+      const target = candidates[Math.floor(Math.random() * candidates.length)];
+      if (!target) return;
+
+      activeCell.value = target.cell;
+      direction.value = placement.direction;
+      grid.value?.focusCell(target.cell, placement.direction);
+      const size = game.value.rows.length;
+      message.value = `Hint for ${placement.number} ${placement.direction === 'across' ? 'Across' : 'Down'}: row ${Math.floor(target.cell / size) + 1}, column ${target.cell % size + 1} is “${placement.answer[target.index]}”.`;
     }
 
     async function requestAction(action: 'new' | 'restart', event: MouseEvent) {
