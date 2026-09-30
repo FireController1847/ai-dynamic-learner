@@ -402,7 +402,7 @@ export const tipsCatalog: Record<TipsFeatureId, Tutorial> = {
   },
 
   crossword: {
-    version: 1,
+    version: 2,
     sections: [
       {
         id: 'library',
