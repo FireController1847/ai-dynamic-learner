@@ -302,7 +302,7 @@ export const TodoTaskEditor = defineComponent({
         h('p', { class: 'todo-editor-progress' }, `${completed.value}/${count.value} done${skipped.value ? ` · ${skipped.value} skipped` : ''}`),
         undo.value ? h('button', { type: 'button', class: 'quiet-button', disabled: storedCount.value >= MAX_TASKS, onClick: restoreTask }, 'Undo remove') : null,
       ]),
-      h('div', { class: 'todo-task-paper' }, [
+      h('div', { class: ['todo-task-paper', { 'is-sorted': sortMode.value !== 'custom' }] }, [
         h('h2', { class: 'todo-paper-title' }, props.item.name),
         ...displaySections.value.map((section, sectionIndex) => h('section', {
         key: section.id, class: ['todo-task-section', { 'is-celebrating': celebratingSections.has(section.id) }],
