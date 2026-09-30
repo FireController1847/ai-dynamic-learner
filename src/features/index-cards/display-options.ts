@@ -2,9 +2,20 @@ import { isRecord } from '../../core/validation.ts';
 import { choiceStyle } from '../../core/display-fields.ts';
 import type { DisplayField } from '../../core/display-fields.ts';
 
-export interface DisplayOptions { font: 'serif' | 'sans'; textSize: number; cardSize: number; ink: 'pencil' | 'dark' | 'black'; baseline: number; }
+export interface DisplayOptions {
+  paper: 'cream' | 'white';
+  font: 'serif' | 'sans';
+  textSize: number;
+  cardSize: number;
+  ink: 'pencil' | 'dark' | 'black';
+  baseline: number;
+}
 // Canonical display choices, defaults, and bounds; no Vue or DOM dependencies.
 export const DISPLAY_FIELDS: DisplayField<DisplayOptions>[] = [
+  { key: 'paper', label: 'Paper color', default: 'cream', choices: [
+    { value: 'cream', label: 'Cream', css: '#fffefa' },
+    { value: 'white', label: 'White', css: '#ffffff' },
+  ] },
   { key: 'font', label: 'Font', default: 'serif', choices: [
     { value: 'serif', label: 'Serif', css: "Georgia, 'Times New Roman', serif" },
     { value: 'sans', label: 'Sans', css: "'Segoe UI', Arial, sans-serif" },
@@ -24,8 +35,12 @@ export function defaultDisplayOptions(): DisplayOptions {
 }
 
 export function validateDisplayOptions(value: unknown): asserts value is DisplayOptions {
-  if (!isRecord(value) ||
-      Object.keys(value).some((key) => !DISPLAY_FIELDS.some((field) => field.key === key))) {
+  if (!isRecord(value)) throw new Error('Index Cards display settings are invalid.');
+
+  // Display settings saved before paper color existed used the cream paper implicitly.
+  if (!Object.hasOwn(value, 'paper')) value.paper = 'cream';
+
+  if (Object.keys(value).some((key) => !DISPLAY_FIELDS.some((field) => field.key === key))) {
     throw new Error('Index Cards display settings are invalid.');
   }
   for (const field of DISPLAY_FIELDS) {
@@ -40,6 +55,7 @@ export function validateDisplayOptions(value: unknown): asserts value is Display
 export function displayStyles(options: DisplayOptions) {
   const choice = (key: keyof DisplayOptions) => choiceStyle(DISPLAY_FIELDS, key, options[key]);
   return {
+    '--paper': choice('paper'),
     '--paper-font': choice('font'),
     '--paper-ink': choice('ink'),
     '--card-text-size': `${3.1 * options.textSize / 100}cqw`,
