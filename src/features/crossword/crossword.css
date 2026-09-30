@@ -141,7 +141,7 @@
 .crossword-library-row.drop-after::after { bottom: -2px; }
 
 .crossword-library-footer { flex-shrink: 0; padding: 8px; border-top: 1px solid var(--border-color); }
-.crossword-settings-button { width: 100%; justify-content: space-between; }
+.crossword-settings-button { width: 100%; justify-content: space-between; border-color: transparent; background: transparent; }
 .crossword-library-resizer {
   grid-column: 1;
   grid-row: 1;
