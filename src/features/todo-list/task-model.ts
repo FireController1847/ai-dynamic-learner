@@ -19,6 +19,13 @@ export function sectionPriority(section: TodoSection): string {
 export function orderedTasks(section: TodoSection): TodoTask[] {
   return [...section.tasks].sort((a, b) => Number(!!b.skipped) - Number(!!a.skipped));
 }
+export function isMeaningfulTask(task: TodoTask): boolean {
+  return !!(task.text.trim() || task.done || task.skipped);
+}
+export function isTodoListComplete(sections: TodoSection[]): boolean {
+  const tasks = sections.flatMap(section => section.tasks.filter(isMeaningfulTask));
+  return tasks.length > 0 && tasks.every(task => task.done || task.skipped);
+}
 export function validateSections(value: unknown): asserts value is TodoSection[] {
   if (!Array.isArray(value) || value.length > MAX_SECTIONS) throw new Error('Todo List sections are invalid.');
   const ids = new Set<string>();

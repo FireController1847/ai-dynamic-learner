@@ -3,7 +3,7 @@ import { todoDisplayStyles, type TodoDisplay } from './display-options.ts';
 import { DeleteConfirmation } from '../../components/delete-confirmation.ts';
 import { inputValue } from '../../core/dom.ts';
 import type { SectionSort, TodoListRecord } from './library-model.ts';
-import { MAX_SECTIONS, MAX_TASKS, MAX_TASK_TEXT, newSection, newTask, orderedTasks, sectionPriority, priorityNumber, formatPriority, type TodoSection, type TodoTask } from './task-model.ts';
+import { MAX_SECTIONS, MAX_TASKS, MAX_TASK_TEXT, isMeaningfulTask, isTodoListComplete, newSection, newTask, orderedTasks, sectionPriority, priorityNumber, formatPriority, type TodoSection, type TodoTask } from './task-model.ts';
 
 export const TodoTaskEditor = defineComponent({
   name: 'TodoTaskEditor',
@@ -49,17 +49,12 @@ export const TodoTaskEditor = defineComponent({
     const pendingSection = ref<TodoSection | null>(null);
     const undo = ref<{ section: TodoSection; index: number; task: TodoTask } | null>(null);
     const message = ref('');
-    function isMeaningfulTask(task: TodoTask) { return !!(task.text.trim() || task.done || task.skipped); }
     function isSectionComplete(section: TodoSection) {
       const tasks = section.tasks.filter(isMeaningfulTask);
       return tasks.length > 0 && tasks.every(task => task.done || task.skipped);
     }
-    function isListComplete() {
-      const tasks = sections.value.flatMap(section => section.tasks.filter(isMeaningfulTask));
-      return tasks.length > 0 && tasks.every(task => task.done || task.skipped);
-    }
     const completedSections = reactive(new Set<string>(sections.value.filter(isSectionComplete).map(section => section.id)));
-    const listComplete = ref(isListComplete());
+    const listComplete = ref(isTodoListComplete(sections.value));
     const celebratingTasks = reactive(new Set<string>());
     const celebratingSections = reactive(new Set<string>());
     const celebratingList = ref(false);
@@ -93,7 +88,7 @@ export const TodoTaskEditor = defineComponent({
       listCelebrationTimer = window.setTimeout(stopListCelebration, 760);
     }
     function syncListCompletion(celebrate: boolean) {
-      const complete = isListComplete();
+      const complete = isTodoListComplete(sections.value);
       const wasComplete = listComplete.value;
       listComplete.value = complete;
       if (!complete) { stopListCelebration(); return; }

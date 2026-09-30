@@ -2,6 +2,7 @@ import { defineComponent, h, nextTick, ref, type PropType } from 'vue';
 import { Icon } from '../../components/icon.ts';
 import { inputValue } from '../../core/dom.ts';
 import { ageProgress, archiveTime, expiryLabel, MAX_LISTS, MAX_NAME_LENGTH, type LibrarySettings, type TodoListRecord } from './library-model.ts';
+import { isTodoListComplete } from './task-model.ts';
 
 export interface TodoLibraryHandle { beginRename(id: string): Promise<void>; focusToggle(): void; focusSettings(): void }
 export const TodoLibrary = defineComponent({
@@ -60,10 +61,18 @@ export const TodoLibrary = defineComponent({
             type: 'button', class: 'todo-library-label', 'aria-current': props.selectedId === item.id ? 'true' : undefined,
             title: expires ? `${item.name} · ${props.archived ? 'Archived' : 'Archives'} ${expiry.toLocaleString()}` : `${item.name} · No expiry`,
             onClick: () => { emit('select', item.id); emit('open-item'); },
-          }, [h('span', item.name), h('small', [
-            expires ? (props.archived ? 'Archived ' : 'Archives ') : 'No expiry',
-            expires ? h('time', { datetime: expiry.toISOString() }, expiry.toLocaleDateString()) : null,
-          ])]),
+          }, [
+            h('span', { class: 'todo-library-name' }, [
+              h('span', { class: 'todo-library-name-text' }, item.name),
+              isTodoListComplete(item.sections ?? []) ? h('span', {
+                class: 'todo-library-complete', title: 'Completed', 'aria-label': 'Completed',
+              }, [h(Icon, { name: 'verified' })]) : null,
+            ]),
+            h('small', [
+              expires ? (props.archived ? 'Archived ' : 'Archives ') : 'No expiry',
+              expires ? h('time', { datetime: expiry.toISOString() }, expiry.toLocaleDateString()) : null,
+            ]),
+          ]),
           h('button', { type: 'button', class: 'icon-button', title: `Rename ${item.name}`, 'aria-label': `Rename ${item.name}`,
             onClick: () => beginRename(item.id) }, [h(Icon, { name: 'pencil' })]),
           h('button', { type: 'button', class: 'icon-button delete-button', title: `Delete ${item.name}`, 'aria-label': `Delete ${item.name}`,
