@@ -180,15 +180,15 @@
   --fall-x: 0px; --fall-y: 28px; --fall-turn: 420deg;
   position: absolute; left: 0; top: 0; color: #ffd84d; opacity: 0;
   font: 800 9px/1 var(--font-family); text-shadow: 0 0 7px rgb(255 200 30 / 85%);
-  animation: todo-check-fallout 920ms forwards;
+  animation: todo-check-fallout 760ms forwards;
 }
-.todo-check-fallout-particle-1 { --fall-x: -22px; --fall-y: 20px; --fall-turn: -520deg; color: #ffc928; animation-delay: 20ms; }
-.todo-check-fallout-particle-2 { --fall-x: -12px; --fall-y: 32px; --fall-turn: 460deg; color: #ffe56b; animation-delay: 45ms; }
-.todo-check-fallout-particle-3 { --fall-x: 0px; --fall-y: 37px; --fall-turn: -440deg; color: #ffd84d; animation-delay: 10ms; }
-.todo-check-fallout-particle-4 { --fall-x: 13px; --fall-y: 31px; --fall-turn: 540deg; color: #ffca2f; animation-delay: 55ms; }
-.todo-check-fallout-particle-5 { --fall-x: 23px; --fall-y: 19px; --fall-turn: -480deg; color: #ffe984; animation-delay: 30ms; }
-.todo-check-fallout-particle-6 { --fall-x: -17px; --fall-y: 42px; --fall-turn: 500deg; color: #ffd240; animation-delay: 65ms; }
-.todo-check-fallout-particle-7 { --fall-x: 18px; --fall-y: 43px; --fall-turn: -560deg; color: #ffdf59; animation-delay: 75ms; }
+.todo-check-fallout-particle-1 { --fall-x: -22px; --fall-y: 20px; --fall-turn: -520deg; color: #ffc928; animation-delay: 8ms; }
+.todo-check-fallout-particle-2 { --fall-x: -12px; --fall-y: 32px; --fall-turn: 460deg; color: #ffe56b; animation-delay: 18ms; }
+.todo-check-fallout-particle-3 { --fall-x: 0px; --fall-y: 37px; --fall-turn: -440deg; color: #ffd84d; animation-delay: 0ms; }
+.todo-check-fallout-particle-4 { --fall-x: 13px; --fall-y: 31px; --fall-turn: 540deg; color: #ffca2f; animation-delay: 22ms; }
+.todo-check-fallout-particle-5 { --fall-x: 23px; --fall-y: 19px; --fall-turn: -480deg; color: #ffe984; animation-delay: 12ms; }
+.todo-check-fallout-particle-6 { --fall-x: -17px; --fall-y: 42px; --fall-turn: 500deg; color: #ffd240; animation-delay: 28ms; }
+.todo-check-fallout-particle-7 { --fall-x: 18px; --fall-y: 43px; --fall-turn: -560deg; color: #ffdf59; animation-delay: 36ms; }
 @keyframes todo-checkbox-pop {
   0% { transform: scale(1); }
   30% { transform: scale(0.78) rotate(-4deg); }
@@ -204,16 +204,14 @@
   0% {
     opacity: 0;
     transform: scale(0.08);
-    animation-timing-function: cubic-bezier(0.16, 0.82, 0.2, 1);
   }
-  28% {
+  38% {
     opacity: 1;
     transform: scale(1);
   }
-  72% {
+  76% {
     opacity: 1;
     transform: scale(1);
-    animation-timing-function: cubic-bezier(0.72, 0, 0.84, 0.22);
   }
   100% {
     opacity: 0;
@@ -223,38 +221,36 @@
 @keyframes todo-check-spark-orbit {
   0% {
     transform: rotate(0deg);
-    animation-timing-function: cubic-bezier(0.22, 0.02, 0.3, 1);
   }
-  28% {
-    transform: rotate(215deg);
-    animation-timing-function: linear;
+  38% {
+    transform: rotate(260deg);
   }
-  72% {
-    transform: rotate(555deg);
+  76% {
+    transform: rotate(560deg);
   }
   100% {
-    transform: rotate(555deg);
+    transform: rotate(560deg);
   }
 }
 @keyframes todo-check-fallout {
   0% {
     opacity: 0;
     transform: translate(-50%, -50%) scale(0.3) rotate(0deg);
-    animation-timing-function: cubic-bezier(0.16, 0.76, 0.24, 1);
+    animation-timing-function: cubic-bezier(0.18, 0.8, 0.24, 1);
   }
-  14% {
-    opacity: 0.98;
-    transform: translate(-50%, calc(-50% - 6px)) scale(0.78) rotate(30deg);
-    animation-timing-function: cubic-bezier(0.62, 0.02, 0.94, 0.34);
+  10% {
+    opacity: 1;
+    transform: translate(-50%, calc(-50% - 8px)) scale(0.8) rotate(26deg);
+    animation-timing-function: cubic-bezier(0.64, 0.02, 0.96, 0.34);
   }
-  26% {
+  20% {
     opacity: 0.92;
-    transform: translate(calc(-50% + var(--fall-x) * 0.16), calc(-50% - 2px)) scale(0.84) rotate(62deg);
-    animation-timing-function: cubic-bezier(0.76, 0.04, 0.98, 0.52);
+    transform: translate(calc(-50% + var(--fall-x) * 0.18), calc(-50% - 1px)) scale(0.82) rotate(58deg);
+    animation-timing-function: cubic-bezier(0.78, 0.04, 0.98, 0.56);
   }
   100% {
     opacity: 0;
-    transform: translate(calc(-50% + var(--fall-x)), calc(-50% + var(--fall-y) + 24px)) scale(0.38) rotate(var(--fall-turn));
+    transform: translate(calc(-50% + var(--fall-x)), calc(-50% + var(--fall-y) + 28px)) scale(0.34) rotate(var(--fall-turn));
   }
 }
 .todo-task-writing { position: relative; display: flex; align-items: start; gap: 8px; padding: 0 40px 0 var(--todo-inset, 12px); min-width: 0; font-size: var(--todo-text-size); letter-spacing: 0.015em; line-height: var(--todo-rule-spacing); transform: translateY(var(--todo-text-offset)); }
