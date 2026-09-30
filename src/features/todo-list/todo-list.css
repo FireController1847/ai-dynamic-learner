@@ -153,11 +153,11 @@
 .todo-check-sparks {
   position: absolute; top: 50%; right: 19px; width: 0; height: 0; z-index: 2; pointer-events: none;
   transform-origin: 0 0;
-  animation: todo-check-spark-scale 1180ms forwards;
+  animation: todo-check-spark-scale 1020ms forwards;
 }
 .todo-check-spark-ring {
   position: absolute; left: 0; top: 0; width: 0; height: 0; transform-origin: 0 0;
-  animation: todo-check-spark-orbit 1180ms forwards;
+  animation: todo-check-spark-orbit 1020ms forwards;
 }
 .todo-check-spark {
   --spark-x: 0px; --spark-y: -22px;
@@ -205,11 +205,15 @@
     opacity: 0;
     transform: scale(0.08);
   }
-  38% {
+  36% {
     opacity: 1;
     transform: scale(1);
   }
-  76% {
+  72% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  78% {
     opacity: 1;
     transform: scale(1);
   }
@@ -223,15 +227,15 @@
     transform: rotate(0deg);
     animation-timing-function: cubic-bezier(0.42, 0, 1, 1);
   }
-  18% {
+  17% {
     transform: rotate(57deg);
     animation-timing-function: linear;
   }
-  58% {
+  54% {
     transform: rotate(323deg);
     animation-timing-function: cubic-bezier(0, 0, 0.58, 1);
   }
-  76% {
+  72% {
     transform: rotate(420deg);
   }
   100% {
