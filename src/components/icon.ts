@@ -34,7 +34,17 @@ export const Icon = defineComponent({
       fill: 'none', stroke: 'currentColor', 'stroke-width': 1.6,
       'stroke-linecap': 'round', 'stroke-linejoin': 'round',
       'aria-hidden': 'true', focusable: 'false',
-    }, props.name === 'word-search' ? [
+    }, props.name === 'crossword' ? [
+      h('rect', { x: 2, y: 2, width: 20, height: 20, rx: 1 }),
+      ...[7, 12, 17].flatMap((position) => [
+        h('path', { d: `M${position} 2v20` }),
+        h('path', { d: `M2 ${position}h20` }),
+      ]),
+      h('rect', { x: 7, y: 2, width: 5, height: 5, fill: 'currentColor', stroke: 'none' }),
+      h('rect', { x: 17, y: 7, width: 5, height: 5, fill: 'currentColor', stroke: 'none' }),
+      h('rect', { x: 2, y: 12, width: 5, height: 5, fill: 'currentColor', stroke: 'none' }),
+      h('rect', { x: 12, y: 17, width: 5, height: 5, fill: 'currentColor', stroke: 'none' }),
+    ] : props.name === 'word-search' ? [
       h('rect', { x: 1.5, y: 1.5, width: 21, height: 7, rx: 3.5 }),
       h('rect', {
         x: 1.5, y: 1.5, width: 21, height: 7, rx: 3.5,
