@@ -58,11 +58,11 @@
 }
 .todo-task-paper::before { content: ''; position: absolute; top: 0; bottom: 0; left: var(--todo-margin-width); border-left: 1px solid var(--paper-red-line); pointer-events: none; }
 .todo-paper-title {
-  position: relative; display: flex; align-items: center; justify-content: center;
-  min-height: calc(var(--todo-rule-spacing) * 2); margin: 0;
+  position: relative; min-height: var(--todo-rule-spacing); margin: 0;
   padding: 0 40px 0 calc(var(--todo-margin-width) + var(--todo-inset, 12px));
-  color: inherit; font: inherit; font-size: calc(var(--todo-text-size) * 1.45); font-weight: 700;
-  line-height: var(--todo-rule-spacing); letter-spacing: 0.02em; text-align: center; overflow-wrap: anywhere;
+  color: inherit; font-family: inherit; font-size: calc(var(--todo-text-size) * 1.45); font-weight: 700;
+  line-height: var(--todo-rule-spacing); letter-spacing: 0.015em; text-align: left; overflow-wrap: anywhere;
+  transform: translateY(var(--todo-text-offset));
 }
 .todo-task-section { position: relative; margin: 0; isolation: isolate; }
 .todo-task-paper.is-sorted .todo-task-section + .todo-task-section { margin-top: var(--todo-rule-spacing); }
