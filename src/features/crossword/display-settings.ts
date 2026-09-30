@@ -6,7 +6,7 @@ import { DISPLAY_FIELDS, defaultDisplayOptions, displayStyles } from './display-
 import { defineComponent, type PropType, h } from 'vue';
 
 const preview = [
-  ['1', 'C'], ['', 'A'], ['', 'T'], ['#', '']],
+  ['1', 'C'], ['', 'A'], ['', 'T'], ['#', ''],
   ['', 'O'], ['#', ''], ['2', 'R'], ['', 'E'],
   ['3', 'D'], ['', 'A'], ['', 'T'], ['', 'A'],
   ['#', ''], ['', 'E'], ['#', ''], ['', 'D'],
