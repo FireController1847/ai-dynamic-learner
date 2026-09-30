@@ -1,4 +1,4 @@
-export interface CrosswordLibraryHandle { reveal(id: string): void; focusToggle(): void }
+export interface CrosswordLibraryHandle { reveal(id: string): void; focusToggle(): void; focusNewCrossword(): void }
 import type { VNode } from 'vue';
 import type { LibraryItem, MovePosition } from './library-model.ts';
 import { inputValue } from '../../core/dom.ts';
@@ -18,7 +18,7 @@ export const CrosswordLibrary = defineComponent({
     selectedId: { type: String as PropType<string | null>, default: null },
     collapsed: Boolean,
   },
-  emits: { 'select': (_id: string | null) => true, 'open-item': () => true, 'toggle-library': () => true },
+  emits: { 'select': (_id: string | null) => true, 'open-item': () => true, 'toggle-library': () => true, 'new-crossword': (_target: { parentId: string | null; parentName: string }) => true },
   setup(props, { emit, expose, slots }) {
     const expanded = ref(new Set<string>());
     const editingId = ref<string | null>(null);
@@ -29,6 +29,7 @@ export const CrosswordLibrary = defineComponent({
     const announcement = ref('');
     const pendingDelete = ref<LibraryItem | null>(null);
     const createGroupButton = ref<HTMLButtonElement | null>(null);
+    const createCrosswordButton = ref<HTMLButtonElement | null>(null);
     const collapseButton = ref<HTMLButtonElement | null>(null);
     const labels = new Map<string | null, HTMLElement>();
     let deleteTrigger: HTMLElement | null = null;
@@ -88,6 +89,24 @@ export const CrosswordLibrary = defineComponent({
       rename(group);
     }
 
+    function requestCrosswordSetup() {
+      const selected = findItem(props.items, props.selectedId);
+      let parentId: string | null = null;
+      let parentName = 'Top level';
+
+      if (selected?.item.kind === 'group') {
+        parentId = selected.item.id;
+        parentName = selected.item.name;
+        expanded.value.add(selected.item.id);
+      } else if (selected?.parentId) {
+        parentId = selected.parentId;
+        parentName = findItem(props.items, selected.parentId)?.item.name ?? 'Selected group';
+      }
+
+      emit('new-crossword', { parentId, parentName });
+      announcement.value = `Opened new crossword setup for ${parentName}.`;
+    }
+
     function toggle(id: string) {
       if (expanded.value.has(id)) expanded.value.delete(id);
       else expanded.value.add(id);
@@ -101,7 +120,11 @@ export const CrosswordLibrary = defineComponent({
       }
     }
 
-    expose({ reveal, focusToggle: () => collapseButton.value?.focus() });
+    expose({
+      reveal,
+      focusToggle: () => collapseButton.value?.focus(),
+      focusNewCrossword: () => createCrosswordButton.value?.focus(),
+    });
 
     function endDrag() {
       draggedId.value = null;
@@ -283,8 +306,9 @@ export const CrosswordLibrary = defineComponent({
             'aria-label': 'New group', onClick: createGroupRelativeToSelection,
           }, [h(Icon, { name: 'folder' })]),
           h('button', {
-            type: 'button', class: 'icon-button', title: 'New crossword — coming soon',
-            'aria-label': 'New crossword', disabled: true,
+            ref: createCrosswordButton,
+            type: 'button', class: 'icon-button', title: 'New crossword',
+            'aria-label': 'New crossword', onClick: requestCrosswordSetup,
           }, [h(Icon, { name: 'crossword' })]),
           h('button', {
             ref: collapseButton,
