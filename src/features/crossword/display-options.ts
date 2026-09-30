@@ -8,7 +8,7 @@ export interface DisplayOptions {
   cellSize: number;
   fit: 'screen' | 'preferred';
   highlight: 'blue' | 'green' | 'purple';
-  blocks: 'black' | 'soft';
+  blocks: 'light' | 'soft' | 'black';
 }
 
 export const MIN_CELL_SIZE = 30;
@@ -36,9 +36,10 @@ export const DISPLAY_FIELDS: DisplayField<DisplayOptions>[] = [
     { value: 'green', label: 'Green', css: '#167044' },
     { value: 'purple', label: 'Purple', css: '#7443a8' },
   ] },
-  { key: 'blocks', label: 'Blocked cells', default: 'black', choices: [
-    { value: 'black', label: 'Black', css: '#202020' },
-    { value: 'soft', label: 'Soft gray', css: '#5f5f5f' },
+  { key: 'blocks', label: 'Blocked cells', default: 'light', choices: [
+    { value: 'light', label: 'Light gray', css: '#f0f0f0' },
+    { value: 'soft', label: 'Medium gray', css: '#d1d1d1' },
+    { value: 'black', label: 'Black', css: '#242424' },
   ] },
 ];
 
