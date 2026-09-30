@@ -400,4 +400,9 @@ export const tipsCatalog: Record<TipsFeatureId, Tutorial> = {
       },
     ],
   },
+
+  crossword: {
+    version: 1,
+    sections: [],
+  },
 };
