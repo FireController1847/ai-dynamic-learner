@@ -71,7 +71,7 @@ export const TodoTaskEditor = defineComponent({
     }
     function celebrateTask(id: string) {
       stopTaskCelebration(id); celebratingTasks.add(id);
-      taskCelebrationTimers.set(id, window.setTimeout(() => stopTaskCelebration(id), 760));
+      taskCelebrationTimers.set(id, window.setTimeout(() => stopTaskCelebration(id), 1650));
     }
     function celebrateSection(id: string) {
       stopSectionCelebration(id); celebratingSections.add(id);
@@ -223,7 +223,7 @@ export const TodoTaskEditor = defineComponent({
             h('span', { class: 'todo-check-fallout', 'aria-hidden': 'true' },
               Array.from({ length: 7 }, (_, particle) => h('span', {
                 class: `todo-check-fallout-particle todo-check-fallout-particle-${particle + 1}`,
-              }, particle % 3 === 0 ? '✦' : '•'))),
+              }, '✦'))),
             h('span', { class: 'todo-check-sparks', 'aria-hidden': 'true' },
               Array.from({ length: 8 }, (_, spark) => h('span', { class: `todo-check-spark todo-check-spark-${spark + 1}` }, '✦'))),
           ] : null,
