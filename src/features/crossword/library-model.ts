@@ -14,7 +14,7 @@ export type MovePosition = TreeMovePosition;
 export type GroupOption = TreeGroupOption;
 
 import { createId, isValidId } from '../../core/ids.ts';
-import { validatePuzzle } from './puzzle-model.ts';
+import { validatePuzzle, validatePuzzleForGeneration } from './puzzle-model.ts';
 import { validateGame } from './game-model.ts';
 import { validateDisplayOptions } from './display-options.ts';
 
@@ -44,7 +44,7 @@ export function saveCrossword(items: LibraryItem[], target: PuzzleTarget, name: 
   if (!trimmedName || trimmedName.length > MAX_NAME_LENGTH) {
     throw new Error(`Enter a title of 1–${MAX_NAME_LENGTH} characters.`);
   }
-  validatePuzzle(puzzle);
+  validatePuzzleForGeneration(puzzle);
 
   if (target.itemId) {
     const found = findItem(items, target.itemId);
@@ -53,7 +53,6 @@ export function saveCrossword(items: LibraryItem[], target: PuzzleTarget, name: 
     const previousAnswers = previous?.entries.map(({ answer }) => answer).sort() ?? [];
     const nextAnswers = puzzle.entries.map(({ answer }) => answer).sort();
     const answersChanged = !previous ||
-      previous.size !== puzzle.size ||
       JSON.stringify(previousAnswers) !== JSON.stringify(nextAnswers);
     if (answersChanged) delete found.item.game;
     Object.assign(found.item, { name: trimmedName, puzzle });
