@@ -281,6 +281,23 @@ export const TodoTaskEditor = defineComponent({
                 event.preventDefault();
                 const current = orderedTasks(section);
                 const currentIndex = current.findIndex(candidate => candidate.id === task.id);
+                const sectionIndex = sections.value.indexOf(section);
+
+                if (current.length === 1 && sections.value.length > 1 && sectionIndex >= 0) {
+                  stopTaskCelebration(task.id); stopSectionCelebration(section.id);
+                  completedSections.delete(section.id);
+                  sections.value.splice(sectionIndex, 1);
+                  drafts.delete(section.id);
+                  syncListCompletion(false);
+                  message.value = 'Empty section removed.';
+                  const targetSection = sections.value[sectionIndex - 1] ?? sections.value[sectionIndex];
+                  if (targetSection) {
+                    const target = orderedTasks(targetSection).at(-1) ?? draftFor(targetSection);
+                    void focusTask(target.id);
+                  }
+                  return;
+                }
+
                 const storedIndex = section.tasks.indexOf(task);
                 if (storedIndex >= 0) section.tasks.splice(storedIndex, 1);
                 stopTaskCelebration(task.id); syncSectionCompletion(section, false);
