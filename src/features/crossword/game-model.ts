@@ -89,7 +89,13 @@ export function validateGame(puzzleValue: unknown, gameValue: unknown): asserts 
       throw new Error('A saved crossword contains an invalid or duplicate answer placement.');
     }
 
-    const typedPlacement = placement as Placement;
+    const typedPlacement: Placement = {
+      answer: placement.answer,
+      row: placement.row,
+      column: placement.column,
+      direction: placement.direction,
+      number: placement.number,
+    };
     const endRow = typedPlacement.row + (typedPlacement.direction === 'down' ? typedPlacement.answer.length - 1 : 0);
     const endColumn = typedPlacement.column + (typedPlacement.direction === 'across' ? typedPlacement.answer.length - 1 : 0);
     const path = placementCells(typedPlacement, typedPlacement.answer.length, size);
