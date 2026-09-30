@@ -328,7 +328,7 @@ export const TodoTaskEditor = defineComponent({
           ]),
         ]),
         h('ul', { class: 'todo-task-rows' }, sectionRows(section)),
-      })),
+      ])),
       ]),
       h('p', { class: 'visually-hidden', role: 'status' }, message.value),
       pendingSection.value ? h(DeleteConfirmation, { itemName: pendingSection.value.title || 'Untitled section', itemLabel: 'section', detail: 'All tasks in this section will be removed.', confirmLabel: 'Delete section',
