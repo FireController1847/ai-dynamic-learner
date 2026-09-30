@@ -219,8 +219,14 @@ export const TodoTaskEditor = defineComponent({
                 syncSectionCompletion(section, task.done);
               }
             } }) : h('span', { class: 'todo-checkbox-space', 'aria-hidden': 'true' }),
-          !draft && celebratingTasks.has(task.id) ? h('span', { class: 'todo-check-sparks', 'aria-hidden': 'true' },
-            Array.from({ length: 8 }, (_, spark) => h('span', { class: `todo-check-spark todo-check-spark-${spark + 1}` }, '✦'))) : null,
+          !draft && celebratingTasks.has(task.id) ? [
+            h('span', { class: 'todo-check-fallout', 'aria-hidden': 'true' },
+              Array.from({ length: 7 }, (_, particle) => h('span', {
+                class: `todo-check-fallout-particle todo-check-fallout-particle-${particle + 1}`,
+              }, particle % 3 === 0 ? '✦' : '•'))),
+            h('span', { class: 'todo-check-sparks', 'aria-hidden': 'true' },
+              Array.from({ length: 8 }, (_, spark) => h('span', { class: `todo-check-spark todo-check-spark-${spark + 1}` }, '✦'))),
+          ] : null,
         ]),
         h('div', { class: 'todo-task-writing' }, [
           h('span', { class: 'todo-task-dash', 'aria-hidden': 'true' }, '-'),
