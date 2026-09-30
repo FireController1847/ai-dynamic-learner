@@ -1,12 +1,22 @@
-import type { LibraryItem, Crossword as FeatureModel } from './library-model.ts';
+import { hasPuzzle } from './library-model.ts';
+import type { CrosswordItem, LibraryItem, PuzzleTarget, Crossword as FeatureModel } from './library-model.ts';
+import type { Puzzle } from './puzzle-model.ts';
 import type { CrosswordLibraryHandle } from './library.ts';
 import { inputValue } from '../../core/dom.ts';
 import { Icon } from '../../components/icon.ts';
 import { usePersistedPanelResize } from '../../components/use-persisted-panel-resize.ts';
 import { CrosswordLibrary } from './library.ts';
-import { canMove, findItem, groupOptions, moveItem } from './library-model.ts';
+import { PuzzleForm, PuzzleSummary } from './puzzle-form.ts';
+import { PuzzleGame } from './puzzle-game.ts';
+import { DisplaySettings } from './display-settings.ts';
+import { resolvedDisplayOptions } from './display-options.ts';
+import { canMove, findItem, groupOptions, moveItem, saveCrossword } from './library-model.ts';
 
-import { defineComponent, type PropType, computed, h, nextTick, onBeforeUnmount, ref } from 'vue';
+import {
+  defineComponent, type PropType, computed, h, nextTick, onBeforeUnmount, onDeactivated, ref,
+} from 'vue';
+
+export interface SetupTarget extends PuzzleTarget { parentName: string }
 
 const MIN_LIBRARY_WIDTH = 248;
 const LIBRARY_WIDTH_KEY = 'dynamic-learner.ui.crossword.library-width';
@@ -19,6 +29,9 @@ export const Crossword = defineComponent({
   },
   setup(props) {
     const selectedId = ref<string | null>(null);
+    const setupTarget = ref<SetupTarget | null>(null);
+    const setupVersion = ref(0);
+    const workspaceHeading = ref<HTMLElement | null>(null);
     const overlayQuery = window.matchMedia('(max-width: 700px), (max-width: 1100px) and (pointer: coarse)');
     const libraryOverlay = ref(overlayQuery.matches);
     const libraryCollapsed = ref(false);
@@ -26,6 +39,9 @@ export const Crossword = defineComponent({
     const library = ref<CrosswordLibraryHandle | null>(null);
     const showLibraryButton = ref<HTMLButtonElement | null>(null);
     const message = ref('');
+    const settingsOpen = ref(false);
+    const displayOptions = computed(() => resolvedDisplayOptions(props.model.display));
+    let settingsTrigger: HTMLElement | null = null;
 
     const {
       width: libraryWidth,
@@ -50,6 +66,8 @@ export const Crossword = defineComponent({
 
     const selection = computed(() => findItem(props.model.items, selectedId.value));
 
+    onDeactivated(() => { settingsOpen.value = false; });
+
     function updateLibraryLayout(event: MediaQueryListEvent) {
       libraryOverlay.value = event.matches;
       libraryResizing.value = false;
@@ -58,6 +76,17 @@ export const Crossword = defineComponent({
 
     overlayQuery.addEventListener('change', updateLibraryLayout);
     onBeforeUnmount(() => overlayQuery.removeEventListener('change', updateLibraryLayout));
+
+    function openSettings(trigger: EventTarget | null) {
+      settingsTrigger = trigger instanceof HTMLElement ? trigger : null;
+      settingsOpen.value = true;
+    }
+
+    async function closeSettings() {
+      settingsOpen.value = false;
+      await nextTick();
+      if (settingsTrigger?.isConnected) settingsTrigger.focus();
+    }
 
     async function setLibraryCollapsed(collapsed: boolean) {
       libraryCollapsed.value = collapsed;
@@ -68,7 +97,45 @@ export const Crossword = defineComponent({
 
     function selectItem(id: string | null) {
       selectedId.value = id;
+      setupTarget.value = null;
       message.value = '';
+    }
+
+    function openNewCrossword(target: SetupTarget) {
+      setupTarget.value = target;
+      setupVersion.value += 1;
+      message.value = '';
+      if (libraryOverlay.value) libraryCollapsed.value = true;
+    }
+
+    function editCrossword(item: CrosswordItem) {
+      if (!selection.value) return;
+      const parentId = selection.value.parentId;
+      openNewCrossword({
+        itemId: item.id,
+        parentId,
+        parentName: parentId
+          ? findItem(props.model.items, parentId)?.item.name ?? 'Top level'
+          : 'Top level',
+      });
+    }
+
+    async function cancelSetup() {
+      setupTarget.value = null;
+      await nextTick();
+      if (workspaceHeading.value) workspaceHeading.value.focus();
+      else if (libraryCollapsed.value) showLibraryButton.value?.focus();
+      else library.value?.focusNewCrossword();
+    }
+
+    function completeSetup(name: string, puzzle: Puzzle) {
+      if (!setupTarget.value) return;
+      const item = saveCrossword(props.model.items, setupTarget.value, name, puzzle);
+      selectedId.value = item.id;
+      setupTarget.value = null;
+      library.value?.reveal(item.id);
+      message.value = `Saved ${item.name}.`;
+      nextTick(() => workspaceHeading.value?.focus());
     }
 
     function moveToGroup(event: Event) {
@@ -84,8 +151,12 @@ export const Crossword = defineComponent({
       if (!selection.value) return;
       const { siblings, index, item } = selection.value;
       const neighbor = siblings[index + offset];
-      if (neighbor && moveItem(props.model.items, item.id, neighbor.id,
-          offset < 0 ? 'before' : 'after')) {
+      if (neighbor && moveItem(
+        props.model.items,
+        item.id,
+        neighbor.id,
+        offset < 0 ? 'before' : 'after',
+      )) {
         message.value = `Moved ${item.name} ${offset < 0 ? 'up' : 'down'}.`;
       }
     }
@@ -131,6 +202,23 @@ export const Crossword = defineComponent({
     }
 
     function detail() {
+      if (setupTarget.value) {
+        const editingItem = findItem(props.model.items, setupTarget.value.itemId)?.item;
+        return h('section', {
+          class: 'crossword-detail',
+          'aria-label': 'Crossword setup',
+          inert: libraryOverlay.value && !libraryCollapsed.value,
+        }, [
+          h(PuzzleForm, {
+            key: setupVersion.value,
+            item: editingItem?.kind === 'crossword' ? editingItem : undefined,
+            destination: setupTarget.value.parentName,
+            save: completeSetup,
+            onCancel: cancelSetup,
+          }),
+        ]);
+      }
+
       const item = selection.value?.item;
       if (!item) {
         return h('section', {
@@ -141,12 +229,11 @@ export const Crossword = defineComponent({
           h('div', { class: 'crossword-placeholder' }, [
             h(Icon, { name: 'crossword' }),
             h('h2', 'Build your crossword library'),
-            h('p', 'Create groups now to organize your puzzles. Crossword creation and solving are coming next.'),
+            h('p', 'Add answers and clues, let Dynamic Learner arrange the grid, and keep your puzzles organized in groups.'),
             h('button', {
               type: 'button',
               class: 'card-primary-button',
-              disabled: true,
-              title: 'Crossword creation is coming soon',
+              onClick: () => openNewCrossword({ parentId: null, parentName: 'Top level' }),
             }, 'New crossword'),
           ]),
         ]);
@@ -158,13 +245,25 @@ export const Crossword = defineComponent({
         'aria-label': item.kind === 'group' ? 'Selected group' : 'Selected crossword',
       }, [
         h('header', { class: 'crossword-item-heading' }, [
-          h('h2', { tabindex: -1 }, item.name),
-          h('p', item.kind === 'group' ? `Group · ${item.children.length} items` : 'Crossword'),
+          h('h2', { ref: workspaceHeading, tabindex: -1 }, item.name),
+          h('p', item.kind === 'group'
+            ? `Group · ${item.children.length} items`
+            : 'Crossword'),
         ]),
-        item.kind === 'crossword' ? h('div', { class: 'crossword-placeholder crossword-placeholder-inline' }, [
-          h('h3', 'Puzzle tools coming next'),
-          h('p', 'This library shell is ready; the crossword editor and solver have not been implemented yet.'),
-        ]) : null,
+        item.kind === 'crossword'
+          ? (hasPuzzle(item)
+            ? h(PuzzleGame, {
+              key: item.id,
+              item,
+              options: displayOptions.value,
+              onEdit: () => editCrossword(item),
+            })
+            : h(PuzzleSummary, {
+              key: item.id,
+              item,
+              onEdit: () => editCrossword(item),
+            }))
+          : null,
         organizationControls(item),
         h('p', { class: 'visually-hidden', role: 'status' }, message.value),
       ]);
@@ -215,12 +314,13 @@ export const Crossword = defineComponent({
           onToggleLibrary: () => setLibraryCollapsed(true),
           onSelect: selectItem,
           onOpenItem: () => { if (libraryOverlay.value) setLibraryCollapsed(true); },
+          onNewCrossword: openNewCrossword,
         }, {
           footer: () => h('button', {
             type: 'button',
             class: 'quiet-button crossword-settings-button',
-            disabled: true,
-            title: 'Display settings are coming soon',
+            'aria-haspopup': 'dialog',
+            onClick: (event: MouseEvent) => openSettings(event.currentTarget),
           }, ['Settings', h(Icon, { name: 'settings' })]),
         }),
         !libraryOverlay.value && !libraryCollapsed.value ? h('div', {
@@ -241,6 +341,11 @@ export const Crossword = defineComponent({
         }) : null,
         detail(),
       ]),
+      settingsOpen.value ? h(DisplaySettings, {
+        options: displayOptions.value,
+        onUpdate: (options) => { props.model.display = options; },
+        onClose: closeSettings,
+      }) : null,
     ]);
   },
 });
