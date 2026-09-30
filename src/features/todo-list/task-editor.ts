@@ -54,11 +54,18 @@ export const TodoTaskEditor = defineComponent({
       const tasks = section.tasks.filter(isMeaningfulTask);
       return tasks.length > 0 && tasks.every(task => task.done || task.skipped);
     }
+    function isListComplete() {
+      const tasks = sections.value.flatMap(section => section.tasks.filter(isMeaningfulTask));
+      return tasks.length > 0 && tasks.every(task => task.done || task.skipped);
+    }
     const completedSections = reactive(new Set<string>(sections.value.filter(isSectionComplete).map(section => section.id)));
+    const listComplete = ref(isListComplete());
     const celebratingTasks = reactive(new Set<string>());
     const celebratingSections = reactive(new Set<string>());
+    const celebratingList = ref(false);
     const taskCelebrationTimers = new Map<string, number>();
     const sectionCelebrationTimers = new Map<string, number>();
+    let listCelebrationTimer: number | undefined;
     function stopTaskCelebration(id: string) {
       const timer = taskCelebrationTimers.get(id);
       if (timer !== undefined) window.clearTimeout(timer);
@@ -77,20 +84,37 @@ export const TodoTaskEditor = defineComponent({
       stopSectionCelebration(id); celebratingSections.add(id);
       sectionCelebrationTimers.set(id, window.setTimeout(() => stopSectionCelebration(id), 2200));
     }
+    function stopListCelebration() {
+      if (listCelebrationTimer !== undefined) window.clearTimeout(listCelebrationTimer);
+      listCelebrationTimer = undefined; celebratingList.value = false;
+    }
+    function celebrateList() {
+      stopListCelebration(); celebratingList.value = true;
+      listCelebrationTimer = window.setTimeout(stopListCelebration, 760);
+    }
+    function syncListCompletion(celebrate: boolean) {
+      const complete = isListComplete();
+      const wasComplete = listComplete.value;
+      listComplete.value = complete;
+      if (!complete) { stopListCelebration(); return; }
+      if (celebrate && !wasComplete) celebrateList();
+    }
     function syncSectionCompletion(section: TodoSection, celebrate: boolean) {
       const complete = isSectionComplete(section);
       const wasComplete = completedSections.has(section.id);
       if (!complete) {
-        completedSections.delete(section.id); stopSectionCelebration(section.id); return;
+        completedSections.delete(section.id); stopSectionCelebration(section.id);
+        syncListCompletion(false); return;
       }
       completedSections.add(section.id);
       if (celebrate && !wasComplete) celebrateSection(section.id);
+      syncListCompletion(celebrate);
     }
     function clearCelebrations() {
       for (const timer of taskCelebrationTimers.values()) window.clearTimeout(timer);
       for (const timer of sectionCelebrationTimers.values()) window.clearTimeout(timer);
       taskCelebrationTimers.clear(); sectionCelebrationTimers.clear();
-      celebratingTasks.clear(); celebratingSections.clear();
+      celebratingTasks.clear(); celebratingSections.clear(); stopListCelebration();
     }
     onDeactivated(() => {
       pendingSection.value = null; editingName.value = null; clearCelebrations();
@@ -307,7 +331,9 @@ export const TodoTaskEditor = defineComponent({
             onClick: () => setSortMode(mode),
           }, mode === 'custom' ? 'Custom' : mode[0]!.toUpperCase() + mode.slice(1))),
         ]),
-        h('p', { class: 'todo-editor-progress' }, `${completed.value}/${count.value} done${skipped.value ? ` · ${skipped.value} skipped` : ''}`),
+        h('p', {
+          class: ['todo-editor-progress', { 'is-complete': listComplete.value, 'is-celebrating': celebratingList.value }],
+        }, `${completed.value}/${count.value} done${skipped.value ? ` · ${skipped.value} skipped` : ''}`),
         undo.value ? h('button', { type: 'button', class: 'quiet-button', disabled: storedCount.value >= MAX_TASKS, onClick: restoreTask }, 'Undo remove') : null,
       ]),
       h('div', { class: ['todo-task-paper', { 'is-sorted': sortMode.value !== 'custom' }] }, [
@@ -338,6 +364,7 @@ export const TodoTaskEditor = defineComponent({
         h('ul', { class: 'todo-task-rows' }, sectionRows(section)),
       ])),
       ]),
+      h('p', { class: 'todo-editor-hint' }, 'Click a section name to rename it. Enter adds a task; Enter on an empty task starts a section. Shift+Enter adds a line. × skips or restores a task. Priority applies to the section.'),
       h('p', { class: 'visually-hidden', role: 'status' }, message.value),
       pendingSection.value ? h(DeleteConfirmation, { itemName: pendingSection.value.title || 'Untitled section', itemLabel: 'section', detail: 'All tasks in this section will be removed.', confirmLabel: 'Delete section',
         onCancel: cancelSectionDelete, onConfirm: async () => {
