@@ -56,11 +56,14 @@ export function expectedNumbers(placements: readonly Pick<Placement, 'row' | 'co
 export function validateGame(puzzleValue: unknown, gameValue: unknown): asserts gameValue is Game {
   validatePuzzle(puzzleValue);
   const puzzle = puzzleValue;
-  const size = puzzle.size;
 
   if (!hasOnlyKeys(gameValue, ['rows', 'placements', 'cells']) ||
-      !Array.isArray(gameValue.rows) || gameValue.rows.length !== size ||
-      gameValue.rows.some((row) => typeof row !== 'string' || row.length !== size || !/^[A-Z#]+$/.test(row)) ||
+      !Array.isArray(gameValue.rows) || gameValue.rows.length < 2 || gameValue.rows.length > 45) {
+    throw new Error('The saved crossword grid or progress is invalid.');
+  }
+
+  const size = gameValue.rows.length;
+  if (gameValue.rows.some((row) => typeof row !== 'string' || row.length !== size || !/^[A-Z#]+$/.test(row)) ||
       !Array.isArray(gameValue.placements) || gameValue.placements.length !== puzzle.entries.length ||
       !Array.isArray(gameValue.cells) || gameValue.cells.length !== size * size ||
       gameValue.cells.some((cell) => typeof cell !== 'string' || (cell !== '' && !/^[A-Z]$/.test(cell)))) {
