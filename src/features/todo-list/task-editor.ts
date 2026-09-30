@@ -154,7 +154,8 @@ export const TodoTaskEditor = defineComponent({
       // An empty row acts as the separator; tasks after it belong to the new section.
       const ordered = orderedTasks(section);
       const following = ordered.slice(index);
-      section.tasks = ordered.slice(0, index);
+      const preceding = ordered.slice(0, index);
+      section.tasks = preceding.length ? preceding : [task];
       if (following[0]?.id === task.id) following.shift();
       next.tasks = following.length ? following : next.tasks;
       const sectionIndex = sections.value.indexOf(section);
@@ -164,6 +165,21 @@ export const TodoTaskEditor = defineComponent({
       const first = orderedTasks(next)[0] ?? draftFor(next);
       await editName(first.id);
       message.value = 'New section. Name it here, or press Enter to start writing.';
+    }
+    async function removeEmptySection(section: TodoSection) {
+      if (sections.value.length <= 1 || section.title.trim() || section.tasks.some(isMeaningfulTask)) return false;
+      const sectionIndex = sections.value.indexOf(section);
+      if (sectionIndex < 0) return false;
+      for (const task of section.tasks) stopTaskCelebration(task.id);
+      stopSectionCelebration(section.id); completedSections.delete(section.id); drafts.delete(section.id);
+      sections.value.splice(sectionIndex, 1); syncListCompletion(false);
+      editingName.value = null; message.value = 'Empty section removed.';
+      const targetSection = sections.value[sectionIndex - 1] ?? sections.value[sectionIndex];
+      if (targetSection) {
+        const target = orderedTasks(targetSection).at(-1) ?? draftFor(targetSection);
+        await focusTask(target.id);
+      }
+      return true;
     }
     async function deleteTask(section: TodoSection, index: number) {
       const task = orderedTasks(section)[index]; if (!task) return;
@@ -259,6 +275,12 @@ export const TodoTaskEditor = defineComponent({
             onInput: (event: Event) => { section.title = inputValue(event); }, onBlur: () => { editingName.value = null; },
             onKeydown: (event: KeyboardEvent) => {
               if (event.isComposing) return;
+              if (event.key === 'Backspace' && !section.title &&
+                  event.target instanceof HTMLInputElement && event.target.selectionStart === 0 && event.target.selectionEnd === 0) {
+                if (sections.value.length > 1 && !section.tasks.some(isMeaningfulTask)) {
+                  event.preventDefault(); event.stopPropagation(); void removeEmptySection(section); return;
+                }
+              }
               if (event.key === 'Enter' || event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); editingName.value = null; void focusTask(task.id); }
             },
           }) : named || first ? h('button', { type: 'button', class: ['todo-section-prefix', { 'is-unnamed': !named }],
@@ -276,28 +298,16 @@ export const TodoTaskEditor = defineComponent({
             },
             onKeydown: (event: KeyboardEvent) => {
               if (event.isComposing) return;
-              if (event.key === 'Backspace' && !draft && !task.text && !task.done && !task.skipped &&
+              if (event.key === 'Backspace' && !task.text && !task.done && !task.skipped &&
                   event.target instanceof HTMLTextAreaElement && event.target.selectionStart === 0 && event.target.selectionEnd === 0) {
+                if (!section.title.trim() && sections.value.length > 1 &&
+                    (draft || section.tasks.every(candidate => candidate.id === task.id || !isMeaningfulTask(candidate)))) {
+                  event.preventDefault(); void removeEmptySection(section); return;
+                }
+                if (draft) return;
                 event.preventDefault();
                 const current = orderedTasks(section);
                 const currentIndex = current.findIndex(candidate => candidate.id === task.id);
-                const sectionIndex = sections.value.indexOf(section);
-
-                if (current.length === 1 && sections.value.length > 1 && sectionIndex >= 0) {
-                  stopTaskCelebration(task.id); stopSectionCelebration(section.id);
-                  completedSections.delete(section.id);
-                  sections.value.splice(sectionIndex, 1);
-                  drafts.delete(section.id);
-                  syncListCompletion(false);
-                  message.value = 'Empty section removed.';
-                  const targetSection = sections.value[sectionIndex - 1] ?? sections.value[sectionIndex];
-                  if (targetSection) {
-                    const target = orderedTasks(targetSection).at(-1) ?? draftFor(targetSection);
-                    void focusTask(target.id);
-                  }
-                  return;
-                }
-
                 const storedIndex = section.tasks.indexOf(task);
                 if (storedIndex >= 0) section.tasks.splice(storedIndex, 1);
                 stopTaskCelebration(task.id); syncSectionCompletion(section, false);
@@ -328,7 +338,6 @@ export const TodoTaskEditor = defineComponent({
               h('button', { type: 'button', class: 'delete-button', onClick: () => deleteTask(section, index) }, 'Remove task'),
             ] : null,
             first ? [
-              h('button', { type: 'button', onClick: () => editName(task.id) }, 'Name section'),
               sortMode.value === 'custom' ? [
                 h('button', { type: 'button', disabled: sections.value.indexOf(section) <= 0, onClick: () => moveSection(section, -1) }, 'Move section up'),
                 h('button', { type: 'button', disabled: sections.value.indexOf(section) >= sections.value.length - 1, onClick: () => moveSection(section, 1) }, 'Move section down'),
