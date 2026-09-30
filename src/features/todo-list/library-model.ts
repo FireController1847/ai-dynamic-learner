@@ -3,7 +3,8 @@ import { createId, isValidId } from '../../core/ids.ts';
 import { validateSections, type TodoSection } from './task-model.ts';
 import { isRecord } from '../../core/validation.ts';
 
-export interface TodoListRecord { id: string; name: string; createdAt: string; sections?: TodoSection[] }
+export type SectionSort = 'custom' | 'name' | 'priority';
+export interface TodoListRecord { id: string; name: string; createdAt: string; sections?: TodoSection[]; sectionSort?: SectionSort }
 export interface Expiry { amount: number; unit: 'days' | 'weeks' | 'months' }
 export interface LibrarySettings { order: 'newest' | 'oldest'; dates: 'long' | 'short'; expiry?: Expiry | null }
 export function expirySetting(settings: LibrarySettings): Expiry | null { return settings.expiry === undefined ? { amount: 1, unit: 'months' } : settings.expiry; }
@@ -78,10 +79,11 @@ export function validateTodoLists(value: unknown): asserts value is TodoLists {
   if (Object.hasOwn(value, 'settings')) validateLibrarySettings(value.settings);
   const ids = new Set<string>();
   for (const item of value.items) {
-    if (!isRecord(item) || Object.keys(item).some(key => !['id', 'name', 'createdAt', 'sections'].includes(key)) ||
+    if (!isRecord(item) || Object.keys(item).some(key => !['id', 'name', 'createdAt', 'sections', 'sectionSort'].includes(key)) ||
         !isValidId(item.id) || ids.has(item.id) || typeof item.name !== 'string' || !item.name.trim() ||
         item.name.length > MAX_NAME_LENGTH || typeof item.createdAt !== 'string' ||
-        !Number.isFinite(Date.parse(item.createdAt)) || new Date(item.createdAt).toISOString() !== item.createdAt) {
+        !Number.isFinite(Date.parse(item.createdAt)) || new Date(item.createdAt).toISOString() !== item.createdAt ||
+        (Object.hasOwn(item, 'sectionSort') && !['custom', 'name', 'priority'].includes(typeof item.sectionSort === 'string' ? item.sectionSort : ''))) {
       throw new Error('A Todo List has an invalid name, creation date, or ID.');
     }
     if (!Number.isFinite(archiveTime({ id: item.id, name: item.name, createdAt: item.createdAt }, { order: 'newest', dates: 'long', expiry: { amount: 365, unit: 'months' } }))) {

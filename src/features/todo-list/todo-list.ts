@@ -122,10 +122,6 @@ export const TodoList = defineComponent({
           onPointercancel: panel.endResize, onKeydown: panel.resizeFromKeyboard, onDblclick: panel.resetWidth,
         }) : null,
         h('section', { class: 'todo-list-detail', inert: overlay.value && !collapsed.value, 'aria-label': selected.value ? selected.value.name : 'Todo List getting started' }, [
-          selected.value ? h('header', { class: 'item-heading' }, [
-            h('h2', selected.value.name),
-            h('p', { class: 'item-summary' }, isArchived(selected.value, now.value, settings.value) ? 'Archived' : 'Active'),
-          ]) : null,
           selected.value ? h(TodoTaskEditor, { key: selected.value.id, item: selected.value, display: display.value }) : h('div', { class: 'todo-list-empty-state' }, [
             props.image ? h('img', { class: 'todo-list-artwork', src: new URL(props.image, document.baseURI).href,
               alt: '', 'aria-hidden': 'true', width: 96, height: 96 }) : h(Icon, { name: 'checklist' }),
