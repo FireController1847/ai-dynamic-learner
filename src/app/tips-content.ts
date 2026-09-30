@@ -429,7 +429,7 @@ export const tipsCatalog: Record<TipsFeatureId, Tutorial> = {
       {
         id: 'creation',
         title: 'Making a crossword',
-        description: 'Add answers, clues, and choose the grid size.',
+        description: 'Add answers and clues; the grid builds itself.',
         when: '.crossword-form',
         steps: [
           {
@@ -447,11 +447,11 @@ export const tipsCatalog: Record<TipsFeatureId, Tutorial> = {
             placement: 'top',
           },
           {
-            title: 'Choose how much room to use',
-            body: 'A larger grid gives longer or less-connected answers more room to fit cleanly.',
-            target: '#crossword-size',
-            targetLabel: 'Grid size',
-            placement: 'left',
+            title: 'Check whether the answers connect',
+            body: 'Dynamic Learner checks the answer set as you type. If something cannot connect, this box explains what needs to change.',
+            target: '#crossword-answer-validation',
+            targetLabel: 'Answer validation',
+            placement: 'right',
           },
         ],
       },
