@@ -256,7 +256,7 @@ export const PuzzleGame = defineComponent({
       }, [
         h('div', { class: 'crossword-game-toolbar' }, [
           h('p', { class: 'crossword-help' },
-            `${puzzle.size} × ${puzzle.size} · ${puzzle.entries.length} clues`),
+            `${game.value?.rows.length ?? '—'} × ${game.value?.rows.length ?? '—'} · ${puzzle.entries.length} clues`),
           h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('edit') }, 'Edit puzzle'),
         ]),
         puzzle.instructions ? h('p', { class: 'crossword-instructions' }, puzzle.instructions) : null,
