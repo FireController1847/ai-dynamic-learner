@@ -2,28 +2,28 @@ import { isRecord } from '../../core/validation.ts';
 import { choiceStyle, type DisplayField } from '../../core/display-fields.ts';
 
 export interface TodoDisplay {
-  font: 'serif' | 'sans' | 'mono'; textSize: number; ink: 'pencil' | 'dark' | 'blue';
-  paper: 'white' | 'cream'; rowSpacing: number; baseline: number; inset: number; margin: number; prioritySize: number;
+  paper: 'white' | 'cream'; font: 'serif' | 'sans' | 'mono'; ink: 'pencil' | 'dark' | 'blue';
+  textSize: number; baseline: number; rowSpacing: number; inset: number; margin: number; prioritySize: number;
 }
 export const DISPLAY_FIELDS: DisplayField<TodoDisplay>[] = [
+  { key: 'paper', label: 'Paper', default: 'white', choices: [
+    { value: 'white', label: 'White', css: '#fff' }, { value: 'cream', label: 'Cream', css: 'var(--paper)' },
+  ] },
   { key: 'font', label: 'Font', default: 'serif', choices: [
     { value: 'serif', label: 'Serif', css: "'Times New Roman', Times, serif" },
     { value: 'sans', label: 'Sans', css: "'Segoe UI', Arial, sans-serif" },
     { value: 'mono', label: 'Monospace', css: 'ui-monospace, Consolas, monospace' },
   ] },
-  { key: 'textSize', label: 'Text size', default: 100, min: 80, max: 130, step: 5, unit: '%' },
-  { key: 'baseline', label: 'Text vertical offset', default: 0, min: -8, max: 8, step: 1, unit: 'px' },
-  { key: 'inset', label: 'Text inset from margin', default: 12, min: 4, max: 32, step: 2, unit: 'px' },
-  { key: 'rowSpacing', label: 'Line spacing', default: 36, min: 28, max: 48, step: 2, unit: 'px' },
-  { key: 'margin', label: 'Left margin width', default: 116, min: 90, max: 180, step: 2, unit: 'px' },
-  { key: 'prioritySize', label: 'Priority marker size', default: 100, min: 80, max: 140, step: 10, unit: '%' },
   { key: 'ink', label: 'Ink', default: 'pencil', choices: [
     { value: 'pencil', label: 'Pencil', css: '#3d3d3d' }, { value: 'dark', label: 'Black', css: '#242424' },
     { value: 'blue', label: 'Blue', css: '#174a7e' },
   ] },
-  { key: 'paper', label: 'Paper', default: 'white', choices: [
-    { value: 'white', label: 'White', css: '#fff' }, { value: 'cream', label: 'Cream', css: 'var(--paper)' },
-  ] },
+  { key: 'textSize', label: 'Text size', default: 100, min: 80, max: 130, step: 5, unit: '%' },
+  { key: 'baseline', label: 'Text vertical offset', default: 0, min: -8, max: 8, step: 1, unit: 'px' },
+  { key: 'rowSpacing', label: 'Line spacing', default: 36, min: 28, max: 48, step: 2, unit: 'px' },
+  { key: 'inset', label: 'Text inset from margin', default: 12, min: 4, max: 32, step: 2, unit: 'px' },
+  { key: 'margin', label: 'Left margin width', default: 116, min: 90, max: 180, step: 2, unit: 'px' },
+  { key: 'prioritySize', label: 'Priority marker size', default: 100, min: 80, max: 140, step: 10, unit: '%' },
 ];
 export function defaultTodoDisplay(): TodoDisplay {
   return Object.fromEntries(DISPLAY_FIELDS.map(field => [field.key, field.default])) as unknown as TodoDisplay;

@@ -5,29 +5,29 @@ import type { DisplayField } from '../../core/display-fields.ts';
 export interface DisplayOptions {
   paper: 'cream' | 'white';
   font: 'serif' | 'sans';
-  textSize: number;
-  cardSize: number;
   ink: 'pencil' | 'dark' | 'black';
+  textSize: number;
   baseline: number;
+  cardSize: number;
 }
 // Canonical display choices, defaults, and bounds; no Vue or DOM dependencies.
 export const DISPLAY_FIELDS: DisplayField<DisplayOptions>[] = [
-  { key: 'paper', label: 'Paper color', default: 'cream', choices: [
-    { value: 'cream', label: 'Cream', css: '#fffefa' },
+  { key: 'paper', label: 'Paper', default: 'white', choices: [
     { value: 'white', label: 'White', css: '#ffffff' },
+    { value: 'cream', label: 'Cream', css: '#fffefa' },
   ] },
   { key: 'font', label: 'Font', default: 'serif', choices: [
     { value: 'serif', label: 'Serif', css: "Georgia, 'Times New Roman', serif" },
     { value: 'sans', label: 'Sans', css: "'Segoe UI', Arial, sans-serif" },
   ] },
-  { key: 'textSize', label: 'Text size', default: 100, min: 80, max: 130, step: 5, unit: '%' },
-  { key: 'cardSize', label: 'Card size', default: 100, min: 75, max: 125, step: 5, unit: '%' },
   { key: 'ink', label: 'Ink', default: 'pencil', choices: [
     { value: 'pencil', label: 'Pencil', css: '#3d3d3d' },
     { value: 'dark', label: 'Dark graphite', css: '#292929' },
     { value: 'black', label: 'Black', css: '#000000' },
   ] },
+  { key: 'textSize', label: 'Text size', default: 100, min: 80, max: 130, step: 5, unit: '%' },
   { key: 'baseline', label: 'Text vertical offset', default: 1, min: -4, max: 6, step: 1, unit: 'px' },
+  { key: 'cardSize', label: 'Card size', default: 100, min: 75, max: 125, step: 5, unit: '%' },
 ];
 
 export function defaultDisplayOptions(): DisplayOptions {
@@ -37,8 +37,8 @@ export function defaultDisplayOptions(): DisplayOptions {
 export function validateDisplayOptions(value: unknown): asserts value is DisplayOptions {
   if (!isRecord(value)) throw new Error('Index Cards display settings are invalid.');
 
-  // Display settings saved before paper color existed used the cream paper implicitly.
-  if (!Object.hasOwn(value, 'paper')) value.paper = 'cream';
+  // Display settings saved before paper color existed use the current paper default.
+  if (!Object.hasOwn(value, 'paper')) value.paper = 'white';
 
   if (Object.keys(value).some((key) => !DISPLAY_FIELDS.some((field) => field.key === key))) {
     throw new Error('Index Cards display settings are invalid.');
