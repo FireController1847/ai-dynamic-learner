@@ -1,7 +1,7 @@
 // Shared by the browser registry and webpack build; keep this data browser-neutral.
 import type { PageMetadataOverrides } from '../core/metadata.ts';
 
-export type FeatureId = 'notebook' | 'todo-list' | 'index-cards' | 'word-search';
+export type FeatureId = 'notebook' | 'todo-list' | 'index-cards' | 'word-search' | 'crossword';
 
 export interface FeatureDefinition {
   hidden?: boolean;
@@ -45,5 +45,10 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
     id: 'word-search', label: 'Word Search', path: '/word-search/', icon: 'word-search',
     image: 'assets/word-search.png',
     description: 'Create your own word searches, find every word, and pick up where you left off.'
+  },
+  {
+    id: 'crossword', label: 'Crossword', path: '/crossword/', icon: 'crossword',
+    image: '',
+    description: 'Organize crossword puzzles in groups while the puzzle builder is being added.',
   },
 ];
