@@ -37,8 +37,8 @@
   grid-template-columns: repeat(4, var(--crossword-cell-size));
   width: max-content;
   margin: 18px auto;
-  border: 1px solid var(--text-color);
-  background: var(--text-color);
+  border: 1px solid var(--control-border);
+  background: var(--control-border);
 }
 .crossword-display-preview-cell {
   position: relative;
@@ -46,8 +46,8 @@
   place-items: center;
   width: var(--crossword-cell-size);
   height: var(--crossword-cell-size);
-  border-right: 1px solid var(--text-color);
-  border-bottom: 1px solid var(--text-color);
+  border-right: 1px solid var(--control-border);
+  border-bottom: 1px solid var(--control-border);
   color: var(--text-color);
   background: var(--page-background);
   font: var(--crossword-letter-weight) var(--crossword-letter-size)/1 var(--crossword-letter-font);
