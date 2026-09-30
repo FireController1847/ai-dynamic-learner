@@ -2,11 +2,12 @@ import { isRecord } from '../core/validation.ts';
 import type { Notebook } from '../features/notebook/library-model.ts';
 import type { IndexCards } from '../features/index-cards/tree-model.ts';
 import type { WordSearch } from '../features/word-search/library-model.ts';
+import { validateTodoLists, type TodoLists } from '../features/todo-list/library-model.ts';
 
 export interface Workspace {
   format: 'dynamic-learner';
   version: 1;
-  features: { notebook: Notebook; 'index-cards': IndexCards; 'word-search': WordSearch };
+  features: { notebook: Notebook; 'todo-list': TodoLists; 'index-cards': IndexCards; 'word-search': WordSearch };
 }
 
 import { validateNotebook } from '../features/notebook/library-model.ts';
@@ -21,6 +22,7 @@ export function emptyWorkspace(): Workspace {
     version: 1,
     features: {
       notebook: { items: [] },
+      'todo-list': { items: [] },
       'index-cards': { items: [] },
       'word-search': { items: [] },
     },
@@ -35,17 +37,18 @@ export function parseWorkspace(text: string): Workspace {
   if (!isRecord(value) || value.format !== 'dynamic-learner' || value.version !== 1 ||
       Object.keys(value).some((key) => !['format', 'version', 'features'].includes(key)) ||
       !isRecord(value.features) || !value.features['index-cards'] ||
-      Object.keys(value.features).some((key) => !['notebook', 'index-cards', 'word-search'].includes(key))) {
+      Object.keys(value.features).some((key) => !['notebook', 'todo-list', 'index-cards', 'word-search'].includes(key))) {
     throw new Error('This is not a supported Dynamic Learner workspace backup (version 1).');
   }
   const notebook = value.features.notebook || { items: [] };
   const indexCards = value.features['index-cards'];
   const wordSearch = value.features['word-search'] || { items: [] };
+  const todoLists = Object.hasOwn(value.features, 'todo-list') ? value.features['todo-list'] : { items: [] };
   validateNotebook(notebook);
   validateIndexCards(indexCards);
   validateWordSearch(wordSearch);
+  validateTodoLists(todoLists);
   return { format: 'dynamic-learner', version: 1,
-    features: { notebook, 'index-cards': indexCards, 'word-search': wordSearch } };
+    features: { notebook, 'todo-list': todoLists, 'index-cards': indexCards, 'word-search': wordSearch } };
 
 }
-

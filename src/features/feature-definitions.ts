@@ -1,7 +1,7 @@
 // Shared by the browser registry and webpack build; keep this data browser-neutral.
 import type { PageMetadataOverrides } from '../core/metadata.ts';
 
-export type FeatureId = 'notebook' | 'index-cards' | 'word-search';
+export type FeatureId = 'notebook' | 'todo-list' | 'index-cards' | 'word-search';
 
 export interface FeatureDefinition {
   hidden?: boolean;
@@ -20,6 +20,21 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
     id: 'notebook', label: 'Notebook', path: '/notebook/', icon: 'document',
     image: 'assets/notebook.png',
     description: 'Organize notes into groups and keep your documents together in one notebook.',
+  },
+  {
+    id: 'todo-list', label: 'Todo List', path: '/todo-list/', icon: 'checklist',
+    image: 'assets/todo-list.png',
+    description: 'Write tasks on lined paper with checkboxes, section priorities, and shared section-name prefixes. Lists are organized by creation date and fade into a configurable archive.',
+    metadata: {
+      keywords: ['todo list', 'tasks', 'checklist', 'task planning'],
+      socialImage: {
+        path: 'assets/todo-list.png',
+        type: 'image/png',
+        width: 1254,
+        height: 1254,
+        alt: 'Todo List — Glossy blue-and-white clipboard with checkmarks and task lines.',
+      },
+    },
   },
   {
     id: 'index-cards', label: 'Index Cards', path: '/index-cards/', icon: 'cards',

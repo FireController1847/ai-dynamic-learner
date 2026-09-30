@@ -1,9 +1,10 @@
 import { isRecord } from '../../core/validation.ts';
 import { createTreeOperations, type TreeGroupOption, type TreeItemLocation, type TreeMovePosition } from '../../core/tree.ts';
 import type { NotebookDocument, DocumentTypeId } from './document-types.ts';
+import { validateNotebookDisplay, type NotebookDisplay } from './display-options.ts';
 export interface Group { id: string; kind: 'group'; name: string; children: LibraryItem[] }
 export type LibraryItem = Group | NotebookDocument;
-export interface Notebook { items: LibraryItem[]; lastSelectedDocumentId?: string | null }
+export interface Notebook { items: LibraryItem[]; lastSelectedDocumentId?: string | null; display?: NotebookDisplay }
 export interface DocumentTarget { selectedId?: string | null }
 export type ItemLocation = TreeItemLocation<LibraryItem>;
 export type MovePosition = TreeMovePosition;
@@ -67,9 +68,10 @@ export function insertDocument(items: LibraryItem[], target: DocumentTarget | nu
 
 export function validateNotebook(value: unknown): asserts value is Notebook {
   if (!isRecord(value) || !Array.isArray(value.items) ||
-      Object.keys(value).some((key) => !['items', 'lastSelectedDocumentId'].includes(key))) {
+      Object.keys(value).some((key) => !['items', 'lastSelectedDocumentId', 'display'].includes(key))) {
     throw new Error('The Notebook library is invalid.');
   }
+  if (Object.hasOwn(value, 'display')) validateNotebookDisplay(value.display);
 
   if (Object.hasOwn(value, 'lastSelectedDocumentId') && value.lastSelectedDocumentId !== null &&
       !isValidId(value.lastSelectedDocumentId)) {
@@ -124,7 +126,19 @@ export function validateNotebook(value: unknown): asserts value is Notebook {
             !isDocumentType(item.type)) {
           throw new Error('A Notebook document contains unsupported data.');
         }
-        validateDocumentData(item.type, item.data);
+        // Lined Paper existed as an empty placeholder in version-1 workspaces.
+        if (item.type === 'lined' && isRecord(item.data) && Object.keys(item.data).length === 0) {
+          item.data = createDocumentData('lined');
+        }
+        if (item.type === 'lined') {
+          // Validate the specific type before accessing its optional editor fields.
+          validateDocumentData('lined', item.data);
+          // Preserve the formerly displayed filename as an independent title on load.
+          if (!Object.hasOwn(item.data, 'title')) item.data.title = item.name;
+          if (!Object.hasOwn(item.data, 'marginText')) item.data.marginText = '';
+        } else {
+          validateDocumentData(item.type, item.data);
+        }
         documentCount += 1;
         if (documentCount > MAX_DOCUMENTS) {
           throw new Error(`A workspace supports up to ${MAX_DOCUMENTS} Notebook documents.`);

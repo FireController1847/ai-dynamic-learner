@@ -12,13 +12,16 @@ import { usePersistedPanelResize } from '../../components/use-persisted-panel-re
 import { DocumentBuilder } from './document-builder.ts';
 import { getDocumentType } from './document-types.ts';
 import { MarkdownEditor } from './markdown-editor.ts';
+import { LinedEditor } from './lined-editor.ts';
+import { DisplaySettings } from './display-settings.ts';
+import { defaultNotebookDisplay, notebookDisplayStyles } from './display-options.ts';
 import { NotebookLibrary } from './library.ts';
 import {
   canMove, countDocuments, countItems, deleteItem, findItem, groupOptions, insertDocument,
   MAX_DOCUMENTS, MAX_ITEMS, moveItem,
 } from './library-model.ts';
 
-import { defineComponent, type PropType, computed, h, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { defineComponent, type PropType, computed, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue';
 
 const MIN_LIBRARY_WIDTH = 248;
 const LIBRARY_WIDTH_KEY = 'dynamic-learner.ui.notebook.library-width';
@@ -60,6 +63,15 @@ export const Notebook = defineComponent({
     const showLibraryButton = ref<HTMLButtonElement | null>(null);
     const creationTarget = ref<CreationTarget | null>(null);
     const message = ref('');
+    const settingsOpen = ref(false);
+    const settingsButton = ref<HTMLButtonElement | null>(null);
+    const displayOptions = computed(() => props.model.display ?? defaultNotebookDisplay());
+    onDeactivated(() => { settingsOpen.value = false; });
+    async function closeSettings() {
+      settingsOpen.value = false;
+      await nextTick();
+      settingsButton.value?.focus();
+    }
 
     const selection = computed(() => findItem(props.model.items, selectedId.value));
 
@@ -170,10 +182,16 @@ export const Notebook = defineComponent({
         return () => restoreTipsState(previous);
       }
 
-      if (action === 'markdown') {
-        const item = insertDocument(props.model.items, { selectedId: null }, 'markdown');
+      if (action === 'markdown' || action === 'lined') {
+        const item = insertDocument(props.model.items, { selectedId: null }, action);
         item.name = 'Lorem ipsum';
         if (item.type === 'markdown') item.data.markdown = '# Lorem ipsum\n\nLorem ipsum dolor sit amet, consectetur adipiscing elit.\n\n## Dolor sit amet\n\nSed do eiusmod tempor incididunt ut labore et dolore magna aliqua.';
+        if (item.type === 'lined') {
+          item.name = 'Lined Paper example';
+          item.data.title = 'A thought to keep';
+          item.data.marginText = '1\n2\n3';
+          item.data.text = Array.from({ length: 45 }, (_, index) => `Note ${index + 1}: A little space to think and learn.`).join('\n');
+        }
         creationTarget.value = null;
         selectedId.value = item.id;
         if (libraryOverlay.value) libraryCollapsed.value = true;
@@ -252,6 +270,7 @@ export const Notebook = defineComponent({
 
     return () => h('section', {
       class: 'notebook-page',
+      style: notebookDisplayStyles(displayOptions.value),
       'aria-label': props.title,
       onKeydown: (event: KeyboardEvent) => {
         if (event.key === 'Escape' && libraryOverlay.value && !libraryCollapsed.value &&
@@ -297,13 +316,11 @@ export const Notebook = defineComponent({
           onNewDocument: beginDocumentCreation,
         }, {
           footer: () => h('button', {
+            ref: settingsButton,
             type: 'button',
-            class: 'quiet-button library-settings-button notebook-coming-control',
-            'aria-disabled': true,
-            'aria-describedby': 'notebook-coming-settings',
-          }, ['Settings', h(Icon, { name: 'settings' }), h('span', {
-            id: 'notebook-coming-settings', class: 'notebook-coming-tooltip', role: 'tooltip',
-          }, 'Coming soon!')]),
+            class: 'quiet-button library-settings-button',
+            onClick: () => { settingsOpen.value = true; },
+          }, ['Settings', h(Icon, { name: 'settings' })]),
         }),
         !libraryOverlay.value && !libraryCollapsed.value ? h('div', {
           class: 'library-resizer',
@@ -349,6 +366,12 @@ export const Notebook = defineComponent({
                 key: selection.value.item.id,
                 document: selection.value.item,
               })
+              : selection.value.item.type === 'lined'
+                ? h(LinedEditor, {
+                  key: selection.value.item.id,
+                  document: selection.value.item,
+                  options: displayOptions.value.lined,
+                })
               : h('div', { class: 'notebook-editor-scaffold' }, [
                 h('article', { class: 'notebook-document-surface', 'aria-label': 'Document editor scaffold' }, [
                   h('span', { class: 'notebook-document-label' }, getDocumentType(selection.value.item.type)?.label ?? 'Document'),
@@ -369,6 +392,12 @@ export const Notebook = defineComponent({
           h('p', 'Use the document button in the Library to start a new note.'),
         ]),
       ]),
+      settingsOpen.value ? h(DisplaySettings, {
+        options: displayOptions.value,
+        initialTab: selection.value?.item.kind === 'document' ? selection.value.item.type : 'lined',
+        onUpdate: (options) => { props.model.display = options; },
+        onClose: closeSettings,
+      }) : null,
     ]);
   },
 });

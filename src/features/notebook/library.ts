@@ -6,6 +6,7 @@ import type { VNode } from 'vue';
 import type { LibraryItem, MovePosition } from './library-model.ts';
 import { inputValue } from '../../core/dom.ts';
 import { Icon } from '../../components/icon.ts';
+import { DocumentTypeIcon } from './document-type-icon.ts';
 import { DeleteConfirmation } from '../../components/delete-confirmation.ts';
 import { readMarkdownFile } from './document-files.ts';
 import {
@@ -114,6 +115,8 @@ export const NotebookLibrary = defineComponent({
     function requestDelete(item: LibraryItem, event: MouseEvent) {
       const isEmpty = item.kind === 'group' ? item.children.length === 0
         : item.type === 'markdown' ? item.data.markdown.trim().length === 0
+          : item.type === 'lined' ? [item.data.text, item.data.title ?? '', item.data.marginText ?? '', ...(item.data.additionalTitles ?? [])]
+            .every((text) => text.trim().length === 0)
           : Object.keys(item.data).length === 0;
       if (isEmpty) {
         confirmDelete(item.id);
@@ -193,7 +196,8 @@ export const NotebookLibrary = defineComponent({
             'aria-expanded': isOpen,
             onClick: () => toggle(item.id),
           }, [h(Icon, { name: 'chevron' })]) : h('span', { class: 'tree-toggle-space' }),
-          h(Icon, { name: isGroup ? 'folder' : 'document' }),
+          item.kind === 'group' ? h(Icon, { name: 'folder' })
+            : h(DocumentTypeIcon, { type: item.type, compact: true }),
           isEditing ? h('input', {
             ref: input,
             class: 'directory-rename',

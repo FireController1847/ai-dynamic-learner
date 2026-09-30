@@ -9,6 +9,7 @@ import { useWorkspace } from './workspace.ts';
 import { WorkspaceTools } from './workspace-tools.ts';
 import { HomePage } from './home-page.ts';
 import { TipsExperience } from './tips.ts';
+import { tipsCatalog } from './tips-content.ts';
 import { Icon } from '../components/icon.ts';
 
 import { defineComponent, type PropType, computed, createApp, h, KeepAlive, nextTick, ref } from 'vue';
@@ -39,7 +40,10 @@ const App = defineComponent({
     let focusContentOnClose = false;
     const { currentPath, navigate } = useNavigation(onNavigate);
     const activeFeature = computed(() => features.find((feature) => feature.path === currentPath.value));
-    const tipsFeature = computed(() => activeFeature.value ?? (currentPath.value === '/' ? homeTipsFeature : null));
+    const tipsFeature = computed(() => {
+      const feature = activeFeature.value ?? (currentPath.value === '/' ? homeTipsFeature : null);
+      return feature && tipsCatalog[feature.id].sections.length ? feature : null;
+    });
     const activeLogoSrc = computed(() => featureImageSrc(activeFeature.value));
 
     function closeSidebar() {
@@ -125,7 +129,7 @@ const App = defineComponent({
         h('main', {
           ref: main,
           class: ['app-content', {
-            'app-content--workspace': ['notebook', 'index-cards', 'word-search'].includes(activeFeature.value?.id ?? ''),
+            'app-content--workspace': ['notebook', 'todo-list', 'index-cards', 'word-search'].includes(activeFeature.value?.id ?? ''),
           }],
           tabindex: -1,
         }, [

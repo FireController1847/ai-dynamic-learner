@@ -1,0 +1,8 @@
+.notebook-display-tabs { display: flex; gap: 4px; margin-top: 20px; border-bottom: 1px solid var(--border-color); }
+.notebook-display-tabs button { flex: 1; padding: 10px 8px; min-height: var(--control-height); border: 0; border-bottom: 2px solid transparent; background: transparent; }
+.notebook-display-tabs button[aria-selected='true'] { color: var(--brand); border-bottom-color: var(--brand); font-weight: 600; }
+.notebook-display-sample { padding: 20px; margin: 16px 0; border: 1px solid var(--border-color); border-radius: var(--radius); }
+.notebook-display-sample--markdown { font-family: var(--notebook-preview-font); font-size: var(--notebook-preview-size); line-height: var(--notebook-preview-leading); }
+.notebook-source-sample { white-space: pre-wrap; font-size: var(--notebook-source-size); line-height: 1.65; }
+.notebook-lined-preview { padding: 16px; margin: 16px 0; background: var(--surface-workspace); border-radius: var(--radius); }
+.notebook-lined-preview .lined-paper-frame { max-width: 300px; }

@@ -1,0 +1,127 @@
+.lined-editor {
+  flex: 1 0 auto;
+  min-width: 0;
+  padding: 16px clamp(12px, 3vw, 32px) 28px;
+  background: var(--surface-workspace);
+}
+.lined-paper-description {
+  max-width: var(--lined-max-width, 816px);
+  margin: 0 auto 12px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 18px;
+}
+.lined-paper-frame {
+  width: min(100%, var(--lined-max-width, 816px));
+  margin: 0 auto;
+  container: lined-paper / inline-size;
+}
+.lined-paper {
+  /* US Letter (8.5 × 11), college ruling (9/32), and a 1.25-inch margin.
+     Narrow views keep readable text/rows instead of shrinking them indefinitely. */
+  --lined-rule-spacing: max(24px, var(--lined-rule, 3.308824cqw));
+  --lined-margin: max(32px, 14.705882cqw);
+  /* Zero user offset includes the paper's calibrated text alignment. */
+  --lined-text-offset: calc(var(--lined-baseline, 0px) - 3px);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  aspect-ratio: var(--lined-aspect, 17 / 22);
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: var(--lined-paper-color, #fff);
+  box-shadow: 0 0 0 1px var(--control-border), var(--shadow-paper);
+  color: var(--lined-ink, #3d3d3d);
+  font-family: var(--lined-font, Georgia, 'Times New Roman', serif);
+}
+.lined-paper::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 var(--lined-margin);
+  width: 1px;
+  background: var(--paper-red-line);
+  pointer-events: none;
+}
+.lined-paper-heading {
+  display: flex;
+  align-items: flex-end;
+  flex: 0 0 max(64px, 14.705882cqw);
+  min-width: 0;
+  padding: 0 max(12px, 5.882353cqw) 8px calc(var(--lined-margin) + 12px);
+  box-shadow: inset 0 -1px var(--paper-red-line);
+  font-size: calc(max(18px, 2.5cqw) * var(--lined-text-scale, 1));
+  line-height: 1.4;
+}
+.lined-paper-title {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  transform: translateY(var(--lined-text-offset));
+}
+.lined-paper-title:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.lined-paper-body {
+  position: relative;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  grid-template-columns: var(--lined-margin) minmax(0, 1fr);
+  flex: 1 1 0;
+  min-height: 0;
+}
+.lined-paper-writing {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: max(0px, calc(var(--lined-rule-spacing) * 0.28 + var(--lined-text-offset))) max(12px, 5.882353cqw) 0 12px;
+  resize: none;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background-color: transparent;
+  background-image: repeating-linear-gradient(to bottom,
+    transparent 0, transparent calc(var(--lined-rule-spacing) - 1px),
+    var(--paper-blue-line) calc(var(--lined-rule-spacing) - 1px), var(--paper-blue-line) var(--lined-rule-spacing));
+  background-attachment: local;
+  color: inherit;
+  font-family: inherit;
+  font-size: calc(max(16px, 2.05cqw) * var(--lined-text-scale, 1));
+  line-height: var(--lined-rule-spacing);
+  tab-size: 4;
+}
+.lined-paper-margin {
+  padding-right: 8px;
+  padding-left: var(--lined-hole-gutter, max(16px, 6cqw));
+  text-align: right;
+}
+.lined-paper-writing::placeholder { color: var(--text-secondary); opacity: 1; }
+.lined-paper-writing:focus-visible { outline: 2px solid var(--brand); outline-offset: -3px; }
+
+.lined-page + .lined-page { margin-top: 20px; }
+.lined-page-number { margin: 8px 0 0; color: var(--text-secondary); font-size: 12px; text-align: center; }
+.lined-paper-holes {
+  display: var(--lined-hole-display, block);
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.lined-paper-holes i {
+  position: absolute;
+  left: 2.2%;
+  top: 50%;
+  width: max(9px, 2.941176cqw);
+  aspect-ratio: 1;
+  transform: translateY(-50%);
+  border-radius: 50%;
+  background: var(--surface-workspace);
+  box-shadow: inset 1px 2px 3px rgb(0 0 0 / 18%), 0 1px 0 rgb(255 255 255 / 80%);
+}
+.lined-paper-holes i:first-child { top: 13.636364%; }
+.lined-paper-holes i:last-child { top: 86.363636%; }

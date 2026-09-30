@@ -2,10 +2,11 @@ import { isRecord } from '../../core/validation.ts';
 
 export type DocumentTypeId = 'markdown' | 'lined' | 'graph';
 export interface MarkdownData { markdown: string }
+export interface LinedData { text: string; title?: string; marginText?: string; additionalTitles?: string[] }
 export type EmptyDocumentData = Record<string, never>;
 export interface DocumentDataByType {
   markdown: MarkdownData;
-  lined: EmptyDocumentData;
+  lined: LinedData;
   graph: EmptyDocumentData;
 }
 export interface DocumentType {
@@ -37,7 +38,7 @@ export const DOCUMENT_TYPES: readonly DocumentType[] = Object.freeze([
   }),
   Object.freeze({
     id: 'lined',
-    available: false,
+    available: true,
     label: 'Lined Paper',
     description: 'A ruled note page for free-form notes.',
   }),
@@ -60,11 +61,13 @@ export function getDocumentType(value: unknown): DocumentType | null {
 }
 
 export function createDocumentData(type?: 'markdown'): MarkdownData;
-export function createDocumentData(type: 'lined' | 'graph'): EmptyDocumentData;
+export function createDocumentData(type: 'lined'): LinedData;
+export function createDocumentData(type: 'graph'): EmptyDocumentData;
 export function createDocumentData(type: DocumentTypeId): DocumentDataByType[DocumentTypeId];
 export function createDocumentData(type: DocumentTypeId = DEFAULT_DOCUMENT_TYPE): DocumentDataByType[DocumentTypeId] {
   if (!isDocumentType(type)) throw new Error(`Unsupported Notebook document type: ${type}`);
-  return type === 'markdown' ? { markdown: '' } : {};
+  if (type === 'markdown') return { markdown: '' };
+  return type === 'lined' ? { text: '', title: '', marginText: '' } : {};
 }
 
 export function validateDocumentData<Type extends DocumentTypeId>(type: Type, data: unknown): asserts data is DocumentDataByType[Type];
@@ -77,6 +80,18 @@ export function validateDocumentData(type: unknown, data: unknown): void {
   if (type === 'markdown') {
     if (Object.keys(data).some((key) => key !== 'markdown') || typeof data.markdown !== 'string') {
       throw new Error('A Markdown Notebook document contains unsupported data.');
+    }
+    return;
+  }
+
+  if (type === 'lined') {
+    if (Object.keys(data).some((key) => !['text', 'title', 'marginText', 'additionalTitles'].includes(key)) ||
+        typeof data.text !== 'string' ||
+        (Object.hasOwn(data, 'title') && typeof data.title !== 'string') ||
+        (Object.hasOwn(data, 'marginText') && typeof data.marginText !== 'string') ||
+        (Object.hasOwn(data, 'additionalTitles') && (!Array.isArray(data.additionalTitles) ||
+          data.additionalTitles.some((title: unknown) => typeof title !== 'string')))) {
+      throw new Error('A Lined Paper Notebook document contains unsupported data.');
     }
     return;
   }

@@ -73,11 +73,14 @@
   outline: 0;
   color: var(--text-color);
   background: var(--page-background);
-  font: 14px/1.65 ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', monospace;
+  font: var(--notebook-source-size, 14px)/1.65 ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', monospace;
   tab-size: 2;
 }
 .markdown-source:focus { box-shadow: inset 0 0 0 2px var(--brand); }
 .markdown-preview {
+  font-family: var(--notebook-preview-font, var(--font-family));
+  font-size: var(--notebook-preview-size, 16px);
+  line-height: var(--notebook-preview-leading, 1.7);
   flex: 1;
   min-width: 0;
   min-height: 0;

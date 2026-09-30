@@ -3,6 +3,8 @@ import { defineComponent, type PropType, h } from 'vue';
 // Small inline SVGs keep essential controls independent of icon fonts or CDNs.
 const paths: Record<string, string> = {
   folder: 'M3 5h6l2 2h10v13H3Z',
+  checklist: 'M9 5h12M9 12h12M9 19h12M2 5l2 2 3-4M2 12l2 2 3-4M2 19l2 2 3-4',
+  archive: 'M3 3h18v5H3ZM5 8v13h14V8M9 12h6',
   document: 'M6 3h9l4 4v14H6ZM15 3v5h5M9 12h6M9 16h6',
   cards: 'M6 3h15v14H6ZM3 7v14h14M9 8h9M9 12h6',
   pencil: 'm4 16-1 5 5-1L20 8l-4-4ZM14 6l4 4',

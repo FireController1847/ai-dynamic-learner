@@ -118,6 +118,107 @@ export const tipsCatalog: Record<TipsFeatureId, Tutorial> = {
           },
         ],
       },
+      {
+        id: 'lined',
+        title: 'Lined Paper',
+        description: 'Write notes, add page headings, and make the paper your own.',
+        when: '.lined-editor',
+        prepare: 'lined',
+        steps: [
+          {
+            title: 'Give each sheet its own heading',
+            body: 'Type a heading at the top of each page. Each sheet has its own heading, and changing it does not rename the document in your library.',
+            target: '.lined-paper-title',
+            targetLabel: 'Page heading',
+            placement: 'bottom',
+          },
+          {
+            title: 'Write on the lines',
+            body: 'Write your notes here. Your changes save automatically in this browser. A workspace backup keeps a copy you can restore or move to another device.',
+            target: '.lined-paper-main',
+            targetLabel: 'Main writing area',
+            placement: 'left',
+          },
+          {
+            title: 'Keep little notes in the margin',
+            body: 'The space to the left of the red line is a separate writing area. Use it for numbers, dates, or short reminders. Its text lines up against the right edge.',
+            target: '.lined-paper-margin',
+            targetLabel: 'Margin writing area',
+            placement: 'right',
+          },
+          {
+            title: 'Keep writing onto another sheet',
+            body: 'When a page fills up, more sheets appear below it. Each new heading starts blank. Changing the window size or paper settings can move page breaks; headings stay with their page numbers. Margin notes flow separately from the main notes.',
+            target: '.lined-page-number',
+            targetLabel: 'Page number',
+            placement: 'top',
+          },
+          {
+            title: 'Make the paper comfortable to read',
+            body: 'Open the Library, then Settings and the Lined Paper tab. Pick your font, text size, ink, ruling, paper size, punch holes, and text alignment. These settings apply to all lined documents; Markdown has its own tab.',
+            target: ['#notebook-library .library-settings-button', '.notebook-page .library-floating-toggle'],
+            targetLabel: 'Library settings',
+            placement: 'right',
+          },
+        ],
+      },
+    ],
+  },
+
+  'todo-list': {
+    version: 2,
+    sections: [
+      {
+        id: 'library',
+        title: 'Todo library',
+        description: 'Create lists and find older ones.',
+        when: '#todo-list-library',
+        steps: [
+          {
+            title: 'Start a list',
+            body: 'Press + to create a list. Lists are organized by when you made them; no due date needed.',
+            target: '#todo-list-library [aria-label="New todo list"]',
+            targetLabel: 'New todo list button',
+            placement: 'right',
+          },
+          {
+            title: 'Keep older lists',
+            body: 'Lists fade as they age, then move to Archive. Settings lets you change that timing and the paper’s appearance. Archived lists stay editable.',
+            target: '.todo-library-footer',
+            targetLabel: 'Settings and Archive',
+            placement: 'top',
+          },
+        ],
+      },
+      {
+        id: 'writing',
+        title: 'Writing tasks',
+        description: 'Open a list to learn sections, priorities, and checkboxes.',
+        when: '.todo-task-editor',
+        steps: [
+          {
+            title: 'Write in sections',
+            body: 'Click the section name to change the prefix on its tasks. Enter adds a task; Enter on an empty task starts a section. Shift+Enter adds a line.',
+            target: '.todo-task-writing',
+            targetLabel: 'Task writing area',
+            placement: 'bottom',
+          },
+          {
+            title: 'Give a section priority',
+            body: 'Type 1 here for P#1. The priority applies to the whole section.',
+            target: '.todo-section-priority-marker',
+            targetLabel: 'Section priority',
+            placement: 'right',
+          },
+          {
+            title: 'Done or skipping it?',
+            body: 'Check the box when done. Click × to skip or defer: the task is crossed out and moves to the top of its section. Click × again to restore it.',
+            target: '.todo-task-margin',
+            targetLabel: 'Skip and completion controls',
+            placement: 'right',
+          },
+        ],
+      },
     ],
   },
 
