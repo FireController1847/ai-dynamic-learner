@@ -88,9 +88,13 @@ export function validateGame(puzzleValue: unknown, gameValue: unknown): asserts 
       throw new Error('A saved crossword contains an invalid or duplicate answer placement.');
     }
 
-    const path = placementCells(placement as Placement, placement.answer.length, size);
-    if (path.some((cell) => cell < 0 || cell >= size * size) ||
-        path.some((cell, index) => rows[Math.floor(cell / size)][cell % size] !== placement.answer[index])) {
+    const typedPlacement = placement as Placement;
+    const endRow = typedPlacement.row + (typedPlacement.direction === 'down' ? typedPlacement.answer.length - 1 : 0);
+    const endColumn = typedPlacement.column + (typedPlacement.direction === 'across' ? typedPlacement.answer.length - 1 : 0);
+    const path = placementCells(typedPlacement, typedPlacement.answer.length, size);
+    if (typedPlacement.row < 0 || typedPlacement.column < 0 || endRow >= size || endColumn >= size ||
+        path.some((cell) => cell < 0 || cell >= size * size) ||
+        path.some((cell, index) => rows[Math.floor(cell / size)][cell % size] !== typedPlacement.answer[index])) {
       throw new Error('A saved crossword answer does not match the grid.');
     }
 
