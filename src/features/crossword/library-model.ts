@@ -50,9 +50,11 @@ export function saveCrossword(items: LibraryItem[], target: PuzzleTarget, name: 
     const found = findItem(items, target.itemId);
     if (!found || found.item.kind !== 'crossword') throw new Error('This crossword no longer exists.');
     const previous = found.item.puzzle;
+    const previousAnswers = previous?.entries.map(({ answer }) => answer).sort() ?? [];
+    const nextAnswers = puzzle.entries.map(({ answer }) => answer).sort();
     const answersChanged = !previous ||
       previous.size !== puzzle.size ||
-      JSON.stringify(previous.entries.map(({ answer }) => answer)) !== JSON.stringify(puzzle.entries.map(({ answer }) => answer));
+      JSON.stringify(previousAnswers) !== JSON.stringify(nextAnswers);
     if (answersChanged) delete found.item.game;
     Object.assign(found.item, { name: trimmedName, puzzle });
     return found.item;
