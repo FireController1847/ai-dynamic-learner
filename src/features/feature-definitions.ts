@@ -49,6 +49,6 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'crossword', label: 'Crossword', path: '/crossword/', icon: 'crossword',
     image: '',
-    description: 'Organize crossword puzzles in groups while the puzzle builder is being added.',
+    description: 'Create your own crosswords, solve the clues, and pick up where you left off.',
   },
 ];
