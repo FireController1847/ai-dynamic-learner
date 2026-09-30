@@ -48,8 +48,8 @@
 .crossword-grid {
   display: grid;
   width: max-content;
-  border: 1px solid var(--text-color);
-  background: var(--text-color);
+  border: 1px solid var(--control-border);
+  background: var(--control-border);
   user-select: none;
 }
 .crossword-grid-row {
@@ -65,8 +65,8 @@
   min-height: 0;
   padding: 0;
   border: 0;
-  border-right: 1px solid var(--text-color);
-  border-bottom: 1px solid var(--text-color);
+  border-right: 1px solid var(--control-border);
+  border-bottom: 1px solid var(--control-border);
   border-radius: 0;
 }
 .crossword-cell-open {
