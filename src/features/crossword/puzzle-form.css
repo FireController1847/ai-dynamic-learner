@@ -91,3 +91,19 @@
   .crossword-field select,
   .crossword-clue-field textarea { font-size: 16px; }
 }
+
+.crossword-answer-validation {
+  display: grid;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  background: var(--surface-subtle);
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 18px;
+}
+.crossword-answer-validation strong { color: var(--danger); }
+.crossword-answer-validation ul { margin: 0; padding-left: 20px; }
+.crossword-answer-validation.is-ready { color: var(--text-color); }
