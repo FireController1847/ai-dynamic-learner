@@ -5,7 +5,7 @@ import type { Direction, Placement } from './game-model.ts';
 import { answerForCell, clearGame, clueEntry, gameComplete, placementCells, placementSolved } from './game-model.ts';
 import { generatePuzzle } from './puzzle-generator.ts';
 import { PuzzleGrid } from './puzzle-grid.ts';
-import { defaultDisplayOptions } from './display-options.ts';
+import { defaultDisplayOptions, displayStyles } from './display-options.ts';
 
 import { defineComponent, type PropType, computed, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref } from 'vue';
 
@@ -237,6 +237,7 @@ export const PuzzleGame = defineComponent({
       const puzzle = props.item.puzzle;
       return h('section', {
         class: 'crossword-game',
+        style: displayStyles(props.options),
         'aria-label': 'Play crossword',
         'aria-busy': loading.value,
       }, [
