@@ -403,6 +403,87 @@ export const tipsCatalog: Record<TipsFeatureId, Tutorial> = {
 
   crossword: {
     version: 1,
-    sections: [],
+    sections: [
+      {
+        id: 'library',
+        title: 'Crossword library',
+        description: 'Keep your puzzles organized.',
+        when: '#crossword-library',
+        steps: [
+          {
+            title: 'Your crosswords live here',
+            body: 'This list holds your groups and crossword puzzles. Use groups to keep related puzzles together.',
+            target: '#crossword-library',
+            targetLabel: 'Crossword library',
+            placement: 'right',
+          },
+          {
+            title: 'Make a new crossword',
+            body: 'Press this button to add answers and clues for a new puzzle.',
+            target: '#crossword-library [aria-label="New crossword"]',
+            targetLabel: 'New crossword button',
+            placement: 'right',
+          },
+        ],
+      },
+      {
+        id: 'creation',
+        title: 'Making a crossword',
+        description: 'Add answers, clues, and choose the grid size.',
+        when: '.crossword-form',
+        steps: [
+          {
+            title: 'Add the answers',
+            body: 'Type the answers you want in the puzzle. Spaces and punctuation are removed from the grid.',
+            target: '#crossword-answers',
+            targetLabel: 'Answers box',
+            placement: 'right',
+          },
+          {
+            title: 'Write a clue for each answer',
+            body: 'Every answer gets its own clue. The clue numbers are assigned automatically when the grid is built.',
+            target: '.crossword-clue-fields',
+            targetLabel: 'Clue fields',
+            placement: 'top',
+          },
+          {
+            title: 'Choose how much room to use',
+            body: 'A larger grid gives longer or less-connected answers more room to fit cleanly.',
+            target: '#crossword-size',
+            targetLabel: 'Grid size',
+            placement: 'left',
+          },
+        ],
+      },
+      {
+        id: 'play',
+        title: 'Solving a crossword',
+        description: 'Move through the grid and use the clue list.',
+        when: '.crossword-game',
+        steps: [
+          {
+            title: 'Type directly into the grid',
+            body: 'Choose a square and type. Arrow keys move around, and clicking an intersection again switches Across and Down.',
+            target: '.crossword-grid',
+            targetLabel: 'Crossword grid',
+            placement: 'right',
+          },
+          {
+            title: 'Pick clues from here',
+            body: 'Across and Down clues select the matching word in the grid. Solved clues are marked automatically.',
+            target: '.crossword-clues',
+            targetLabel: 'Crossword clues',
+            placement: 'left',
+          },
+          {
+            title: 'Use puzzle help when you need it',
+            body: 'Check your letters, reveal a cell or word, show answers temporarily, start over, or generate a new layout.',
+            target: '.crossword-game-actions',
+            targetLabel: 'Crossword controls',
+            placement: 'top',
+          },
+        ],
+      },
+    ],
   },
 };
