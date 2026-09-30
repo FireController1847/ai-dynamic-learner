@@ -19,4 +19,7 @@
 @import '../features/word-search/puzzle-game.css';
 @import '../features/word-search/display-settings.css';
 @import '../features/crossword/crossword.css';
+@import '../features/crossword/puzzle-form.css';
+@import '../features/crossword/puzzle-game.css';
+@import '../features/crossword/display-settings.css';
 @import './mobile.css';
