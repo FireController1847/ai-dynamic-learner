@@ -207,6 +207,7 @@
 }
 .crossword-placeholder-inline { margin-block: 24px; }
 .crossword-placeholder > .ui-icon { width: 32px; height: 32px; color: var(--brand); }
+.crossword-artwork { display: block; width: 96px; height: 96px; object-fit: contain; }
 .crossword-placeholder h2,
 .crossword-placeholder h3 { margin: 16px 0 8px; }
 .crossword-placeholder p { color: var(--text-secondary); }

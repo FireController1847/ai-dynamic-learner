@@ -48,7 +48,17 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   },
   {
     id: 'crossword', label: 'Crossword', path: '/crossword/', icon: 'crossword',
-    image: '',
+    image: 'assets/crossword.png',
     description: 'Create your own crosswords, solve the clues, and pick up where you left off.',
+    metadata: {
+      keywords: ['crossword', 'crossword puzzle', 'crossword maker', 'clues'],
+      socialImage: {
+        path: 'assets/crossword.png',
+        type: 'image/png',
+        width: 1254,
+        height: 1254,
+        alt: 'Crossword — Glossy blue-and-white puzzle grid with letters, clue numbers, and blue blocked squares.',
+      },
+    },
   },
 ];

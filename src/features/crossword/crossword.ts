@@ -25,6 +25,7 @@ export const Crossword = defineComponent({
   name: 'Crossword',
   props: {
     title: { type: String, required: true },
+    image: { type: String, default: '' },
     model: { type: Object as PropType<FeatureModel>, required: true },
   },
   setup(props) {
@@ -227,7 +228,11 @@ export const Crossword = defineComponent({
           inert: libraryOverlay.value && !libraryCollapsed.value,
         }, [
           h('div', { class: 'crossword-placeholder' }, [
-            h(Icon, { name: 'crossword' }),
+            props.image ? h('img', {
+              class: 'crossword-artwork',
+              src: new URL(props.image, document.baseURI).href,
+              alt: '', 'aria-hidden': 'true', width: 96, height: 96,
+            }) : h(Icon, { name: 'crossword' }),
             h('h2', 'Build your crossword library'),
             h('p', 'Add answers and clues, let Dynamic Learner arrange the grid, and keep your puzzles organized in groups.'),
             h('button', {
