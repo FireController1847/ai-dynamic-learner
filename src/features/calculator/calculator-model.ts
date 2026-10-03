@@ -137,6 +137,9 @@ export class CalculatorModel {
   }
 
   private resetDisplayMode() {
+    if (this.displayMode === 'fraction' && this.justEvaluated && !this.hasError) {
+      this.display = this.formatResult(this.lastAnswer);
+    }
     this.displayMode = 'decimal';
   }
 
