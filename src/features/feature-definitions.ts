@@ -1,7 +1,7 @@
 // Shared by the browser registry and webpack build; keep this data browser-neutral.
 import type { PageMetadataOverrides } from '../core/metadata.ts';
 
-export type FeatureId = 'notebook' | 'todo-list' | 'index-cards' | 'word-search' | 'crossword';
+export type FeatureId = 'calculator' | 'notebook' | 'todo-list' | 'index-cards' | 'word-search' | 'crossword';
 
 export interface FeatureDefinition {
   hidden?: boolean;
@@ -16,6 +16,12 @@ export interface FeatureDefinition {
 }
 
 export const featureDefinitions: readonly FeatureDefinition[] = [
+  {
+    id: 'calculator', label: 'Calculator', path: '/calculator/', icon: 'calculator',
+    image: '',
+    description: 'Work through quick calculations with keyboard input, memory controls, and session history.',
+    metadata: { keywords: ['calculator', 'arithmetic', 'math', 'percentages'] },
+  },
   {
     id: 'notebook', label: 'Notebook', path: '/notebook/', icon: 'document',
     image: 'assets/notebook.png',
