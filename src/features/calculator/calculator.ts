@@ -9,7 +9,13 @@ export const Calculator = defineComponent({
     let listening = false;
 
     function handleKeyboard(event: KeyboardEvent) {
-      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      if (event.ctrlKey || event.metaKey || event.altKey || document.querySelector('dialog[open]')) return;
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      if (target?.matches('input, textarea, select, [contenteditable="true"]') || target?.closest('a[href]')) return;
+      const button = target?.closest('button');
+      if (button && !button.closest('.calculator-page')) return;
+      if (button && (event.key === 'Enter' || event.key === ' ')) return;
+
       if (/^\d$/.test(event.key)) calculator.inputDigit(event.key);
       else if (event.key === '.' || event.key === ',') calculator.inputDecimal();
       else if (['+', '-', '*', '/'].includes(event.key)) calculator.chooseOperator(event.key as Operator);
