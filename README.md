@@ -50,6 +50,7 @@ The current application includes:
 
 | Tool | What it does |
 | --- | --- |
+| **Calculator** | Handles everyday arithmetic with keyboard input, percentages, standard unary operations, memory controls, repeat-equals behavior, and reusable session history. |
 | **Notebook** | Organizes documents into a nested library. Write plain-text notes on Lined Paper with automatic overflow pages, or use Markdown documents with source and preview workflows. Customize appearance separately for each supported paper type. |
 | **Todo List** | Lined-paper tasks with adjustable fonts and alignment, checkboxes, centered section priorities, and shared section-name prefixes. Lists are organized by creation date and gradually fade into an archive with configurable expiry. |
 | **Index Cards** | Creates nested groups and card sets with editable fronts and backs, review modes, appearance controls, and resumable workspace storage. |
