@@ -46,10 +46,6 @@
     transform var(--motion-fast);
 }
 
-.tips-card.is-menu {
-  width: min(560px, calc(100vw - 32px));
-}
-
 .tips-header {
   display: flex;
   align-items: center;
@@ -177,15 +173,6 @@
   text-align: left;
 }
 
-.tips-menu-intro {
-  padding: 8px 4px 14px;
-}
-
-.tips-menu-intro h2 {
-  margin: 0;
-  font-size: 1.3rem;
-}
-
 .tips-section-list {
   display: grid;
   gap: 8px;
@@ -246,8 +233,7 @@
 }
 
 @media (max-width: 560px) {
-  .tips-card,
-  .tips-card.is-menu {
+  .tips-card {
     width: calc(100% - 20px);
     max-height: calc(100dvh - 20px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
     padding: 14px;
@@ -298,11 +284,6 @@
 @media (max-width: 560px) {
   .tips-card:not(.is-menu) {
     max-height: min(60dvh, calc(100dvh - 20px - env(safe-area-inset-top) - env(safe-area-inset-bottom)));
-    overscroll-behavior: contain;
-  }
-
-  .tips-card.is-menu {
-    max-height: calc(100dvh - 20px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
     overscroll-behavior: contain;
   }
 

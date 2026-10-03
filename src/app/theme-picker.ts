@@ -44,15 +44,12 @@ export const ThemePicker = defineComponent({
             if (event.target instanceof HTMLInputElement) theme.setFollowSystem(event.target.checked);
           },
         }),
-        h('span', { class: 'theme-picker-system-copy' }, [
-          h('strong', 'Follow system appearance'),
-          h('small', 'Switch between the selected light and dark themes with your device.'),
-        ]),
+        h('span', { class: 'theme-picker-system-label' }, 'Follow system'),
       ]),
       theme.preferences.value.followSystem
         ? h('div', { class: 'theme-picker-roles' }, [
-          field('Light theme', theme.preferences.value.lightTheme, lightThemes, theme.setLightTheme),
-          field('Dark theme', theme.preferences.value.darkTheme, darkThemes, theme.setDarkTheme),
+          field('Light', theme.preferences.value.lightTheme, lightThemes, theme.setLightTheme),
+          field('Dark', theme.preferences.value.darkTheme, darkThemes, theme.setDarkTheme),
         ])
         : field('Theme', theme.preferences.value.theme, theme.themes, theme.setTheme),
     ]);

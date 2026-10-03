@@ -1,4 +1,5 @@
 import { defineComponent, h, type PropType } from 'vue';
+import { PopupDialog } from '../components/popup-dialog.ts';
 import type { TipsFeature, TipSection } from './tips-content.ts';
 import { useTips } from './use-tips.ts';
 export interface TipsHandle { open(trigger?: EventTarget | null): void }
@@ -9,7 +10,7 @@ export const TipsExperience = defineComponent({
     feature: { type: Object as PropType<TipsFeature | null>, default: null },
   },
   setup(props, { expose }) {
-    const { primaryFocus, openState, mode, stepIndex, preferences, tutorial, sections, activeSection, step, card, targetRect, cardPlacement, cardStyle, dragging, manualPosition, scrims, centeredCardStyle, beginCardDrag, dragCard, endCardDrag, hasSeenSection, availableNow, prepareAndStart, open, startSection, skipSection, showMenu, close, previous, next, toggleAutomaticTips, resetCurrentTips } = useTips(props);
+    const { primaryFocus, openState, mode, stepIndex, preferences, tutorial, sections, activeSection, step, card, targetRect, cardPlacement, cardStyle, dragging, scrims, beginCardDrag, dragCard, endCardDrag, hasSeenSection, availableNow, prepareAndStart, open, startSection, skipSection, showMenu, close, previous, next, toggleAutomaticTips, resetCurrentTips } = useTips(props);
     expose({ open });
 
     function progressDots(section: TipSection) {
@@ -32,9 +33,6 @@ export const TipsExperience = defineComponent({
     function menuContent() {
       let firstAvailableAssigned = false;
       return [
-        h('div', { class: 'tips-menu-intro' }, [
-          h('h2', { id: 'tips-heading' }, `${props.feature?.label} tips`),
-        ]),
         h('div', { class: 'tips-section-list' }, sections.value.map((section) => {
           const available = availableNow(section);
           const canPrepare = Boolean(section.prepare);
@@ -109,11 +107,16 @@ export const TipsExperience = defineComponent({
 
     return () => {
       if (!openState.value || !tutorial.value || !props.feature) return null;
-      const isMenu = mode.value === 'menu';
+      if (mode.value === 'menu') return h(PopupDialog, {
+        title: `${props.feature.label} tips`,
+        headingId: 'tips-heading',
+        width: 560,
+        onClose: close,
+      }, { default: menuContent });
       const section = activeSection.value;
       const currentStep = step.value;
-      const isLastStep = !isMenu && section && stepIndex.value === section.steps.length - 1;
-      const spotlight = !isMenu ? targetRect.value : null;
+      const isLastStep = section && stepIndex.value === section.steps.length - 1;
+      const spotlight = targetRect.value;
 
       return h('div', { class: 'tips-layer' }, [
         ...scrims.value.map((bounds, index) => h('div', {
@@ -126,7 +129,7 @@ export const TipsExperience = defineComponent({
             width: `${bounds.width}px`,
             height: `${bounds.height}px`,
           },
-          onClick: isMenu ? close : skipSection,
+          onClick: skipSection,
         })),
         spotlight ? h('div', {
           class: 'tips-spotlight',
@@ -141,14 +144,13 @@ export const TipsExperience = defineComponent({
         h('section', {
           ref: card,
           class: ['tips-card', {
-            'is-centered': (isMenu && !manualPosition.value) || cardPlacement.value === 'center',
-            'is-menu': isMenu,
+            'is-centered': cardPlacement.value === 'center',
             'is-dragging': dragging.value,
           }],
           role: 'dialog',
           'aria-labelledby': 'tips-heading',
-          'data-placement': isMenu ? 'center' : cardPlacement.value,
-          style: isMenu && !manualPosition.value ? centeredCardStyle() : cardStyle.value,
+          'data-placement': cardPlacement.value,
+          style: cardStyle.value,
         }, [
           h('header', {
             class: 'tips-header',
@@ -162,11 +164,11 @@ export const TipsExperience = defineComponent({
             h('button', {
               type: 'button',
               class: 'quiet-button tips-skip',
-              onClick: isMenu ? close : skipSection,
-            }, isMenu ? 'Close' : 'Skip'),
+              onClick: skipSection,
+            }, 'Skip'),
           ]),
-          ...(isMenu ? menuContent() : tourContent()),
-          !isMenu ? h('footer', { class: 'tips-footer' }, [
+          ...tourContent(),
+          h('footer', { class: 'tips-footer' }, [
             moreMenu(),
             h('div', { class: 'tips-navigation' }, [
               stepIndex.value > 0 && currentStep?.back !== false ? h('button', {
@@ -181,7 +183,7 @@ export const TipsExperience = defineComponent({
                 onClick: next,
               }, currentStep?.nextLabel ?? (isLastStep ? (section.finishLabel ?? 'Done') : 'Next')),
             ]),
-          ]) : null,
+          ]),
         ]),
       ]);
     };

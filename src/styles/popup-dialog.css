@@ -1,0 +1,38 @@
+.popup-dialog {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: 12px;
+  border: 0;
+  color: var(--text-color);
+  background: transparent;
+}
+.popup-dialog[open] { display: grid; place-items: center; }
+.popup-dialog::backdrop { background: var(--scrim); }
+.popup-card {
+  width: min(var(--popup-width), 100%);
+  max-height: calc(100dvh - 24px);
+  padding: 16px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--border-color);
+  border-radius: calc(var(--radius) * 2);
+  background: var(--page-background);
+  box-shadow: var(--shadow-overlay);
+}
+.popup-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 8px 4px 14px; }
+.popup-header h2 { font-size: 1.3rem; }
+.popup-close { flex: 0 0 auto; min-height: 30px; padding: 2px 8px; border-color: transparent; background: transparent; color: var(--text-secondary); font-size: 12px; }
+
+@media (max-width: 560px) {
+  .popup-dialog { padding: 10px; }
+  .popup-card { width: 100%; max-height: calc(100dvh - 20px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); padding: 14px; }
+  .popup-header { gap: 10px; }
+  .popup-close { min-height: 44px; }
+}
+
+@media (pointer: coarse) {
+  .popup-close { min-height: 44px; }
+}

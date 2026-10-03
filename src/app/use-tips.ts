@@ -266,11 +266,10 @@ export function useTips(props: Readonly<{ feature: TipsFeature | null }>) {
   }
 
   function handleKeydown(event: KeyboardEvent) {
-    if (event.key !== 'Escape' || !openState.value) return;
+    if (event.key !== 'Escape' || !openState.value || mode.value !== 'tour') return;
     event.preventDefault();
     event.stopPropagation();
-    if (mode.value === 'menu') close();
-    else skipSection();
+    skipSection();
   }
 
   function installGlobalTracking() {
