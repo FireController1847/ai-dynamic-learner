@@ -6,7 +6,10 @@ import { CalculatorSettings } from './calculator-settings.ts';
 import { CalculatorModel, type HistoryEntry, type Operator } from './calculator-model.ts';
 import type { DecimalPlaces, FractionParts } from './calculator-format.ts';
 
-import { defineComponent, h, nextTick, onActivated, onBeforeUnmount, onDeactivated, reactive, ref } from 'vue';
+import {
+  defineComponent, h, nextTick, onActivated, onBeforeUnmount, onDeactivated, reactive, ref,
+  type VNode,
+} from 'vue';
 
 const DECIMAL_PLACES_PREFERENCE = 'dynamic-learner.ui.calculator.decimal-places';
 
@@ -128,7 +131,7 @@ export const Calculator = defineComponent({
       ]);
     }
 
-    function renderMathNodes(nodes: MathPrintNode[], cursor: number | null): ReturnType<typeof h>[] {
+    function renderMathNodes(nodes: MathPrintNode[], cursor: number | null): VNode[] {
       return nodes.map((node) => {
         if (node.kind === 'text') return renderTextNode(node, cursor);
 
