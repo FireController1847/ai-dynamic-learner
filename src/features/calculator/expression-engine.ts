@@ -140,6 +140,16 @@ class Parser {
       if (identifier === 'e') return Math.E;
       if (identifier === 'ans') return this.context.ans;
       if (!this.match('(')) throw new Error(`${identifier} requires parentheses.`);
+
+      if (identifier === 'frac') {
+        const numerator = this.parseExpression();
+        if (!this.match(',')) throw new Error('Fraction denominator is missing.');
+        const denominator = this.parseExpression();
+        if (!this.match(')')) throw new Error('Missing closing parenthesis.');
+        if (denominator === 0) throw new Error('Cannot divide by zero.');
+        return finite(numerator / denominator);
+      }
+
       const value = this.parseExpression();
       if (!this.match(')')) throw new Error('Missing closing parenthesis.');
       return applyFunction(identifier, value, this.context.angleMode);
