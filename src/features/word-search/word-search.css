@@ -210,7 +210,7 @@
 .word-search-placeholder p { color: var(--text-secondary); }
 .word-search-eyebrow { margin-bottom: 0; color: var(--brand-text) !important; font-size: 12px; font-weight: 600; }
 .word-search-organization {
-  padding: 0 20px 8px;
+  padding: 0 20px;
   border-top: 1px solid var(--border-color);
   background: var(--page-background);
 }
@@ -221,7 +221,7 @@
   overflow: auto;
 }
 .word-search-detail:not(.is-search) .word-search-organization { max-width: 560px; margin: 20px; padding: 16px; border: 1px solid var(--border-color); border-radius: var(--radius); }
-.word-search-organization summary { padding: 8px 0 0; color: var(--text-secondary); font-size: 12px; cursor: pointer; }
+.word-search-organization summary { color: var(--text-secondary); font-size: 12px; cursor: pointer; }
 .word-search-organization[open] { padding-bottom: 16px; }
 .word-search-location { display: grid; gap: 4px; max-width: 480px; margin-top: 12px; }
 .word-search-location select { width: 100%; min-width: 0; }

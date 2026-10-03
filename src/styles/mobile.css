@@ -75,7 +75,6 @@
   .card-list-items li + li { margin-top: 0; }
   .is-set > .item-organization { max-height: none; overflow: visible; }
   .item-organization { padding-inline: 12px; }
-  .item-organization summary { min-height: 44px; padding-block: 12px; }
 
   .display-settings, .review-setup {
     width: min(560px, calc(100% - 24px));

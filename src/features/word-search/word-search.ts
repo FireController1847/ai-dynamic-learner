@@ -212,7 +212,7 @@ export const WordSearch = defineComponent({
     function organizationControls(item: LibraryItem) {
       if (!selection.value) return null;
       return h('details', { key: `organization-${item.id}`, class: 'word-search-organization', open: item.kind === 'group' }, [
-        h('summary', 'Location and order'),
+        h('summary', { class: 'organization-summary' }, 'Location and order'),
         h('div', { class: 'word-search-location' }, [
           h('label', { for: 'word-search-parent' }, 'Move to group'),
           h('select', {

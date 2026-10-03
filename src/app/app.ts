@@ -158,6 +158,9 @@ const App = defineComponent({
           }),
         ]),
       ]),
+      activeFeature.value ? h('span', {
+        class: 'app-version',
+      }, `v${activeFeature.value.version}`) : null,
     ]);
   },
 });

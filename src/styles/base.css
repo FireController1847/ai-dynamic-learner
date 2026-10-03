@@ -16,6 +16,11 @@ button { cursor: pointer; }
 button:disabled { cursor: default; opacity: 0.45; }
 :focus-visible { outline: 2px solid var(--text-color); outline-offset: 2px; }
 .ui-icon { flex-shrink: 0; vertical-align: middle; width: 20px; height: 20px; }
+.organization-summary {
+  min-height: var(--control-height);
+  padding-block: calc((var(--control-height) - 20px) / 2);
+  line-height: 20px;
+}
 
 /* All action buttons share metrics, including the card flip action. */
 .quiet-button, .card-primary-button, .card-flip-button,

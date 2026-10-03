@@ -279,7 +279,7 @@ export const IndexCards = defineComponent({
             key: `organization-${selection.value.item.id}`, class: 'item-organization',
             open: selection.value.item.kind === 'group',
           }, [
-          h('summary', 'Location and order'),
+          h('summary', { class: 'organization-summary' }, 'Location and order'),
           h('div', { class: 'item-location' }, [
             h('label', { for: 'index-cards-parent' }, 'Move to group'),
             h('select', {

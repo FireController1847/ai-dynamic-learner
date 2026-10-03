@@ -236,7 +236,7 @@ export const Notebook = defineComponent({
         class: 'item-organization',
         open: item.kind === 'group',
       }, [
-        h('summary', 'Location and order'),
+        h('summary', { class: 'organization-summary' }, 'Location and order'),
         h('div', { class: 'item-location' }, [
           h('label', { for: 'notebook-parent' }, 'Move to group'),
           h('select', {

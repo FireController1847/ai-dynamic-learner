@@ -169,7 +169,7 @@ export const Crossword = defineComponent({
         class: 'crossword-organization',
         open: item.kind === 'group',
       }, [
-        h('summary', 'Location and order'),
+        h('summary', { class: 'organization-summary' }, 'Location and order'),
         h('div', { class: 'crossword-location' }, [
           h('label', { for: 'crossword-parent' }, 'Move to group'),
           h('select', {
