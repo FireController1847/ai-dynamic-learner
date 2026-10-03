@@ -222,6 +222,8 @@ export function formatExpression(source: string) {
     .replace(/\bacos\(/g, 'cos⁻¹(')
     .replace(/\batan\(/g, 'tan⁻¹(')
     .replace(/\bsqrt\(/g, '√(')
+    .replace(/\^\(2\)/g, '²')
+    .replace(/\^\(-1\)/g, '⁻¹')
     .replace(/\bpi\b/g, 'π')
     .replace(/\bans\b/g, 'Ans')
     .replace(/\*/g, '×')
