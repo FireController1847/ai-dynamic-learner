@@ -50,8 +50,7 @@ export function fractionForValue(value: number) {
     if (nextDenominator > MAX_FRACTION_DENOMINATOR) break;
 
     const approximation = nextNumerator / nextDenominator;
-    const tolerance = FRACTION_TOLERANCE * Math.max(1, target);
-    if (Math.abs(approximation - target) <= tolerance) {
+    if (nextDenominator > 1 && Math.abs(approximation - target) <= FRACTION_TOLERANCE) {
       return `${sign * nextNumerator}/${nextDenominator}`;
     }
 
