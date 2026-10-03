@@ -32,7 +32,10 @@
 .calculator-memory,
 .calculator-keyboard-hint { grid-column: 1 / -1; }
 .calculator-display {
+  --calculator-result-size: clamp(24px, 5cqw, 40px);
   display: flex;
+  position: relative;
+  isolation: isolate;
   flex-direction: column;
   justify-content: flex-end;
   min-width: 0;
@@ -42,6 +45,36 @@
   border-radius: var(--radius-dialog);
   background: var(--page-background);
   overflow: hidden;
+}
+.calculator-display::before,
+.calculator-display-meta::before {
+  content: '';
+  position: absolute;
+  font-size: var(--calculator-result-size);
+  background: var(--text-color);
+  opacity: 0.045;
+  pointer-events: none;
+  /* Faint 5 × 7 pixel matrices mark character slots behind the normal text. */
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 24'%3E%3Cdefs%3E%3Cpattern id='pixels' x='1' y='1' width='3' height='3' patternUnits='userSpaceOnUse'%3E%3Crect width='2' height='2'/%3E%3C/pattern%3E%3C/defs%3E%3Crect x='1' y='1' width='14' height='20' fill='url(%23pixels)'/%3E%3C/svg%3E");
+  mask-repeat: repeat-x;
+  mask-position: right center;
+  mask-size: 1ch 1em;
+  transform: scaleY(1.18);
+}
+.calculator-display::before {
+  inset-inline: 14px;
+  bottom: 12px;
+  height: 1.15em;
+}
+.calculator-display-meta::before {
+  inset: 0;
+  z-index: -1;
+  font-size: 14px;
+}
+.calculator-display-meta, .calculator-value { position: relative; z-index: 1; }
+.calculator-display:has(.calculator-value.is-error)::before { display: none; }
+@media (forced-colors: active) {
+  .calculator-display::before, .calculator-display-meta::before { display: none; }
 }
 .calculator-display-meta {
   display: flex;
@@ -75,7 +108,7 @@
   border: 0;
   color: var(--text-color);
   background: transparent;
-  font-size: clamp(24px, 5cqw, 40px);
+  font-size: var(--calculator-result-size);
   font-weight: 600;
   line-height: 1.15;
   text-align: right;
@@ -323,5 +356,6 @@
   .calculator-page { --calculator-key-height: 40px; }
   .calculator-scientific-keypad .calculator-key { min-height: 40px; }
   .calculator-display { min-height: 76px; padding-block: 8px; }
+  .calculator-display::before { bottom: 8px; }
   .calculator-keyboard-hint { font-size: 11px; line-height: 16px; }
 }

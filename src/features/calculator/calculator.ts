@@ -193,7 +193,7 @@ export const Calculator = defineComponent({
             key('cos⁻¹', () => calculator.inputFunction('acos'), 'function', 'Inverse cosine'),
             key('tan⁻¹', () => calculator.inputFunction('atan'), 'function', 'Inverse tangent'),
             key('√x', () => calculator.inputFunction('sqrt'), 'function', 'Square root'),
-            key('xʸ', () => calculator.chooseOperator('^'), 'operator', 'Raise to a power'),
+            key('xʸ', () => calculator.chooseOperator('^'), 'function', 'Raise to a power'),
 
             key('x²', () => calculator.inputPowerShortcut('2'), 'function', 'Square'),
             key('1/x', () => calculator.inputPowerShortcut('-1'), 'function', 'Reciprocal'),
