@@ -76,7 +76,7 @@ export const PuzzleGame = defineComponent({
     function celebrateWord(answer: string) {
       stopWordCelebration(answer);
       celebratingAnswers.value = [...celebratingAnswers.value, answer];
-      wordCelebrationTimers.set(answer, window.setTimeout(() => stopWordCelebration(answer), 900));
+      wordCelebrationTimers.set(answer, window.setTimeout(() => stopWordCelebration(answer), 1100));
     }
 
     function stopCompleteCelebration() {
@@ -188,6 +188,7 @@ export const PuzzleGame = defineComponent({
       newlySolved.forEach((placement) => celebrateWord(placement.answer));
 
       const isComplete = gameComplete(currentGame);
+      if (!isComplete) stopCompleteCelebration();
       if (!wasComplete && isComplete) {
         celebrateComplete();
         message.value = 'You completed the crossword! Every letter is correct.';
