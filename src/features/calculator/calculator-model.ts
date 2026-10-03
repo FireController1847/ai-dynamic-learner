@@ -65,7 +65,8 @@ export class CalculatorModel {
 
   visibleHistoryEntry() {
     if (!this.history.length) return null;
-    return this.history[this.historyIndex ?? 0] ?? null;
+    if (this.historyIndex !== null) return this.history[this.historyIndex] ?? null;
+    return this.history[this.justEvaluated ? 1 : 0] ?? null;
   }
 
   isBrowsingHistory() {
@@ -254,7 +255,9 @@ export class CalculatorModel {
     }
 
     const fraction = fractionContextAt(this.expression, this.cursor);
-    if (fraction?.field === 'denominator' && this.cursor === fraction.denominatorEnd) {
+    if (fraction?.field === 'denominator'
+      && fraction.denominatorStart < fraction.denominatorEnd
+      && this.cursor === fraction.denominatorEnd) {
       this.cursor = fraction.close + 1;
     }
 
