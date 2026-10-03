@@ -47,6 +47,42 @@ export const tipsCatalog: Record<TipsFeatureId, Tutorial> = {
     ],
   },
 
+
+  calculator: {
+    version: 1,
+    sections: [
+      {
+        id: 'basics',
+        title: 'Calculator basics',
+        description: 'Learn the keypad, memory, and calculation history.',
+        when: '.calculator-page',
+        steps: [
+          {
+            title: 'Tap or type your calculation',
+            body: 'Use the keypad here, or type numbers and operators on your keyboard. Enter works like the equals button.',
+            target: '.calculator-keypad',
+            targetLabel: 'Calculator keypad',
+            placement: 'right',
+          },
+          {
+            title: 'Keep a value in memory',
+            body: 'Use MC, MR, M+, M−, and MS when you want to reuse a number across calculations.',
+            target: '.calculator-memory',
+            targetLabel: 'Memory controls',
+            placement: 'bottom',
+          },
+          {
+            title: 'Reuse a recent result',
+            body: 'Completed calculations appear here for this session. Press one to put its result back on the calculator.',
+            target: '.calculator-history',
+            targetLabel: 'Calculation history',
+            placement: 'left',
+          },
+        ],
+      },
+    ],
+  },
+
   notebook: {
     version: 5,
     sections: [
