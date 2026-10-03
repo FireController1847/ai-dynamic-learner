@@ -1,14 +1,26 @@
-import { defineComponent, h, onActivated, onBeforeUnmount, onDeactivated, reactive, ref } from 'vue';
-import {
-  CalculatorModel, formatNumber, type HistoryEntry, type Operator,
-} from './calculator-model.ts';
+import { Icon } from '../../components/icon.ts';
+import { clearPreference, readNumberPreference, writeNumberPreference } from '../../core/ui-preferences.ts';
+import { CalculatorSettings } from './calculator-settings.ts';
+import { CalculatorModel, type HistoryEntry, type Operator } from './calculator-model.ts';
+import type { DecimalPlaces } from './calculator-format.ts';
+
+import { defineComponent, h, nextTick, onActivated, onBeforeUnmount, onDeactivated, reactive, ref } from 'vue';
+
+const DECIMAL_PLACES_PREFERENCE = 'dynamic-learner.ui.calculator.decimal-places';
+
+function savedDecimalPlaces(): DecimalPlaces {
+  const stored = readNumberPreference(DECIMAL_PLACES_PREFERENCE);
+  return stored !== null && Number.isInteger(stored) && stored >= 0 && stored <= 9 ? stored : null;
+}
 
 export const Calculator = defineComponent({
   name: 'Calculator',
   props: { title: { type: String, required: true } },
   setup(props) {
-    const calculator = reactive(new CalculatorModel());
+    const calculator = reactive(new CalculatorModel(savedDecimalPlaces()));
     const scientificOpen = ref(false);
+    const settingsOpen = ref(false);
+    const settingsButton = ref<HTMLButtonElement | null>(null);
     let listening = false;
 
     function handleKeyboard(event: KeyboardEvent) {
@@ -46,8 +58,23 @@ export const Calculator = defineComponent({
       listening = false;
     }
 
+    function updateDecimalPlaces(value: DecimalPlaces) {
+      calculator.setDecimalPlaces(value);
+      if (value === null) clearPreference(DECIMAL_PLACES_PREFERENCE);
+      else writeNumberPreference(DECIMAL_PLACES_PREFERENCE, value);
+    }
+
+    async function closeSettings() {
+      settingsOpen.value = false;
+      await nextTick();
+      settingsButton.value?.focus();
+    }
+
     onActivated(startListening);
-    onDeactivated(stopListening);
+    onDeactivated(() => {
+      stopListening();
+      settingsOpen.value = false;
+    });
     onBeforeUnmount(stopListening);
     startListening();
 
@@ -80,7 +107,7 @@ export const Calculator = defineComponent({
         onClick: () => calculator.useHistory(entry),
       }, [
         h('span', { class: 'calculator-history-expression' }, entry.expression),
-        h('strong', formatNumber(entry.result)),
+        h('strong', calculator.formatResult(entry.result)),
       ]),
     ]);
 
@@ -91,7 +118,7 @@ export const Calculator = defineComponent({
             h('div', { class: 'calculator-display-meta' }, [
               h('span', {
                 class: ['calculator-memory-indicator', { 'is-active': calculator.memory !== null }],
-                title: calculator.memory === null ? 'Memory is empty' : `Memory: ${formatNumber(calculator.memory)}`,
+                title: calculator.memory === null ? 'Memory is empty' : `Memory: ${calculator.formatResult(calculator.memory)}`,
               }, 'M'),
               h('span', {
                 class: 'calculator-expression',
@@ -114,12 +141,29 @@ export const Calculator = defineComponent({
             }, calculator.angleMode),
             h('button', {
               type: 'button',
+              class: 'quiet-button calculator-fraction-toggle',
+              disabled: !calculator.canToggleFraction(),
+              title: 'Toggle the evaluated answer between fraction and decimal',
+              'aria-label': 'Toggle fraction and decimal answer',
+              onClick: () => calculator.toggleFractionDecimal(),
+            }, 'FR↔DC'),
+            h('button', {
+              type: 'button',
               class: 'quiet-button calculator-scientific-toggle',
               'aria-expanded': scientificOpen.value,
               'aria-controls': 'calculator-scientific-keypad',
               onClick: () => { scientificOpen.value = !scientificOpen.value; },
             }, scientificOpen.value ? 'Hide scientific' : 'Scientific'),
             h('span', { class: 'calculator-mode-description' }, 'Expression mode · standard scientific functions'),
+            h('button', {
+              ref: settingsButton,
+              type: 'button',
+              class: 'icon-button calculator-settings-trigger',
+              title: 'Calculator settings',
+              'aria-label': 'Calculator settings',
+              'aria-haspopup': 'dialog',
+              onClick: () => { settingsOpen.value = true; },
+            }, [h(Icon, { name: 'settings' })]),
           ]),
           h('div', { class: 'calculator-memory', 'aria-label': 'Memory controls' }, [
             memoryKey('MC', () => { calculator.memory = null; }, calculator.memory === null, 'Clear memory'),
@@ -206,6 +250,11 @@ export const Calculator = defineComponent({
             ]),
         ]),
       ]),
+      settingsOpen.value ? h(CalculatorSettings, {
+        decimalPlaces: calculator.decimalPlaces,
+        onUpdateDecimalPlaces: updateDecimalPlaces,
+        onClose: closeSettings,
+      }) : null,
     ]);
   },
 });
