@@ -19,7 +19,7 @@ export interface FeatureDefinition {
 export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'calculator', label: 'Calculator', path: '/calculator/', icon: 'calculator',
-    version: '1.2.2',
+    version: '1.3.0',
     image: 'assets/calculator.png',
     description: 'A scientific calculator for expressions and functions.',
     metadata: {
