@@ -1,6 +1,9 @@
 import {
   evaluateExpression, formatExpression, type AngleMode,
 } from './expression-engine.ts';
+import {
+  formatNumber, fractionForValue, normaliseNumber, type DecimalPlaces,
+} from './calculator-format.ts';
 
 export type Operator = '+' | '-' | '*' | '/' | '^';
 export type ScientificFunction = 'sin' | 'cos' | 'tan' | 'asin' | 'acos' | 'atan' | 'ln' | 'log' | 'sqrt';
@@ -12,19 +15,6 @@ export interface HistoryEntry {
 }
 
 const MAX_EXPRESSION_LENGTH = 180;
-
-function normalise(value: number) {
-  return value === 0 ? 0 : Number.parseFloat(value.toPrecision(12));
-}
-
-export function formatNumber(value: number) {
-  const normalised = normalise(value);
-  const absolute = Math.abs(normalised);
-  if (absolute !== 0 && (absolute >= 1e12 || absolute < 1e-9)) {
-    return normalised.toExponential(10).replace(/\.0+e/, 'e').replace(/(\.\d*?[1-9])0+e/, '$1e');
-  }
-  return String(normalised);
-}
 
 function endsValue(expression: string) {
   return /[\d)!%]$/.test(expression) || /(?:pi|e|ans)$/.test(expression);
@@ -76,10 +66,60 @@ export class CalculatorModel {
   angleMode: AngleMode = 'DEG';
   lastAnswer = 0;
   justEvaluated = false;
+  decimalPlaces: DecimalPlaces;
+  displayMode: 'decimal' | 'fraction' = 'decimal';
   private historyId = 0;
+
+  constructor(decimalPlaces: DecimalPlaces = null) {
+    this.decimalPlaces = decimalPlaces;
+    this.display = this.formatResult(0);
+  }
 
   formattedExpression() {
     return formatExpression(this.expression);
+  }
+
+  formatResult(value: number) {
+    return formatNumber(value, this.decimalPlaces);
+  }
+
+  canToggleFraction() {
+    return this.justEvaluated && !this.hasError && fractionForValue(this.lastAnswer) !== null;
+  }
+
+  toggleFractionDecimal() {
+    if (!this.canToggleFraction()) return;
+    if (this.displayMode === 'fraction') {
+      this.displayMode = 'decimal';
+      this.display = this.formatResult(this.lastAnswer);
+      return;
+    }
+
+    const fraction = fractionForValue(this.lastAnswer);
+    if (!fraction) return;
+    this.displayMode = 'fraction';
+    this.display = fraction;
+  }
+
+  setDecimalPlaces(decimalPlaces: DecimalPlaces) {
+    this.decimalPlaces = decimalPlaces;
+    if (this.hasError || this.displayMode === 'fraction') return;
+
+    if (this.justEvaluated) {
+      this.display = this.formatResult(this.lastAnswer);
+      return;
+    }
+
+    if (!this.expression) {
+      this.display = this.formatResult(0);
+      return;
+    }
+
+    try {
+      this.display = this.formatResult(evaluateExpression(this.expression, this.context()));
+    } catch {
+      // Keep the last valid preview while an expression is incomplete.
+    }
   }
 
   private context() {
@@ -87,18 +127,24 @@ export class CalculatorModel {
   }
 
   private currentValue() {
+    if (this.justEvaluated) return this.lastAnswer;
     try {
-      return normalise(evaluateExpression(this.expression, this.context()));
+      return normaliseNumber(evaluateExpression(this.expression, this.context()));
     } catch {
       const displayValue = Number(this.display);
       return Number.isFinite(displayValue) ? displayValue : null;
     }
   }
 
+  private resetDisplayMode() {
+    this.displayMode = 'decimal';
+  }
+
   private prepareValue() {
+    this.resetDisplayMode();
     if (this.hasError) {
       this.expression = '';
-      this.display = '0';
+      this.display = this.formatResult(0);
       this.hasError = false;
       this.justEvaluated = false;
     }
@@ -110,6 +156,7 @@ export class CalculatorModel {
 
   private append(text: string) {
     if (this.expression.length + text.length > MAX_EXPRESSION_LENGTH) return false;
+    this.resetDisplayMode();
     this.expression += text;
     this.refreshPreview();
     return true;
@@ -123,11 +170,11 @@ export class CalculatorModel {
 
   private refreshPreview() {
     if (!this.expression) {
-      this.display = '0';
+      this.display = this.formatResult(0);
       return;
     }
     try {
-      this.display = formatNumber(evaluateExpression(this.expression, this.context()));
+      this.display = this.formatResult(evaluateExpression(this.expression, this.context()));
       this.hasError = false;
     } catch {
       // Incomplete expressions are normal while the user is still typing.
@@ -135,19 +182,22 @@ export class CalculatorModel {
   }
 
   private fail(error: unknown) {
+    this.resetDisplayMode();
     this.display = error instanceof Error ? error.message : String(error);
     this.hasError = true;
     this.justEvaluated = false;
   }
 
   clearAll() {
+    this.resetDisplayMode();
     this.expression = '';
-    this.display = '0';
+    this.display = this.formatResult(0);
     this.hasError = false;
     this.justEvaluated = false;
   }
 
   clearEntry() {
+    this.resetDisplayMode();
     if (this.hasError) {
       this.hasError = false;
       this.refreshPreview();
@@ -162,6 +212,7 @@ export class CalculatorModel {
   }
 
   backspace() {
+    this.resetDisplayMode();
     if (this.hasError) {
       this.hasError = false;
       this.refreshPreview();
@@ -197,6 +248,7 @@ export class CalculatorModel {
 
   chooseOperator(operator: Operator) {
     if (this.hasError) return;
+    this.resetDisplayMode();
     if (this.justEvaluated) {
       this.expression = 'ans';
       this.justEvaluated = false;
@@ -242,6 +294,7 @@ export class CalculatorModel {
 
   inputPostfix(operator: '!' | '%') {
     if (this.hasError) return;
+    this.resetDisplayMode();
     if (this.justEvaluated) {
       this.expression = 'ans';
       this.justEvaluated = false;
@@ -251,6 +304,7 @@ export class CalculatorModel {
 
   inputPowerShortcut(power: '2' | '-1') {
     if (this.hasError || !endsValue(this.expression)) return;
+    this.resetDisplayMode();
     if (this.justEvaluated) {
       this.expression = 'ans';
       this.justEvaluated = false;
@@ -264,6 +318,7 @@ export class CalculatorModel {
 
   toggleSign() {
     if (this.hasError) return;
+    this.resetDisplayMode();
     if (this.justEvaluated) {
       this.expression = 'ans';
       this.justEvaluated = false;
@@ -285,12 +340,13 @@ export class CalculatorModel {
   equals() {
     if (!this.expression) return;
     try {
-      const result = normalise(evaluateExpression(this.expression, this.context()));
+      const result = normaliseNumber(evaluateExpression(this.expression, this.context()));
       const label = `${formatExpression(this.expression)} =`;
       this.history.unshift({ id: ++this.historyId, expression: label, result });
       if (this.history.length > 30) this.history.pop();
       this.lastAnswer = result;
-      this.display = formatNumber(result);
+      this.resetDisplayMode();
+      this.display = this.formatResult(result);
       this.hasError = false;
       this.justEvaluated = true;
     } catch (error) {
@@ -300,6 +356,7 @@ export class CalculatorModel {
 
   toggleAngleMode() {
     this.angleMode = this.angleMode === 'DEG' ? 'RAD' : 'DEG';
+    this.resetDisplayMode();
     if (!this.justEvaluated) this.refreshPreview();
   }
 
@@ -310,22 +367,23 @@ export class CalculatorModel {
 
   memoryRecall() {
     if (this.memory === null) return;
-    const literal = this.memory < 0 ? `(${formatNumber(this.memory)})` : formatNumber(this.memory);
+    const literal = this.memory < 0 ? `(${String(this.memory)})` : String(this.memory);
     this.appendValue(literal);
   }
 
   memoryAdjust(direction: 1 | -1) {
     const value = this.currentValue();
     if (value === null) return;
-    this.memory = normalise((this.memory ?? 0) + value * direction);
+    this.memory = normaliseNumber((this.memory ?? 0) + value * direction);
   }
 
   useHistory(entry: HistoryEntry) {
-    this.expression = formatNumber(entry.result);
-    this.display = formatNumber(entry.result);
+    this.expression = String(entry.result);
     this.lastAnswer = entry.result;
+    this.resetDisplayMode();
+    this.display = this.formatResult(entry.result);
     this.hasError = false;
-    this.justEvaluated = false;
+    this.justEvaluated = true;
   }
 
   clearHistory() {
