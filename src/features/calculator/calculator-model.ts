@@ -255,7 +255,7 @@ export class CalculatorModel {
       this.expression = 'ans';
       this.justEvaluated = false;
     }
-    this.append(power === '2' ? '^2' : '^(-1)');
+    this.append(power === '2' ? '^(2)' : '^(-1)');
   }
 
   inputPowerFunction(base: '10' | 'e') {
