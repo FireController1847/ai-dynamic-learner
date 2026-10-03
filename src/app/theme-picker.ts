@@ -37,12 +37,6 @@ export const ThemePicker = defineComponent({
       'aria-labelledby': 'theme-picker-heading',
     }, [
       h('h2', { id: 'theme-picker-heading', class: 'theme-picker-heading' }, 'Appearance'),
-      theme.preferences.value.followSystem
-        ? h('div', { class: 'theme-picker-roles' }, [
-          field('Light theme', theme.preferences.value.lightTheme, lightThemes, theme.setLightTheme),
-          field('Dark theme', theme.preferences.value.darkTheme, darkThemes, theme.setDarkTheme),
-        ])
-        : field('Theme', theme.preferences.value.theme, theme.themes, theme.setTheme),
       h('label', { class: 'theme-picker-system' }, [
         h('input', {
           type: 'checkbox',
@@ -56,6 +50,12 @@ export const ThemePicker = defineComponent({
           h('small', 'Switch between the selected light and dark themes with your device.'),
         ]),
       ]),
+      theme.preferences.value.followSystem
+        ? h('div', { class: 'theme-picker-roles' }, [
+          field('Light theme', theme.preferences.value.lightTheme, lightThemes, theme.setLightTheme),
+          field('Dark theme', theme.preferences.value.darkTheme, darkThemes, theme.setDarkTheme),
+        ])
+        : field('Theme', theme.preferences.value.theme, theme.themes, theme.setTheme),
     ]);
   },
 });
