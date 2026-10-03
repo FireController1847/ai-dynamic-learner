@@ -49,7 +49,7 @@ export const tipsCatalog: Record<TipsFeatureId, Tutorial> = {
 
 
   calculator: {
-    version: 6,
+    version: 7,
     sections: [
       {
         id: 'basics',
@@ -58,17 +58,17 @@ export const tipsCatalog: Record<TipsFeatureId, Tutorial> = {
         when: '.calculator-page',
         steps: [
           {
-            title: 'Use scientific functions',
-            body: 'Press Scientific for trig, logs, roots, powers, and more.',
-            target: ['.calculator-scientific-toggle', '.calculator-scientific-keypad'],
-            targetLabel: 'Scientific functions',
+            title: 'Use the MathPrint display',
+            body: 'Enter fractions with n/d, use ▲/▼ to move through fractions or recent entries, and press = to replace the entry with its answer.',
+            target: ['.calculator-display', '.calculator-basic-keypad'],
+            targetLabel: 'Calculator display and keypad',
             placement: 'bottom',
           },
           {
-            title: 'Change how answers look',
-            body: 'Use DEG/RAD or Settings for answer display. FR↔DC keeps eligible results in fraction mode until you toggle it off or press C.',
-            target: ['.calculator-angle-mode', '.calculator-fraction-toggle', '.calculator-settings-trigger'],
-            targetLabel: 'Answer settings',
+            title: 'Scientific and answer controls',
+            body: 'Scientific opens advanced functions. DEG/RAD, FR↔DC, and Settings control how calculations and answers behave.',
+            target: ['.calculator-scientific-toggle', '.calculator-angle-mode', '.calculator-fraction-toggle', '.calculator-settings-trigger'],
+            targetLabel: 'Calculator controls',
             placement: 'bottom',
           },
         ],
