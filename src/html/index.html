@@ -11,6 +11,12 @@
     <link rel="icon" href="assets/dynamic-learner.ico" sizes="16x16 32x32 48x48 64x64 128x128 256x256">
     <link rel="icon" type="image/png" href="assets/dynamic-learner.png" sizes="512x512">
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" sizes="180x180">
+    <script>
+      try {
+        const theme = localStorage.getItem('dynamic-learner.theme');
+        if (theme) document.documentElement.dataset.theme = theme;
+      } catch { /* Theme preference is best-effort only. */ }
+    </script>
   </head>
   <body>
     <div id="app"></div>

@@ -7,12 +7,16 @@ import { NavigationDrawer } from './navigation-drawer.ts';
 import { pageHref, useNavigation } from './navigation.ts';
 import { useWorkspace } from './workspace.ts';
 import { WorkspaceTools } from './workspace-tools.ts';
+import { ThemePicker } from './theme-picker.ts';
+import { initializeTheme } from './theme.ts';
 import { HomePage } from './home-page.ts';
 import { TipsExperience } from './tips.ts';
 import { tipsCatalog } from './tips-content.ts';
 import { Icon } from '../components/icon.ts';
 
 import { defineComponent, type PropType, computed, createApp, h, KeepAlive, nextTick, ref } from 'vue';
+
+initializeTheme();
 
 const appLogoSrc = new URL('assets/dynamic-learner.png', document.baseURI).href;
 const homeTipsFeature = Object.freeze({ id: 'home', label: appConfig.name });
@@ -119,7 +123,7 @@ const App = defineComponent({
         onNavigate: navigate,
         onClosed: restoreFocus,
       }, {
-        footer: () => h(WorkspaceTools, { workspace }),
+        footer: () => [h(ThemePicker), h(WorkspaceTools, { workspace })],
       }),
       h(TipsExperience, { ref: tipsExperience, feature: tipsFeature.value }),
       workspace.storageProblem.value ? h('p', {
