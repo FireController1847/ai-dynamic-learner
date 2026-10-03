@@ -7,7 +7,11 @@ export interface LinedDisplay {
   holes: 'show' | 'hide';
 }
 export interface MarkdownDisplay { font: 'sans' | 'serif'; textSize: number; sourceSize: number; lineHeight: number }
-export interface NotebookDisplay { lined: LinedDisplay; markdown: MarkdownDisplay }
+export interface GraphDisplay {
+  paper: 'white' | 'cream'; size: 'letter' | 'a4'; grid: 'quarter' | 'fifth' | 'metric';
+  emphasis: 'plain' | 'fifths'; axes: 'show' | 'hide'; numbers: 'show' | 'hide';
+}
+export interface NotebookDisplay { lined: LinedDisplay; markdown: MarkdownDisplay; graph?: GraphDisplay }
 
 export const LINED_FIELDS: DisplayField<LinedDisplay>[] = [
   { key: 'paper', label: 'Paper', default: 'white', choices: [
@@ -43,6 +47,27 @@ export const MARKDOWN_FIELDS: DisplayField<MarkdownDisplay>[] = [
   { key: 'sourceSize', label: 'Source text size', default: 14, min: 12, max: 22, step: 1, unit: 'px' },
   { key: 'lineHeight', label: 'Preview line spacing', default: 170, min: 130, max: 220, step: 10, unit: '%' },
 ];
+export const GRAPH_FIELDS: DisplayField<GraphDisplay>[] = [
+  { key: 'paper', label: 'Paper', default: 'white', choices: [
+    { value: 'white', label: 'White' }, { value: 'cream', label: 'Cream' },
+  ] },
+  { key: 'size', label: 'Paper size', default: 'letter', choices: [
+    { value: 'letter', label: 'US Letter · 8.5 × 11 in' }, { value: 'a4', label: 'A4 · 210 × 297 mm' },
+  ] },
+  { key: 'grid', label: 'Square size', default: 'quarter', choices: [
+    { value: 'quarter', label: '¼ inch · 4 squares per inch' },
+    { value: 'fifth', label: '⅕ inch · 5 squares per inch' }, { value: 'metric', label: '5 mm' },
+  ] },
+  { key: 'emphasis', label: 'Grid lines', default: 'plain', choices: [
+    { value: 'plain', label: 'Uniform' }, { value: 'fifths', label: 'Emphasize every fifth line' },
+  ] },
+  { key: 'axes', label: 'Coordinate axes', default: 'show', choices: [
+    { value: 'show', label: 'Show' }, { value: 'hide', label: 'Hide' },
+  ] },
+  { key: 'numbers', label: 'Coordinate labels', default: 'show', choices: [
+    { value: 'show', label: 'Show' }, { value: 'hide', label: 'Hide' },
+  ] },
+];
 
 export function defaultLinedDisplay(): LinedDisplay {
   return Object.fromEntries(LINED_FIELDS.map(field => [field.key, field.default])) as unknown as LinedDisplay;
@@ -50,11 +75,18 @@ export function defaultLinedDisplay(): LinedDisplay {
 export function defaultMarkdownDisplay(): MarkdownDisplay {
   return Object.fromEntries(MARKDOWN_FIELDS.map(field => [field.key, field.default])) as unknown as MarkdownDisplay;
 }
+export function defaultGraphDisplay(): GraphDisplay {
+  return Object.fromEntries(GRAPH_FIELDS.map(field => [field.key, field.default])) as unknown as GraphDisplay;
+}
 export function defaultNotebookDisplay(): NotebookDisplay {
-  return { lined: defaultLinedDisplay(), markdown: defaultMarkdownDisplay() };
+  return { lined: defaultLinedDisplay(), markdown: defaultMarkdownDisplay(), graph: defaultGraphDisplay() };
+}
+export function resolvedNotebookDisplay(options?: NotebookDisplay): NotebookDisplay & { graph: GraphDisplay } {
+  const value = options ?? defaultNotebookDisplay();
+  return { ...value, graph: value.graph ?? defaultGraphDisplay() };
 }
 
-function validateFields(value: unknown, fields: (DisplayField<LinedDisplay> | DisplayField<MarkdownDisplay>)[]): void {
+function validateFields(value: unknown, fields: (DisplayField<LinedDisplay> | DisplayField<MarkdownDisplay> | DisplayField<GraphDisplay>)[]): void {
   if (!isRecord(value) || Object.keys(value).some(key => !fields.some(field => field.key === key))) {
     throw new Error('Notebook display settings contain unsupported data.');
   }
@@ -67,11 +99,12 @@ function validateFields(value: unknown, fields: (DisplayField<LinedDisplay> | Di
   }
 }
 export function validateNotebookDisplay(value: unknown): asserts value is NotebookDisplay {
-  if (!isRecord(value) || Object.keys(value).some(key => !['lined', 'markdown'].includes(key))) {
+  if (!isRecord(value) || Object.keys(value).some(key => !['lined', 'markdown', 'graph'].includes(key))) {
     throw new Error('Notebook display settings are invalid.');
   }
   validateFields(value.lined, LINED_FIELDS);
   validateFields(value.markdown, MARKDOWN_FIELDS);
+  if (Object.hasOwn(value, 'graph')) validateFields(value.graph, GRAPH_FIELDS);
 }
 
 export function notebookDisplayStyles(options: NotebookDisplay) {

@@ -9,6 +9,7 @@ import { Icon } from '../../components/icon.ts';
 import { DocumentTypeIcon } from './document-type-icon.ts';
 import { DeleteConfirmation } from '../../components/delete-confirmation.ts';
 import { readMarkdownFile } from './document-files.ts';
+import { graphIsEmpty } from './graph-model.ts';
 import {
   countItems, createItem, deleteItem, findItem, MAX_DEPTH, MAX_ITEMS, MAX_NAME_LENGTH,
 } from './library-model.ts';
@@ -117,7 +118,7 @@ export const NotebookLibrary = defineComponent({
         : item.type === 'markdown' ? item.data.markdown.trim().length === 0
           : item.type === 'lined' ? [item.data.text, item.data.title ?? '', item.data.marginText ?? '', ...(item.data.additionalTitles ?? [])]
             .every((text) => text.trim().length === 0)
-          : Object.keys(item.data).length === 0;
+          : graphIsEmpty(item.data);
       if (isEmpty) {
         confirmDelete(item.id);
         return;

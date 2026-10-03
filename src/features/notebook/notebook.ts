@@ -13,8 +13,9 @@ import { DocumentBuilder } from './document-builder.ts';
 import { getDocumentType } from './document-types.ts';
 import { MarkdownEditor } from './markdown-editor.ts';
 import { LinedEditor } from './lined-editor.ts';
+import { GraphEditor } from './graph-editor.ts';
 import { DisplaySettings } from './display-settings.ts';
-import { defaultNotebookDisplay, notebookDisplayStyles } from './display-options.ts';
+import { resolvedNotebookDisplay, notebookDisplayStyles } from './display-options.ts';
 import { NotebookLibrary } from './library.ts';
 import {
   canMove, countDocuments, countItems, deleteItem, findItem, groupOptions, insertDocument,
@@ -65,7 +66,7 @@ export const Notebook = defineComponent({
     const message = ref('');
     const settingsOpen = ref(false);
     const settingsButton = ref<HTMLButtonElement | null>(null);
-    const displayOptions = computed(() => props.model.display ?? defaultNotebookDisplay());
+    const displayOptions = computed(() => resolvedNotebookDisplay(props.model.display));
     onDeactivated(() => { settingsOpen.value = false; });
     async function closeSettings() {
       settingsOpen.value = false;
@@ -372,13 +373,11 @@ export const Notebook = defineComponent({
                   document: selection.value.item,
                   options: displayOptions.value.lined,
                 })
-              : h('div', { class: 'notebook-editor-scaffold' }, [
-                h('article', { class: 'notebook-document-surface', 'aria-label': 'Document editor scaffold' }, [
-                  h('span', { class: 'notebook-document-label' }, getDocumentType(selection.value.item.type)?.label ?? 'Document'),
-                  h('h3', selection.value.item.name),
-                  h('p', `${getDocumentType(selection.value.item.type)?.label ?? 'Document'} editing will be added here.`),
-                ]),
-              ])
+                : h(GraphEditor, {
+                  key: selection.value.item.id,
+                  document: selection.value.item,
+                  options: displayOptions.value.graph,
+                })
             : null,
           organizationControls(selection.value.item),
           h('p', { class: 'visually-hidden', role: 'status' }, message.value),
