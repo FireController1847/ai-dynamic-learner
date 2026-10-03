@@ -8,6 +8,7 @@ export interface EvaluationContext {
 const MAX_FACTORIAL = 170;
 
 function finite(value: number) {
+  if (Number.isNaN(value)) throw new Error('Invalid input.');
   if (!Number.isFinite(value)) throw new Error('Result is too large.');
   return value === 0 ? 0 : value;
 }
