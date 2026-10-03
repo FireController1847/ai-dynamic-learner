@@ -49,48 +49,27 @@ export const tipsCatalog: Record<TipsFeatureId, Tutorial> = {
 
 
   calculator: {
-    version: 4,
+    version: 5,
     sections: [
       {
         id: 'basics',
         title: 'Calculator',
-        description: 'Learn the basics.',
+        description: 'See what makes it different.',
         when: '.calculator-page',
         steps: [
           {
-            title: 'Enter a calculation',
-            body: 'Type numbers and symbols, then press =.',
-            target: '.calculator-basic-keypad',
-            targetLabel: 'Calculator keypad',
-            placement: 'right',
-          },
-          {
             title: 'Use scientific functions',
-            body: 'Use functions like sin, log, √, and powers. On narrow screens, press Scientific to show these controls.',
+            body: 'Press Scientific for trig, logs, roots, powers, and more.',
             target: ['.calculator-scientific-toggle', '.calculator-scientific-keypad'],
             targetLabel: 'Scientific functions',
             placement: 'bottom',
           },
           {
-            title: 'Choose how answers display',
-            body: 'DEG/RAD changes trig angles. FR↔DC switches eligible answers between fractions and decimals.',
-            target: ['.calculator-angle-mode', '.calculator-fraction-toggle'],
-            targetLabel: 'Answer modes',
+            title: 'Change how answers look',
+            body: 'Use DEG/RAD, FR↔DC, or Settings to change answer display.',
+            target: ['.calculator-angle-mode', '.calculator-fraction-toggle', '.calculator-settings-trigger'],
+            targetLabel: 'Answer settings',
             placement: 'bottom',
-          },
-          {
-            title: 'Set decimal places',
-            body: 'Open Settings to use FLOAT or choose 0–9 fixed decimal places.',
-            target: '.calculator-settings-trigger',
-            targetLabel: 'Calculator settings',
-            placement: 'bottom',
-          },
-          {
-            title: 'Reuse your results',
-            body: 'Memory saves a number. History keeps your recent calculations.',
-            target: ['.calculator-memory', '.calculator-history'],
-            targetLabel: 'Memory and history',
-            placement: 'left',
           },
         ],
       },
