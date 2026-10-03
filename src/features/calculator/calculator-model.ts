@@ -1,5 +1,5 @@
 import {
-  evaluateExpression, type AngleMode,
+  evaluateExpression, formatExpression, type AngleMode,
 } from './expression-engine.ts';
 import {
   backspaceMathPrint, createFractionTemplate, endsValue, fractionContextAt,
