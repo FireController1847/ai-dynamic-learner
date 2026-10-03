@@ -73,20 +73,20 @@
   display: grid;
   place-items: center;
   color: var(--text-color);
-  background: var(--page-background);
+  background: var(--crossword-cell-background);
   font: var(--crossword-letter-weight) var(--crossword-letter-size)/1 var(--crossword-letter-font);
   -webkit-tap-highlight-color: transparent;
 }
-.crossword-cell-open:hover { background: color-mix(in srgb, var(--crossword-highlight) 8%, var(--page-background)); }
-.crossword-cell-open.is-word { background: color-mix(in srgb, var(--crossword-highlight) 12%, var(--page-background)); }
+.crossword-cell-open:hover { background: color-mix(in srgb, var(--crossword-highlight) 8%, var(--crossword-cell-background)); }
+.crossword-cell-open.is-word { background: color-mix(in srgb, var(--crossword-highlight) 12%, var(--crossword-cell-background)); }
 .crossword-cell-open.is-active {
   z-index: 1;
-  background: color-mix(in srgb, var(--crossword-highlight) 28%, var(--page-background));
+  background: color-mix(in srgb, var(--crossword-highlight) 28%, var(--crossword-cell-background));
   box-shadow: inset 0 0 0 2px var(--crossword-highlight);
 }
 .crossword-cell-open.is-incorrect {
   color: var(--danger);
-  background: color-mix(in srgb, var(--danger) 10%, var(--page-background));
+  background: color-mix(in srgb, var(--danger) 10%, var(--crossword-cell-background));
 }
 .crossword-cell-open.is-revealed { color: var(--crossword-highlight); }
 .crossword-cell-open:focus-visible { z-index: 2; outline-offset: -3px; }

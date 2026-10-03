@@ -32,14 +32,14 @@ export const DISPLAY_FIELDS: DisplayField<DisplayOptions>[] = [
     { value: 'preferred', label: 'Use preferred cell size' },
   ] },
   { key: 'highlight', label: 'Selection color', default: 'blue', choices: [
-    { value: 'blue', label: 'Blue', css: '#0f6cbd' },
-    { value: 'green', label: 'Green', css: '#167044' },
-    { value: 'purple', label: 'Purple', css: '#7443a8' },
+    { value: 'blue', label: 'Blue', css: 'var(--crossword-highlight-blue)' },
+    { value: 'green', label: 'Green', css: 'var(--crossword-highlight-green)' },
+    { value: 'purple', label: 'Purple', css: 'var(--crossword-highlight-purple)' },
   ] },
   { key: 'blocks', label: 'Blocked cells', default: 'light', choices: [
-    { value: 'light', label: 'Light gray', css: '#f0f0f0' },
-    { value: 'soft', label: 'Medium gray', css: '#d1d1d1' },
-    { value: 'black', label: 'Black', css: '#242424' },
+    { value: 'light', label: 'Light gray', css: 'var(--crossword-block-light)' },
+    { value: 'soft', label: 'Medium gray', css: 'var(--crossword-block-soft)' },
+    { value: 'black', label: 'Black', css: 'var(--crossword-block-black)' },
   ] },
 ];
 

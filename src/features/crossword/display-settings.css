@@ -49,7 +49,7 @@
   border-right: 1px solid var(--control-border);
   border-bottom: 1px solid var(--control-border);
   color: var(--text-color);
-  background: var(--page-background);
+  background: var(--crossword-cell-background);
   font: var(--crossword-letter-weight) var(--crossword-letter-size)/1 var(--crossword-letter-font);
 }
 .crossword-display-preview-cell.is-blocked { background: var(--crossword-block); }
