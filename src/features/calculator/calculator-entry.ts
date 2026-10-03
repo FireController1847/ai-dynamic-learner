@@ -1,0 +1,209 @@
+export interface FractionContext {
+  start: number;
+  open: number;
+  comma: number;
+  close: number;
+  numeratorStart: number;
+  numeratorEnd: number;
+  denominatorStart: number;
+  denominatorEnd: number;
+  field: 'numerator' | 'denominator' | 'outside';
+}
+
+export type MathPrintNode =
+  | { kind: 'text'; text: string; start: number; end: number }
+  | {
+      kind: 'fraction';
+      start: number;
+      end: number;
+      numeratorStart: number;
+      numeratorEnd: number;
+      denominatorStart: number;
+      denominatorEnd: number;
+      numerator: MathPrintNode[];
+      denominator: MathPrintNode[];
+    };
+
+export function endsValue(expression: string) {
+  return /[\d)!%]$/.test(expression) || /(?:pi|e|ans)$/.test(expression);
+}
+
+export function parenthesesBalancedEnoughToClose(expression: string) {
+  let depth = 0;
+  for (const character of expression) {
+    if (character === '(') depth += 1;
+    else if (character === ')') depth -= 1;
+  }
+  return depth > 0;
+}
+
+export function lastOperandStart(expression: string) {
+  if (!expression || !endsValue(expression)) return expression.length;
+  let index = expression.length - 1;
+
+  while (expression[index] === '!' || expression[index] === '%') index -= 1;
+
+  if (expression[index] === ')') {
+    let depth = 1;
+    index -= 1;
+    while (index >= 0 && depth > 0) {
+      if (expression[index] === ')') depth += 1;
+      else if (expression[index] === '(') depth -= 1;
+      index -= 1;
+    }
+    let start = index + 1;
+    while (start > 0 && /[A-Za-z]/.test(expression[start - 1] ?? '')) start -= 1;
+    return start;
+  }
+
+  if (/[A-Za-z]/.test(expression[index] ?? '')) {
+    while (index >= 0 && /[A-Za-z]/.test(expression[index] ?? '')) index -= 1;
+    return index + 1;
+  }
+
+  while (index >= 0 && /[\d.]/.test(expression[index] ?? '')) index -= 1;
+  return index + 1;
+}
+
+function fractionSpanAt(source: string, start: number) {
+  if (!source.startsWith('frac(', start)) return null;
+  const open = start + 4;
+  let depth = 1;
+  let comma = -1;
+
+  for (let index = open + 1; index < source.length; index += 1) {
+    const character = source[index];
+    if (character === '(') depth += 1;
+    else if (character === ')') {
+      depth -= 1;
+      if (depth === 0) {
+        if (comma < 0) return null;
+        return { start, open, comma, close: index };
+      }
+    } else if (character === ',' && depth === 1 && comma < 0) {
+      comma = index;
+    }
+  }
+  return null;
+}
+
+export function fractionContextAt(source: string, cursor: number): FractionContext | null {
+  let match: FractionContext | null = null;
+  for (let index = 0; index < source.length; index += 1) {
+    if (!source.startsWith('frac(', index)) continue;
+    const span = fractionSpanAt(source, index);
+    if (!span) continue;
+    if (cursor < span.open + 1 || cursor > span.close) continue;
+
+    const numeratorStart = span.open + 1;
+    const numeratorEnd = span.comma;
+    const denominatorStart = span.comma + 1;
+    const denominatorEnd = span.close;
+    const field = cursor <= span.comma
+      ? 'numerator'
+      : cursor <= span.close ? 'denominator' : 'outside';
+    match = { ...span, numeratorStart, numeratorEnd, denominatorStart, denominatorEnd, field };
+    index = span.close;
+  }
+  return match;
+}
+
+export function createFractionTemplate(source: string, cursor: number) {
+  const before = source.slice(0, cursor);
+  const after = source.slice(cursor);
+
+  if (endsValue(before)) {
+    const start = lastOperandStart(before);
+    const numerator = before.slice(start);
+    const prefix = before.slice(0, start);
+    const template = `frac(${numerator},)`;
+    return {
+      source: `${prefix}${template}${after}`,
+      cursor: prefix.length + 5 + numerator.length,
+    };
+  }
+
+  const template = 'frac(,)';
+  return {
+    source: `${before}${template}${after}`,
+    cursor: before.length + 5,
+  };
+}
+
+export function moveFractionCursor(source: string, cursor: number, direction: 'up' | 'down' | 'right') {
+  const context = fractionContextAt(source, cursor);
+  if (!context) return null;
+
+  if (direction === 'down' && context.field === 'numerator') return context.denominatorStart;
+  if (direction === 'up' && context.field === 'denominator') return context.numeratorEnd;
+  if (direction === 'right') return context.close + 1;
+  return null;
+}
+
+export function backspaceMathPrint(source: string, cursor: number) {
+  if (cursor <= 0) return { source, cursor };
+
+  const context = fractionContextAt(source, cursor);
+  if (context?.field === 'denominator' && cursor === context.denominatorStart) {
+    return { source, cursor: context.numeratorEnd };
+  }
+  if (context?.field === 'numerator' && cursor === context.numeratorStart) {
+    return {
+      source: source.slice(0, context.start) + source.slice(context.close + 1),
+      cursor: context.start,
+    };
+  }
+
+  for (let index = 0; index < source.length; index += 1) {
+    const span = fractionSpanAt(source, index);
+    if (!span) continue;
+    if (span.close === cursor - 1) return { source, cursor: span.comma + 1 };
+    index = span.close;
+  }
+
+  return {
+    source: source.slice(0, cursor - 1) + source.slice(cursor),
+    cursor: cursor - 1,
+  };
+}
+
+function parseRange(source: string, start: number, end: number): MathPrintNode[] {
+  const nodes: MathPrintNode[] = [];
+  let textStart = start;
+  let index = start;
+
+  while (index < end) {
+    if (source.startsWith('frac(', index)) {
+      const span = fractionSpanAt(source, index);
+      if (span && span.close < end) {
+        if (textStart < index) {
+          nodes.push({ kind: 'text', text: source.slice(textStart, index), start: textStart, end: index });
+        }
+        nodes.push({
+          kind: 'fraction',
+          start: span.start,
+          end: span.close + 1,
+          numeratorStart: span.open + 1,
+          numeratorEnd: span.comma,
+          denominatorStart: span.comma + 1,
+          denominatorEnd: span.close,
+          numerator: parseRange(source, span.open + 1, span.comma),
+          denominator: parseRange(source, span.comma + 1, span.close),
+        });
+        index = span.close + 1;
+        textStart = index;
+        continue;
+      }
+    }
+    index += 1;
+  }
+
+  if (textStart < end) {
+    nodes.push({ kind: 'text', text: source.slice(textStart, end), start: textStart, end });
+  }
+  return nodes;
+}
+
+export function parseMathPrint(source: string) {
+  return parseRange(source, 0, source.length);
+}
