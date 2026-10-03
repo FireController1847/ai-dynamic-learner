@@ -102,14 +102,14 @@ export function graphScene(view: GraphView, options: GraphDisplay, plots: readon
   const magnification = graphZoom(view) / 100;
   const cell = graphCellSize(paper, view);
   const labelStep = [1, 2, 5, 10, 20, 50, 100].find(step => step * cell * screenScale >= 50) ?? 100;
-  const marks: SvgMark[] = [{ tag: 'rect', attributes: { width: paper.width, height: paper.height,
-    fill: options.paper === 'white' ? '#ffffff' : '#fff9ec' } }];
+  const paperFill = options.paper === 'white' ? 'var(--paper-white)' : 'var(--paper-cream)';
+  const marks: SvgMark[] = [{ tag: 'rect', attributes: { width: paper.width, height: paper.height, fill: paperFill } }];
   const origin = pointOnPaper({ x: 0, y: 0 }, paper, view);
   const right = paper.left + paper.plotWidth, bottom = paper.top + paper.plotHeight;
   let minor = '', major = '', subdivisionLines = '';
   const labels: SvgMark[] = [];
   const label = (x: number, y: number, value: string, anchor: string) => labels.push({ tag: 'text',
-    attributes: { x: rounded(x), y: rounded(y), fill: '#58677c', 'font-size': 12,
+    attributes: { x: rounded(x), y: rounded(y), fill: 'var(--graph-paper-label)', 'font-size': 12,
       'font-family': 'Segoe UI, sans-serif', 'text-anchor': anchor }, text: value });
   for (const axis of ['x', 'y'] as const) {
     const start = axis === 'x' ? paper.left : paper.top;
@@ -140,16 +140,16 @@ export function graphScene(view: GraphView, options: GraphDisplay, plots: readon
       }
     }
   }
-  marks.push({ tag: 'path', attributes: { d: subdivisionLines, fill: 'none', stroke: '#e3edf5', 'stroke-width': 0.5 } },
-    { tag: 'path', attributes: { d: minor, fill: 'none', stroke: '#c8dced', 'stroke-width': 0.7 * Math.max(1, magnification) } },
-    { tag: 'path', attributes: { d: major, fill: 'none', stroke: '#a0bbd2', 'stroke-width': Math.max(1, magnification) } },
+  marks.push({ tag: 'path', attributes: { d: subdivisionLines, fill: 'none', stroke: 'var(--graph-paper-subdivision)', 'stroke-width': 0.5 } },
+    { tag: 'path', attributes: { d: minor, fill: 'none', stroke: 'var(--graph-paper-grid)', 'stroke-width': 0.7 * Math.max(1, magnification) } },
+    { tag: 'path', attributes: { d: major, fill: 'none', stroke: 'var(--graph-paper-grid-major)', 'stroke-width': Math.max(1, magnification) } },
     { tag: 'rect', attributes: { x: paper.left, y: paper.top, width: paper.plotWidth, height: paper.plotHeight,
-      fill: 'none', stroke: '#b6ccde', 'stroke-width': 0.7 } });
+      fill: 'none', stroke: 'var(--graph-paper-border)', 'stroke-width': 0.7 } });
   if (options.axes === 'show') {
     let axes = '';
     if (origin.x >= paper.left && origin.x <= right) axes += `M${origin.x},${paper.top}V${bottom}`;
     if (origin.y >= paper.top && origin.y <= bottom) axes += `M${paper.left},${origin.y}H${right}`;
-    marks.push({ tag: 'path', attributes: { d: axes, fill: 'none', stroke: '#687f95', 'stroke-width': 1.3 } });
+    marks.push({ tag: 'path', attributes: { d: axes, fill: 'none', stroke: 'var(--graph-paper-axis)', 'stroke-width': 1.3 } });
     if (origin.y >= paper.top && origin.y <= bottom) label(right - 8, origin.y - 8, 'x', 'end');
     if (origin.x >= paper.left && origin.x <= right) label(origin.x + 10, paper.top + 16, 'y', 'start');
   }
@@ -179,7 +179,7 @@ export function graphScene(view: GraphView, options: GraphDisplay, plots: readon
       if (position.x < paper.left || position.x > right || position.y < paper.top || position.y > bottom) return;
       measurementLabels.push({ tag: 'text', text, attributes: { x: position.x, y: position.y, fill: ink,
         'font-size': 14, 'font-family': 'Segoe UI, sans-serif', 'text-anchor': 'middle',
-        stroke: options.paper === 'white' ? '#ffffff' : '#fff9ec', 'stroke-width': 4,
+        stroke: paperFill, 'stroke-width': 4,
         'paint-order': 'stroke fill', 'data-graph-annotation': 'true' } });
     };
     if (annotations.areas) {
@@ -202,7 +202,7 @@ export function graphScene(view: GraphView, options: GraphDisplay, plots: readon
     if (annotations.lengths) {
       for (const segment of measurements.segments) {
         const midpoint = pointOnPaper(segment.midpoint, paper, view);
-        annotation({ x: midpoint.x, y: midpoint.y - 10 }, `${measurementNumber(segment.length)} units`, '#3d536b');
+        annotation({ x: midpoint.x, y: midpoint.y - 10 }, `${measurementNumber(segment.length)} units`, 'var(--graph-paper-measurement)');
       }
     }
     marks.push(...measurementLabels);
@@ -210,7 +210,7 @@ export function graphScene(view: GraphView, options: GraphDisplay, plots: readon
       const position = pointOnPaper(point, paper, view);
       if (position.x < paper.left || position.x > right || position.y < paper.top || position.y > bottom) continue;
       marks.push({ tag: 'circle', attributes: { cx: position.x, cy: position.y, r: 6 * Math.max(0.75, magnification),
-        fill: graphInk(point.color), stroke: '#ffffff', 'stroke-width': 1.5 } });
+        fill: graphInk(point.color), stroke: 'var(--graph-paper-point-outline)', 'stroke-width': 1.5 } });
       if (selection?.id === point.id) marks.push({ tag: 'circle', attributes: {
         cx: position.x, cy: position.y, r: 11 * Math.max(0.75, magnification), fill: 'none', stroke: graphInk(point.color), 'stroke-width': 1.5,
       } });

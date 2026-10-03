@@ -35,7 +35,11 @@ export const Icon = defineComponent({
       fill: 'none', stroke: 'currentColor', 'stroke-width': 1.6,
       'stroke-linecap': 'round', 'stroke-linejoin': 'round',
       'aria-hidden': 'true', focusable: 'false',
-    }, props.name === 'verified' ? [
+    }, props.name === 'theme' ? [
+      h('circle', { cx: 12, cy: 12, r: 9 }),
+      h('path', { d: 'M12 3a9 9 0 0 1 0 18Z', fill: 'currentColor', stroke: 'none', 'fill-opacity': 0.22 }),
+      h('path', { d: 'M12 3v18' }),
+    ] : props.name === 'verified' ? [
       h('path', {
         d: 'm12 2 2.1 1.8 2.8-.2 1.2 2.5 2.5 1.2-.2 2.8L22 12l-1.8 2.1.2 2.8-2.5 1.2-1.2 2.5-2.8-.2L12 22l-2.1-1.8-2.8.2-1.2-2.5-2.5-1.2.2-2.8L2 12l1.8-2.1-.2-2.8 2.5-1.2 1.2-2.5 2.8.2Z',
         fill: 'none',

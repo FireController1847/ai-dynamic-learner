@@ -7,7 +7,7 @@ import { NavigationDrawer } from './navigation-drawer.ts';
 import { pageHref, useNavigation } from './navigation.ts';
 import { useWorkspace } from './workspace.ts';
 import { WorkspaceTools } from './workspace-tools.ts';
-import { ThemePicker } from './theme-picker.ts';
+import { ThemeMenu, type ThemeMenuHandle } from './theme-menu.ts';
 import { initializeTheme } from './theme.ts';
 import { HomePage } from './home-page.ts';
 import { TipsExperience } from './tips.ts';
@@ -40,6 +40,7 @@ const App = defineComponent({
     const sidebarOpen = ref(false);
     const menuButton = ref<HTMLButtonElement | null>(null);
     const tipsExperience = ref<TipsHandle | null>(null);
+    const themeMenu = ref<ThemeMenuHandle | null>(null);
     const main = ref<HTMLElement | null>(null);
     let focusContentOnClose = false;
     const { currentPath, navigate } = useNavigation(onNavigate);
@@ -101,16 +102,28 @@ const App = defineComponent({
             ? h(Icon, { name: activeFeature.value.icon })
             : h('img', { class: 'app-logo app-header-logo', src: appLogoSrc, alt: '', 'aria-hidden': 'true' }),
         h('h1', activeFeature.value?.label ?? (currentPath.value === '/' ? appConfig.name : 'Page not found')),
-        tipsFeature.value ? h('button', {
-          type: 'button',
-          class: 'quiet-button tips-trigger',
-          title: currentPath.value === '/' ? 'Show tips' : `Show ${tipsFeature.value.label} tips`,
-          'aria-haspopup': 'dialog',
-          onClick: (event: MouseEvent) => tipsExperience.value?.open(event.currentTarget),
-        }, [
-          h(Icon, { name: 'lightbulb' }),
-          h('span', { class: 'tips-trigger-label' }, 'Tips'),
-        ]) : null,
+        h('div', { class: 'app-header-actions' }, [
+          h('button', {
+            type: 'button',
+            class: 'quiet-button app-header-action theme-trigger',
+            title: 'Theme settings',
+            'aria-haspopup': 'dialog',
+            onClick: (event: MouseEvent) => themeMenu.value?.open(event.currentTarget),
+          }, [
+            h(Icon, { name: 'theme' }),
+            h('span', { class: 'app-header-action-label' }, 'Theme'),
+          ]),
+          tipsFeature.value ? h('button', {
+            type: 'button',
+            class: 'quiet-button app-header-action tips-trigger',
+            title: currentPath.value === '/' ? 'Show tips' : `Show ${tipsFeature.value.label} tips`,
+            'aria-haspopup': 'dialog',
+            onClick: (event: MouseEvent) => tipsExperience.value?.open(event.currentTarget),
+          }, [
+            h(Icon, { name: 'lightbulb' }),
+            h('span', { class: 'app-header-action-label tips-trigger-label' }, 'Tips'),
+          ]) : null,
+        ]),
       ]),
       h(NavigationDrawer, {
         open: sidebarOpen.value,
@@ -123,8 +136,9 @@ const App = defineComponent({
         onNavigate: navigate,
         onClosed: restoreFocus,
       }, {
-        footer: () => [h(ThemePicker), h(WorkspaceTools, { workspace })],
+        footer: () => h(WorkspaceTools, { workspace }),
       }),
+      h(ThemeMenu, { ref: themeMenu }),
       h(TipsExperience, { ref: tipsExperience, feature: tipsFeature.value }),
       workspace.storageProblem.value ? h('p', {
         class: 'workspace-storage-warning', role: 'alert',

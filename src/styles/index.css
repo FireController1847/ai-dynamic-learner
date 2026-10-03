@@ -3,6 +3,7 @@
 @import './base.css';
 @import './delete-confirmation.css';
 @import './shell.css';
+@import './theme.css';
 @import './tips.css';
 @import './home.css';
 @import '../features/calculator/calculator.css';

@@ -1,9 +1,6 @@
 /* Fluent-inspired shared tokens. Theme-dependent palette values live in themes.css. */
 :root {
   --font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
-  --paper: #fffefa;
-  --paper-blue-line: #cfdfef;
-  --paper-red-line: #dfa6a6;
   --radius: 4px;
   --radius-dialog: 8px;
   --control-height: 32px;

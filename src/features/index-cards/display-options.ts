@@ -13,17 +13,17 @@ export interface DisplayOptions {
 // Canonical display choices, defaults, and bounds; no Vue or DOM dependencies.
 export const DISPLAY_FIELDS: DisplayField<DisplayOptions>[] = [
   { key: 'paper', label: 'Paper', default: 'white', choices: [
-    { value: 'white', label: 'White', css: '#ffffff' },
-    { value: 'cream', label: 'Cream', css: '#fffefa' },
+    { value: 'white', label: 'White', css: 'var(--paper-white)' },
+    { value: 'cream', label: 'Cream', css: 'var(--paper-cream)' },
   ] },
   { key: 'font', label: 'Font', default: 'serif', choices: [
     { value: 'serif', label: 'Serif', css: "Georgia, 'Times New Roman', serif" },
     { value: 'sans', label: 'Sans', css: "'Segoe UI', Arial, sans-serif" },
   ] },
   { key: 'ink', label: 'Ink', default: 'pencil', choices: [
-    { value: 'pencil', label: 'Pencil', css: '#3d3d3d' },
-    { value: 'dark', label: 'Dark graphite', css: '#292929' },
-    { value: 'black', label: 'Black', css: '#000000' },
+    { value: 'pencil', label: 'Pencil', css: 'var(--paper-ink-pencil)' },
+    { value: 'dark', label: 'Dark graphite', css: 'var(--paper-ink-dark)' },
+    { value: 'black', label: 'Black', css: 'var(--paper-ink-black)' },
   ] },
   { key: 'textSize', label: 'Text size', default: 100, min: 80, max: 130, step: 5, unit: '%' },
   { key: 'baseline', label: 'Text vertical offset', default: 1, min: -4, max: 6, step: 1, unit: 'px' },

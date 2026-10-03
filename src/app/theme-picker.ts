@@ -34,9 +34,8 @@ export const ThemePicker = defineComponent({
 
     return () => h('section', {
       class: 'theme-picker',
-      'aria-labelledby': 'theme-picker-heading',
+      'aria-label': 'Theme settings',
     }, [
-      h('h2', { id: 'theme-picker-heading', class: 'theme-picker-heading' }, 'Appearance'),
       h('label', { class: 'theme-picker-system' }, [
         h('input', {
           type: 'checkbox',

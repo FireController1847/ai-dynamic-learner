@@ -80,7 +80,7 @@ export const GraphPaper = defineComponent({
       if (!anchor) return null;
       const start = pointOnPaper(anchor, paper.value, props.view), end = interaction.hover.value;
       return h('path', { d: `M${start.x},${start.y}L${end.x},${end.y}`, fill: 'none',
-        stroke: '#687f95', 'stroke-width': 2, 'stroke-dasharray': '6 4', 'clip-path': `url(#${clipId})` });
+        stroke: 'var(--graph-paper-axis)', 'stroke-width': 2, 'stroke-dasharray': '6 4', 'clip-path': `url(#${clipId})` });
     });
     return () => h('div', { class: ['graph-paper-frame', { 'is-preview': props.preview }],
       style: { maxWidth: `${paper.value.width}px` } }, [

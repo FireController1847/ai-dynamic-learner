@@ -1,0 +1,47 @@
+.theme-menu {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: 16px;
+  border: 0;
+  color: var(--text-color);
+  background: transparent;
+}
+.theme-menu[open] { display: grid; place-items: center; }
+.theme-menu::backdrop { background: var(--scrim); }
+.theme-menu-card {
+  width: min(440px, 100%);
+  max-height: calc(100dvh - 32px);
+  padding: 16px;
+  overflow: auto;
+  border: 1px solid var(--border-color);
+  border-radius: calc(var(--radius) * 2);
+  background: var(--page-background);
+  box-shadow: var(--shadow-overlay);
+}
+.theme-menu-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.theme-menu-header h2 { font-size: 1.3rem; }
+.theme-menu-header p { max-width: 330px; margin: 4px 0 0; color: var(--text-secondary); font-size: 12px; line-height: 18px; }
+.theme-menu-close { flex: 0 0 auto; border-color: transparent; }
+.theme-picker { display: grid; gap: 12px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border-color); }
+.theme-picker-field { display: grid; gap: 6px; color: var(--text-secondary); font-size: 12px; font-weight: 600; }
+.theme-picker-field select { width: 100%; color: var(--text-color); font-size: 14px; font-weight: 400; }
+.theme-picker-roles { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.theme-picker-system { display: flex; align-items: flex-start; gap: 8px; color: var(--text-color); cursor: pointer; }
+.theme-picker-system input { flex: 0 0 auto; margin: 3px 0 0; accent-color: var(--brand); }
+.theme-picker-system-copy { display: grid; gap: 1px; min-width: 0; }
+.theme-picker-system-copy strong { font-size: 13px; font-weight: 600; }
+.theme-picker-system-copy small { color: var(--text-secondary); font-size: 11px; font-weight: 400; line-height: 16px; }
+
+@media (max-width: 480px) {
+  .theme-menu { padding: 10px; }
+  .theme-menu-card { max-height: calc(100dvh - 20px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); padding: 14px; }
+  .theme-menu-header { gap: 10px; }
+  .theme-picker-roles { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (pointer: coarse) {
+  .theme-menu-close { min-height: 44px; }
+}
