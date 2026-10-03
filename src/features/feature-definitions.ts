@@ -1,7 +1,7 @@
 // Shared by the browser registry and webpack build; keep this data browser-neutral.
 import type { PageMetadataOverrides } from '../core/metadata.ts';
 
-export type FeatureId = 'notebook' | 'todo-list' | 'index-cards' | 'word-search' | 'crossword';
+export type FeatureId = 'notebook' | 'todo-list' | 'index-cards' | 'word-search' | 'crossword' | 'knowledge-check';
 
 export interface FeatureDefinition {
   hidden?: boolean;
@@ -60,5 +60,10 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
         alt: 'Crossword — Glossy blue-and-white puzzle grid with letters, clue numbers, and blue blocked squares.',
       },
     },
+  },
+  {
+    id: 'knowledge-check', label: 'Knowledge Check', path: '/knowledge-check/', icon: 'checklist',
+    image: '',
+    description: 'Quiz yourself and check what you know.',
   },
 ];
