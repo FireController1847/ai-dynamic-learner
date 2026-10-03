@@ -50,7 +50,8 @@ The current application includes:
 
 | Tool | What it does |
 | --- | --- |
-| **Notebook** | Organizes documents into a nested library. Write plain-text notes on Lined Paper with automatic overflow pages, or use Markdown documents with source and preview workflows. Customize appearance separately for each supported paper type. |
+| **Calculator** | Evaluates full scientific expressions with normal precedence, parentheses, trigonometry, logarithms, powers, roots, constants, DEG/RAD modes, memory controls, and reusable session history. |
+| **Notebook** | Organizes documents into a nested library. Write on Lined Paper with automatic overflow pages, use Markdown source and preview, or combine expressions and visual drawing on Graph Paper with point coordinates, line measurements, and closed-region areas. Customize appearance separately for each paper type. |
 | **Todo List** | Lined-paper tasks with adjustable fonts and alignment, checkboxes, centered section priorities, and shared section-name prefixes. Lists are organized by creation date and gradually fade into an archive with configurable expiry. |
 | **Index Cards** | Creates nested groups and card sets with editable fronts and backs, review modes, appearance controls, and resumable workspace storage. |
 | **Word Search** | Builds custom word-search puzzles with configurable difficulty and appearance, saved grids, hints, answer reveal, and persistent progress. |

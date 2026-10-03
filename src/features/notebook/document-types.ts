@@ -1,13 +1,13 @@
 import { isRecord } from '../../core/validation.ts';
+import { createGraphData, validateGraphData, type GraphData } from './graph-model.ts';
 
 export type DocumentTypeId = 'markdown' | 'lined' | 'graph';
 export interface MarkdownData { markdown: string }
 export interface LinedData { text: string; title?: string; marginText?: string; additionalTitles?: string[] }
-export type EmptyDocumentData = Record<string, never>;
 export interface DocumentDataByType {
   markdown: MarkdownData;
   lined: LinedData;
-  graph: EmptyDocumentData;
+  graph: GraphData;
 }
 export interface DocumentType {
   readonly id: DocumentTypeId;
@@ -44,9 +44,9 @@ export const DOCUMENT_TYPES: readonly DocumentType[] = Object.freeze([
   }),
   Object.freeze({
     id: 'graph',
-    available: false,
+    available: true,
     label: 'Graph Paper',
-    description: 'A square-grid page for diagrams, plots, equations, and spatial notes.',
+    description: 'Square-grid paper for functions, points, equations, and observations.',
   }),
 ]);
 
@@ -62,12 +62,12 @@ export function getDocumentType(value: unknown): DocumentType | null {
 
 export function createDocumentData(type?: 'markdown'): MarkdownData;
 export function createDocumentData(type: 'lined'): LinedData;
-export function createDocumentData(type: 'graph'): EmptyDocumentData;
+export function createDocumentData(type: 'graph'): GraphData;
 export function createDocumentData(type: DocumentTypeId): DocumentDataByType[DocumentTypeId];
 export function createDocumentData(type: DocumentTypeId = DEFAULT_DOCUMENT_TYPE): DocumentDataByType[DocumentTypeId] {
   if (!isDocumentType(type)) throw new Error(`Unsupported Notebook document type: ${type}`);
   if (type === 'markdown') return { markdown: '' };
-  return type === 'lined' ? { text: '', title: '', marginText: '' } : {};
+  return type === 'lined' ? { text: '', title: '', marginText: '' } : createGraphData();
 }
 
 export function validateDocumentData<Type extends DocumentTypeId>(type: Type, data: unknown): asserts data is DocumentDataByType[Type];
@@ -96,7 +96,5 @@ export function validateDocumentData(type: unknown, data: unknown): void {
     return;
   }
 
-  if (Object.keys(data).length !== 0) {
-    throw new Error(`A ${getDocumentType(type)?.label} document contains unsupported editor data.`);
-  }
+  validateGraphData(data);
 }

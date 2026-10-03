@@ -5,9 +5,11 @@
 @import './shell.css';
 @import './tips.css';
 @import './home.css';
+@import '../features/calculator/calculator.css';
 @import '../features/notebook/notebook.css';
 @import '../features/notebook/markdown-editor.css';
 @import '../features/notebook/lined-editor.css';
+@import '../features/notebook/graph-editor.css';
 @import '../features/notebook/display-settings.css';
 @import '../features/todo-list/todo-list.css';
 @import '../features/index-cards/index-cards.css';

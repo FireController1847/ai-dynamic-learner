@@ -1,4 +1,5 @@
 import { h, type VNode } from 'vue';
+import { Calculator } from './calculator/calculator.ts';
 import { Notebook } from './notebook/notebook.ts';
 import { TodoList } from './todo-list/todo-list.ts';
 import { IndexCards } from './index-cards/index-cards.ts';
@@ -21,6 +22,7 @@ export interface FeatureModels {
 
 // Each renderer keeps the component and its model paired at the typed boundary.
 const renderers: Record<FeatureId, (definition: FeatureDefinition, models: FeatureModels) => VNode> = {
+  calculator: (definition) => h(Calculator, { key: definition.id, title: definition.label }),
   notebook: (definition, models) => h(Notebook, { key: definition.id, title: definition.label, model: models.notebook }),
   'todo-list': (definition, models) => h(TodoList, { key: definition.id, title: definition.label, image: definition.image, model: models['todo-list'] }),
   'index-cards': (definition, models) => h(IndexCards, { key: definition.id, title: definition.label, model: models['index-cards'] }),
