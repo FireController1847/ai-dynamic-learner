@@ -20,7 +20,7 @@ The repository had no release tags or established app version fields. These are 
 
 | App | Initial version |
 | --- | --- |
-| Calculator | `1.2.2` |
+| Calculator | `1.3.0` |
 | Notebook | `1.4.2` |
 | Todo List | `1.4.2` |
 | Index Cards | `1.7.2` |
@@ -36,6 +36,7 @@ The repository had no release tags or established app version fields. These are 
 | `1.2.0`: persistent fraction mode and stacked fraction rendering | `501464d`–`e6efd0e`, including `e670188`, `4362c69`, and `720d1c8`. |
 | `1.2.1`: retain fraction previews through operator entry | `e2f2f3b`. |
 | `1.2.2`: align fractions and correct error display | `c46ccb8`. |
+| `1.3.0`: MathPrint-style editable fractions, two-row home display, arrow history navigation, and retained session-history panel | `bbf7a01`–`95943df`, with follow-up navigation refinements through `ad5c1e5`. |
 
 ### Notebook
 
