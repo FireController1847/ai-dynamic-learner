@@ -514,4 +514,9 @@ export const tipsCatalog: Record<TipsFeatureId, Tutorial> = {
       },
     ],
   },
+
+  workbook: {
+    version: 1,
+    sections: [],
+  },
 };
