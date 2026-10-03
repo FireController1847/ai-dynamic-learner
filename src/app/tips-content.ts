@@ -49,7 +49,7 @@ export const tipsCatalog: Record<TipsFeatureId, Tutorial> = {
 
 
   calculator: {
-    version: 5,
+    version: 6,
     sections: [
       {
         id: 'basics',
@@ -66,7 +66,7 @@ export const tipsCatalog: Record<TipsFeatureId, Tutorial> = {
           },
           {
             title: 'Change how answers look',
-            body: 'Use DEG/RAD, FR↔DC, or Settings to change answer display.',
+            body: 'Use DEG/RAD or Settings for answer display. FR↔DC keeps eligible results in fraction mode until you toggle it off or press C.',
             target: ['.calculator-angle-mode', '.calculator-fraction-toggle', '.calculator-settings-trigger'],
             targetLabel: 'Answer settings',
             placement: 'bottom',
