@@ -2,7 +2,7 @@ import { Icon } from '../../components/icon.ts';
 import { clearPreference, readNumberPreference, writeNumberPreference } from '../../core/ui-preferences.ts';
 import { CalculatorSettings } from './calculator-settings.ts';
 import { CalculatorModel, type HistoryEntry, type Operator } from './calculator-model.ts';
-import type { DecimalPlaces } from './calculator-format.ts';
+import type { DecimalPlaces, FractionParts } from './calculator-format.ts';
 
 import { defineComponent, h, nextTick, onActivated, onBeforeUnmount, onDeactivated, reactive, ref } from 'vue';
 
@@ -102,19 +102,37 @@ export const Calculator = defineComponent({
         onClick: action,
       }, label);
 
-    const historyEntry = (entry: HistoryEntry) => h('li', { key: entry.id }, [
-      h('button', {
-        type: 'button',
-        class: 'calculator-history-entry',
-        title: 'Use this result',
-        onClick: () => calculator.useHistory(entry),
-      }, [
-        h('span', { class: 'calculator-history-expression' }, entry.expression),
-        h('strong', calculator.formatResult(entry.result)),
-      ]),
+    const stackedFraction = (fraction: FractionParts, compact = false) => h('span', {
+      class: ['calculator-stacked-fraction', { 'is-compact': compact }],
+      'aria-hidden': 'true',
+    }, [
+      h('span', { class: 'calculator-fraction-numerator' }, String(fraction.numerator)),
+      h('span', { class: 'calculator-fraction-bar' }),
+      h('span', { class: 'calculator-fraction-denominator' }, String(fraction.denominator)),
     ]);
 
-    return () => h('section', { class: 'calculator-page', 'aria-label': props.title }, [
+    const historyEntry = (entry: HistoryEntry) => {
+      const fraction = calculator.fractionPartsForResult(entry.result);
+      return h('li', { key: entry.id }, [
+        h('button', {
+          type: 'button',
+          class: 'calculator-history-entry',
+          title: 'Use this result',
+          onClick: () => calculator.useHistory(entry),
+        }, [
+          h('span', { class: 'calculator-history-expression' }, entry.expression),
+          h('strong', {
+            'aria-label': fraction
+              ? `${fraction.numerator} over ${fraction.denominator}`
+              : calculator.formatResult(entry.result),
+          }, fraction ? stackedFraction(fraction, true) : calculator.formatResult(entry.result)),
+        ]),
+      ]);
+    };
+
+    return () => {
+      const displayFraction = calculator.displayFractionParts();
+      return h('section', { class: 'calculator-page', 'aria-label': props.title }, [
       h('div', { class: 'calculator-layout' }, [
         h('div', { class: 'calculator-machine' }, [
           h('div', { class: 'calculator-display', 'aria-live': 'polite', 'aria-atomic': 'true' }, [
@@ -129,10 +147,15 @@ export const Calculator = defineComponent({
               }, calculator.formattedExpression() || '\u00a0'),
             ]),
             h('output', {
-              class: ['calculator-value', { 'is-error': calculator.hasError }],
-              'aria-label': 'Calculator result',
+              class: ['calculator-value', {
+                'is-error': calculator.hasError,
+                'is-fraction': Boolean(displayFraction),
+              }],
+              'aria-label': displayFraction
+                ? `Calculator result: ${displayFraction.numerator} over ${displayFraction.denominator}`
+                : `Calculator result: ${calculator.display}`,
               title: calculator.display,
-            }, calculator.display),
+            }, displayFraction ? stackedFraction(displayFraction) : calculator.display),
           ]),
           h('div', { class: 'calculator-mode-row' }, [
             h('button', {
@@ -146,10 +169,16 @@ export const Calculator = defineComponent({
             }, calculator.angleMode),
             h('button', {
               type: 'button',
-              class: 'quiet-button calculator-fraction-toggle',
-              disabled: !calculator.canToggleFraction(),
-              title: 'FR↔DC: Toggle an eligible evaluated answer between fraction and decimal form.',
-              'aria-label': 'Toggle fraction and decimal answer',
+              class: ['quiet-button', 'calculator-fraction-toggle', {
+                'is-active': calculator.displayMode === 'fraction',
+              }],
+              'aria-pressed': calculator.displayMode === 'fraction',
+              title: calculator.displayMode === 'fraction'
+                ? 'FR↔DC: Fraction mode is on. Click to return to decimal mode; C also resets it.'
+                : 'FR↔DC: Use fraction mode for eligible results until toggled off or C is pressed.',
+              'aria-label': calculator.displayMode === 'fraction'
+                ? 'Fraction mode on. Switch to decimal mode'
+                : 'Decimal mode on. Switch to fraction mode',
               onClick: () => calculator.toggleFractionDecimal(),
             }, 'FR↔DC'),
             h('button', {
@@ -228,7 +257,8 @@ export const Calculator = defineComponent({
           h('div', { class: 'calculator-keypad calculator-basic-keypad', 'aria-label': 'Calculator keypad' }, [
             key('%', () => calculator.inputPostfix('%'), 'function', 'Percent'),
             key('CE', () => calculator.clearEntry(), 'function', 'Clear entry'),
-            key('C', () => calculator.clearAll(), 'function', 'Clear expression'),
+            key('C', () => calculator.clearAll(), 'function', 'Clear expression',
+              'C: Clear the expression and reset fraction mode to decimal.'),
             key('⌫', () => calculator.backspace(), 'function', 'Backspace'),
 
             key('7', () => calculator.inputDigit('7')),
@@ -280,5 +310,6 @@ export const Calculator = defineComponent({
         onClose: closeSettings,
       }) : null,
     ]);
+    };
   },
 });
