@@ -130,6 +130,10 @@ export function validateNotebook(value: unknown): asserts value is Notebook {
         if (item.type === 'lined' && isRecord(item.data) && Object.keys(item.data).length === 0) {
           item.data = createDocumentData('lined');
         }
+        // Graph Paper also existed as an empty version-1 placeholder.
+        if (item.type === 'graph' && isRecord(item.data) && Object.keys(item.data).length === 0) {
+          item.data = createDocumentData('graph');
+        }
         if (item.type === 'lined') {
           // Validate the specific type before accessing its optional editor fields.
           validateDocumentData('lined', item.data);
