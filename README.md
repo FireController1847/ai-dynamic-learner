@@ -11,9 +11,6 @@
 </p>
 
 <p align="center">
-  <a href="https://firecontroller1847.github.io/ai-dynamic-learner/">
-    <img alt="Open Dynamic Learner on GitHub Pages" src="https://img.shields.io/badge/Open%20Dynamic%20Learner-GitHub%20Pages-0f6cbd?style=for-the-badge&logo=githubpages&logoColor=white">
-  </a>
   <a href="https://github.com/FireController1847/ai-dynamic-learner/stargazers">
     <img alt="GitHub stars" src="https://img.shields.io/github/stars/FireController1847/ai-dynamic-learner?style=for-the-badge">
   </a>
