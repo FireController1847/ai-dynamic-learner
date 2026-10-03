@@ -4,6 +4,7 @@
 @import './shell.css';
 @import './tips.css';
 @import './home.css';
+@import '../features/calculator/calculator.css';
 @import '../features/notebook/notebook.css';
 @import '../features/notebook/markdown-editor.css';
 @import '../features/notebook/lined-editor.css';

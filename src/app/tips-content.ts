@@ -47,6 +47,49 @@ export const tipsCatalog: Record<TipsFeatureId, Tutorial> = {
     ],
   },
 
+
+  calculator: {
+    version: 2,
+    sections: [
+      {
+        id: 'basics',
+        title: 'Scientific calculator',
+        description: 'Build expressions and use the scientific controls.',
+        when: '.calculator-page',
+        steps: [
+          {
+            title: 'Build the whole expression',
+            body: 'Use numbers, operators, and parentheses. The calculator follows normal order of operations, then Enter or = evaluates it.',
+            target: '.calculator-basic-keypad',
+            targetLabel: 'Calculator keypad',
+            placement: 'right',
+          },
+          {
+            title: 'Use scientific functions',
+            body: 'Trig, inverse trig, logarithms, powers, roots, constants, factorial, and Ans are available here.',
+            target: '.calculator-scientific-keypad',
+            targetLabel: 'Scientific functions',
+            placement: 'bottom',
+          },
+          {
+            title: 'Check the angle mode',
+            body: 'DEG and RAD change how trigonometric functions read and return angles. Press the mode button to switch.',
+            target: '.calculator-angle-mode',
+            targetLabel: 'Angle mode',
+            placement: 'bottom',
+          },
+          {
+            title: 'Reuse values',
+            body: 'Memory keeps a number handy. Completed calculations also stay in History for this session.',
+            target: ['.calculator-memory', '.calculator-history'],
+            targetLabel: 'Memory and history',
+            placement: 'left',
+          },
+        ],
+      },
+    ],
+  },
+
   notebook: {
     version: 5,
     sections: [
