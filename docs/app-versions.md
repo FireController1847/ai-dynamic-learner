@@ -20,7 +20,7 @@ The repository had no release tags or established app version fields. These are 
 
 | App | Initial version |
 | --- | --- |
-| Calculator | `1.3.0` |
+| Calculator | `1.2.2` |
 | Notebook | `1.4.2` |
 | Todo List | `1.4.2` |
 | Index Cards | `1.7.2` |
