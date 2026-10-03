@@ -1,5 +1,5 @@
 import {
-  evaluateExpression, formatExpression, type AngleMode,
+  evaluateExpression, type AngleMode,
 } from './expression-engine.ts';
 import {
   backspaceMathPrint, createFractionTemplate, endsValue, fractionContextAt,
@@ -16,7 +16,6 @@ export type ScientificFunction = 'sin' | 'cos' | 'tan' | 'asin' | 'acos' | 'atan
 export interface HistoryEntry {
   id: number;
   source: string;
-  expression: string;
   result: number;
 }
 
@@ -370,7 +369,6 @@ export class CalculatorModel {
       this.history.unshift({
         id: ++this.historyId,
         source,
-        expression: `${formatExpression(source)} =`,
         result,
       });
       if (this.history.length > 30) this.history.pop();
