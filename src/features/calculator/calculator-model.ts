@@ -1,5 +1,9 @@
-export type Operator = '+' | '-' | '*' | '/';
-export type UnaryOperation = 'reciprocal' | 'square' | 'sqrt';
+import {
+  evaluateExpression, formatExpression, type AngleMode,
+} from './expression-engine.ts';
+
+export type Operator = '+' | '-' | '*' | '/' | '^';
+export type ScientificFunction = 'sin' | 'cos' | 'tan' | 'asin' | 'acos' | 'atan' | 'ln' | 'log' | 'sqrt';
 
 export interface HistoryEntry {
   id: number;
@@ -7,8 +11,7 @@ export interface HistoryEntry {
   result: number;
 }
 
-const MAX_INPUT_LENGTH = 18;
-export const OPERATOR_SYMBOLS: Record<Operator, string> = { '+': '+', '-': '−', '*': '×', '/': '÷' };
+const MAX_EXPRESSION_LENGTH = 180;
 
 function normalise(value: number) {
   return value === 0 ? 0 : Number.parseFloat(value.toPrecision(12));
@@ -23,282 +26,303 @@ export function formatNumber(value: number) {
   return String(normalised);
 }
 
+function endsValue(expression: string) {
+  return /[\d)!%]$/.test(expression) || /(?:pi|e|ans)$/.test(expression);
+}
+
+function parenthesesBalancedEnoughToClose(expression: string) {
+  let depth = 0;
+  for (const character of expression) {
+    if (character === '(') depth += 1;
+    else if (character === ')') depth -= 1;
+  }
+  return depth > 0;
+}
+
+function lastOperandStart(expression: string) {
+  if (!expression || !endsValue(expression)) return expression.length;
+  let index = expression.length - 1;
+
+  while (expression[index] === '!' || expression[index] === '%') index -= 1;
+
+  if (expression[index] === ')') {
+    let depth = 1;
+    index -= 1;
+    while (index >= 0 && depth > 0) {
+      if (expression[index] === ')') depth += 1;
+      else if (expression[index] === '(') depth -= 1;
+      index -= 1;
+    }
+    let start = index + 1;
+    while (start > 0 && /[A-Za-z]/.test(expression[start - 1] ?? '')) start -= 1;
+    return start;
+  }
+
+  if (/[A-Za-z]/.test(expression[index] ?? '')) {
+    while (index >= 0 && /[A-Za-z]/.test(expression[index] ?? '')) index -= 1;
+    return index + 1;
+  }
+
+  while (index >= 0 && /[\d.]/.test(expression[index] ?? '')) index -= 1;
+  return index + 1;
+}
+
 export class CalculatorModel {
-  display = '0';
   expression = '';
-  accumulator: number | null = null;
-  pendingOperator: Operator | null = null;
-  overwrite = true;
+  display = '0';
   hasError = false;
-  lastOperator: Operator | null = null;
-  lastOperand: number | null = null;
   memory: number | null = null;
   history: HistoryEntry[] = [];
+  angleMode: AngleMode = 'DEG';
+  lastAnswer = 0;
+  justEvaluated = false;
   private historyId = 0;
 
-  private readCurrent() {
-    const value = Number(this.display);
-    return Number.isFinite(value) ? value : null;
+  formattedExpression() {
+    return formatExpression(this.expression);
   }
 
-  private resetBinaryState() {
-    this.accumulator = null;
-    this.pendingOperator = null;
-    this.lastOperator = null;
-    this.lastOperand = null;
+  private context() {
+    return { angleMode: this.angleMode, ans: this.lastAnswer };
   }
 
-  private startFreshEntryIfNeeded() {
-    if (!this.overwrite || this.pendingOperator !== null || this.accumulator !== null || !this.expression.endsWith('=')) return;
-    this.expression = '';
-    this.lastOperator = null;
-    this.lastOperand = null;
+  private currentValue() {
+    try {
+      return normalise(evaluateExpression(this.expression, this.context()));
+    } catch {
+      const displayValue = Number(this.display);
+      return Number.isFinite(displayValue) ? displayValue : null;
+    }
   }
 
-  private showError(message: string) {
-    this.display = message;
-    this.expression = '';
+  private prepareValue() {
+    if (this.hasError) {
+      this.hasError = false;
+      this.display = formatNumber(this.lastAnswer);
+    }
+    if (this.justEvaluated) {
+      this.expression = '';
+      this.justEvaluated = false;
+    }
+  }
+
+  private append(text: string) {
+    if (this.expression.length + text.length > MAX_EXPRESSION_LENGTH) return false;
+    this.expression += text;
+    this.refreshPreview();
+    return true;
+  }
+
+  private appendValue(text: string) {
+    this.prepareValue();
+    const multiply = endsValue(this.expression) ? '*' : '';
+    this.append(`${multiply}${text}`);
+  }
+
+  private refreshPreview() {
+    if (!this.expression) {
+      this.display = '0';
+      return;
+    }
+    try {
+      this.display = formatNumber(evaluateExpression(this.expression, this.context()));
+      this.hasError = false;
+    } catch {
+      // Incomplete expressions are normal while the user is still typing.
+    }
+  }
+
+  private fail(error: unknown) {
+    this.display = error instanceof Error ? error.message : String(error);
     this.hasError = true;
-    this.overwrite = true;
-    this.resetBinaryState();
-  }
-
-  private calculate(left: number, operator: Operator, right: number) {
-    let result: number;
-    switch (operator) {
-      case '+': result = left + right; break;
-      case '-': result = left - right; break;
-      case '*': result = left * right; break;
-      case '/':
-        if (right === 0) {
-          this.showError('Cannot divide by zero');
-          return null;
-        }
-        result = left / right;
-        break;
-    }
-    if (!Number.isFinite(result)) {
-      this.showError('Result is too large');
-      return null;
-    }
-    return normalise(result);
-  }
-
-  private record(expression: string, result: number) {
-    this.history.unshift({ id: ++this.historyId, expression, result });
-    if (this.history.length > 30) this.history.pop();
+    this.justEvaluated = false;
   }
 
   clearAll() {
-    this.display = '0';
     this.expression = '';
+    this.display = '0';
     this.hasError = false;
-    this.overwrite = true;
-    this.resetBinaryState();
+    this.justEvaluated = false;
   }
 
   clearEntry() {
     if (this.hasError) {
-      this.clearAll();
+      this.hasError = false;
+      this.refreshPreview();
       return;
     }
-    this.display = '0';
-    this.overwrite = true;
-  }
-
-  inputDigit(digit: string) {
-    if (this.hasError) this.clearAll();
-    this.startFreshEntryIfNeeded();
-    if (this.overwrite || this.display === '0') {
-      this.display = digit;
-      this.overwrite = false;
-      return;
-    }
-    if (this.display.replace('-', '').replace('.', '').length < MAX_INPUT_LENGTH) {
-      this.display += digit;
-    }
-  }
-
-  inputDecimal() {
-    if (this.hasError) this.clearAll();
-    this.startFreshEntryIfNeeded();
-    if (this.overwrite) {
-      this.display = '0.';
-      this.overwrite = false;
-    } else if (!this.display.includes('.')) {
-      this.display += '.';
+    const start = lastOperandStart(this.expression);
+    if (start < this.expression.length) {
+      this.expression = this.expression.slice(0, start);
+      this.justEvaluated = false;
+      this.refreshPreview();
     }
   }
 
   backspace() {
     if (this.hasError) {
-      this.clearAll();
+      this.hasError = false;
+      this.refreshPreview();
       return;
     }
-    if (this.overwrite) return;
-    const next = this.display.slice(0, -1);
-    this.display = !next || next === '-' ? '0' : next;
-    if (this.display === '0') this.overwrite = true;
+    if (this.justEvaluated) {
+      this.justEvaluated = false;
+      return;
+    }
+    this.expression = this.expression.slice(0, -1);
+    this.refreshPreview();
   }
 
-  toggleSign() {
-    if (this.hasError || this.display === '0') return;
-    this.display = this.display.startsWith('-') ? this.display.slice(1) : `-${this.display}`;
+  inputDigit(digit: string) {
+    this.prepareValue();
+    if (endsValue(this.expression) && /(?:\)|!|%|pi|e|ans)$/.test(this.expression)) {
+      this.append(`*${digit}`);
+      return;
+    }
+    this.append(digit);
+  }
+
+  inputDecimal() {
+    this.prepareValue();
+    if (!this.expression || /[+\-*/^(]$/.test(this.expression)) {
+      this.append('0.');
+      return;
+    }
+    if (/(?:\)|!|%|pi|e|ans)$/.test(this.expression)) {
+      this.append('*0.');
+      return;
+    }
+    const currentNumber = this.expression.match(/(?:^|[+\-*/^(])(\d*\.?\d*)$/)?.[1] ?? '';
+    if (!currentNumber.includes('.')) this.append('.');
   }
 
   chooseOperator(operator: Operator) {
     if (this.hasError) return;
-    const current = this.readCurrent();
-    if (current === null) return;
-
-    if (this.pendingOperator && this.accumulator !== null) {
-      if (this.overwrite) {
-        this.pendingOperator = operator;
-        this.expression = `${formatNumber(this.accumulator)} ${OPERATOR_SYMBOLS[operator]}`;
-        return;
-      }
-      const result = this.calculate(this.accumulator, this.pendingOperator, current);
-      if (result === null) return;
-      this.accumulator = result;
-      this.display = formatNumber(result);
-    } else {
-      this.accumulator = current;
+    if (this.justEvaluated) {
+      this.expression = 'ans';
+      this.justEvaluated = false;
+    }
+    if (!this.expression) {
+      if (operator === '-') this.append('-');
+      return;
+    }
+    if (this.expression.endsWith('(')) {
+      if (operator === '-') this.append('-');
+      return;
     }
 
-    this.pendingOperator = operator;
-    this.expression = `${formatNumber(this.accumulator)} ${OPERATOR_SYMBOLS[operator]}`;
-    this.overwrite = true;
-    this.lastOperator = null;
-    this.lastOperand = null;
+    if (/[+\-*/^]$/.test(this.expression)) {
+      if (operator === '-' && !this.expression.endsWith('-')) {
+        this.append('-');
+        return;
+      }
+      this.expression = this.expression.replace(/[+\-*/^]+$/, operator);
+      this.refreshPreview();
+      return;
+    }
+
+    if (endsValue(this.expression)) this.append(operator);
+  }
+
+  inputParenthesis(open: boolean) {
+    if (open) {
+      this.prepareValue();
+      this.append(`${endsValue(this.expression) ? '*' : ''}(`);
+      return;
+    }
+    if (parenthesesBalancedEnoughToClose(this.expression) && endsValue(this.expression)) this.append(')');
+  }
+
+  inputFunction(name: ScientificFunction) {
+    this.appendValue(`${name}(`);
+  }
+
+  inputConstant(name: 'pi' | 'e' | 'ans') {
+    this.appendValue(name);
+  }
+
+  inputPostfix(operator: '!' | '%') {
+    if (this.hasError || this.justEvaluated || !endsValue(this.expression)) return;
+    this.append(operator);
+  }
+
+  inputPowerShortcut(power: '2' | '-1') {
+    if (this.hasError || !endsValue(this.expression)) return;
+    if (this.justEvaluated) {
+      this.expression = 'ans';
+      this.justEvaluated = false;
+    }
+    this.append(power === '2' ? '^2' : '^(-1)');
+  }
+
+  inputPowerFunction(base: '10' | 'e') {
+    this.appendValue(`${base}^(`);
+  }
+
+  toggleSign() {
+    if (this.hasError) return;
+    if (this.justEvaluated) {
+      this.expression = 'ans';
+      this.justEvaluated = false;
+    }
+    if (!this.expression || /[+\-*/^(]$/.test(this.expression)) {
+      this.append('-');
+      return;
+    }
+
+    const start = lastOperandStart(this.expression);
+    if (start >= this.expression.length) return;
+    const prefix = this.expression.slice(0, start);
+    const operand = this.expression.slice(start);
+    const negative = operand.match(/^\(-(.+)\)$/);
+    this.expression = negative ? `${prefix}${negative[1]}` : `${prefix}(-${operand})`;
+    this.refreshPreview();
   }
 
   equals() {
-    if (this.hasError) return;
-    const current = this.readCurrent();
-    if (current === null) return;
-
-    if (this.pendingOperator && this.accumulator !== null) {
-      const operator = this.pendingOperator;
-      const left = this.accumulator;
-      const right = current;
-      const result = this.calculate(left, operator, right);
-      if (result === null) return;
-      const label = `${formatNumber(left)} ${OPERATOR_SYMBOLS[operator]} ${formatNumber(right)} =`;
-      this.record(label, result);
+    if (!this.expression) return;
+    try {
+      const result = normalise(evaluateExpression(this.expression, this.context()));
+      const label = `${formatExpression(this.expression)} =`;
+      this.history.unshift({ id: ++this.historyId, expression: label, result });
+      if (this.history.length > 30) this.history.pop();
+      this.lastAnswer = result;
       this.display = formatNumber(result);
-      this.expression = label;
-      this.lastOperator = operator;
-      this.lastOperand = right;
-      this.accumulator = null;
-      this.pendingOperator = null;
-      this.overwrite = true;
-      return;
-    }
-
-    if (this.lastOperator && this.lastOperand !== null) {
-      const operator = this.lastOperator;
-      const right = this.lastOperand;
-      const result = this.calculate(current, operator, right);
-      if (result === null) return;
-      const label = `${formatNumber(current)} ${OPERATOR_SYMBOLS[operator]} ${formatNumber(right)} =`;
-      this.record(label, result);
-      this.display = formatNumber(result);
-      this.expression = label;
-      this.overwrite = true;
+      this.hasError = false;
+      this.justEvaluated = true;
+    } catch (error) {
+      this.fail(error);
     }
   }
 
-  percent() {
-    if (this.hasError) return;
-    const current = this.readCurrent();
-    if (current === null) return;
-    const result = this.pendingOperator && this.accumulator !== null &&
-      (this.pendingOperator === '+' || this.pendingOperator === '-')
-      ? this.accumulator * current / 100
-      : current / 100;
-    this.display = formatNumber(result);
-
-    if (this.pendingOperator && this.accumulator !== null) {
-      this.expression = `${formatNumber(this.accumulator)} ${OPERATOR_SYMBOLS[this.pendingOperator]} ${this.display}`;
-    } else {
-      const label = `${formatNumber(current)}% =`;
-      this.expression = label;
-      this.record(label, normalise(result));
-      this.lastOperator = null;
-      this.lastOperand = null;
-    }
-    this.overwrite = true;
-  }
-
-  unary(operation: UnaryOperation) {
-    if (this.hasError) return;
-    const current = this.readCurrent();
-    if (current === null) return;
-
-    let result: number;
-    let label: string;
-    if (operation === 'reciprocal') {
-      if (current === 0) {
-        this.showError('Cannot divide by zero');
-        return;
-      }
-      result = 1 / current;
-      label = `1/(${formatNumber(current)})`;
-    } else if (operation === 'square') {
-      result = current * current;
-      label = `sqr(${formatNumber(current)})`;
-    } else {
-      if (current < 0) {
-        this.showError('Invalid input');
-        return;
-      }
-      result = Math.sqrt(current);
-      label = `√(${formatNumber(current)})`;
-    }
-
-    if (!Number.isFinite(result)) {
-      this.showError('Result is too large');
-      return;
-    }
-
-    const normalised = normalise(result);
-    this.display = formatNumber(normalised);
-    if (this.pendingOperator && this.accumulator !== null) {
-      this.expression = `${formatNumber(this.accumulator)} ${OPERATOR_SYMBOLS[this.pendingOperator]} ${label}`;
-    } else {
-      const historyLabel = `${label} =`;
-      this.expression = historyLabel;
-      this.record(historyLabel, normalised);
-      this.lastOperator = null;
-      this.lastOperand = null;
-    }
-    this.overwrite = true;
+  toggleAngleMode() {
+    this.angleMode = this.angleMode === 'DEG' ? 'RAD' : 'DEG';
+    if (!this.justEvaluated) this.refreshPreview();
   }
 
   memoryStore() {
-    const value = this.hasError ? null : this.readCurrent();
+    const value = this.currentValue();
     if (value !== null) this.memory = value;
   }
 
   memoryRecall() {
     if (this.memory === null) return;
-    this.display = formatNumber(this.memory);
-    this.hasError = false;
-    this.overwrite = true;
+    const literal = this.memory < 0 ? `(${formatNumber(this.memory)})` : formatNumber(this.memory);
+    this.appendValue(literal);
   }
 
   memoryAdjust(direction: 1 | -1) {
-    const value = this.hasError ? null : this.readCurrent();
+    const value = this.currentValue();
     if (value === null) return;
     this.memory = normalise((this.memory ?? 0) + value * direction);
   }
 
   useHistory(entry: HistoryEntry) {
+    this.expression = formatNumber(entry.result);
     this.display = formatNumber(entry.result);
-    this.expression = entry.expression;
+    this.lastAnswer = entry.result;
     this.hasError = false;
-    this.overwrite = true;
-    this.resetBinaryState();
+    this.justEvaluated = false;
   }
 
   clearHistory() {
