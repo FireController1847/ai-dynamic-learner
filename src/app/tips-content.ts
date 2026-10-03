@@ -49,33 +49,40 @@ export const tipsCatalog: Record<TipsFeatureId, Tutorial> = {
 
 
   calculator: {
-    version: 1,
+    version: 2,
     sections: [
       {
         id: 'basics',
-        title: 'Calculator basics',
-        description: 'Learn the keypad, memory, and calculation history.',
+        title: 'Scientific calculator',
+        description: 'Build expressions and use the scientific controls.',
         when: '.calculator-page',
         steps: [
           {
-            title: 'Tap or type your calculation',
-            body: 'Use the keypad here, or type numbers and operators on your keyboard. Enter works like the equals button.',
-            target: '.calculator-keypad',
+            title: 'Build the whole expression',
+            body: 'Use numbers, operators, and parentheses. The calculator follows normal order of operations, then Enter or = evaluates it.',
+            target: '.calculator-basic-keypad',
             targetLabel: 'Calculator keypad',
             placement: 'right',
           },
           {
-            title: 'Keep a value in memory',
-            body: 'Use MC, MR, M+, M−, and MS when you want to reuse a number across calculations.',
-            target: '.calculator-memory',
-            targetLabel: 'Memory controls',
+            title: 'Use scientific functions',
+            body: 'Trig, inverse trig, logarithms, powers, roots, constants, factorial, and Ans are available here.',
+            target: '.calculator-scientific-keypad',
+            targetLabel: 'Scientific functions',
             placement: 'bottom',
           },
           {
-            title: 'Reuse a recent result',
-            body: 'Completed calculations appear here for this session. Press one to put its result back on the calculator.',
-            target: '.calculator-history',
-            targetLabel: 'Calculation history',
+            title: 'Check the angle mode',
+            body: 'DEG and RAD change how trigonometric functions read and return angles. Press the mode button to switch.',
+            target: '.calculator-angle-mode',
+            targetLabel: 'Angle mode',
+            placement: 'bottom',
+          },
+          {
+            title: 'Reuse values',
+            body: 'Memory keeps a number handy. Completed calculations also stay in History for this session.',
+            target: ['.calculator-memory', '.calculator-history'],
+            targetLabel: 'Memory and history',
             placement: 'left',
           },
         ],
