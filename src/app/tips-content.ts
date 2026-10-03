@@ -49,7 +49,7 @@ export const tipsCatalog: Record<TipsFeatureId, Tutorial> = {
 
 
   calculator: {
-    version: 3,
+    version: 4,
     sections: [
       {
         id: 'basics',
@@ -72,10 +72,17 @@ export const tipsCatalog: Record<TipsFeatureId, Tutorial> = {
             placement: 'bottom',
           },
           {
-            title: 'Choose an angle mode',
-            body: 'Use DEG or RAD for trigonometric functions.',
-            target: '.calculator-angle-mode',
-            targetLabel: 'Angle mode',
+            title: 'Choose how answers display',
+            body: 'DEG/RAD changes trig angles. FR↔DC switches eligible answers between fractions and decimals.',
+            target: ['.calculator-angle-mode', '.calculator-fraction-toggle'],
+            targetLabel: 'Answer modes',
+            placement: 'bottom',
+          },
+          {
+            title: 'Set decimal places',
+            body: 'Open Settings to use FLOAT or choose 0–9 fixed decimal places.',
+            target: '.calculator-settings-trigger',
+            targetLabel: 'Calculator settings',
             placement: 'bottom',
           },
           {
