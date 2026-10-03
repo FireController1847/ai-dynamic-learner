@@ -1,5 +1,5 @@
 import { defineComponent, h } from 'vue';
-import { type ThemeId, useTheme } from './theme.ts';
+import { type ThemeDefinition, type ThemeId, useTheme } from './theme.ts';
 
 export const ThemePicker = defineComponent({
   name: 'ThemePicker',
@@ -10,7 +10,7 @@ export const ThemePicker = defineComponent({
 
     const select = (
       value: ThemeId,
-      options: typeof theme.themes,
+      options: readonly ThemeDefinition[],
       onChange: (theme: ThemeId) => void,
     ) => h('select', {
       value,
@@ -25,7 +25,7 @@ export const ThemePicker = defineComponent({
     const field = (
       label: string,
       value: ThemeId,
-      options: typeof theme.themes,
+      options: readonly ThemeDefinition[],
       onChange: (theme: ThemeId) => void,
     ) => h('label', { class: 'theme-picker-field' }, [
       h('span', label),
