@@ -69,6 +69,7 @@ export class CalculatorModel {
   justEvaluated = false;
   decimalPlaces: DecimalPlaces;
   displayMode: 'decimal' | 'fraction' = 'decimal';
+  private displayValue = 0;
   private historyId = 0;
 
   constructor(decimalPlaces: DecimalPlaces = null) {
@@ -93,49 +94,36 @@ export class CalculatorModel {
 
   displayFractionParts(): FractionParts | null {
     if (this.hasError) return null;
-    const value = this.displayedValue();
-    return value === null ? null : this.fractionPartsForResult(value);
+    return this.fractionPartsForResult(this.displayValue);
   }
 
   toggleFractionDecimal() {
     this.displayMode = this.displayMode === 'fraction' ? 'decimal' : 'fraction';
-    if (this.hasError) return;
-    const value = this.displayedValue();
-    if (value !== null) this.display = this.formatResult(value);
+    if (!this.hasError) this.display = this.formatResult(this.displayValue);
   }
 
   setDecimalPlaces(decimalPlaces: DecimalPlaces) {
     this.decimalPlaces = decimalPlaces;
-    if (this.hasError) return;
-    const value = this.displayedValue();
-    if (value !== null) this.display = this.formatResult(value);
+    if (!this.hasError) this.display = this.formatResult(this.displayValue);
   }
 
   private context() {
     return { angleMode: this.angleMode, ans: this.lastAnswer };
   }
 
-  private displayedValue() {
-    if (this.justEvaluated) return this.lastAnswer;
-    if (!this.expression) return 0;
-    try {
-      return normaliseNumber(evaluateExpression(this.expression, this.context()));
-    } catch {
-      return null;
-    }
+  private currentValue() {
+    return this.hasError ? null : this.displayValue;
   }
 
-  private currentValue() {
-    const value = this.displayedValue();
-    if (value !== null) return value;
-    const displayValue = Number(this.display);
-    return Number.isFinite(displayValue) ? displayValue : null;
+  private showValue(value: number) {
+    this.displayValue = normaliseNumber(value);
+    this.display = this.formatResult(this.displayValue);
   }
 
   private prepareValue() {
     if (this.hasError) {
       this.expression = '';
-      this.display = this.formatResult(0);
+      this.showValue(0);
       this.hasError = false;
       this.justEvaluated = false;
     }
@@ -160,11 +148,11 @@ export class CalculatorModel {
 
   private refreshPreview() {
     if (!this.expression) {
-      this.display = this.formatResult(0);
+      this.showValue(0);
       return;
     }
     try {
-      this.display = this.formatResult(evaluateExpression(this.expression, this.context()));
+      this.showValue(evaluateExpression(this.expression, this.context()));
       this.hasError = false;
     } catch {
       // Incomplete expressions are normal while the user is still typing.
@@ -180,7 +168,7 @@ export class CalculatorModel {
   clearAll() {
     this.displayMode = 'decimal';
     this.expression = '';
-    this.display = this.formatResult(0);
+    this.showValue(0);
     this.hasError = false;
     this.justEvaluated = false;
   }
@@ -328,7 +316,7 @@ export class CalculatorModel {
       this.history.unshift({ id: ++this.historyId, expression: label, result });
       if (this.history.length > 30) this.history.pop();
       this.lastAnswer = result;
-      this.display = this.formatResult(result);
+      this.showValue(result);
       this.hasError = false;
       this.justEvaluated = true;
     } catch (error) {
@@ -361,7 +349,7 @@ export class CalculatorModel {
   useHistory(entry: HistoryEntry) {
     this.expression = String(entry.result);
     this.lastAnswer = entry.result;
-    this.display = this.formatResult(entry.result);
+    this.showValue(entry.result);
     this.hasError = false;
     this.justEvaluated = true;
   }
