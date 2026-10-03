@@ -4,6 +4,7 @@ import { TodoList } from './todo-list/todo-list.ts';
 import { IndexCards } from './index-cards/index-cards.ts';
 import { WordSearch } from './word-search/word-search.ts';
 import { Crossword } from './crossword/crossword.ts';
+import { Workbook } from './workbook/workbook.ts';
 import { featureDefinitions, type FeatureDefinition, type FeatureId } from './feature-definitions.ts';
 import type { Notebook as NotebookModel } from './notebook/library-model.ts';
 import type { IndexCards as IndexCardsModel } from './index-cards/tree-model.ts';
@@ -26,6 +27,7 @@ const renderers: Record<FeatureId, (definition: FeatureDefinition, models: Featu
   'index-cards': (definition, models) => h(IndexCards, { key: definition.id, title: definition.label, model: models['index-cards'] }),
   'word-search': (definition, models) => h(WordSearch, { key: definition.id, title: definition.label, model: models['word-search'] }),
   crossword: (definition, models) => h(Crossword, { key: definition.id, title: definition.label, image: definition.image, model: models.crossword }),
+  workbook: (definition) => h(Workbook, { key: definition.id }),
 };
 
 export const features = featureDefinitions.map((definition) => ({

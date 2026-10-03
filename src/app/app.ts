@@ -129,7 +129,7 @@ const App = defineComponent({
         h('main', {
           ref: main,
           class: ['app-content', {
-            'app-content--workspace': ['notebook', 'todo-list', 'index-cards', 'word-search', 'crossword'].includes(activeFeature.value?.id ?? ''),
+            'app-content--workspace': ['notebook', 'todo-list', 'index-cards', 'word-search', 'crossword', 'workbook'].includes(activeFeature.value?.id ?? ''),
           }],
           tabindex: -1,
         }, [
