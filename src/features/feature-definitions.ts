@@ -18,9 +18,18 @@ export interface FeatureDefinition {
 export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'calculator', label: 'Calculator', path: '/calculator/', icon: 'calculator',
-    image: '',
+    image: 'assets/calculator.png',
     description: 'Calculate with numbers and scientific functions.',
-    metadata: { keywords: ['calculator', 'scientific calculator', 'arithmetic', 'trigonometry', 'logarithms'] },
+    metadata: {
+      keywords: ['calculator', 'scientific calculator', 'arithmetic', 'trigonometry', 'logarithms'],
+      socialImage: {
+        path: 'assets/calculator.png',
+        type: 'image/png',
+        width: 1254,
+        height: 1254,
+        alt: 'Calculator — Glossy blue-and-white calculator with a 123 display and rounded number and arithmetic keys.',
+      },
+    },
   },
   {
     id: 'notebook', label: 'Notebook', path: '/notebook/', icon: 'document',
