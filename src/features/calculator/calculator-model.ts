@@ -87,10 +87,14 @@ export class CalculatorModel {
     return formatNumber(value, this.decimalPlaces);
   }
 
+  fractionPartsForResult(value: number): FractionParts | null {
+    return this.displayMode === 'fraction' ? fractionPartsForValue(value) : null;
+  }
+
   displayFractionParts(): FractionParts | null {
-    if (this.displayMode !== 'fraction' || this.hasError) return null;
+    if (this.hasError) return null;
     const value = this.displayedValue();
-    return value === null ? null : fractionPartsForValue(value);
+    return value === null ? null : this.fractionPartsForResult(value);
   }
 
   toggleFractionDecimal() {
@@ -324,7 +328,7 @@ export class CalculatorModel {
       this.history.unshift({ id: ++this.historyId, expression: label, result });
       if (this.history.length > 30) this.history.pop();
       this.lastAnswer = result;
-        this.display = this.formatResult(result);
+      this.display = this.formatResult(result);
       this.hasError = false;
       this.justEvaluated = true;
     } catch (error) {
