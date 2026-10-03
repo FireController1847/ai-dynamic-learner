@@ -3,7 +3,7 @@ import { clearPreference, readNumberPreference, writeNumberPreference } from '..
 import { formatExpression } from './expression-engine.ts';
 import { parseMathPrint, type MathPrintNode } from './calculator-entry.ts';
 import { CalculatorSettings } from './calculator-settings.ts';
-import { CalculatorModel, type Operator } from './calculator-model.ts';
+import { CalculatorModel, type HistoryEntry, type Operator } from './calculator-model.ts';
 import type { DecimalPlaces, FractionParts } from './calculator-format.ts';
 
 import { defineComponent, h, nextTick, onActivated, onBeforeUnmount, onDeactivated, reactive, ref } from 'vue';
@@ -168,6 +168,20 @@ export const Calculator = defineComponent({
     function renderResult(value: number, compact = false) {
       const fraction = calculator.fractionPartsForResult(value);
       return fraction ? stackedFraction(fraction, compact) : calculator.formatResult(value);
+    }
+
+    function historyPanelEntry(entry: HistoryEntry) {
+      return h('li', { key: entry.id }, [
+        h('button', {
+          type: 'button',
+          class: 'calculator-history-entry',
+          title: 'Recall this expression to the calculator',
+          onClick: () => calculator.recallHistoryEntry(entry),
+        }, [
+          h('span', { class: 'calculator-history-expression' }, renderMathPrint(entry.source)),
+          h('strong', { class: 'calculator-history-result' }, renderResult(entry.result, true)),
+        ]),
+      ]);
     }
 
     return () => {
@@ -359,6 +373,23 @@ export const Calculator = defineComponent({
             ]),
             h('p', { class: 'calculator-keyboard-hint' },
               'Keyboard: 0–9, operators, parentheses, !, %, Enter, Backspace, Delete, Escape, and arrow keys.'),
+          ]),
+          h('aside', { class: 'calculator-history', 'aria-labelledby': 'calculator-history-title' }, [
+            h('div', { class: 'calculator-history-header' }, [
+              h('h2', { id: 'calculator-history-title' }, 'History'),
+              h('button', {
+                type: 'button',
+                class: 'quiet-button',
+                disabled: calculator.history.length === 0,
+                onClick: () => calculator.clearHistory(),
+              }, 'Clear'),
+            ]),
+            calculator.history.length
+              ? h('ol', { class: 'calculator-history-list' }, calculator.history.map(historyPanelEntry))
+              : h('div', { class: 'calculator-history-empty' }, [
+                  h('p', 'No calculations yet.'),
+                  h('span', 'Completed calculations stay here for this session.'),
+                ]),
           ]),
         ]),
         settingsOpen.value ? h(CalculatorSettings, {
