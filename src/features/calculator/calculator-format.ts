@@ -3,10 +3,6 @@ export type DecimalPlaces = number | null;
 const MAX_FRACTION_DENOMINATOR = 10_000;
 const FRACTION_TOLERANCE = 1e-10;
 
-export function isDecimalPlaces(value: number | null): value is DecimalPlaces {
-  return value === null || (Number.isInteger(value) && value >= 0 && value <= 9);
-}
-
 export function normaliseNumber(value: number) {
   return value === 0 ? 0 : value;
 }
