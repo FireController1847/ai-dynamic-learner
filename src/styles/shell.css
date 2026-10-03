@@ -106,6 +106,16 @@ body:has(.navigation-drawer[open]) { overflow: hidden; }
 .drawer-enter-from, .drawer-leave-to { background-color: transparent; }
 .drawer-enter-from .drawer-panel, .drawer-leave-to .drawer-panel { transform: translateX(-100%); }
 .drawer-footer { margin-top: auto; padding-top: 24px; }
+.theme-picker { display: grid; gap: 10px; padding: 12px; border-top: 1px solid var(--border-color); }
+.theme-picker-heading { margin: 0; color: var(--text-secondary); font-size: 12px; font-weight: 600; }
+.theme-picker-field { display: grid; gap: 6px; color: var(--text-secondary); font-size: 12px; font-weight: 600; }
+.theme-picker-field select { width: 100%; color: var(--text-color); font-size: 14px; font-weight: 400; }
+.theme-picker-roles { display: grid; gap: 8px; }
+.theme-picker-system { display: flex; align-items: flex-start; gap: 8px; color: var(--text-color); cursor: pointer; }
+.theme-picker-system input { flex: 0 0 auto; margin: 3px 0 0; accent-color: var(--brand); }
+.theme-picker-system-copy { display: grid; gap: 1px; min-width: 0; }
+.theme-picker-system-copy strong { font-size: 13px; font-weight: 600; }
+.theme-picker-system-copy small { color: var(--text-secondary); font-size: 11px; font-weight: 400; line-height: 16px; }
 .app-layout { flex: 1; min-height: 0; }
 .app-content { height: 100%; min-width: 0; overflow: auto; padding: var(--page-padding); }
 .app-content.app-content--workspace { display: flex; padding: 0; overflow: hidden; }

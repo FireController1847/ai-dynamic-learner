@@ -21,7 +21,7 @@
 .graph-expression-source { width: 100%; min-width: 0; font: 16px/24px ui-monospace, Consolas, monospace; }
 .graph-expression-source[aria-invalid='true'] { border-color: var(--danger, #c44545); }
 .graph-expression.is-hidden .graph-expression-source { color: var(--text-secondary); }
-.graph-expression-error { margin: 6px 0 0; color: #a42f36; font-size: 12px; line-height: 18px; }
+.graph-expression-error { margin: 6px 0 0; color: var(--danger); font-size: 12px; line-height: 18px; }
 .graph-expression-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .graph-formula-help { margin-top: 20px; color: var(--text-secondary); font-size: 12px; line-height: 18px; }
 .graph-formula-help summary { cursor: pointer; color: var(--text-primary); }
@@ -61,12 +61,12 @@
 .graph-paper-title:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
 .graph-paper-title::placeholder { color: #7b8791; }
 .graph-sheet-caption { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; margin: 8px 0 12px; color: var(--text-secondary); font-size: 12px; font-variant-numeric: tabular-nums; }
-.graph-editor-message { color: #a42f36; }
+.graph-editor-message { color: var(--danger); }
 .graph-tools { position: sticky; top: 8px; min-width: 0; z-index: 2; }
 .graph-tool-rail { display: flex; flex-direction: column; gap: 4px; padding: 4px; border: 1px solid var(--border-color); border-radius: var(--radius); background: var(--page-background); }
 .graph-tool-button { display: grid; place-items: center; width: 42px; min-height: 42px; padding: 8px; border: 1px solid transparent; border-radius: var(--radius); background: transparent; }
 .graph-tool-button:hover { background: var(--surface-subtle); }
-.graph-tool-button[aria-pressed='true'] { color: var(--brand); border-color: var(--brand); background: var(--brand-subtle, #e8f1fb); }
+.graph-tool-button[aria-pressed='true'] { color: var(--brand); border-color: var(--brand); background: var(--brand-tint); }
 .graph-tool-options-toggle { border-top-color: var(--border-color); margin-top: 4px; }
 .graph-select-circle { display: none; }
 .graph-tool-options { position: absolute; right: calc(100% + 8px); top: 0; display: grid; gap: 12px; width: 240px; max-width: calc(100vw - 100px); max-height: 70vh; overflow: auto; padding: 16px; border: 1px solid var(--border-color); border-radius: var(--radius); background: var(--page-background); box-shadow: var(--shadow-paper); }

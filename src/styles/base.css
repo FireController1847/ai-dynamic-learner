@@ -54,7 +54,7 @@ button:disabled { cursor: default; opacity: 0.45; }
 .delete-cancel-button:active { background: var(--surface-pressed); }
 
 .card-primary-button, .card-flip-button {
-  color: #fff;
+  color: var(--on-accent);
   background: var(--brand);
   border-color: var(--brand);
 }
@@ -66,8 +66,8 @@ button:disabled { cursor: default; opacity: 0.45; }
   background: var(--brand-pressed);
   border-color: var(--brand-pressed);
 }
-.delete-confirm-button { color: #fff; background: var(--danger); border-color: var(--danger); }
-.delete-confirm-button:hover { background: var(--danger-hover); border-color: var(--danger-hover); }
+.delete-confirm-button { color: var(--on-accent); background: var(--danger-fill); border-color: var(--danger-fill); }
+.delete-confirm-button:hover { background: var(--danger-fill-hover); border-color: var(--danger-fill-hover); }
 .delete-cancel-button { border-color: var(--text-secondary); }
 .delete-button { color: var(--danger); }
 .delete-button:hover:not(:disabled) { background: var(--danger-tint); }
