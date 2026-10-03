@@ -48,6 +48,13 @@ export class CalculatorModel {
     this.lastOperand = null;
   }
 
+  private startFreshEntryIfNeeded() {
+    if (!this.overwrite || this.pendingOperator !== null || this.accumulator !== null || !this.expression.endsWith('=')) return;
+    this.expression = '';
+    this.lastOperator = null;
+    this.lastOperand = null;
+  }
+
   private showError(message: string) {
     this.display = message;
     this.expression = '';
@@ -101,6 +108,7 @@ export class CalculatorModel {
 
   inputDigit(digit: string) {
     if (this.hasError) this.clearAll();
+    this.startFreshEntryIfNeeded();
     if (this.overwrite || this.display === '0') {
       this.display = digit;
       this.overwrite = false;
@@ -113,6 +121,7 @@ export class CalculatorModel {
 
   inputDecimal() {
     if (this.hasError) this.clearAll();
+    this.startFreshEntryIfNeeded();
     if (this.overwrite) {
       this.display = '0.';
       this.overwrite = false;
