@@ -2,6 +2,10 @@ import {
   evaluateExpression, formatExpression, type AngleMode,
 } from './expression-engine.ts';
 import {
+  backspaceMathPrint, createFractionTemplate, endsValue, fractionContextAt,
+  lastOperandStart, moveFractionCursor, parenthesesBalancedEnoughToClose,
+} from './calculator-entry.ts';
+import {
   formatNumber, fractionForValue, fractionPartsForValue, normaliseNumber,
   type DecimalPlaces, type FractionParts,
 } from './calculator-format.ts';
@@ -11,59 +15,21 @@ export type ScientificFunction = 'sin' | 'cos' | 'tan' | 'asin' | 'acos' | 'atan
 
 export interface HistoryEntry {
   id: number;
+  source: string;
   expression: string;
   result: number;
 }
 
 const MAX_EXPRESSION_LENGTH = 180;
 
-function endsValue(expression: string) {
-  return /[\d)!%]$/.test(expression) || /(?:pi|e|ans)$/.test(expression);
-}
-
-function parenthesesBalancedEnoughToClose(expression: string) {
-  let depth = 0;
-  for (const character of expression) {
-    if (character === '(') depth += 1;
-    else if (character === ')') depth -= 1;
-  }
-  return depth > 0;
-}
-
-function lastOperandStart(expression: string) {
-  if (!expression || !endsValue(expression)) return expression.length;
-  let index = expression.length - 1;
-
-  while (expression[index] === '!' || expression[index] === '%') index -= 1;
-
-  if (expression[index] === ')') {
-    let depth = 1;
-    index -= 1;
-    while (index >= 0 && depth > 0) {
-      if (expression[index] === ')') depth += 1;
-      else if (expression[index] === '(') depth -= 1;
-      index -= 1;
-    }
-    let start = index + 1;
-    while (start > 0 && /[A-Za-z]/.test(expression[start - 1] ?? '')) start -= 1;
-    return start;
-  }
-
-  if (/[A-Za-z]/.test(expression[index] ?? '')) {
-    while (index >= 0 && /[A-Za-z]/.test(expression[index] ?? '')) index -= 1;
-    return index + 1;
-  }
-
-  while (index >= 0 && /[\d.]/.test(expression[index] ?? '')) index -= 1;
-  return index + 1;
-}
-
 export class CalculatorModel {
   expression = '';
+  cursor = 0;
   display = '0';
   hasError = false;
   memory: number | null = null;
   history: HistoryEntry[] = [];
+  historyIndex: number | null = null;
   angleMode: AngleMode = 'DEG';
   lastAnswer = 0;
   justEvaluated = false;
@@ -93,8 +59,17 @@ export class CalculatorModel {
   }
 
   displayFractionParts(): FractionParts | null {
-    if (this.hasError) return null;
+    if (this.hasError || !this.justEvaluated) return null;
     return this.fractionPartsForResult(this.displayValue);
+  }
+
+  visibleHistoryEntry() {
+    if (!this.history.length) return null;
+    return this.history[this.historyIndex ?? 0] ?? null;
+  }
+
+  isBrowsingHistory() {
+    return this.historyIndex !== null;
   }
 
   toggleFractionDecimal() {
@@ -120,30 +95,38 @@ export class CalculatorModel {
     this.display = this.formatResult(this.displayValue);
   }
 
+  private dismissHistory() {
+    this.historyIndex = null;
+  }
+
   private prepareValue() {
+    this.dismissHistory();
     if (this.hasError) {
       this.expression = '';
+      this.cursor = 0;
       this.showValue(0);
       this.hasError = false;
       this.justEvaluated = false;
     }
     if (this.justEvaluated) {
       this.expression = '';
+      this.cursor = 0;
       this.justEvaluated = false;
     }
   }
 
-  private append(text: string) {
+  private insert(text: string) {
     if (this.expression.length + text.length > MAX_EXPRESSION_LENGTH) return false;
-    this.expression += text;
+    this.expression = this.expression.slice(0, this.cursor) + text + this.expression.slice(this.cursor);
+    this.cursor += text.length;
     this.refreshPreview();
     return true;
   }
 
   private appendValue(text: string) {
     this.prepareValue();
-    const multiply = endsValue(this.expression) ? '*' : '';
-    this.append(`${multiply}${text}`);
+    const before = this.expression.slice(0, this.cursor);
+    this.insert(`${endsValue(before) ? '*' : ''}${text}`);
   }
 
   private refreshPreview() {
@@ -155,7 +138,7 @@ export class CalculatorModel {
       this.showValue(evaluateExpression(this.expression, this.context()));
       this.hasError = false;
     } catch {
-      // Incomplete expressions are normal while the user is still typing.
+      // Incomplete MathPrint templates and operators retain the last valid value.
     }
   }
 
@@ -168,94 +151,146 @@ export class CalculatorModel {
   clearAll() {
     this.displayMode = 'decimal';
     this.expression = '';
+    this.cursor = 0;
+    this.historyIndex = null;
     this.showValue(0);
     this.hasError = false;
     this.justEvaluated = false;
   }
 
   clearEntry() {
+    this.dismissHistory();
     if (this.hasError) {
       this.hasError = false;
       this.refreshPreview();
       return;
     }
-    const start = lastOperandStart(this.expression);
-    if (start < this.expression.length) {
-      this.expression = this.expression.slice(0, start);
+    if (this.justEvaluated) {
+      this.expression = '';
+      this.cursor = 0;
       this.justEvaluated = false;
-      this.refreshPreview();
+      this.showValue(0);
+      return;
     }
+
+    const fraction = fractionContextAt(this.expression, this.cursor);
+    if (fraction?.field === 'numerator') {
+      this.expression = this.expression.slice(0, fraction.numeratorStart)
+        + this.expression.slice(fraction.numeratorEnd);
+      this.cursor = fraction.numeratorStart;
+    } else if (fraction?.field === 'denominator') {
+      this.expression = this.expression.slice(0, fraction.denominatorStart)
+        + this.expression.slice(fraction.denominatorEnd);
+      this.cursor = fraction.denominatorStart;
+    } else {
+      const before = this.expression.slice(0, this.cursor);
+      const start = lastOperandStart(before);
+      this.expression = this.expression.slice(0, start) + this.expression.slice(this.cursor);
+      this.cursor = start;
+    }
+    this.refreshPreview();
   }
 
   backspace() {
+    this.dismissHistory();
     if (this.hasError) {
       this.hasError = false;
       this.refreshPreview();
       return;
     }
-    if (this.justEvaluated) this.justEvaluated = false;
-    this.expression = this.expression.slice(0, -1);
+    if (this.justEvaluated) {
+      this.justEvaluated = false;
+      this.cursor = this.expression.length;
+    }
+
+    const edited = backspaceMathPrint(this.expression, this.cursor);
+    this.expression = edited.source;
+    this.cursor = edited.cursor;
     this.refreshPreview();
   }
 
   inputDigit(digit: string) {
     this.prepareValue();
-    if (endsValue(this.expression) && /(?:\)|!|%|pi|e|ans)$/.test(this.expression)) {
-      this.append(`*${digit}`);
+    const before = this.expression.slice(0, this.cursor);
+    if (endsValue(before) && /(?:\)|!|%|pi|e|ans)$/.test(before)) {
+      this.insert(`*${digit}`);
       return;
     }
-    this.append(digit);
+    this.insert(digit);
   }
 
   inputDecimal() {
     this.prepareValue();
-    if (!this.expression || /[+\-*/^(]$/.test(this.expression)) {
-      this.append('0.');
+    const before = this.expression.slice(0, this.cursor);
+    if (!before || /[+\-*/^(,]$/.test(before)) {
+      this.insert('0.');
       return;
     }
-    if (/(?:\)|!|%|pi|e|ans)$/.test(this.expression)) {
-      this.append('*0.');
+    if (/(?:\)|!|%|pi|e|ans)$/.test(before)) {
+      this.insert('*0.');
       return;
     }
-    const currentNumber = this.expression.match(/(?:^|[+\-*/^(])(\d*\.?\d*)$/)?.[1] ?? '';
-    if (!currentNumber.includes('.')) this.append('.');
+    const currentNumber = before.match(/(?:^|[+\-*/^(,])(\d*\.?\d*)$/)?.[1] ?? '';
+    if (!currentNumber.includes('.')) this.insert('.');
+  }
+
+  inputFraction() {
+    this.prepareValue();
+    const template = createFractionTemplate(this.expression, this.cursor);
+    if (template.source.length > MAX_EXPRESSION_LENGTH) return;
+    this.expression = template.source;
+    this.cursor = template.cursor;
+    this.refreshPreview();
   }
 
   chooseOperator(operator: Operator) {
     if (this.hasError) return;
+    this.dismissHistory();
+
     if (this.justEvaluated) {
       this.expression = 'ans';
+      this.cursor = this.expression.length;
       this.justEvaluated = false;
     }
-    if (!this.expression) {
-      if (operator === '-') this.append('-');
+
+    const fraction = fractionContextAt(this.expression, this.cursor);
+    if (fraction?.field === 'denominator' && this.cursor === fraction.denominatorEnd) {
+      this.cursor = fraction.close + 1;
+    }
+
+    const before = this.expression.slice(0, this.cursor);
+    if (!before) {
+      if (operator === '-') this.insert('-');
       return;
     }
-    if (this.expression.endsWith('(')) {
-      if (operator === '-') this.append('-');
+    if (/[,(]$/.test(before)) {
+      if (operator === '-') this.insert('-');
       return;
     }
 
-    if (/[+\-*/^]$/.test(this.expression)) {
-      if (operator === '-' && !this.expression.endsWith('-')) {
-        this.append('-');
+    if (/[+\-*/^]$/.test(before)) {
+      if (operator === '-' && !before.endsWith('-')) {
+        this.insert('-');
         return;
       }
-      this.expression = this.expression.replace(/[+\-*/^]+$/, operator);
+      this.expression = this.expression.slice(0, this.cursor - 1)
+        + operator + this.expression.slice(this.cursor);
       this.refreshPreview();
       return;
     }
 
-    if (endsValue(this.expression)) this.append(operator);
+    if (endsValue(before)) this.insert(operator);
   }
 
   inputParenthesis(open: boolean) {
     if (open) {
       this.prepareValue();
-      this.append(`${endsValue(this.expression) ? '*' : ''}(`);
+      const before = this.expression.slice(0, this.cursor);
+      this.insert(`${endsValue(before) ? '*' : ''}(`);
       return;
     }
-    if (parenthesesBalancedEnoughToClose(this.expression) && endsValue(this.expression)) this.append(')');
+    const before = this.expression.slice(0, this.cursor);
+    if (parenthesesBalancedEnoughToClose(before) && endsValue(before)) this.insert(')');
   }
 
   inputFunction(name: ScientificFunction) {
@@ -268,20 +303,26 @@ export class CalculatorModel {
 
   inputPostfix(operator: '!' | '%') {
     if (this.hasError) return;
+    this.dismissHistory();
     if (this.justEvaluated) {
       this.expression = 'ans';
+      this.cursor = this.expression.length;
       this.justEvaluated = false;
     }
-    if (endsValue(this.expression)) this.append(operator);
+    if (endsValue(this.expression.slice(0, this.cursor))) this.insert(operator);
   }
 
   inputPowerShortcut(power: '2' | '-1') {
-    if (this.hasError || !endsValue(this.expression)) return;
+    if (this.hasError) return;
+    this.dismissHistory();
     if (this.justEvaluated) {
       this.expression = 'ans';
+      this.cursor = this.expression.length;
       this.justEvaluated = false;
     }
-    this.append(power === '2' ? '^(2)' : '^(-1)');
+    if (endsValue(this.expression.slice(0, this.cursor))) {
+      this.insert(power === '2' ? '^(2)' : '^(-1)');
+    }
   }
 
   inputPowerFunction(base: '10' | 'e') {
@@ -290,38 +331,92 @@ export class CalculatorModel {
 
   toggleSign() {
     if (this.hasError) return;
+    this.dismissHistory();
     if (this.justEvaluated) {
       this.expression = 'ans';
+      this.cursor = this.expression.length;
       this.justEvaluated = false;
     }
-    if (!this.expression || /[+\-*/^(]$/.test(this.expression)) {
-      this.append('-');
+
+    const before = this.expression.slice(0, this.cursor);
+    if (!before || /[+\-*/^(,]$/.test(before)) {
+      this.insert('-');
       return;
     }
 
-    const start = lastOperandStart(this.expression);
-    if (start >= this.expression.length) return;
-    const prefix = this.expression.slice(0, start);
-    const operand = this.expression.slice(start);
+    const start = lastOperandStart(before);
+    if (start >= this.cursor) return;
+    const operand = this.expression.slice(start, this.cursor);
     const negative = operand.match(/^\(-(.+)\)$/);
-    this.expression = negative ? `${prefix}${negative[1]}` : `${prefix}(-${operand})`;
+    const replacement = negative ? negative[1] : `(-${operand})`;
+    this.expression = this.expression.slice(0, start) + replacement + this.expression.slice(this.cursor);
+    this.cursor = start + replacement.length;
     this.refreshPreview();
   }
 
   equals() {
+    if (this.historyIndex !== null) {
+      this.recallHistorySelection();
+      return;
+    }
     if (!this.expression) return;
+
     try {
       const result = normaliseNumber(evaluateExpression(this.expression, this.context()));
-      const label = `${formatExpression(this.expression)} =`;
-      this.history.unshift({ id: ++this.historyId, expression: label, result });
+      const source = this.expression;
+      this.history.unshift({
+        id: ++this.historyId,
+        source,
+        expression: `${formatExpression(source)} =`,
+        result,
+      });
       if (this.history.length > 30) this.history.pop();
       this.lastAnswer = result;
       this.showValue(result);
       this.hasError = false;
       this.justEvaluated = true;
+      this.cursor = this.expression.length;
     } catch (error) {
       this.fail(error);
     }
+  }
+
+  moveVertical(direction: 'up' | 'down') {
+    if (!this.justEvaluated && !this.hasError) {
+      const moved = moveFractionCursor(this.expression, this.cursor, direction);
+      if (moved !== null) {
+        this.cursor = moved;
+        return;
+      }
+    }
+
+    if (!this.history.length) return;
+    if (direction === 'up') {
+      this.historyIndex = this.historyIndex === null
+        ? 0
+        : Math.min(this.history.length - 1, this.historyIndex + 1);
+    } else if (this.historyIndex !== null) {
+      this.historyIndex = this.historyIndex === 0 ? null : this.historyIndex - 1;
+    }
+  }
+
+  moveRight() {
+    if (this.justEvaluated || this.hasError) return;
+    const moved = moveFractionCursor(this.expression, this.cursor, 'right');
+    if (moved !== null) this.cursor = moved;
+  }
+
+  recallHistorySelection() {
+    if (this.historyIndex === null) return false;
+    const entry = this.history[this.historyIndex];
+    if (!entry) return false;
+    this.expression = entry.source;
+    this.cursor = entry.source.length;
+    this.historyIndex = null;
+    this.hasError = false;
+    this.justEvaluated = false;
+    this.refreshPreview();
+    return true;
   }
 
   toggleAngleMode() {
@@ -346,15 +441,8 @@ export class CalculatorModel {
     this.memory = normaliseNumber((this.memory ?? 0) + value * direction);
   }
 
-  useHistory(entry: HistoryEntry) {
-    this.expression = String(entry.result);
-    this.lastAnswer = entry.result;
-    this.showValue(entry.result);
-    this.hasError = false;
-    this.justEvaluated = true;
-  }
-
   clearHistory() {
     this.history = [];
+    this.historyIndex = null;
   }
 }
