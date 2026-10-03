@@ -97,8 +97,10 @@ export class CalculatorModel {
 
   private prepareValue() {
     if (this.hasError) {
+      this.expression = '';
+      this.display = '0';
       this.hasError = false;
-      this.display = formatNumber(this.lastAnswer);
+      this.justEvaluated = false;
     }
     if (this.justEvaluated) {
       this.expression = '';
@@ -165,10 +167,7 @@ export class CalculatorModel {
       this.refreshPreview();
       return;
     }
-    if (this.justEvaluated) {
-      this.justEvaluated = false;
-      return;
-    }
+    if (this.justEvaluated) this.justEvaluated = false;
     this.expression = this.expression.slice(0, -1);
     this.refreshPreview();
   }
@@ -242,8 +241,12 @@ export class CalculatorModel {
   }
 
   inputPostfix(operator: '!' | '%') {
-    if (this.hasError || this.justEvaluated || !endsValue(this.expression)) return;
-    this.append(operator);
+    if (this.hasError) return;
+    if (this.justEvaluated) {
+      this.expression = 'ans';
+      this.justEvaluated = false;
+    }
+    if (endsValue(this.expression)) this.append(operator);
   }
 
   inputPowerShortcut(power: '2' | '-1') {
