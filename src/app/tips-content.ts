@@ -66,8 +66,8 @@ export const tipsCatalog: Record<TipsFeatureId, Tutorial> = {
           },
           {
             title: 'Use scientific functions',
-            body: 'Use functions like sin, log, √, and powers.',
-            target: '.calculator-scientific-keypad',
+            body: 'Use functions like sin, log, √, and powers. On narrow screens, press Scientific to show these controls.',
+            target: ['.calculator-scientific-toggle', '.calculator-scientific-keypad'],
             targetLabel: 'Scientific functions',
             placement: 'bottom',
           },

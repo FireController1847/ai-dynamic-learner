@@ -1,4 +1,4 @@
-import { defineComponent, h, onActivated, onBeforeUnmount, onDeactivated, reactive } from 'vue';
+import { defineComponent, h, onActivated, onBeforeUnmount, onDeactivated, reactive, ref } from 'vue';
 import {
   CalculatorModel, formatNumber, type HistoryEntry, type Operator,
 } from './calculator-model.ts';
@@ -8,6 +8,7 @@ export const Calculator = defineComponent({
   props: { title: { type: String, required: true } },
   setup(props) {
     const calculator = reactive(new CalculatorModel());
+    const scientificOpen = ref(false);
     let listening = false;
 
     function handleKeyboard(event: KeyboardEvent) {
@@ -100,6 +101,7 @@ export const Calculator = defineComponent({
             h('output', {
               class: ['calculator-value', { 'is-error': calculator.hasError }],
               'aria-label': 'Calculator result',
+              title: calculator.display,
             }, calculator.display),
           ]),
           h('div', { class: 'calculator-mode-row' }, [
@@ -110,7 +112,14 @@ export const Calculator = defineComponent({
               'aria-label': `Angle mode: ${calculator.angleMode}. Change angle mode`,
               onClick: () => calculator.toggleAngleMode(),
             }, calculator.angleMode),
-            h('span', 'Expression mode · standard scientific functions'),
+            h('button', {
+              type: 'button',
+              class: 'quiet-button calculator-scientific-toggle',
+              'aria-expanded': scientificOpen.value,
+              'aria-controls': 'calculator-scientific-keypad',
+              onClick: () => { scientificOpen.value = !scientificOpen.value; },
+            }, scientificOpen.value ? 'Hide scientific' : 'Scientific'),
+            h('span', { class: 'calculator-mode-description' }, 'Expression mode · standard scientific functions'),
           ]),
           h('div', { class: 'calculator-memory', 'aria-label': 'Memory controls' }, [
             memoryKey('MC', () => { calculator.memory = null; }, calculator.memory === null, 'Clear memory'),
@@ -119,7 +128,11 @@ export const Calculator = defineComponent({
             memoryKey('M−', () => calculator.memoryAdjust(-1), false, 'Subtract from memory'),
             memoryKey('MS', () => calculator.memoryStore(), false, 'Store in memory'),
           ]),
-          h('div', { class: 'calculator-scientific-keypad', 'aria-label': 'Scientific functions' }, [
+          h('div', {
+            id: 'calculator-scientific-keypad',
+            class: ['calculator-scientific-keypad', { 'is-expanded': scientificOpen.value }],
+            'aria-label': 'Scientific functions',
+          }, [
             key('(', () => calculator.inputParenthesis(true), 'function', 'Open parenthesis'),
             key(')', () => calculator.inputParenthesis(false), 'function', 'Close parenthesis'),
             key('π', () => calculator.inputConstant('pi'), 'function', 'Pi'),
