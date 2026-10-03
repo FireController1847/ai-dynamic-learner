@@ -410,13 +410,17 @@ export class CalculatorModel {
     if (this.historyIndex === null) return false;
     const entry = this.history[this.historyIndex];
     if (!entry) return false;
+    this.recallHistoryEntry(entry);
+    return true;
+  }
+
+  recallHistoryEntry(entry: HistoryEntry) {
     this.expression = entry.source;
     this.cursor = entry.source.length;
     this.historyIndex = null;
     this.hasError = false;
     this.justEvaluated = false;
     this.refreshPreview();
-    return true;
   }
 
   toggleAngleMode() {
