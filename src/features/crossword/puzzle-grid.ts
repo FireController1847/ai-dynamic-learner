@@ -205,7 +205,7 @@ export const PuzzleGrid = defineComponent({
                 }],
                 style: celebrationIndex === undefined
                   ? undefined
-                  : `--crossword-celebration-delay: ${celebrationIndex * 48}ms;`,
+                  : `--crossword-celebration-delay: ${celebrationIndex * 18}ms;`,
                 role: 'gridcell',
                 tabindex: selected || (props.activeCell === null && cell === props.game.rows.join('').search(/[A-Z]/)) ? 0 : -1,
                 'aria-selected': selected,
