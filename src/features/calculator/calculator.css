@@ -97,7 +97,7 @@
   color: var(--text-secondary);
   font-size: 12px;
 }
-.calculator-scientific-toggle { margin-left: auto; }
+.calculator-settings-trigger { margin-left: auto; }
 .calculator-mode-description { display: none; }
 .calculator-angle-mode {
   flex: 0 0 auto;
@@ -244,6 +244,39 @@
 }
 .calculator-history-empty span { font-size: 12px; }
 
+.calculator-settings {
+  width: min(420px, calc(100% - 32px));
+  max-height: calc(100dvh - 32px);
+  padding: 24px;
+  overflow: auto;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-dialog);
+  color: var(--text-color);
+  background: var(--page-background);
+  box-shadow: var(--shadow-overlay);
+}
+.calculator-settings::backdrop { background: var(--scrim); }
+.calculator-settings > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.calculator-settings-field {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+}
+.calculator-settings-field select { width: 100%; }
+.calculator-settings-help {
+  margin: 16px 0 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
 @container calculator (min-width: 300px) {
   .calculator-scientific-keypad { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 }
@@ -272,6 +305,11 @@
 
 @media (max-width: 700px) {
   .calculator-page { margin-inline: -12px; }
+}
+
+@media (max-width: 420px) {
+  .calculator-settings { padding: 16px; }
+  .calculator-settings-field { grid-template-columns: 1fr; gap: 4px; }
 }
 
 @media (pointer: coarse) {
