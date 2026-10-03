@@ -103,7 +103,6 @@ export function fractionContextAt(source: string, cursor: number): FractionConte
       ? 'numerator'
       : cursor <= span.close ? 'denominator' : 'outside';
     match = { ...span, numeratorStart, numeratorEnd, denominatorStart, denominatorEnd, field };
-    index = span.close;
   }
   return match;
 }
