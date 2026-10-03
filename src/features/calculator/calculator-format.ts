@@ -1,5 +1,10 @@
 export type DecimalPlaces = number | null;
 
+export interface FractionParts {
+  numerator: number;
+  denominator: number;
+}
+
 const MAX_FRACTION_DENOMINATOR = 10_000;
 const FRACTION_TOLERANCE = 1e-10;
 
@@ -27,7 +32,7 @@ export function formatNumber(value: number, decimalPlaces: DecimalPlaces = null)
   return String(Number.parseFloat(normalised.toPrecision(12)));
 }
 
-export function fractionForValue(value: number) {
+export function fractionPartsForValue(value: number): FractionParts | null {
   if (!Number.isFinite(value) || Number.isInteger(value)) return null;
 
   const sign = value < 0 ? -1 : 1;
@@ -47,7 +52,7 @@ export function fractionForValue(value: number) {
 
     const approximation = nextNumerator / nextDenominator;
     if (nextDenominator > 1 && Math.abs(approximation - target) <= FRACTION_TOLERANCE) {
-      return `${sign * nextNumerator}/${nextDenominator}`;
+      return { numerator: sign * nextNumerator, denominator: nextDenominator };
     }
 
     previousNumerator = numerator;
@@ -61,4 +66,9 @@ export function fractionForValue(value: number) {
   }
 
   return null;
+}
+
+export function fractionForValue(value: number) {
+  const fraction = fractionPartsForValue(value);
+  return fraction ? `${fraction.numerator}/${fraction.denominator}` : null;
 }
