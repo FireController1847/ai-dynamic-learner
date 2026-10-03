@@ -49,38 +49,38 @@ export const tipsCatalog: Record<TipsFeatureId, Tutorial> = {
 
 
   calculator: {
-    version: 2,
+    version: 3,
     sections: [
       {
         id: 'basics',
-        title: 'Scientific calculator',
-        description: 'Build expressions and use the scientific controls.',
+        title: 'Calculator',
+        description: 'Learn the basics.',
         when: '.calculator-page',
         steps: [
           {
-            title: 'Build the whole expression',
-            body: 'Use numbers, operators, and parentheses. The calculator follows normal order of operations, then Enter or = evaluates it.',
+            title: 'Enter a calculation',
+            body: 'Type numbers and symbols, then press =.',
             target: '.calculator-basic-keypad',
             targetLabel: 'Calculator keypad',
             placement: 'right',
           },
           {
             title: 'Use scientific functions',
-            body: 'Trig, inverse trig, logarithms, powers, roots, constants, factorial, and Ans are available here.',
+            body: 'Use functions like sin, log, √, and powers.',
             target: '.calculator-scientific-keypad',
             targetLabel: 'Scientific functions',
             placement: 'bottom',
           },
           {
-            title: 'Check the angle mode',
-            body: 'DEG and RAD change how trigonometric functions read and return angles. Press the mode button to switch.',
+            title: 'Choose an angle mode',
+            body: 'Use DEG or RAD for trigonometric functions.',
             target: '.calculator-angle-mode',
             targetLabel: 'Angle mode',
             placement: 'bottom',
           },
           {
-            title: 'Reuse values',
-            body: 'Memory keeps a number handy. Completed calculations also stay in History for this session.',
+            title: 'Reuse your results',
+            body: 'Memory saves a number. History keeps your recent calculations.',
             target: ['.calculator-memory', '.calculator-history'],
             targetLabel: 'Memory and history',
             placement: 'left',

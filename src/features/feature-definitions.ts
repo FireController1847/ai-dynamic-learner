@@ -19,7 +19,7 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'calculator', label: 'Calculator', path: '/calculator/', icon: 'calculator',
     image: '',
-    description: 'Evaluate full scientific expressions with functions, constants, angle modes, memory, and session history.',
+    description: 'Calculate with numbers and scientific functions.',
     metadata: { keywords: ['calculator', 'scientific calculator', 'arithmetic', 'trigonometry', 'logarithms'] },
   },
   {
