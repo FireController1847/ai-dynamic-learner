@@ -1,6 +1,6 @@
 # Todo List artwork
 
-`src/assets/todo-list.png` is the transparent 1254 × 1254 PNG used by Home, navigation, the page header, and the Todo List coming-soon screen. The feature definition also supplies this image and its dimensions, media type, and alternative description to the existing Open Graph, Twitter, and JSON-LD metadata generator. The canonical URL, title, description, and other shared metadata come from the existing route generation.
+`src/assets/todo-list.png` is the transparent 1254 × 1254 PNG used by Home, navigation, and the page header. Todo List's empty-library screen uses the sidebar's New todo list plus icon. The feature definition also supplies the generated image and its dimensions, media type, and alternative description to the existing Open Graph, Twitter, and JSON-LD metadata generator. The canonical URL, title, description, and other shared metadata come from the existing route generation.
 
 Generated with the built-in image generation tool, using `src/assets/notebook.png` and `src/assets/index-cards.png` as style references.
 
@@ -10,4 +10,4 @@ Create a new Todo List app icon matching the supplied Notebook and Index Cards S
 
 ## Manual review
 
-Inspect the icon on Home, in navigation, in the header, and on the coming-soon screen at desktop and phone widths. Check `/todo-list/` directly and after refresh. After the next production build, inspect the route's title, description, canonical URL, Open Graph/Twitter image URL and dimensions, and JSON-LD. Generated output stays in ignored `dist/`.
+Inspect the generated icon on Home, in navigation, and in the header at desktop and phone widths. The empty-library screen should show the plus icon instead. Check `/todo-list/` directly and after refresh. After the next requested production build, inspect the route's title, description, canonical URL, Open Graph/Twitter image URL and dimensions, and JSON-LD. Generated output stays in ignored `dist/`.

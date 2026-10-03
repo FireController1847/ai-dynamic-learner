@@ -1,6 +1,6 @@
 # Crossword artwork
 
-`src/assets/crossword.png` is the transparent 1254 × 1254 PNG used by Home, navigation, the page header, and the Crossword empty-library view. The feature definition supplies this image and its dimensions, media type, and alternative description to the existing Open Graph, Twitter, and JSON-LD metadata generator. Canonical URLs, titles, descriptions, and other shared metadata use the existing route generation.
+`src/assets/crossword.png` is the transparent 1254 × 1254 PNG used by Home, navigation, and the page header. The empty-library and selected-group creation screens use the sidebar's Crossword SVG icon. The feature definition supplies the generated image and its dimensions, media type, and alternative description to the existing Open Graph, Twitter, and JSON-LD metadata generator. Canonical URLs, titles, descriptions, and other shared metadata use the existing route generation.
 
 Generated with the built-in image generation tool, using `src/assets/notebook.png`, `src/assets/word-search.png`, and `src/assets/index-cards.png` as style references.
 
@@ -10,4 +10,4 @@ Use case: stylized-concept. Asset type: Crossword app icon for Dynamic Learner. 
 
 ## Manual review
 
-Inspect the icon on Home, in navigation, in the header, and in the empty-library view at desktop and phone widths. Check `/crossword/` directly and after refresh. After the next requested production build, inspect the route's Open Graph/Twitter image URL, dimensions, alternative description, and JSON-LD. Generated output stays in ignored `dist/`.
+Inspect the generated icon on Home, in navigation, and in the header at desktop and phone widths. The empty-library and selected-group screens should show the creation SVG instead. Check `/crossword/` directly and after refresh. After the next requested production build, inspect the route's Open Graph/Twitter image URL, dimensions, alternative description, and JSON-LD. Generated output stays in ignored `dist/`.

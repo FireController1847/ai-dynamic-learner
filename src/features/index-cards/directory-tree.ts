@@ -1,10 +1,10 @@
-export interface DirectoryTreeHandle { reveal(id: string): void; focusToggle(): void; }
+export interface DirectoryTreeHandle { reveal(id: string): void; focusToggle(): void; createSet(): void; }
 import type { VNode } from 'vue';
 import type { LibraryItem, MovePosition } from './tree-model.ts';
 import { inputValue } from '../../core/dom.ts';
 import { Icon } from '../../components/icon.ts';
 import { DeleteConfirmation } from '../../components/delete-confirmation.ts';
-import { canMove, countItems, createItem, deleteItem, findItem, MAX_DEPTH, MAX_ITEMS, MAX_NAME_LENGTH, moveItem } from './tree-model.ts';
+import { canMove, countItems, createItem, deleteItem, findItem, firstEntry, MAX_DEPTH, MAX_ITEMS, MAX_NAME_LENGTH, moveItem } from './tree-model.ts';
 
 import { defineComponent, type PropType, h, nextTick, onDeactivated, ref } from 'vue';
 
@@ -53,12 +53,12 @@ export const DirectoryTree = defineComponent({
     async function confirmDelete(id = pendingDelete.value?.id) {
       const found = id && findItem(props.items, id);
       if (!found) { cancelDelete(); return; }
-      const { item, siblings, index, parentId } = found;
-      const fallbackId = siblings[index + 1]?.id ?? siblings[index - 1]?.id ?? parentId;
+      const { item } = found;
       const removesSelection = props.selectedId === item.id ||
         (item.kind === 'group' && Boolean(findItem(item.children, props.selectedId)));
 
       deleteItem(props.items, item.id);
+      const fallbackId = firstEntry(props.items)?.id ?? null;
       const removedItems = [item];
       while (removedItems.length) {
         const removed = removedItems.pop();
@@ -66,7 +66,10 @@ export const DirectoryTree = defineComponent({
         expanded.value.delete(removed.id);
         if (removed.kind === 'group') removedItems.push(...removed.children);
       }
-      if (removesSelection) emit('select', fallbackId);
+      if (removesSelection) {
+        if (fallbackId) reveal(fallbackId);
+        emit('select', fallbackId);
+      }
       pendingDelete.value = null;
       deleteTrigger = null;
       announcement.value = `Deleted ${item.name}${item.kind === 'group' ? ' and everything inside it' : ''}.`;
@@ -140,7 +143,7 @@ export const DirectoryTree = defineComponent({
         parentId = findItem(props.items, parentId)?.parentId;
       }
     }
-    expose({ reveal, focusToggle: () => collapseButton.value?.focus() });
+    expose({ reveal, focusToggle: () => collapseButton.value?.focus(), createSet: () => create('set') });
 
     function endDrag() {
       draggedId.value = null;

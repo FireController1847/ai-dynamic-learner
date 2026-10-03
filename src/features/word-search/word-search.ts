@@ -8,13 +8,15 @@ import { TIPS_ACTION_EVENT, type TutorialRequest } from '../../core/tutorial.ts'
 import type { WordSearch as FeatureModel } from './library-model.ts';
 import { inputValue } from '../../core/dom.ts';
 import { Icon } from '../../components/icon.ts';
+import { LibraryEmptyState } from '../../components/library-empty-state.ts';
+import { useLibrarySelection } from '../../components/use-library-selection.ts';
 import { usePersistedPanelResize } from '../../components/use-persisted-panel-resize.ts';
 import { WordSearchLibrary } from './library.ts';
 import { PuzzleForm, PuzzleSummary } from './puzzle-form.ts';
 import { PuzzleGame } from './puzzle-game.ts';
 import { DisplaySettings } from './display-settings.ts';
 import { resolvedDisplayOptions } from './display-options.ts';
-import { canMove, deleteItem, findItem, groupOptions, moveItem, saveWordSearch } from './library-model.ts';
+import { canMove, deleteItem, findItem, firstEntry, groupOptions, moveItem, saveWordSearch } from './library-model.ts';
 
 import { defineComponent, type PropType, computed, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref } from 'vue';
 
@@ -28,13 +30,21 @@ export const WordSearch = defineComponent({
     model: { type: Object as PropType<FeatureModel>, required: true },
   },
   setup(props) {
-    const selectedId = ref<string | null>(null);
     const setupTarget = ref<SetupTarget | null>(null);
+    const selectedId = useLibrarySelection({
+      firstId: () => firstEntry(props.model.items)?.id ?? null,
+      hasItem: (id) => findItem(props.model.items, id) !== null,
+      enabled: () => setupTarget.value === null,
+      onAutoSelect: (id) => {
+        library.value?.reveal(id);
+        if (libraryOverlay.value) libraryCollapsed.value = true;
+      },
+    });
     const setupVersion = ref(0);
     const workspaceHeading = ref<HTMLElement | null>(null);
     const overlayQuery = window.matchMedia('(max-width: 700px), (max-width: 1100px) and (pointer: coarse)');
     const libraryOverlay = ref(overlayQuery.matches);
-    const libraryCollapsed = ref(false);
+    const libraryCollapsed = ref(overlayQuery.matches && selectedId.value !== null);
     const layout = ref<HTMLElement | null>(null);
     const {
       width: libraryWidth,
@@ -211,7 +221,11 @@ export const WordSearch = defineComponent({
 
     function organizationControls(item: LibraryItem) {
       if (!selection.value) return null;
-      return h('details', { key: `organization-${item.id}`, class: 'word-search-organization', open: item.kind === 'group' }, [
+      return h('details', {
+        key: `organization-${item.id}`,
+        class: ['word-search-organization', { 'library-group-organization': item.kind === 'group' }],
+        open: item.kind === 'group',
+      }, [
         h('summary', { class: 'organization-summary' }, 'Location and order'),
         h('div', { class: 'word-search-location' }, [
           h('label', { for: 'word-search-parent' }, 'Move to group'),
@@ -263,37 +277,36 @@ export const WordSearch = defineComponent({
       }
 
       const item = selection.value?.item;
-      if (!item) {
+      if (!item || item.kind === 'group') {
         return h('section', {
-          class: 'word-search-detail', 'aria-label': 'Word Search workspace',
+          class: 'word-search-detail', 'aria-label': item ? 'Selected group' : 'Word Search workspace',
           inert: libraryOverlay.value && !libraryCollapsed.value,
         }, [
-          h('div', { class: 'word-search-placeholder' }, [
-            h(Icon, { name: 'word-search' }),
-            h('h2', 'Build your word-search library'),
-            h('p', 'Make a word list around a topic you love, choose your settings, and keep everything organized in groups.'),
-            h('button', {
-              type: 'button', class: 'card-primary-button',
-              onClick: () => openNewWordSearch({ parentId: null, parentName: 'Top level' }),
-            }, 'New word search'),
-          ]),
+          h(LibraryEmptyState, {
+            class: { 'has-organization': item !== undefined },
+            icon: 'word-search',
+            title: item?.name ?? 'Build your word-search library',
+            description: item ? 'Create a word search in this group, or select one from the Library.' : 'Make a word list, choose your settings, and organize your puzzles in groups.',
+            actionLabel: 'New word search',
+            onCreate: () => openNewWordSearch({ parentId: item?.id ?? null, parentName: item?.name ?? 'Top level' }),
+          }),
+          item ? organizationControls(item) : null,
+          h('p', { class: 'visually-hidden', role: 'status' }, message.value),
         ]);
       }
 
       return h('section', {
-        class: ['word-search-detail', { 'is-search': item.kind === 'word-search' }],
+        class: 'word-search-detail is-search',
         inert: libraryOverlay.value && !libraryCollapsed.value,
-        'aria-label': item.kind === 'group' ? 'Selected group' : 'Selected word search',
+        'aria-label': 'Selected word search',
       }, [
         h('header', { class: 'word-search-item-heading' }, [
           h('h2', { ref: workspaceHeading, tabindex: -1 }, item.name),
-          h('p', item.kind === 'group'
-            ? `Group · ${item.children.length} items`
-            : 'Word search'),
+          h('p', 'Word search'),
         ]),
-        item.kind === 'word-search' ? (hasPuzzle(item)
+        hasPuzzle(item)
           ? h(PuzzleGame, { key: item.id, item, options: displayOptions.value, onEdit: () => editWordSearch(item) })
-          : h(PuzzleSummary, { key: item.id, item, onEdit: () => editWordSearch(item) })) : null,
+          : h(PuzzleSummary, { key: item.id, item, onEdit: () => editWordSearch(item) }),
         organizationControls(item),
         h('p', { class: 'visually-hidden', role: 'status' }, message.value),
       ]);

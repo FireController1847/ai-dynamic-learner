@@ -4,13 +4,15 @@ import type { Puzzle } from './puzzle-model.ts';
 import type { CrosswordLibraryHandle } from './library.ts';
 import { inputValue } from '../../core/dom.ts';
 import { Icon } from '../../components/icon.ts';
+import { LibraryEmptyState } from '../../components/library-empty-state.ts';
+import { useLibrarySelection } from '../../components/use-library-selection.ts';
 import { usePersistedPanelResize } from '../../components/use-persisted-panel-resize.ts';
 import { CrosswordLibrary } from './library.ts';
 import { PuzzleForm, PuzzleSummary } from './puzzle-form.ts';
 import { PuzzleGame } from './puzzle-game.ts';
 import { DisplaySettings } from './display-settings.ts';
 import { resolvedDisplayOptions } from './display-options.ts';
-import { canMove, findItem, groupOptions, moveItem, saveCrossword } from './library-model.ts';
+import { canMove, findItem, firstEntry, groupOptions, moveItem, saveCrossword } from './library-model.ts';
 
 import {
   defineComponent, type PropType, computed, h, nextTick, onBeforeUnmount, onDeactivated, ref,
@@ -25,17 +27,24 @@ export const Crossword = defineComponent({
   name: 'Crossword',
   props: {
     title: { type: String, required: true },
-    image: { type: String, default: '' },
     model: { type: Object as PropType<FeatureModel>, required: true },
   },
   setup(props) {
-    const selectedId = ref<string | null>(null);
     const setupTarget = ref<SetupTarget | null>(null);
+    const selectedId = useLibrarySelection({
+      firstId: () => firstEntry(props.model.items)?.id ?? null,
+      hasItem: (id) => findItem(props.model.items, id) !== null,
+      enabled: () => setupTarget.value === null,
+      onAutoSelect: (id) => {
+        library.value?.reveal(id);
+        if (libraryOverlay.value) libraryCollapsed.value = true;
+      },
+    });
     const setupVersion = ref(0);
     const workspaceHeading = ref<HTMLElement | null>(null);
     const overlayQuery = window.matchMedia('(max-width: 700px), (max-width: 1100px) and (pointer: coarse)');
     const libraryOverlay = ref(overlayQuery.matches);
-    const libraryCollapsed = ref(false);
+    const libraryCollapsed = ref(overlayQuery.matches && selectedId.value !== null);
     const layout = ref<HTMLElement | null>(null);
     const library = ref<CrosswordLibraryHandle | null>(null);
     const showLibraryButton = ref<HTMLButtonElement | null>(null);
@@ -166,7 +175,7 @@ export const Crossword = defineComponent({
       if (!selection.value) return null;
       return h('details', {
         key: `organization-${item.id}`,
-        class: 'crossword-organization',
+        class: ['crossword-organization', { 'library-group-organization': item.kind === 'group' }],
         open: item.kind === 'group',
       }, [
         h('summary', { class: 'organization-summary' }, 'Location and order'),
@@ -221,54 +230,46 @@ export const Crossword = defineComponent({
       }
 
       const item = selection.value?.item;
-      if (!item) {
+      if (!item || item.kind === 'group') {
         return h('section', {
           class: 'crossword-detail',
-          'aria-label': 'Crossword workspace',
+          'aria-label': item ? 'Selected group' : 'Crossword workspace',
           inert: libraryOverlay.value && !libraryCollapsed.value,
         }, [
-          h('div', { class: 'crossword-placeholder' }, [
-            props.image ? h('img', {
-              class: 'crossword-artwork',
-              src: new URL(props.image, document.baseURI).href,
-              alt: '', 'aria-hidden': 'true', width: 96, height: 96,
-            }) : h(Icon, { name: 'crossword' }),
-            h('h2', 'Build your crossword library'),
-            h('p', 'Add answers and clues, let Dynamic Learner arrange the grid, and keep your puzzles organized in groups.'),
-            h('button', {
-              type: 'button',
-              class: 'card-primary-button',
-              onClick: () => openNewCrossword({ parentId: null, parentName: 'Top level' }),
-            }, 'New crossword'),
-          ]),
+          h(LibraryEmptyState, {
+            class: { 'has-organization': item !== undefined },
+            icon: 'crossword',
+            title: item?.name ?? 'Build your crossword library',
+            description: item ? 'Create a crossword in this group, or select one from the Library.' : 'Add answers and clues, then organize your puzzles in groups.',
+            actionLabel: 'New crossword',
+            onCreate: () => openNewCrossword({ parentId: item?.id ?? null, parentName: item?.name ?? 'Top level' }),
+          }),
+          item ? organizationControls(item) : null,
+          h('p', { class: 'visually-hidden', role: 'status' }, message.value),
         ]);
       }
 
       return h('section', {
-        class: ['crossword-detail', { 'is-crossword': item.kind === 'crossword' }],
+        class: 'crossword-detail is-crossword',
         inert: libraryOverlay.value && !libraryCollapsed.value,
-        'aria-label': item.kind === 'group' ? 'Selected group' : 'Selected crossword',
+        'aria-label': 'Selected crossword',
       }, [
         h('header', { class: 'crossword-item-heading' }, [
           h('h2', { ref: workspaceHeading, tabindex: -1 }, item.name),
-          h('p', item.kind === 'group'
-            ? `Group · ${item.children.length} items`
-            : 'Crossword'),
+          h('p', 'Crossword'),
         ]),
-        item.kind === 'crossword'
-          ? (hasPuzzle(item)
-            ? h(PuzzleGame, {
-              key: item.id,
-              item,
-              options: displayOptions.value,
-              onEdit: () => editCrossword(item),
-            })
-            : h(PuzzleSummary, {
-              key: item.id,
-              item,
-              onEdit: () => editCrossword(item),
-            }))
-          : null,
+        hasPuzzle(item)
+          ? h(PuzzleGame, {
+            key: item.id,
+            item,
+            options: displayOptions.value,
+            onEdit: () => editCrossword(item),
+          })
+          : h(PuzzleSummary, {
+            key: item.id,
+            item,
+            onEdit: () => editCrossword(item),
+          }),
         organizationControls(item),
         h('p', { class: 'visually-hidden', role: 'status' }, message.value),
       ]);

@@ -196,20 +196,8 @@
 }
 .word-search-item-heading h2 { flex: 1; min-width: 0; font-size: 16px; line-height: 22px; }
 .word-search-item-heading p { margin: 0; color: var(--text-secondary); font-size: 12px; }
-.word-search-placeholder {
-  width: min(100% - 40px, 620px);
-  margin: clamp(32px, 8vh, 80px) auto;
-  padding: 28px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-dialog);
-  background: var(--surface-subtle);
-}
-.word-search-placeholder > .ui-icon { width: 32px; height: 32px; color: var(--brand); }
-.word-search-placeholder h2,
-.word-search-placeholder h3 { margin: 16px 0 8px; }
-.word-search-placeholder p { color: var(--text-secondary); }
 .word-search-eyebrow { margin-bottom: 0; color: var(--brand-text) !important; font-size: 12px; font-weight: 600; }
-.word-search-organization {
+.word-search-organization:not(.library-group-organization) {
   padding: 0 20px;
   border-top: 1px solid var(--border-color);
   background: var(--page-background);
@@ -220,9 +208,8 @@
   margin: 0;
   overflow: auto;
 }
-.word-search-detail:not(.is-search) .word-search-organization { max-width: 560px; margin: 20px; padding: 16px; border: 1px solid var(--border-color); border-radius: var(--radius); }
 .word-search-organization summary { color: var(--text-secondary); font-size: 12px; cursor: pointer; }
-.word-search-organization[open] { padding-bottom: 16px; }
+.word-search-organization[open]:not(.library-group-organization) { padding-bottom: 16px; }
 .word-search-location { display: grid; gap: 4px; max-width: 480px; margin-top: 12px; }
 .word-search-location select { width: 100%; min-width: 0; }
 .word-search-order-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
@@ -256,6 +243,5 @@
   .word-search-rename,
   .word-search-location select { font-size: 16px; }
   .word-search-item-heading { position: sticky; top: 0; z-index: 1; padding-inline: 12px; background: var(--page-background); }
-  .word-search-placeholder { width: calc(100% - 24px); margin-block: 24px; padding: 20px; }
-  .word-search-organization { margin: 12px; }
+  .word-search-organization:not(.library-group-organization) { margin: 12px; }
 }

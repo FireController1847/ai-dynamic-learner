@@ -8,8 +8,10 @@ import { CardSet } from './card-set.ts';
 import { DisplaySettings } from './display-settings.ts';
 import { defaultDisplayOptions, displayStyles } from './display-options.ts';
 import { Icon } from '../../components/icon.ts';
+import { LibraryEmptyState } from '../../components/library-empty-state.ts';
+import { useLibrarySelection } from '../../components/use-library-selection.ts';
 import { usePersistedPanelResize } from '../../components/use-persisted-panel-resize.ts';
-import { canMove, countCards, createItem, deleteItem, findItem, groupOptions, moveItem } from './tree-model.ts';
+import { canMove, countCards, createItem, deleteItem, findItem, firstEntry, groupOptions, moveItem } from './tree-model.ts';
 import { createCard } from './card-model.ts';
 import { clearPreference, readNumberPreference, writeNumberPreference } from '../../core/ui-preferences.ts';
 
@@ -26,8 +28,14 @@ export const IndexCards = defineComponent({
     model: { type: Object as PropType<FeatureModel>, required: true },
   },
   setup(props) {
-    const rememberedSet = findItem(props.model.items, props.model.lastSelectedSetId);
-    const selectedId = ref(rememberedSet?.item.kind === 'set' ? rememberedSet.item.id : null);
+    const selectedId = useLibrarySelection({
+      firstId: () => firstEntry(props.model.items)?.id ?? null,
+      hasItem: (id) => findItem(props.model.items, id) !== null,
+      onAutoSelect: (id) => {
+        tree.value?.reveal(id);
+        if (libraryOverlay.value) libraryCollapsed.value = true;
+      },
+    });
     // Keep this breakpoint aligned with styles/mobile.css.
     const overlayQuery = window.matchMedia('(max-width: 700px), (max-width: 1100px) and (pointer: coarse)');
     const libraryOverlay = ref(overlayQuery.matches);
@@ -81,7 +89,7 @@ export const IndexCards = defineComponent({
     // Remember sets only; browsing a group must not replace the last opened set.
     watch(() => selection.value?.item, (item) => {
       if (item?.kind === 'set') props.model.lastSelectedSetId = item.id;
-    });
+    }, { immediate: true });
     watch(() => findItem(props.model.items, props.model.lastSelectedSetId)?.item.kind, (kind) => {
       if (kind !== 'set' && props.model.lastSelectedSetId != null) {
         props.model.lastSelectedSetId = null;
@@ -255,18 +263,16 @@ export const IndexCards = defineComponent({
           onKeydown: resizeLibraryFromKeyboard,
           onDblclick: resetLibraryWidth,
         }) : null,
-        selection.value ? h('section', {
-          class: ['index-cards-detail', { 'is-set': selection.value.item.kind === 'set' }],
-          'aria-label': 'Selected item',
+        h('section', {
+          class: ['index-cards-detail', { 'is-set': selection.value?.item.kind === 'set' }],
+          'aria-label': selection.value ? 'Selected item' : 'Index Cards getting started',
           inert: libraryOverlay.value && !libraryCollapsed.value,
         }, [
-          h('header', { class: 'item-heading' }, [
+          selection.value?.item.kind === 'set' ? h('header', { class: 'item-heading' }, [
             h('h2', selection.value.item.name),
-            h('p', { class: 'item-summary' }, selection.value.item.kind === 'group'
-              ? `Group · ${selection.value.item.children.length} items`
-              : `Set · ${selection.value.item.cards.length} cards`),
-          ]),
-          selection.value.item.kind === 'set' ? h(CardSet, {
+            h('p', { class: 'item-summary' }, `Set · ${selection.value.item.cards.length} cards`),
+          ]) : null,
+          selection.value?.item.kind === 'set' ? h(CardSet, {
             key: selection.value.item.id,
             set: selection.value.item,
             totalCards: totalCards.value,
@@ -274,9 +280,17 @@ export const IndexCards = defineComponent({
             tutorialReview: tutorialReviewSetId.value === selection.value.item.id,
             onResizeCardList: setCardListWidth,
             onResetCardList: resetCardListWidth,
-          }) : null,
-          h('details', {
-            key: `organization-${selection.value.item.id}`, class: 'item-organization',
+          }) : h(LibraryEmptyState, {
+            class: { 'has-organization': selection.value !== null },
+            icon: 'cards',
+            title: selection.value?.item.name ?? 'Build your index-card library',
+            description: selection.value ? 'Create a set in this group, or select one from the Library.' : 'Create a set of cards and organize your sets in groups.',
+            actionLabel: 'New set',
+            onCreate: () => { libraryCollapsed.value = false; tree.value?.createSet(); },
+          }),
+          selection.value ? h('details', {
+            key: `organization-${selection.value.item.id}`,
+            class: ['item-organization', { 'library-group-organization': selection.value.item.kind === 'group' }],
             open: selection.value.item.kind === 'group',
           }, [
           h('summary', { class: 'organization-summary' }, 'Location and order'),
@@ -303,9 +317,9 @@ export const IndexCards = defineComponent({
               onClick: () => reorder(1),
             }, 'Move down'),
           ]),
-          ]),
+          ]) : null,
           h('p', { class: 'visually-hidden', role: 'status' }, message.value),
-        ]) : null,
+        ]),
       ]),
       settingsOpen.value ? h(DisplaySettings, {
         options: displayOptions.value,

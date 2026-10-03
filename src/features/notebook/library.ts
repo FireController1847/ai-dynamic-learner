@@ -11,7 +11,7 @@ import { DeleteConfirmation } from '../../components/delete-confirmation.ts';
 import { readMarkdownFile } from './document-files.ts';
 import { graphIsEmpty } from './graph-model.ts';
 import {
-  countItems, createItem, deleteItem, findItem, MAX_DEPTH, MAX_ITEMS, MAX_NAME_LENGTH,
+  countItems, createItem, deleteItem, findItem, firstEntry, MAX_DEPTH, MAX_ITEMS, MAX_NAME_LENGTH,
 } from './library-model.ts';
 
 import { defineComponent, type PropType, h, nextTick, onBeforeUnmount, onDeactivated, ref } from 'vue';
@@ -140,11 +140,11 @@ export const NotebookLibrary = defineComponent({
         await cancelDelete();
         return;
       }
-      const { item, siblings, index, parentId } = found;
-      const fallbackId = siblings[index + 1]?.id ?? siblings[index - 1]?.id ?? parentId ?? null;
+      const { item } = found;
       const removesSelection = props.selectedId === item.id ||
         (item.kind === 'group' && Boolean(findItem(item.children, props.selectedId)));
       deleteItem(props.items, item.id);
+      const fallbackId = firstEntry(props.items)?.id ?? null;
       const removedItems = [item];
       while (removedItems.length) {
         const removed = removedItems.pop();
@@ -153,7 +153,10 @@ export const NotebookLibrary = defineComponent({
         if (editingId.value === removed.id) editingId.value = null;
         if (removed.kind === 'group') removedItems.push(...removed.children);
       }
-      if (removesSelection) emit('select', fallbackId);
+      if (removesSelection) {
+        if (fallbackId) reveal(fallbackId);
+        emit('select', fallbackId);
+      }
       pendingDelete.value = null;
       deleteTrigger = null;
       announcement.value = `Deleted ${item.name}${item.kind === 'group' ? ' and everything inside it' : ''}.`;

@@ -8,6 +8,8 @@ import { TIPS_ACTION_EVENT, type TutorialRequest } from '../../core/tutorial.ts'
 import type { Notebook as FeatureModel } from './library-model.ts';
 import { inputValue } from '../../core/dom.ts';
 import { Icon } from '../../components/icon.ts';
+import { LibraryEmptyState } from '../../components/library-empty-state.ts';
+import { useLibrarySelection } from '../../components/use-library-selection.ts';
 import { usePersistedPanelResize } from '../../components/use-persisted-panel-resize.ts';
 import { DocumentBuilder } from './document-builder.ts';
 import { getDocumentType } from './document-types.ts';
@@ -18,7 +20,7 @@ import { DisplaySettings } from './display-settings.ts';
 import { resolvedNotebookDisplay, notebookDisplayStyles } from './display-options.ts';
 import { NotebookLibrary } from './library.ts';
 import {
-  canMove, countDocuments, countItems, deleteItem, findItem, groupOptions, insertDocument,
+  canMove, countDocuments, countItems, deleteItem, findItem, firstEntry, groupOptions, insertDocument,
   MAX_DOCUMENTS, MAX_ITEMS, moveItem,
 } from './library-model.ts';
 
@@ -34,8 +36,16 @@ export const Notebook = defineComponent({
     model: { type: Object as PropType<FeatureModel>, required: true },
   },
   setup(props) {
-    const remembered = findItem(props.model.items, props.model.lastSelectedDocumentId);
-    const selectedId = ref(remembered?.item.kind === 'document' ? remembered.item.id : null);
+    const creationTarget = ref<CreationTarget | null>(null);
+    const selectedId = useLibrarySelection({
+      firstId: () => firstEntry(props.model.items)?.id ?? null,
+      hasItem: (id) => findItem(props.model.items, id) !== null,
+      enabled: () => creationTarget.value === null,
+      onAutoSelect: (id) => {
+        library.value?.reveal(id);
+        if (libraryOverlay.value) libraryCollapsed.value = true;
+      },
+    });
     const overlayQuery = window.matchMedia('(max-width: 700px), (max-width: 1100px) and (pointer: coarse)');
     const libraryOverlay = ref(overlayQuery.matches);
     const libraryCollapsed = ref(overlayQuery.matches && selectedId.value !== null);
@@ -62,7 +72,6 @@ export const Notebook = defineComponent({
     });
     const library = ref<NotebookLibraryHandle | null>(null);
     const showLibraryButton = ref<HTMLButtonElement | null>(null);
-    const creationTarget = ref<CreationTarget | null>(null);
     const message = ref('');
     const settingsOpen = ref(false);
     const settingsButton = ref<HTMLButtonElement | null>(null);
@@ -78,7 +87,7 @@ export const Notebook = defineComponent({
 
     watch(() => selection.value?.item, (item) => {
       if (item?.kind === 'document') props.model.lastSelectedDocumentId = item.id;
-    });
+    }, { immediate: true });
     watch(() => findItem(props.model.items, props.model.lastSelectedDocumentId)?.item.kind, (kind) => {
       if (kind !== 'document' && props.model.lastSelectedDocumentId != null) {
         props.model.lastSelectedDocumentId = null;
@@ -233,7 +242,7 @@ export const Notebook = defineComponent({
       if (!selection.value) return null;
       return h('details', {
         key: `organization-${item.id}`,
-        class: 'item-organization',
+        class: ['item-organization', { 'library-group-organization': item.kind === 'group' }],
         open: item.kind === 'group',
       }, [
         h('summary', { class: 'organization-summary' }, 'Location and order'),
@@ -350,18 +359,16 @@ export const Notebook = defineComponent({
             onCancel: cancelDocumentCreation,
           }),
           message.value ? h('p', { class: 'notebook-builder-error', role: 'alert' }, message.value) : null,
-        ]) : selection.value ? h('section', {
-          class: ['notebook-detail', { 'is-document': selection.value.item.kind === 'document' }],
-          'aria-label': 'Selected item',
+        ]) : h('section', {
+          class: ['notebook-detail', { 'is-document': selection.value?.item.kind === 'document' }],
+          'aria-label': selection.value ? 'Selected item' : 'Notebook getting started',
           inert: libraryOverlay.value && !libraryCollapsed.value,
         }, [
-          h('header', { class: 'item-heading' }, [
+          selection.value?.item.kind === 'document' ? h('header', { class: 'item-heading' }, [
             h('h2', selection.value.item.name),
-            h('p', { class: 'item-summary' }, selection.value.item.kind === 'group'
-              ? `Group · ${selection.value.item.children.length} items`
-              : 'Document'),
-          ]),
-          selection.value.item.kind === 'document'
+            h('p', { class: 'item-summary' }, 'Document'),
+          ]) : null,
+          selection.value?.item.kind === 'document'
             ? selection.value.item.type === 'markdown'
               ? h(MarkdownEditor, {
                 key: selection.value.item.id,
@@ -378,17 +385,16 @@ export const Notebook = defineComponent({
                   document: selection.value.item,
                   options: displayOptions.value.graph,
                 })
-            : null,
-          organizationControls(selection.value.item),
+            : h(LibraryEmptyState, {
+              class: { 'has-organization': selection.value !== null },
+              icon: 'document',
+              title: selection.value?.item.name ?? 'Build your notebook library',
+              description: selection.value ? 'Create a document in this group, or select one from the Library.' : 'Create a document and organize your notes in groups.',
+              actionLabel: 'New document',
+              onCreate: beginDocumentCreation,
+            }),
+          selection.value ? organizationControls(selection.value.item) : null,
           h('p', { class: 'visually-hidden', role: 'status' }, message.value),
-        ]) : h('section', {
-          class: 'notebook-empty-state',
-          'aria-label': 'Notebook getting started',
-          inert: libraryOverlay.value && !libraryCollapsed.value,
-        }, [
-          h(Icon, { name: 'document' }),
-          h('h2', 'Create a document to begin'),
-          h('p', 'Use the document button in the Library to start a new note.'),
         ]),
       ]),
       settingsOpen.value ? h(DisplaySettings, {

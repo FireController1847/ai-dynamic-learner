@@ -29,6 +29,7 @@ const libraryTree = createTreeOperations<LibraryItem>({
 });
 
 export const findItem = libraryTree.findItem;
+export const firstEntry = libraryTree.firstEntry;
 export const countItems = libraryTree.countItems;
 export const deleteItem = libraryTree.deleteItem;
 export const canMove = libraryTree.canMove;

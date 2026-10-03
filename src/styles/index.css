@@ -3,6 +3,7 @@
 @import './base.css';
 @import './delete-confirmation.css';
 @import './popup-dialog.css';
+@import './library-empty-state.css';
 @import './shell.css';
 @import './theme.css';
 @import './tips.css';

@@ -24,10 +24,10 @@ export interface FeatureModels {
 const renderers: Record<FeatureId, (definition: FeatureDefinition, models: FeatureModels) => VNode> = {
   calculator: (definition) => h(Calculator, { key: definition.id, title: definition.label }),
   notebook: (definition, models) => h(Notebook, { key: definition.id, title: definition.label, model: models.notebook }),
-  'todo-list': (definition, models) => h(TodoList, { key: definition.id, title: definition.label, image: definition.image, model: models['todo-list'] }),
+  'todo-list': (definition, models) => h(TodoList, { key: definition.id, title: definition.label, model: models['todo-list'] }),
   'index-cards': (definition, models) => h(IndexCards, { key: definition.id, title: definition.label, model: models['index-cards'] }),
   'word-search': (definition, models) => h(WordSearch, { key: definition.id, title: definition.label, model: models['word-search'] }),
-  crossword: (definition, models) => h(Crossword, { key: definition.id, title: definition.label, image: definition.image, model: models.crossword }),
+  crossword: (definition, models) => h(Crossword, { key: definition.id, title: definition.label, model: models.crossword }),
 };
 
 export const features = featureDefinitions.map((definition) => ({

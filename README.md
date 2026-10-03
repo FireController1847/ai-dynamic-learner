@@ -67,6 +67,8 @@ The latest published GitHub Pages snapshot is available here:
 
 GitHub Pages is deployed manually, so the published site may occasionally lag behind the latest commit on `main`.
 
+Opening an app with a library selects its first entry in library order. Todo List follows your chosen date order and opens Archive when only past lists remain. Select or create a group to see its creation screen, then use the button there to add an entry inside that group.
+
 To run the current source locally, install Node.js 24 or newer and run:
 
 ```powershell
