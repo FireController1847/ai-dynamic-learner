@@ -122,6 +122,35 @@
   white-space: normal;
   overflow-wrap: anywhere;
 }
+.calculator-value.is-fraction {
+  overflow: visible;
+  line-height: 1;
+}
+.calculator-stacked-fraction {
+  display: inline-grid;
+  grid-template-rows: auto 1px auto;
+  align-items: center;
+  justify-items: stretch;
+  min-width: 1ch;
+  font-size: 0.48em;
+  line-height: 0.82;
+  vertical-align: middle;
+  text-align: center;
+}
+.calculator-fraction-numerator,
+.calculator-fraction-denominator {
+  min-width: 1ch;
+  padding-inline: 0.08em;
+  text-align: center;
+}
+.calculator-fraction-bar {
+  width: 100%;
+  min-width: 1.1ch;
+  border-top: max(1px, 0.07em) solid currentColor;
+}
+.calculator-stacked-fraction.is-compact {
+  font-size: 0.62em;
+}
 .calculator-mode-row {
   display: flex;
   align-items: center;
@@ -137,6 +166,14 @@
   min-width: 58px;
   padding-inline: 8px;
   color: var(--brand-text);
+}
+.calculator-fraction-toggle.is-active {
+  color: var(--brand-text);
+  border-color: color-mix(in srgb, var(--brand) 30%, var(--control-border));
+  background: var(--brand-tint);
+}
+.calculator-fraction-toggle.is-active:hover {
+  background: color-mix(in srgb, var(--brand-tint) 75%, var(--surface-hover));
 }
 .calculator-memory {
   display: grid;
