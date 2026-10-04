@@ -1,5 +1,5 @@
 import { defineComponent, h, type PropType, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue';
-import type { TipSection, TipsFeature } from './types.ts';
+import type { TipSection, TipsCatalog, TipsFeature } from './types.ts';
 import { useTips } from './use-tips.ts';
 export interface TipsHandle { open(trigger?: EventTarget | null): void }
 
@@ -7,6 +7,9 @@ export const TipsExperience = defineComponent({
   name: 'TipsExperience',
   props: {
     feature: { type: Object as PropType<TipsFeature | null>, default: null },
+    catalog: { type: Object as PropType<TipsCatalog>, required: true },
+    storageKey: { type: String, default: 'tips.v1' },
+    actionEventName: { type: String, default: 'tips:action' },
   },
   setup(props, { expose }) {
     const menuDialog = ref<HTMLDialogElement | null>(null);
