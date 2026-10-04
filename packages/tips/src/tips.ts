@@ -1,6 +1,5 @@
-import { defineComponent, h, type PropType } from 'vue';
-import { PopupDialog } from '../components/popup-dialog.ts';
-import type { TipsFeature, TipSection } from './tips-content.ts';
+import { defineComponent, h, type PropType, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue';
+import type { TipSection, TipsCatalog, TipsFeature } from './types.ts';
 import { useTips } from './use-tips.ts';
 export interface TipsHandle { open(trigger?: EventTarget | null): void }
 
@@ -8,8 +7,12 @@ export const TipsExperience = defineComponent({
   name: 'TipsExperience',
   props: {
     feature: { type: Object as PropType<TipsFeature | null>, default: null },
+    catalog: { type: Object as PropType<TipsCatalog>, required: true },
+    storageKey: { type: String, default: 'tips.v1' },
+    actionEventName: { type: String, default: 'tips:action' },
   },
   setup(props, { expose }) {
+    const menuDialog = ref<HTMLDialogElement | null>(null);
     const { primaryFocus, openState, mode, stepIndex, preferences, tutorial, sections, activeSection, step, card, targetRect, cardPlacement, cardStyle, dragging, scrims, beginCardDrag, dragCard, endCardDrag, hasSeenSection, availableNow, prepareAndStart, open, startSection, skipSection, showMenu, close, previous, next, toggleAutomaticTips, resetCurrentTips } = useTips(props);
     expose({ open });
 
@@ -30,46 +33,75 @@ export const TipsExperience = defineComponent({
       })));
     }
 
+    async function syncMenuDialog() {
+      await nextTick();
+      const dialog = menuDialog.value;
+      if (!dialog) return;
+      if (openState.value && mode.value === 'menu') {
+        if (!dialog.open) dialog.showModal();
+      } else if (dialog.open) {
+        dialog.close();
+      }
+    }
+
+    function closeMenu(event?: Event) {
+      event?.preventDefault();
+      close();
+    }
+
     function menuContent() {
       let firstAvailableAssigned = false;
       return [
-        h('div', { class: 'tips-section-list' }, sections.value.map((section) => {
-          const available = availableNow(section);
-          const canPrepare = Boolean(section.prepare);
-          const seen = hasSeenSection(section);
-          const canOpen = available || canPrepare;
-          const assignFocus = canOpen && !firstAvailableAssigned;
-          if (assignFocus) firstAvailableAssigned = true;
-          return h('button', {
-            key: section.id,
-            ref: assignFocus ? primaryFocus : undefined,
-            type: 'button',
-            class: 'tips-section-choice',
-            disabled: !canOpen,
-            onClick: () => available ? startSection(section, true) : prepareAndStart(section),
-          }, [
-            h('span', { class: 'tips-section-choice-copy' }, [
-              h('strong', section.title),
-              h('span', section.description),
-            ]),
-            h('span', {
-              class: ['tips-section-state', {
-                complete: seen,
-                'is-action': !seen && !available && canPrepare,
-              }],
-            }, seen
-              ? 'Done · Show again'
-              : !available
-                ? canPrepare ? 'Open for me' : 'Open this screen first'
-                : 'Start'),
-          ]);
-        })),
-        h('div', { class: 'tips-menu-reset' }, [
-          h('button', {
-            type: 'button',
-            class: 'delete-confirm-button tips-reset-button',
-            onClick: resetCurrentTips,
-          }, 'Reset tips'),
+        h('section', {
+          class: 'tips-menu-card',
+          onClick: (event: MouseEvent) => event.stopPropagation(),
+        }, [
+          h('header', { class: 'tips-menu-header' }, [
+            h('h2', { id: 'tips-menu-heading' }, `${props.feature?.label ?? 'Page'} tips`),
+            h('button', {
+              type: 'button',
+              class: 'tips-menu-close',
+              onClick: close,
+            }, 'Close'),
+          ]),
+          h('div', { class: 'tips-section-list' }, sections.value.map((section) => {
+            const available = availableNow(section);
+            const canPrepare = Boolean(section.prepare);
+            const seen = hasSeenSection(section);
+            const canOpen = available || canPrepare;
+            const assignFocus = canOpen && !firstAvailableAssigned;
+            if (assignFocus) firstAvailableAssigned = true;
+            return h('button', {
+              key: section.id,
+              ref: assignFocus ? primaryFocus : undefined,
+              type: 'button',
+              class: 'tips-section-choice',
+              disabled: !canOpen,
+              onClick: () => available ? startSection(section, true) : prepareAndStart(section),
+            }, [
+              h('span', { class: 'tips-section-choice-copy' }, [
+                h('strong', section.title),
+                h('span', section.description),
+              ]),
+              h('span', {
+                class: ['tips-section-state', {
+                  complete: seen,
+                  'is-action': !seen && !available && canPrepare,
+                }],
+              }, seen
+                ? 'Done · Show again'
+                : !available
+                  ? canPrepare ? 'Open for me' : 'Open this screen first'
+                  : 'Start'),
+            ]);
+          })),
+          h('div', { class: 'tips-menu-reset' }, [
+            h('button', {
+              type: 'button',
+              class: 'tips-danger-button tips-reset-button',
+              onClick: resetCurrentTips,
+            }, 'Reset tips'),
+          ]),
         ]),
       ];
     }
@@ -93,26 +125,38 @@ export const TipsExperience = defineComponent({
         h('div', { class: 'tips-more-menu' }, [
           h('button', {
             type: 'button',
-            class: 'quiet-button',
+            class: 'tips-button',
             onClick: showMenu,
           }, 'All guides'),
           h('button', {
             type: 'button',
-            class: 'quiet-button',
+            class: 'tips-button',
             onClick: toggleAutomaticTips,
           }, preferences.value.enabled ? 'Stop automatic tips' : 'Show tips automatically'),
         ]),
       ]);
     }
 
+    watch([openState, mode], syncMenuDialog, { immediate: true });
+    onMounted(syncMenuDialog);
+    onDeactivated(() => {
+      if (menuDialog.value?.open) menuDialog.value.close();
+    });
+    onBeforeUnmount(() => {
+      if (menuDialog.value?.open) menuDialog.value.close();
+    });
+
     return () => {
       if (!openState.value || !tutorial.value || !props.feature) return null;
-      if (mode.value === 'menu') return h(PopupDialog, {
-        title: `${props.feature.label} tips`,
-        headingId: 'tips-heading',
-        width: 560,
-        onClose: close,
-      }, { default: menuContent });
+      if (mode.value === 'menu') return h('dialog', {
+        ref: menuDialog,
+        class: 'tips-menu-dialog',
+        'aria-labelledby': 'tips-menu-heading',
+        onCancel: closeMenu,
+        onClick: (event: MouseEvent) => {
+          if (event.target === menuDialog.value) close();
+        },
+      }, menuContent());
       const section = activeSection.value;
       const currentStep = step.value;
       const isLastStep = section && stepIndex.value === section.steps.length - 1;
@@ -163,7 +207,7 @@ export const TipsExperience = defineComponent({
             h('span', { class: 'tips-drag-handle', 'aria-hidden': 'true' }, '•••'),
             h('button', {
               type: 'button',
-              class: 'quiet-button tips-skip',
+              class: 'tips-button tips-skip',
               onClick: skipSection,
             }, 'Skip'),
           ]),
@@ -173,13 +217,13 @@ export const TipsExperience = defineComponent({
             h('div', { class: 'tips-navigation' }, [
               stepIndex.value > 0 && currentStep?.back !== false ? h('button', {
                 type: 'button',
-                class: 'quiet-button',
+                class: 'tips-button',
                 onClick: previous,
               }, 'Back') : null,
               h('button', {
                 ref: primaryFocus,
                 type: 'button',
-                class: 'card-primary-button',
+                class: 'tips-primary-button',
                 onClick: next,
               }, currentStep?.nextLabel ?? (isLastStep ? (section.finishLabel ?? 'Done') : 'Next')),
             ]),

@@ -1,5 +1,5 @@
 import type { FeatureDefinition } from '../features/feature-definitions.ts';
-import type { TipsHandle } from './tips.ts';
+import type { TipsHandle } from '../../packages/tips/src/index.ts';
 import '../styles/index.css';
 import { appConfig } from './app-config.ts';
 import { features } from '../features/feature-registry.ts';
@@ -10,7 +10,7 @@ import { WorkspaceTools } from './workspace-tools.ts';
 import { ThemeMenu, type ThemeMenuHandle } from './theme-menu.ts';
 import { initializeTheme } from './theme.ts';
 import { HomePage } from './home-page.ts';
-import { TipsExperience } from './tips.ts';
+import { TipsExperience } from '../../packages/tips/src/index.ts';
 import { tipsCatalog } from './tips-content.ts';
 import { Icon } from '../components/icon.ts';
 
@@ -139,7 +139,12 @@ const App = defineComponent({
         footer: () => h(WorkspaceTools, { workspace }),
       }),
       h(ThemeMenu, { ref: themeMenu }),
-      h(TipsExperience, { ref: tipsExperience, feature: tipsFeature.value }),
+      h(TipsExperience, {
+        ref: tipsExperience,
+        feature: tipsFeature.value,
+        catalog: tipsCatalog,
+        storageKey: 'dynamic-learner.tips.v1',
+      }),
       workspace.storageProblem.value ? h('p', {
         class: 'workspace-storage-warning', role: 'alert',
       }, workspace.storageProblem.value) : null,
