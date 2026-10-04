@@ -81,7 +81,7 @@ Keep [change-routing.md](change-routing.md) aligned with file ownership. Add spe
 
 ## Visual system
 
-Theme and Tips settings use `components/popup-dialog.ts`, a centered native modal backed by `components/use-dialog.ts`. It shares header/card spacing, backdrop and Escape dismissal, native focus confinement, and focus return; `styles/popup-dialog.css` owns the desktop and touch presentation. `app/theme-menu.ts` provides Theme settings content. `packages/tips/` owns the reusable guided-Tips UI, spotlight, placement, draggable cards, persistence, and step navigation; the app supplies only its catalog and feature adapters.
+Theme settings use `components/popup-dialog.ts`, a centered native modal backed by `components/use-dialog.ts`; `styles/popup-dialog.css` owns its desktop and touch presentation, and `app/theme-menu.ts` provides Theme settings content. TIPS is independently packaged in `packages/tips/`, which owns the reusable guided-Tips UI, spotlight, placement, draggable cards, persistence, and step navigation; the app supplies only its catalog and feature adapters.
 
 `app/home-page.ts` composes the Home launcher from the same feature definitions used by navigation, with native links resolved through `navigation.ts`. Its responsive grid automatically accommodates future apps without placeholder entries. The Home-only footer uses repository/license metadata from `app-config.ts` and the visitor's current local date, refreshed while the page stays open. `styles/home.css` scopes its appearance to Home; feature workspaces are unaffected.
 
