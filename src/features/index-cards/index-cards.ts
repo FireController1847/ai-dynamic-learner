@@ -1,6 +1,6 @@
 import type { DirectoryTreeHandle } from './directory-tree.ts';
 import type { LibraryItem } from './tree-model.ts';
-import { TIPS_ACTION_EVENT, type TutorialRequest } from '../../../packages/tips/src/index.ts';
+import { addTutorialActionListener, type TutorialRequest } from '../../../packages/tips/src/index.ts';
 import type { IndexCards as FeatureModel } from './tree-model.ts';
 import { inputValue } from '../../core/dom.ts';
 import { DirectoryTree } from './directory-tree.ts';
@@ -107,10 +107,10 @@ export const IndexCards = defineComponent({
 
     onMounted(() => {
       if (selectedId.value) tree.value?.reveal(selectedId.value);
-      window.addEventListener(TIPS_ACTION_EVENT, handleTipsAction);
+      const removeTipsActionListener = addTutorialActionListener(handleTipsAction);
     });
     onBeforeUnmount(() => {
-      window.removeEventListener(TIPS_ACTION_EVENT, handleTipsAction);
+      removeTipsActionListener();
     });
 
     async function setLibraryCollapsed(collapsed: boolean) {
