@@ -2,8 +2,6 @@ import type { TipsCatalog } from '../../packages/tips/src/index.ts';
 
 // Dynamic Learner's guide content lives here; the reusable TIPS engine does not know these selectors or feature IDs.
 export const tipsCatalog: TipsCatalog = {
-// changing the apps themselves. Each section appears when that part of the app is open.
-export const tipsCatalog: TipsCatalog = {
   home: {
     version: 1,
     sections: [
