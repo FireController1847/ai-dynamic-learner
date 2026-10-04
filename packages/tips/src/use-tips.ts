@@ -1,7 +1,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { readTipsPreferences, writeTipsPreferences } from './preferences.ts';
 import { dispatchTutorialAction } from './tutorial-events.ts';
-import type { StepAction, TipSection, TipsProps, TutorialCleanup, TutorialRequest } from './types.ts';
+import type { StepAction, TipSection, TipsPreferences, TipsProps, TutorialCleanup, TutorialRequest } from './types.ts';
 import { useTipsPosition, visibleTarget } from './position.ts';
 
 export function useTips(props: Readonly<TipsProps>) {
@@ -47,7 +47,7 @@ export function useTips(props: Readonly<TipsProps>) {
     });
   }
 
-  function savePreferences(nextPreferences: TipsProps extends never ? never : typeof preferences.value) {
+  function savePreferences(nextPreferences: TipsPreferences) {
     preferences.value = nextPreferences;
     writeTipsPreferences(props.storageKey, nextPreferences);
   }
