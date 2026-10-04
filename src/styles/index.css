@@ -7,6 +7,23 @@
 @import './shell.css';
 @import './theme.css';
 @import '../../packages/tips/src/tips.css';
+
+.tips-layer,
+.tips-menu-dialog {
+  --tips-scrim: var(--scrim);
+  --tips-brand: var(--brand);
+  --tips-brand-tint: var(--brand-tint);
+  --tips-brand-text: var(--brand-text);
+  --tips-overlay-shadow: var(--shadow-overlay);
+  --tips-radius: var(--radius);
+  --tips-background: var(--page-background);
+  --tips-border: var(--border-color);
+  --tips-text: var(--text-color);
+  --tips-text-secondary: var(--text-secondary);
+  --tips-control-border: var(--control-border);
+  --tips-hover: var(--surface-hover);
+  --tips-fast: var(--motion-fast);
+}
 @import './home.css';
 @import '../features/calculator/calculator.css';
 @import '../features/notebook/notebook.css';
