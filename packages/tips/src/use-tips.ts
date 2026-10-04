@@ -1,41 +1,16 @@
-import { isRecord } from '../core/validation.ts';
-import { TIPS_ACTION_EVENT, type TutorialCleanup, type TutorialRequest } from '../core/tutorial.ts';
-import type { TipsFeature, TipSection, StepAction } from './tips-content.ts';
-interface TipsPreferences { enabled: boolean; seen: Record<string, unknown> }
-import { useTipsPosition, visibleTarget } from './tips-position.ts';
-import { tipsCatalog } from './tips-content.ts';
-
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { readTipsPreferences, writeTipsPreferences } from './preferences.ts';
+import { dispatchTutorialAction } from './tutorial-events.ts';
+import type { StepAction, TipSection, TipsPreferences, TipsProps, TutorialCleanup, TutorialRequest } from './types.ts';
+import { useTipsPosition, visibleTarget } from './position.ts';
 
-const STORAGE_KEY = 'dynamic-learner.tips.v1';
-
-function readPreferences(): TipsPreferences {
-  try {
-  const value: unknown = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}');
-  const stored = isRecord(value) ? value : {};
-  return {
-    enabled: stored.enabled !== false,
-    seen: isRecord(stored.seen)
-      ? { ...stored.seen }
-      : {},
-  };
-  } catch {
-  return { enabled: true, seen: {} };
-  }
-}
-
-function writePreferences(preferences: TipsPreferences) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(preferences)); }
-  catch { /* TIPS preferences are best-effort only. */ }
-}
-
-export function useTips(props: Readonly<{ feature: TipsFeature | null }>) {
+export function useTips(props: Readonly<TipsProps>) {
   const primaryFocus = ref<HTMLElement | null>(null);
   const openState = ref(false);
   const mode = ref('menu');
   const activeSectionId = ref<string | null>(null);
   const stepIndex = ref(0);
-  const preferences = ref(readPreferences());
+  const preferences = ref(readTipsPreferences(props.storageKey));
 
   let returnFocus: HTMLElement | null = null;
   let contextObserver: MutationObserver | null = null;
@@ -43,7 +18,7 @@ export function useTips(props: Readonly<{ feature: TipsFeature | null }>) {
   let returnToMenu = false;
   let activeCleanup: TutorialCleanup | null = null;
 
-  const tutorial = computed(() => props.feature ? tipsCatalog[props.feature.id] : null);
+  const tutorial = computed(() => props.feature ? props.catalog[props.feature.id] : null);
   const sections = computed(() => tutorial.value?.sections ?? []);
   const activeSection = computed(() =>
     sections.value.find((section) => section.id === activeSectionId.value) ?? null);
@@ -74,7 +49,7 @@ export function useTips(props: Readonly<{ feature: TipsFeature | null }>) {
 
   function savePreferences(nextPreferences: TipsPreferences) {
     preferences.value = nextPreferences;
-    writePreferences(nextPreferences);
+    writeTipsPreferences(props.storageKey, nextPreferences);
   }
 
   function sectionAvailable(section: TipSection) {
@@ -94,7 +69,7 @@ export function useTips(props: Readonly<{ feature: TipsFeature | null }>) {
         resolve,
         reject,
       };
-      window.dispatchEvent(new CustomEvent(TIPS_ACTION_EVENT, { detail }));
+      dispatchTutorialAction(props.actionEventName, detail);
       if (!detail.handled) reject(new Error('This guide cannot be opened automatically.'));
     });
   }
@@ -277,13 +252,13 @@ export function useTips(props: Readonly<{ feature: TipsFeature | null }>) {
     document.addEventListener('scroll', requestPositionUpdate, true);
     document.addEventListener('keydown', handleKeydown, true);
 
-    const appLayout = document.querySelector('.app-layout');
-    if (appLayout && window.MutationObserver) {
+    const trackingRoot = document.body;
+    if (trackingRoot && window.MutationObserver) {
       contextObserver = new MutationObserver(() => {
         if (openState.value && mode.value === 'tour') requestPositionUpdate();
         else requestAutoStart();
       });
-      contextObserver.observe(appLayout, { childList: true, subtree: true, attributes: true });
+      contextObserver.observe(trackingRoot, { childList: true, subtree: true, attributes: true });
     }
   }
 

@@ -1,5 +1,5 @@
 import { computed, ref, type Ref } from 'vue';
-import type { TargetSelector, Placement, TipStep } from './tips-content.ts';
+import type { TargetSelector, Placement, TipStep } from './types.ts';
 
 interface Rect { left: number; top: number; right: number; bottom: number; width: number; height: number }
 const SPOTLIGHT_PADDING = 8;

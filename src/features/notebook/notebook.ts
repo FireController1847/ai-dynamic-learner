@@ -4,7 +4,7 @@ import type { ImportedDocument } from './library.ts';
 interface CreationTarget extends DocumentTarget { destination: string }
 import type { NotebookLibraryHandle } from './library.ts';
 import type { LibraryItem } from './library-model.ts';
-import { TIPS_ACTION_EVENT, type TutorialRequest } from '../../core/tutorial.ts';
+import { TIPS_ACTION_EVENT, type TutorialRequest } from '../../../packages/tips/src/index.ts';
 import type { Notebook as FeatureModel } from './library-model.ts';
 import { inputValue } from '../../core/dom.ts';
 import { Icon } from '../../components/icon.ts';

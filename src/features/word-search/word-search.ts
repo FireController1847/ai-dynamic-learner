@@ -4,7 +4,7 @@ import type { Puzzle } from './puzzle-model.ts';
 export interface SetupTarget extends PuzzleTarget { parentName: string }
 import type { WordSearchLibraryHandle } from './library.ts';
 import type { LibraryItem } from './library-model.ts';
-import { TIPS_ACTION_EVENT, type TutorialRequest } from '../../core/tutorial.ts';
+import { TIPS_ACTION_EVENT, type TutorialRequest } from '../../../packages/tips/src/index.ts';
 import type { WordSearch as FeatureModel } from './library-model.ts';
 import { inputValue } from '../../core/dom.ts';
 import { Icon } from '../../components/icon.ts';
