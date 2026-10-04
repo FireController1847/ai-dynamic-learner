@@ -6,7 +6,7 @@
 @import './library-empty-state.css';
 @import './shell.css';
 @import './theme.css';
-@import './tips.css';
+@import '../../packages/tips/src/tips.css';
 @import './home.css';
 @import '../features/calculator/calculator.css';
 @import '../features/notebook/notebook.css';
