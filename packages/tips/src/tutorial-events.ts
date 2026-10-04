@@ -2,10 +2,11 @@ import type { TutorialRequest } from './types.ts';
 
 export const TIPS_ACTION_EVENT = 'tips:action' as const;
 
-declare global {
-  interface WindowEventMap {
-    'tips:action': CustomEvent<TutorialRequest>;
-  }
+export type TutorialActionHandler = (event: CustomEvent<TutorialRequest>) => void;
+
+export function addTutorialActionListener(handler: TutorialActionHandler) {
+  window.addEventListener(TIPS_ACTION_EVENT, handler as EventListener);
+  return () => window.removeEventListener(TIPS_ACTION_EVENT, handler as EventListener);
 }
 
 export function dispatchTutorialAction(eventName: string, request: TutorialRequest) {
