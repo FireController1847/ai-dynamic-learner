@@ -104,12 +104,15 @@ export const Notebook = defineComponent({
     overlayQuery.addEventListener('change', updateLibraryLayout);
     onBeforeUnmount(() => overlayQuery.removeEventListener('change', updateLibraryLayout));
 
+    let removeTipsActionListener: (() => void) | null = null;
+
     onMounted(() => {
       if (selectedId.value) library.value?.reveal(selectedId.value);
-      const removeTipsActionListener = addTutorialActionListener(handleTipsAction);
+      removeTipsActionListener = addTutorialActionListener(handleTipsAction);
     });
     onBeforeUnmount(() => {
-      removeTipsActionListener();
+      removeTipsActionListener?.();
+      removeTipsActionListener = null;
     });
 
     async function setLibraryCollapsed(collapsed: boolean) {
