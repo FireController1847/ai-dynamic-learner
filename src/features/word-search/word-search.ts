@@ -95,11 +95,14 @@ export const WordSearch = defineComponent({
     overlayQuery.addEventListener('change', updateLibraryLayout);
     onBeforeUnmount(() => overlayQuery.removeEventListener('change', updateLibraryLayout));
 
+    let removeTipsActionListener: (() => void) | null = null;
+
     onMounted(() => {
-      const removeTipsActionListener = addTutorialActionListener(handleTipsAction);
+      removeTipsActionListener = addTutorialActionListener(handleTipsAction);
     });
     onBeforeUnmount(() => {
-      removeTipsActionListener();
+      removeTipsActionListener?.();
+      removeTipsActionListener = null;
     });
 
     async function setLibraryCollapsed(collapsed: boolean) {
