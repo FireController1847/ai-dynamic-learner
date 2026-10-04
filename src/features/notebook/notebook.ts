@@ -4,7 +4,7 @@ import type { ImportedDocument } from './library.ts';
 interface CreationTarget extends DocumentTarget { destination: string }
 import type { NotebookLibraryHandle } from './library.ts';
 import type { LibraryItem } from './library-model.ts';
-import { TIPS_ACTION_EVENT, type TutorialRequest } from '../../../packages/tips/src/index.ts';
+import { addTutorialActionListener, type TutorialRequest } from '../../../packages/tips/src/index.ts';
 import type { Notebook as FeatureModel } from './library-model.ts';
 import { inputValue } from '../../core/dom.ts';
 import { Icon } from '../../components/icon.ts';
@@ -106,10 +106,10 @@ export const Notebook = defineComponent({
 
     onMounted(() => {
       if (selectedId.value) library.value?.reveal(selectedId.value);
-      window.addEventListener(TIPS_ACTION_EVENT, handleTipsAction);
+      const removeTipsActionListener = addTutorialActionListener(handleTipsAction);
     });
     onBeforeUnmount(() => {
-      window.removeEventListener(TIPS_ACTION_EVENT, handleTipsAction);
+      removeTipsActionListener();
     });
 
     async function setLibraryCollapsed(collapsed: boolean) {
