@@ -166,7 +166,7 @@
   background: var(--tips-background, #ffffff);
 }
 
-.tips-more-menu .quiet-button {
+.tips-more-menu .tips-button {
   justify-content: flex-start;
   width: 100%;
   min-height: 34px;
@@ -293,7 +293,7 @@
 
   .tips-skip,
   .tips-more > summary,
-  .tips-more-menu .quiet-button,
+  .tips-more-menu .tips-button,
   .tips-reset-button {
     min-height: 44px;
   }
@@ -329,7 +329,7 @@
 
   .tips-skip,
   .tips-more > summary,
-  .tips-more-menu .quiet-button,
+  .tips-more-menu .tips-button,
   .tips-reset-button {
     min-height: 44px;
   }
