@@ -1,6 +1,6 @@
 import type { DirectoryTreeHandle } from './directory-tree.ts';
 import type { LibraryItem } from './tree-model.ts';
-import { TIPS_ACTION_EVENT, type TutorialRequest } from '../../core/tutorial.ts';
+import { TIPS_ACTION_EVENT, type TutorialRequest } from '../../../packages/tips/src/index.ts';
 import type { IndexCards as FeatureModel } from './tree-model.ts';
 import { inputValue } from '../../core/dom.ts';
 import { DirectoryTree } from './directory-tree.ts';
