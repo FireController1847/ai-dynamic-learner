@@ -1,24 +1,9 @@
-import type { FeatureId } from '../features/feature-definitions.ts';
-export type TipsFeatureId = FeatureId | 'home';
-export interface TipsFeature { id: TipsFeatureId; label: string }
-export type TargetSelector = string | string[];
-export type Placement = 'top' | 'bottom' | 'left' | 'right' | 'center';
-export interface StepAction { click: TargetSelector }
-export interface TipStep {
-  title: string; body: string; target: TargetSelector; targetLabel: string;
-  placement?: Placement; nextAction?: StepAction; backAction?: StepAction;
-  nextLabel?: string; back?: boolean;
-}
-export interface TipSection {
-  id: string; title: string; description: string; steps: TipStep[];
-  when?: TargetSelector; prepare?: string; auto?: boolean; finishLabel?: string;
-  continueToAvailable?: boolean; finishAction?: StepAction;
-}
-export interface Tutorial { version: number; sections: TipSection[] }
+import type { TipsCatalog } from '../../packages/tips/src/index.ts';
 
-// TIPS content is separate from feature components so onboarding can change without
+// Dynamic Learner's guide content lives here; the reusable TIPS engine does not know these selectors or feature IDs.
+export const tipsCatalog: TipsCatalog = {
 // changing the apps themselves. Each section appears when that part of the app is open.
-export const tipsCatalog: Record<TipsFeatureId, Tutorial> = {
+export const tipsCatalog: TipsCatalog = {
   home: {
     version: 1,
     sections: [
