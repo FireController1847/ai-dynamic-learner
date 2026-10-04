@@ -252,13 +252,13 @@ export function useTips(props: Readonly<TipsProps>) {
     document.addEventListener('scroll', requestPositionUpdate, true);
     document.addEventListener('keydown', handleKeydown, true);
 
-    const appLayout = document.querySelector('.app-layout');
-    if (appLayout && window.MutationObserver) {
+    const trackingRoot = document.body;
+    if (trackingRoot && window.MutationObserver) {
       contextObserver = new MutationObserver(() => {
         if (openState.value && mode.value === 'tour') requestPositionUpdate();
         else requestAutoStart();
       });
-      contextObserver.observe(appLayout, { childList: true, subtree: true, attributes: true });
+      contextObserver.observe(trackingRoot, { childList: true, subtree: true, attributes: true });
     }
   }
 
