@@ -105,12 +105,15 @@ export const IndexCards = defineComponent({
       cardListWidth.value = null;
     }
 
+    let removeTipsActionListener: (() => void) | null = null;
+
     onMounted(() => {
       if (selectedId.value) tree.value?.reveal(selectedId.value);
-      const removeTipsActionListener = addTutorialActionListener(handleTipsAction);
+      removeTipsActionListener = addTutorialActionListener(handleTipsAction);
     });
     onBeforeUnmount(() => {
-      removeTipsActionListener();
+      removeTipsActionListener?.();
+      removeTipsActionListener = null;
     });
 
     async function setLibraryCollapsed(collapsed: boolean) {
