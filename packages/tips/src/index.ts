@@ -1,5 +1,5 @@
 export { TipsExperience, type TipsHandle } from './tips.ts';
-export { TIPS_ACTION_EVENT } from './tutorial-events.ts';
+export { addTutorialActionListener, TIPS_ACTION_EVENT, type TutorialActionHandler } from './tutorial-events.ts';
 export { useTips } from './use-tips.ts';
 export type {
   Placement,
