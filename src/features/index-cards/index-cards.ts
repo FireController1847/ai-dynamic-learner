@@ -1,9 +1,13 @@
 import type { DirectoryTreeHandle } from './directory-tree.ts';
-import type { LibraryItem } from './tree-model.ts';
+import type { LibraryItem, SetTarget } from './tree-model.ts';
+import type { SetModeId } from './set-modes.ts';
+interface CreationTarget extends SetTarget { destination: string }
 import { addTutorialActionListener, type TutorialRequest } from '../../../packages/tips/src/index.ts';
 import type { IndexCards as FeatureModel } from './tree-model.ts';
 import { inputValue } from '../../core/dom.ts';
 import { DirectoryTree } from './directory-tree.ts';
+import { SetBuilder } from './set-builder.ts';
+import { getSetMode } from './set-modes.ts';
 import { CardSet } from './card-set.ts';
 import { DisplaySettings } from './display-settings.ts';
 import { defaultDisplayOptions, displayStyles } from './display-options.ts';
@@ -11,7 +15,7 @@ import { Icon } from '../../components/icon.ts';
 import { LibraryEmptyState } from '../../components/library-empty-state.ts';
 import { useLibrarySelection } from '../../components/use-library-selection.ts';
 import { usePersistedPanelResize } from '../../components/use-persisted-panel-resize.ts';
-import { canMove, countCards, createItem, deleteItem, findItem, firstEntry, groupOptions, moveItem } from './tree-model.ts';
+import { canMove, countCards, createItem, deleteItem, findItem, firstEntry, groupOptions, insertSet, moveItem } from './tree-model.ts';
 import { createCard } from './card-model.ts';
 import { clearPreference, readNumberPreference, writeNumberPreference } from '../../core/ui-preferences.ts';
 
@@ -28,9 +32,11 @@ export const IndexCards = defineComponent({
     model: { type: Object as PropType<FeatureModel>, required: true },
   },
   setup(props) {
+    const creationTarget = ref<CreationTarget | null>(null);
     const selectedId = useLibrarySelection({
       firstId: () => firstEntry(props.model.items)?.id ?? null,
       hasItem: (id) => findItem(props.model.items, id) !== null,
+      enabled: () => creationTarget.value === null,
       onAutoSelect: (id) => {
         tree.value?.reveal(id);
         if (libraryOverlay.value) libraryCollapsed.value = true;
@@ -123,6 +129,34 @@ export const IndexCards = defineComponent({
       else tree.value?.focusToggle();
     }
 
+    function beginSetCreation() {
+      const current = selection.value;
+      let destination = 'Top level';
+      if (current?.item.kind === 'group') destination = current.item.name;
+      else if (current?.parentId) destination = findItem(props.model.items, current.parentId)?.item.name ?? 'Top level';
+      creationTarget.value = { selectedId: selectedId.value, destination };
+      message.value = '';
+      if (libraryOverlay.value) setLibraryCollapsed(true);
+    }
+
+    async function cancelSetCreation() {
+      creationTarget.value = null;
+      await nextTick();
+      if (libraryCollapsed.value) showLibraryButton.value?.focus();
+      else tree.value?.focusNewSet();
+    }
+
+    function createSet(mode: SetModeId) {
+      if (!getSetMode(mode)?.available) return;
+      let item;
+      try { item = insertSet(props.model.items, creationTarget.value, mode); }
+      catch (error) { message.value = error instanceof Error ? error.message : String(error); return; }
+      selectedId.value = item.id;
+      creationTarget.value = null;
+      tree.value?.reveal(item.id);
+      nextTick(() => tree.value?.beginRename(item.id));
+    }
+
     function moveToGroup(event: Event) {
       if (!selectedId.value || !selection.value) return;
       const targetId = inputValue(event) || null;
@@ -141,10 +175,11 @@ export const IndexCards = defineComponent({
       }
     }
 
-    async function restoreTipsState(previous: { selectedId: string | null; lastSelectedSetId: string | null; libraryCollapsed: boolean }, temporaryId: string) {
+    async function restoreTipsState(previous: { selectedId: string | null; lastSelectedSetId: string | null; creationTarget: CreationTarget | null; libraryCollapsed: boolean }, temporaryId: string) {
       if (temporaryId) deleteItem(props.model.items, temporaryId);
       if (tutorialReviewSetId.value === temporaryId) tutorialReviewSetId.value = null;
       const previousSelection = previous.selectedId && findItem(props.model.items, previous.selectedId);
+      creationTarget.value = previous.creationTarget;
       selectedId.value = previousSelection ? previous.selectedId : null;
       libraryCollapsed.value = previous.libraryCollapsed;
       await nextTick();
@@ -157,10 +192,12 @@ export const IndexCards = defineComponent({
       const previous = {
         selectedId: selectedId.value,
         lastSelectedSetId: props.model.lastSelectedSetId ?? null,
+        creationTarget: creationTarget.value,
         libraryCollapsed: libraryCollapsed.value,
       };
 
       if (action === 'set') {
+        creationTarget.value = null;
         const item = createItem('set');
         item.name = 'Lorem ipsum';
         props.model.items.unshift(item);
@@ -172,6 +209,7 @@ export const IndexCards = defineComponent({
       }
 
       if (action === 'review') {
+        creationTarget.value = null;
         const item = createItem('set');
         item.name = 'Lorem ipsum';
         item.cards.push(
@@ -242,7 +280,8 @@ export const IndexCards = defineComponent({
           ref: tree, items: props.model.items, selectedId: selectedId.value,
           collapsed: libraryCollapsed.value,
           onToggleLibrary: () => setLibraryCollapsed(true),
-          onSelect: (id) => { selectedId.value = id; message.value = ''; },
+          onNewSet: beginSetCreation,
+          onSelect: (id) => { selectedId.value = id; creationTarget.value = null; message.value = ''; },
           onOpenItem: () => { if (libraryOverlay.value) setLibraryCollapsed(true); },
         }, {
           footer: () => h('button', {
@@ -268,14 +307,19 @@ export const IndexCards = defineComponent({
         }) : null,
         h('section', {
           class: ['index-cards-detail', { 'is-set': selection.value?.item.kind === 'set' }],
-          'aria-label': selection.value ? 'Selected item' : 'Index Cards getting started',
+          'aria-label': creationTarget.value ? 'Choose an Index Cards mode' : selection.value ? 'Selected item' : 'Index Cards getting started',
           inert: libraryOverlay.value && !libraryCollapsed.value,
         }, [
-          selection.value?.item.kind === 'set' ? h('header', { class: 'item-heading' }, [
+          creationTarget.value ? h(SetBuilder, {
+            destination: creationTarget.value.destination,
+            onCreate: createSet,
+            onCancel: cancelSetCreation,
+          }) : null,
+          !creationTarget.value && selection.value?.item.kind === 'set' ? h('header', { class: 'item-heading' }, [
             h('h2', selection.value.item.name),
-            h('p', { class: 'item-summary' }, `Set · ${selection.value.item.cards.length} cards`),
+            h('p', { class: 'item-summary' }, `${getSetMode(selection.value.item.mode)?.label ?? 'Flash Cards'} · ${selection.value.item.cards.length} cards`),
           ]) : null,
-          selection.value?.item.kind === 'set' ? h(CardSet, {
+          !creationTarget.value && selection.value?.item.kind === 'set' ? h(CardSet, {
             key: selection.value.item.id,
             set: selection.value.item,
             totalCards: totalCards.value,
@@ -283,15 +327,15 @@ export const IndexCards = defineComponent({
             tutorialReview: tutorialReviewSetId.value === selection.value.item.id,
             onResizeCardList: setCardListWidth,
             onResetCardList: resetCardListWidth,
-          }) : h(LibraryEmptyState, {
+          }) : !creationTarget.value ? h(LibraryEmptyState, {
             class: { 'has-organization': selection.value !== null },
             icon: 'cards',
             title: selection.value?.item.name ?? 'Build your index-card library',
             description: selection.value ? 'Create a set in this group, or select one from the Library.' : 'Create a set of cards and organize your sets in groups.',
             actionLabel: 'New set',
-            onCreate: () => { libraryCollapsed.value = false; tree.value?.createSet(); },
-          }),
-          selection.value ? h('details', {
+            onCreate: beginSetCreation,
+          }) : null,
+          !creationTarget.value && selection.value ? h('details', {
             key: `organization-${selection.value.item.id}`,
             class: ['item-organization', { 'library-group-organization': selection.value.item.kind === 'group' }],
             open: selection.value.item.kind === 'group',
