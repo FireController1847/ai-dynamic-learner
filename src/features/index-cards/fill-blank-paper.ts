@@ -96,9 +96,12 @@ export const FillBlankPaper = defineComponent({
         })),
       ]);
 
+      const hasIncorrect = props.verified && template.answers.some((answer, blankIndex) =>
+        !isFillBlankAnswerCorrect(answer, props.responses[blankIndex] ?? ''));
+
       const backBody = props.verified
         ? h('div', {
-          class: 'fill-blank-writing fill-blank-results',
+          class: ['fill-blank-writing', 'fill-blank-results', { 'has-incorrect': hasIncorrect }],
           'aria-label': `Verified answers for card ${props.position}`,
         }, template.segments.map((segment) => {
           if (segment.type === 'text') return h('span', { class: 'fill-blank-text' }, segment.text);
