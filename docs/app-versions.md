@@ -14,7 +14,7 @@ Follow [Semantic Versioning 2.0.0](https://semver.org/). For these browser apps,
 
 Keep the source version explicit and review its increment with future changes. These versions are independent of the npm package version, tutorial completion versions, and workspace backup format version.
 
-Knowledge Check is at `0.4.0`. The initial `0.1.0` shell received artwork in `0.1.1`; `0.2.0` added grouped libraries and persistence, with full-viewport layout corrected in `0.2.1`. `0.3.0` introduced Study/Quiz/Test choices. `0.4.0` unifies those modes around one saved knowledge set, adds staged question building and mode-specific sessions, and migrates earlier empty placeholders without losing library entries.
+Knowledge Check is at `1.0.0`, its initial release with shared knowledge sets, staged question building, and Study, Quiz, and Test sessions. The initial `0.1.0` shell received artwork in `0.1.1`; `0.2.0` added grouped libraries and persistence, with full-viewport layout corrected in `0.2.1`. `0.3.0` introduced Study/Quiz/Test choices. `0.4.0` unified those modes around one saved knowledge set, added staged question building and mode-specific sessions, and migrated earlier empty placeholders without losing library entries.
 
 ## History-derived starting versions
 
