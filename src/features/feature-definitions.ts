@@ -57,9 +57,9 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   },
   {
     id: 'index-cards', label: 'Index Cards', path: '/index-cards/', icon: 'cards',
-    version: '1.7.3',
+    version: '1.8.0',
     image: 'assets/index-cards.png',
-    description: 'Organize your sets, write on both sides, and review at your own pace.',
+    description: 'Create flash cards or fill-in-the-blanks sets and review them at your own pace.',
   },
   {
     id: 'word-search', label: 'Word Search', path: '/word-search/', icon: 'word-search',
