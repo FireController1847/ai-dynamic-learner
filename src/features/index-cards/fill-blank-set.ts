@@ -35,6 +35,8 @@ export const FillBlankSet = defineComponent({
     const shuffleOrder = ref<string[] | null>(null);
     const responses = ref<string[]>([]);
     const verified = ref(false);
+    const reviewSide = ref<'front' | 'back'>('front');
+    const editSide = ref<'front' | 'back'>('front');
     const editor = ref<FillBlankEditorHandle | null>(null);
     const addButton = ref<HTMLButtonElement | null>(null);
     const deleteButton = ref<HTMLButtonElement | null>(null);
@@ -120,6 +122,11 @@ export const FillBlankSet = defineComponent({
     function resetAttempt() {
       responses.value = [];
       verified.value = false;
+      reviewSide.value = 'front';
+    }
+
+    function resetEditSide() {
+      editSide.value = 'front';
     }
     async function addCard(duplicate = false) {
       if (atLimit.value) return;
@@ -129,6 +136,7 @@ export const FillBlankSet = defineComponent({
       if (shuffleOrder.value) shuffleOrder.value.splice(index.value + 1, 0, card.id);
       currentId.value = card.id;
       resetAttempt();
+      resetEditSide();
       message.value = duplicate ? 'Card duplicated.' : 'New card added.';
       await nextTick();
       if (!reviewActive.value) editor.value?.focus();
@@ -136,6 +144,7 @@ export const FillBlankSet = defineComponent({
     function selectCard(id: string) {
       currentId.value = id;
       resetAttempt();
+      resetEditSide();
       message.value = '';
     }
     function go(offset: number) {
@@ -146,6 +155,7 @@ export const FillBlankSet = defineComponent({
     async function startReview(order: ReviewOrder) {
       reviewActive.value = true;
       reviewNotice.value = '';
+      editSide.value = 'front';
       reviewOrder.value = order;
       shuffleOrder.value = order === 'shuffle' ? shuffledCardIds(props.set.cards) : null;
       currentId.value = orderedCards.value[0]?.id ?? null;
@@ -160,6 +170,7 @@ export const FillBlankSet = defineComponent({
       reviewOrder.value = 'forward';
       shuffleOrder.value = null;
       resetAttempt();
+      editSide.value = 'front';
       reviewNotice.value = finished
         ? 'Review finished. Keep editing, or start another review.'
         : 'Review ended. You are back to browsing in saved order.';
@@ -184,6 +195,7 @@ export const FillBlankSet = defineComponent({
       if (!template.answers.length ||
           template.answers.some((_answer, blankIndex) => !(responses.value[blankIndex] ?? '').trim())) return;
       verified.value = true;
+      reviewSide.value = 'back';
       const correct = template.answers.filter((answer, blankIndex) =>
         isFillBlankAnswerCorrect(answer, responses.value[blankIndex] ?? '')).length;
       message.value = `${correct} of ${template.answers.length} ${template.answers.length === 1 ? 'blank' : 'blanks'} correct.`;
@@ -199,6 +211,7 @@ export const FillBlankSet = defineComponent({
       if (shuffleOrder.value) shuffleOrder.value = shuffleOrder.value.filter((cardId) => cardId !== id);
       currentId.value = next?.id ?? null;
       resetAttempt();
+      resetEditSide();
       message.value = 'Card deleted.';
       await nextTick();
       (current.value ? deleteButton.value : addButton.value)?.focus();
@@ -278,11 +291,17 @@ export const FillBlankSet = defineComponent({
               reviewActive.value
                 ? h(FillBlankPaper, {
                   key: `review-${card.id}`, card, position: index.value + 1,
-                  responses: responses.value, verified: verified.value,
+                  responses: responses.value,
+                  verified: verified.value,
+                  side: reviewSide.value,
                   onUpdateResponse: updateResponse,
                 })
                 : h(FillBlankEditor, {
-                  key: `edit-${card.id}`, ref: editor, card, position: index.value + 1,
+                  key: `edit-${card.id}`,
+                  ref: editor,
+                  card,
+                  position: index.value + 1,
+                  side: editSide.value,
                   onMessage: (value: string) => { message.value = value; },
                 }),
             ]),
@@ -305,10 +324,20 @@ export const FillBlankSet = defineComponent({
                 title: 'Previous card', 'aria-label': 'Previous card',
                 disabled: index.value === 0, onClick: () => go(-1),
               }, [h(Icon, { name: 'chevron' }), 'Previous']),
-              reviewActive.value ? h('button', {
-                type: 'button', class: 'card-primary-button fill-blank-verify-button',
-                disabled: !allFilled || verified.value, onClick: verify,
-              }, [h(Icon, { name: verified.value ? 'verified' : 'checklist' }), verified.value ? 'Verified' : 'Verify'])
+              reviewActive.value
+                ? verified.value
+                  ? h('button', {
+                    type: 'button',
+                    class: 'card-flip-button',
+                    'aria-label': reviewSide.value === 'front' ? 'Show verified answers' : 'Show prompt',
+                    onClick: () => { reviewSide.value = reviewSide.value === 'front' ? 'back' : 'front'; },
+                  }, [h(Icon, { name: 'flip' }), reviewSide.value === 'front' ? 'Show answers' : 'Show prompt'])
+                  : h('button', {
+                    type: 'button',
+                    class: 'card-primary-button fill-blank-verify-button',
+                    disabled: !allFilled,
+                    onClick: verify,
+                  }, [h(Icon, { name: 'checklist' }), 'Verify'])
                 : h('div', {
                   class: 'fill-blank-control-tools',
                   role: 'group',
@@ -319,6 +348,7 @@ export const FillBlankSet = defineComponent({
                     class: 'fill-blank-segment-button',
                     title: 'Make blank',
                     'aria-label': 'Make blank from selected text',
+                    disabled: editSide.value === 'back',
                     onMousedown: preserveEditorSelection,
                     onClick: () => editor.value?.makeBlank(),
                   }, [h(Icon, { name: 'blank-add' })]),
@@ -327,9 +357,17 @@ export const FillBlankSet = defineComponent({
                     class: 'fill-blank-segment-button',
                     title: 'Remove blank',
                     'aria-label': 'Remove blank at the cursor',
+                    disabled: editSide.value === 'back',
                     onMousedown: preserveEditorSelection,
                     onClick: () => editor.value?.removeBlank(),
                   }, [h(Icon, { name: 'blank-remove' })]),
+                  h('button', {
+                    type: 'button',
+                    class: 'fill-blank-segment-button',
+                    title: editSide.value === 'front' ? 'Show answer key' : 'Show prompt',
+                    'aria-label': editSide.value === 'front' ? 'Show answer key' : 'Show prompt',
+                    onClick: () => { editSide.value = editSide.value === 'front' ? 'back' : 'front'; },
+                  }, [h(Icon, { name: 'flip' })]),
                 ]),
               h('button', {
                 type: 'button', class: 'quiet-button',
