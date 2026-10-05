@@ -16,7 +16,7 @@ export function useTips(props: Readonly<TipsProps>) {
   let contextObserver: MutationObserver | null = null;
   let autoFrame = 0;
   let returnToMenu = false;
-  let activeCleanup: TutorialCleanup | null = null;
+  let activeCleanups: TutorialCleanup[] = [];
 
   const tutorial = computed(() => props.feature ? props.catalog[props.feature.id] : null);
   const sections = computed(() => tutorial.value?.sections ?? []);
@@ -75,11 +75,11 @@ export function useTips(props: Readonly<TipsProps>) {
   }
 
   async function cleanupActiveDemo() {
-    const cleanup = activeCleanup;
-    activeCleanup = null;
-    if (typeof cleanup !== 'function') return;
-    try { await cleanup(); }
-    catch (error) { console.warn('TIPS example cleanup failed.', error); }
+    const cleanups = activeCleanups.splice(0).reverse();
+    for (const cleanup of cleanups) {
+      try { await cleanup(); }
+      catch (error) { console.warn('TIPS example cleanup failed.', error); }
+    }
   }
 
   async function prepareAndStart(section: TipSection) {
@@ -87,7 +87,7 @@ export function useTips(props: Readonly<TipsProps>) {
     await cleanupActiveDemo();
     try {
       const cleanup = await requestTutorialAction(section.prepare);
-      activeCleanup = typeof cleanup === 'function' ? cleanup : null;
+      if (typeof cleanup === 'function') activeCleanups.push(cleanup);
       await nextTick();
       await new Promise<number>((resolve) => requestAnimationFrame(resolve));
       if (!sectionAvailable(section)) throw new Error('The requested guide did not open.');
@@ -174,6 +174,18 @@ export function useTips(props: Readonly<TipsProps>) {
 
   async function runStepAction(action?: StepAction) {
     if (!action) return true;
+
+    let stepCleanup: TutorialCleanup | null = null;
+    if (action.prepare) {
+      try {
+        stepCleanup = await requestTutorialAction(action.prepare);
+        if (typeof stepCleanup === 'function') activeCleanups.push(stepCleanup);
+      } catch (error) {
+        console.warn('TIPS step preparation failed.', error);
+        return false;
+      }
+    }
+
     if (action.click) {
       const target = visibleTarget(action.click);
       if (!target) return false;
