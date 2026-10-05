@@ -22,6 +22,10 @@
   height: 100%;
 }
 
+.fill-blank-back-heading {
+  justify-content: flex-end;
+}
+
 .fill-blank-review-title {
   flex: 1;
   min-width: 0;
@@ -235,14 +239,30 @@
   white-space: nowrap;
 }
 
-/* Three compact edit actions fit inside the same middle track used by the
-   normal Flip / Verify button without crowding Previous and Next. */
-.fill-blank-control-tools {
-  justify-self: center;
+/* Editing keeps the standard Flash Cards flip button and adds two compact
+   blank-authoring actions immediately to its left. */
+.fill-blank-edit-controls {
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  width: min(100%, 620px);
+}
+.fill-blank-edit-center {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
+  min-width: 0;
+}
+.fill-blank-control-tools {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.fill-blank-edit-center > .card-flip-button {
+  min-width: 132px;
+  min-height: 36px;
+  padding: 7px 12px;
+  white-space: nowrap;
 }
 .fill-blank-segment-button {
   display: grid;
@@ -284,11 +304,30 @@
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-@container card-workspace (max-width: 380px) {
-  .fill-blank-control-tools { gap: 4px; }
+@container card-workspace (max-width: 560px) {
+  .fill-blank-edit-controls {
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  }
+  .fill-blank-edit-center,
+  .fill-blank-control-tools {
+    gap: 4px;
+  }
   .fill-blank-segment-button {
     width: 32px;
     min-width: 32px;
+  }
+  .fill-blank-edit-center > .card-flip-button {
+    min-width: 0;
+    padding-inline: 8px;
+  }
+}
+@container card-workspace (max-width: 420px) {
+  .fill-blank-edit-center > .card-flip-button .ui-icon {
+    display: none;
+  }
+  .fill-blank-edit-center > .card-flip-button {
+    font-size: 12px;
   }
 }
 @media (pointer: coarse) {
