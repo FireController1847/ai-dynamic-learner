@@ -309,7 +309,7 @@ export const tipsCatalog: TipsCatalog = {
             target: '.card-review-button',
             targetLabel: 'Review button',
             placement: 'bottom',
-            nextAction: { click: '.card-review-button' },
+            nextAction: { prepare: 'enable-review', click: '.card-review-button' },
           },
           {
             title: 'Choose the starting side',
@@ -326,6 +326,7 @@ export const tipsCatalog: TipsCatalog = {
             target: '.review-setup .review-choices',
             targetLabel: 'Card order',
             placement: 'right',
+            blockTarget: true,
             nextAction: { click: '.review-setup button[type="submit"]' },
           },
           {
@@ -380,7 +381,7 @@ export const tipsCatalog: TipsCatalog = {
             target: '.card-review-button',
             targetLabel: 'Review button',
             placement: 'bottom',
-            nextAction: { click: '.card-review-button' },
+            nextAction: { prepare: 'enable-review', click: '.card-review-button' },
           },
           {
             title: 'Choose the card order',
