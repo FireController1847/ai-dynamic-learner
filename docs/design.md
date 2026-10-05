@@ -20,6 +20,8 @@ Word Search uses a snug outer grid frame without internal gridlines. `puzzle-gam
 
 ## Index-card geometry
 
+Untitled cards keep their title area blank during review in both Flash Cards and Fill in the Blanks. The Untitled card placeholder appears only while editing; the card list retains its Card 1, Card 2 numbering fallback. Manually review titled/untitled cards, flip where applicable, and end review to confirm the editable placeholder returns without changing card data or list labels.
+
 The paper uses a fixed landscape 5:3 aspect ratio, matching the traditional 3 × 5-inch format. Quarter-inch ruling is modeled as 5% of the card width. Our layout reserves half an inch for the editable title and ten quarter-inch writing rows extending to the bottom edge. The row count is this app's layout choice; ruling and margins vary between physical products. Reference: [Pacon 3 × 5-inch, quarter-inch ruled cards](https://www.teachersparadise.com/c/pacon-index-cards-white-ruled-1-4-ruled-3-x-5-100-cards/).
 
 `card-set.css` makes the stack an inline-size container. Paper typography, ruling, and margins use its container width, so the same text and number of rows scale together across window and sidebar sizes. These are physical proportions, not a promise of actual inches on an uncalibrated screen. Both sides retain ruling for editing. Existing longer content scrolls within the ten-row writing area; the paper never stretches and no new content limit is imposed.

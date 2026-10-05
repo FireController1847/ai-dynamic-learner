@@ -16,8 +16,7 @@ export const StudyGuideListEditor = defineComponent({
         h('div',{class:'study-guide-bullets'},section.bullets.map((bullet,bi)=>h('div',{key:bi,class:'study-guide-bullet-row'},[
           h('span',{'aria-hidden':'true'},'•'),
           h('input',{value:bullet,maxlength:MAX_TEXT_LENGTH,placeholder:'Bullet point','aria-label':'Bullet ' + (bi+1),
-            onInput:(e:Event)=>{section.bullets[bi]=inputValue(e);},
-            onKeydown:(e:KeyboardEvent)=>{if(e.key==='Enter'&&!e.isComposing){e.preventDefault();section.bullets.splice(bi+1,0,'');}}}),
+            onInput:(e:Event)=>{section.bullets[bi]=inputValue(e);},}),
           h('button',{type:'button',class:'icon-button study-guide-remove',title:'Remove bullet','aria-label':'Remove bullet',
             onClick:()=>section.bullets.splice(bi,1)},'×')
         ]))),

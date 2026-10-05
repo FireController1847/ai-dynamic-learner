@@ -20,6 +20,8 @@ Review (formerly Knowledge Check) is at `1.2.2`. `1.2.2` resets mode selection w
 
 Todo List `1.5.0` adds independent list cloning, with an optional action to skip remaining tasks on the original after copying.
 
+Index Cards `1.10.2` keeps untitled cards’ title area blank during Flash Cards and Fill in the Blanks review; editable placeholders and numbered card-list labels remain.
+
 ## History-derived starting versions
 
 The repository had no release tags or established app version fields. These are retrospective starting versions, inferred from the 300 commits reachable at `c46ccb8c115e7753b8db76e68361672df2838250` on 2026-10-02. Main's integration order, the merged feature branches, commit descriptions, and relevant implementation diffs establish the milestones below. A first complete app implementation is treated as `1.0.0`; preliminary scaffolds and partial multi-commit implementations are grouped into that baseline. Earlier patch sequences reset at each subsequent minor milestone. No incompatible saved-data/workflow change was identified that warrants a major increment above 1; Crossword's original optional size field, for example, remains accepted in older backups.
