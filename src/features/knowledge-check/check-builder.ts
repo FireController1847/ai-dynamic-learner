@@ -46,7 +46,7 @@ export const CheckBuilder = defineComponent({
       return h('section', { class: 'knowledge-set-builder', 'aria-label': 'Knowledge set builder' }, [
         h('header', { class: 'knowledge-builder-header' }, [
           h('div', [h('p', { class: 'knowledge-eyebrow' }, 'Knowledge set builder'), h('h2', 'One set. Three ways to learn.'),
-            h('p', 'Build your questions here, then use them in Study, Quiz, or Test.')]),
+            h('p', 'Add questions, then use them to study or test yourself.')]),
           h('div', { class: 'knowledge-actions' }, [
             h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel') }, 'Cancel'),
             h('button', { type: 'button', class: 'card-primary-button', disabled: !name.value.trim(),
@@ -67,7 +67,7 @@ export const CheckBuilder = defineComponent({
               class: ['knowledge-question-row', { 'is-selected': index === selected.value }],
               'aria-pressed': index === selected.value, onClick: () => { selected.value = index; } },
             `${index + 1}. ${entry.prompt.trim() || 'Untitled question'}`)),
-            !questions.value.length ? h('p', { class: 'knowledge-muted' }, 'Add your first question, or save an empty set to start later.') : null,
+            !questions.value.length ? h('p', { class: 'knowledge-muted' }, 'Add your first question.') : null,
           ]),
           question ? h('div', { class: 'knowledge-question-editor', key: question.id }, [
             h('div', { class: 'knowledge-builder-header' }, [h('h3', `Question ${selected.value + 1}`),
@@ -87,7 +87,7 @@ export const CheckBuilder = defineComponent({
             textField('Question', 'prompt', question),
             question.type === 'multiple-choice' ? h('fieldset', { class: 'knowledge-choice-editor' }, [
               h('legend', 'Answer choices'),
-              h('p', { class: 'knowledge-muted' }, 'Select the correct answer.'),
+              h('p', { class: 'knowledge-muted' }, 'Choose the correct answer.'),
               ...question.choices.map((choice, index) => h('div', { class: 'knowledge-choice-row', key: index }, [
                 h('input', { type: 'radio', name: `correct-${question.id}`, checked: Boolean(choice) && question.answer === choice,
                   disabled: !choice.trim(), 'aria-label': `Choice ${index + 1} is correct`, onChange: () => { question.answer = choice; } }),
@@ -106,7 +106,7 @@ export const CheckBuilder = defineComponent({
             }, ['True', 'False'].map((answer) => h('option', { value: answer }, answer)))]) : textField('Expected answer', 'answer', question),
             textField('Explanation (optional)', 'explanation', question),
           ]) : h('div', { class: 'knowledge-question-editor knowledge-builder-empty' }, [h(Icon, { name: 'cards' }),
-            h('h3', 'Start with something worth knowing.'), h('button', { type: 'button', class: 'card-primary-button', onClick: addQuestion }, 'Add question')]),
+            h('h3', 'Add a question.'), h('button', { type: 'button', class: 'card-primary-button', onClick: addQuestion }, 'Add question')]),
         ]),
         pendingDelete.value ? h(DeleteConfirmation, { itemName: pendingDelete.value.prompt.trim() || 'Untitled question', itemLabel: 'question',
           detail: 'The question and its answer will be removed from this set.', confirmLabel: 'Delete question',
