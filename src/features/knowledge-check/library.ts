@@ -256,7 +256,7 @@ export const KnowledgeCheckLibrary = defineComponent({
           h(Icon, { name: item.kind === 'group' ? 'folder' : 'cards' }),
           isEditing ? h('input', {
             ref: input, class: 'knowledge-check-rename', value: draft.value,
-            'aria-label': `Rename ${isGroup ? 'group' : 'knowledge set'}`,
+            'aria-label': `Rename ${isGroup ? 'group' : 'question set'}`,
             maxlength: MAX_NAME_LENGTH,
             onInput: (event: Event) => { draft.value = inputValue(event); },
             onBlur: () => finishRename(true),
@@ -311,8 +311,8 @@ export const KnowledgeCheckLibrary = defineComponent({
           }, [h(Icon, { name: 'folder' })]),
           h('button', {
             ref: createKnowledgeCheckButton,
-            type: 'button', class: 'icon-button', title: 'New knowledge set',
-            'aria-label': 'New knowledge set', onClick: requestKnowledgeCheckSetup,
+            type: 'button', class: 'icon-button', title: 'New question set',
+            'aria-label': 'New question set', onClick: requestKnowledgeCheckSetup,
           }, [h(Icon, { name: 'checklist' })]),
           h('button', {
             ref: collapseButton,
@@ -326,20 +326,20 @@ export const KnowledgeCheckLibrary = defineComponent({
       h('div', { class: 'knowledge-check-library-scroll' }, [
         rootTarget('before', 'Top level'),
         props.items.length
-          ? h('ul', { class: 'knowledge-check-library-list', 'aria-label': 'Groups and knowledge sets' },
+          ? h('ul', { class: 'knowledge-check-library-list', 'aria-label': 'Groups and question sets' },
             props.items.map(renderItem))
-          : h('p', { class: 'knowledge-check-library-empty' }, 'No groups or knowledge sets yet.'),
+          : h('p', { class: 'knowledge-check-library-empty' }, 'No groups or question sets yet.'),
         draggedId.value ? rootTarget('after', 'Move to end of top level') : null,
       ]),
       h('p', { class: 'visually-hidden', role: 'status' }, announcement.value),
       slots.footer ? h('div', { class: 'knowledge-check-library-footer' }, slots.footer()) : null,
       pendingDelete.value ? h(DeleteConfirmation, {
         itemName: pendingDelete.value.name,
-        itemLabel: pendingDelete.value.kind === 'set' ? 'knowledge set' : 'group',
+        itemLabel: pendingDelete.value.kind === 'set' ? 'question set' : 'group',
         detail: pendingDelete.value.kind === 'group'
-          ? `This also deletes ${countItems(pendingDelete.value.children)} nested library items, including ${countChecks(pendingDelete.value.children)} knowledge sets.`
-          : 'The knowledge set and its questions will be removed from the library.',
-        confirmLabel: pendingDelete.value.kind === 'group' ? 'Delete group' : 'Delete knowledge set',
+          ? `This also deletes ${countItems(pendingDelete.value.children)} nested library items, including ${countChecks(pendingDelete.value.children)} question sets.`
+          : 'The question set and its questions will be removed from the library.',
+        confirmLabel: pendingDelete.value.kind === 'group' ? 'Delete group' : 'Delete question set',
         onCancel: cancelDelete,
         onConfirm: confirmDelete,
       }) : null,
