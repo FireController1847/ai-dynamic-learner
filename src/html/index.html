@@ -13,7 +13,8 @@
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" sizes="180x180">
     <script>
       try {
-        let theme = localStorage.getItem('dynamic-learner.theme') || 'light';
+        const legacyTheme = localStorage.getItem('dynamic-learner.theme');
+        let theme = legacyTheme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
         const saved = localStorage.getItem('dynamic-learner.theme-preferences');
         if (saved) {
           try {
@@ -25,7 +26,7 @@
             } else if (preferences?.theme) {
               theme = preferences.theme;
             }
-          } catch { /* Keep the legacy/default theme if saved preferences are malformed. */ }
+          } catch { /* Keep the legacy/system-default theme if saved preferences are malformed. */ }
         }
         if (typeof theme === 'string') document.documentElement.dataset.theme = theme;
       } catch { /* Theme preference is best-effort only. */ }

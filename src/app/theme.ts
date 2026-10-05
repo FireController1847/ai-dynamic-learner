@@ -27,7 +27,7 @@ const THEME_STORAGE_KEY = 'dynamic-learner.theme-preferences';
 const LEGACY_THEME_STORAGE_KEY = 'dynamic-learner.theme';
 const DEFAULT_PREFERENCES: ThemePreferences = Object.freeze({
   theme: 'light',
-  followSystem: false,
+  followSystem: true,
   lightTheme: 'light',
   darkTheme: 'dark',
 });
