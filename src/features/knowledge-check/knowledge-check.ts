@@ -7,12 +7,14 @@ import { useLibrarySelection } from '../../components/use-library-selection.ts';
 import { usePersistedPanelResize } from '../../components/use-persisted-panel-resize.ts';
 import { KnowledgeCheckLibrary } from './library.ts';
 import { CheckBuilder } from './check-builder.ts';
-import type { Question } from './question-model.ts';
+import { createQuestion, type Question } from './question-model.ts';
 import { KnowledgeSet } from './knowledge-set.ts';
-import { canMove, findItem, firstEntry, groupOptions, moveItem, insertCheck } from './library-model.ts';
+import { canMove, deleteItem, findItem, firstEntry, groupOptions, moveItem, insertCheck } from './library-model.ts';
+
+import { addTutorialActionListener, type TutorialCleanup, type TutorialRequest } from '../../../packages/tips/src/index.ts';
 
 import {
-  defineComponent, type PropType, computed, h, nextTick, onBeforeUnmount, ref,
+  defineComponent, type PropType, computed, h, nextTick, onBeforeUnmount, onMounted, ref,
 } from 'vue';
 
 type SetupTarget = CheckTarget;
@@ -45,6 +47,71 @@ export const KnowledgeCheck = defineComponent({
     const library = ref<KnowledgeCheckLibraryHandle | null>(null);
     const showLibraryButton = ref<HTMLButtonElement | null>(null);
     const message = ref('');
+    let removeTipsActionListener: (() => void) | null = null;
+
+    function createTutorialQuestions(): Question[] {
+      const multipleChoice = createQuestion('multiple-choice');
+      multipleChoice.prompt = 'Which planet do we live on?';
+      multipleChoice.choices = ['Earth', 'Mars', 'Venus', 'Jupiter'];
+      multipleChoice.answer = 'Earth';
+      multipleChoice.explanation = 'We live on Earth.';
+
+      const trueFalse = createQuestion('true-false');
+      trueFalse.prompt = 'The Sun is a star.';
+      trueFalse.answer = 'True';
+      trueFalse.explanation = 'The Sun is a star at the center of our solar system.';
+
+      const shortAnswer = createQuestion('short-answer');
+      shortAnswer.prompt = 'How many days are in a week?';
+      shortAnswer.answer = '7';
+      shortAnswer.explanation = 'There are seven days in a week.';
+
+      return [multipleChoice, trueFalse, shortAnswer];
+    }
+
+    async function prepareTipsAction(action: string): Promise<TutorialCleanup> {
+      const supported = ['builder', 'mode', 'study', 'quiz', 'test'];
+      if (!supported.includes(action)) throw new Error('Unknown Knowledge Check tutorial action.');
+
+      const previousSelectedId = selectedId.value;
+      const previousSetupTarget = setupTarget.value;
+      const item = insertCheck(
+        props.model.items,
+        { parentId: null, parentName: 'Top level' },
+        'Lorem ipsum',
+        createTutorialQuestions(),
+      );
+
+      if (action !== 'mode') {
+        item.mode = action === 'builder' ? 'study' : action as 'study' | 'quiz' | 'test';
+      }
+
+      setupTarget.value = null;
+      selectedId.value = item.id;
+      library.value?.reveal(item.id);
+      if (libraryOverlay.value) libraryCollapsed.value = true;
+      message.value = '';
+
+      await nextTick();
+
+      return () => {
+        deleteItem(props.model.items, item.id);
+        setupTarget.value = previousSetupTarget;
+        const restoredId = previousSelectedId && findItem(props.model.items, previousSelectedId)
+          ? previousSelectedId
+          : firstEntry(props.model.items)?.id ?? null;
+        selectedId.value = restoredId;
+        if (restoredId) library.value?.reveal(restoredId);
+        message.value = '';
+      };
+    }
+
+    function handleTipsAction(event: CustomEvent<TutorialRequest>) {
+      const detail = event.detail;
+      if (detail?.featureId !== 'knowledge-check') return;
+      detail.handled = true;
+      prepareTipsAction(detail.action).then(detail.resolve, detail.reject);
+    }
 
     const {
       width: libraryWidth,
@@ -76,7 +143,14 @@ export const KnowledgeCheck = defineComponent({
     }
 
     overlayQuery.addEventListener('change', updateLibraryLayout);
-    onBeforeUnmount(() => overlayQuery.removeEventListener('change', updateLibraryLayout));
+    onMounted(() => {
+      removeTipsActionListener = addTutorialActionListener(handleTipsAction);
+    });
+    onBeforeUnmount(() => {
+      removeTipsActionListener?.();
+      removeTipsActionListener = null;
+      overlayQuery.removeEventListener('change', updateLibraryLayout);
+    });
 
     async function setLibraryCollapsed(collapsed: boolean) {
       libraryCollapsed.value = collapsed;
