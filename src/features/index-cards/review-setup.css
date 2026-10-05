@@ -1,4 +1,5 @@
 .review-setup {
+  z-index: 900;
   width: min(440px, calc(100% - 32px));
   max-height: calc(100dvh - 32px);
   padding: 24px;
@@ -26,4 +27,11 @@ body:has(.review-setup[open]) { overflow: hidden; }
 @keyframes dialog-enter {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+
+/* TIPS owns interaction during guided review setup. Keep the setup visible
+   behind the lesson card, but prevent direct user interaction with it. */
+.review-setup[data-tips-tutorial] {
+  pointer-events: none;
 }
