@@ -235,6 +235,7 @@
 .index-cards-mode-card:hover .index-cards-coming-tooltip,
 .index-cards-mode-card:focus-visible .index-cards-coming-tooltip { visibility: visible; }
 .index-cards-builder-actions { display: flex; justify-content: flex-end; }
+.index-cards-builder-error { margin: -12px clamp(28px, 5vw, 56px) 24px; color: var(--danger); }
 
 @media (max-width: 700px) {
   .index-cards-mode-grid { grid-template-columns: 1fr; }
