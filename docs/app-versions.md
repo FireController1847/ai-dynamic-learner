@@ -78,6 +78,7 @@ The repository had no release tags or established app version fields. These are 
 | `1.7.2`: correct themed paper and ink choices | `69fcd5c`. |
 | `1.8.0`: study-mode creation with Flash Cards and Fill in the Blanks, visual numbered blank authoring, edit-side answer keys, Verify-triggered card flipping with corrected results, and per-mode appearance settings | PR #15 development branch. |
 | `1.9.0`: configurable Short/Medium/Long blank lengths with Short defaults and shared card positioning across study modes | Blank-length appearance settings and removal of the Fill in the Blanks positioning wrapper. |
+| `1.10.0`: Tiny blanks and tighter Tiny/Short spacing | Two-character-width blanks and mode-aware horizontal margins, number spacing, and authoring padding. |
 
 ### Word Search
 

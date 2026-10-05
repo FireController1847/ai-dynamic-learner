@@ -81,12 +81,12 @@
 .fill-blank-review-blank {
   display: inline-flex;
   align-items: baseline;
-  gap: 0.14em;
-  margin: 0 0.14em;
+  gap: var(--blank-number-gap, 0.14em);
+  margin: 0 var(--blank-margin, 0.14em);
   vertical-align: baseline;
 }
 .fill-blank-author-blank {
-  padding: 0.06em 0.12em;
+  padding: 0.06em var(--blank-author-padding, 0.12em);
   border-radius: 4px;
   cursor: pointer;
   user-select: all;

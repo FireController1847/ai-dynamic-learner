@@ -10,7 +10,7 @@ export interface CardDisplayOptions {
   textSize: number;
   baseline: number;
   cardSize: number;
-  blankLength: 'short' | 'medium' | 'long';
+  blankLength: 'tiny' | 'short' | 'medium' | 'long';
 }
 
 export interface DisplayOptions {
@@ -35,6 +35,7 @@ export const DISPLAY_FIELDS: DisplayField<CardDisplayOptions>[] = [
   { key: 'textSize', label: 'Text size', default: 100, min: 80, max: 130, step: 5, unit: '%' },
   { key: 'baseline', label: 'Text vertical offset', default: 1, min: -4, max: 6, step: 1, unit: 'px' },
   { key: 'blankLength', label: 'Blank length', default: 'short', choices: [
+    { value: 'tiny', label: 'Tiny' },
     { value: 'short', label: 'Short' },
     { value: 'medium', label: 'Medium' },
     { value: 'long', label: 'Long' },
@@ -108,9 +109,13 @@ export function validateDisplayOptions(value: unknown): asserts value is Display
 
 export function displayStyles(options: CardDisplayOptions) {
   const choice = (key: keyof CardDisplayOptions) => choiceStyle(DISPLAY_FIELDS, key, options[key]);
+  const compactBlanks = options.blankLength === 'tiny' || options.blankLength === 'short';
   return {
     '--blank-sizing-width': options.blankLength === 'medium' ? 'max-content'
-      : options.blankLength === 'long' ? 'initial' : '4ch',
+      : options.blankLength === 'long' ? 'initial' : options.blankLength === 'tiny' ? '2ch' : '4ch',
+    '--blank-margin': compactBlanks ? '0.04em' : '0.14em',
+    '--blank-number-gap': compactBlanks ? '0.08em' : '0.14em',
+    '--blank-author-padding': compactBlanks ? '0.04em' : '0.12em',
     '--blank-input-padding': options.blankLength === 'long' ? '0.18em' : '0px',
     '--paper': choice('paper'),
     '--paper-font': choice('font'),
