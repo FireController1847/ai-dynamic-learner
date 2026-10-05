@@ -178,7 +178,7 @@ export const DisplaySettings = defineComponent({
           h('p', { class: 'display-settings-description' },
             'Text size changes the letters, not the line spacing. Positive vertical offsets move text down. Card size keeps the 5:3 shape and fits the available space.'),
           mode.id === 'fill-in-the-blanks' ? h('p', { class: 'display-settings-description' },
-            'Tiny uses two character widths; Short uses four. Both use tighter spacing. Medium matches the answer’s width. Long uses the original expanding blank lengths.') : null,
+            'Tiny starts at two character widths; Short starts at four. Both use tighter spacing. Medium matches the answer’s width. Long uses the original blank lengths. Review blanks grow as you type.') : null,
           mode.id === 'fill-in-the-blanks' ? fillBlankPreview(current) : flashPreview(current),
           h('button', {
             type: 'button',

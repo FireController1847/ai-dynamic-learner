@@ -75,6 +75,8 @@ export const FillBlankPaper = defineComponent({
             blankNumber(segment.index),
             h('span', { class: 'fill-blank-input-slot', style: { '--blank-width': `${width}ch` } }, [
               h('span', { class: 'fill-blank-input-sizing', 'aria-hidden': 'true' }, segment.answer),
+              h('span', { class: 'fill-blank-input-sizing fill-blank-input-growth', 'aria-hidden': 'true' },
+                response ? `${response}\u00a0` : ''),
               h('input', {
                 ref: (element) => { inputs[segment.index] = element instanceof HTMLInputElement ? element : null; },
                 class: 'fill-blank-input',

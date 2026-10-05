@@ -156,11 +156,12 @@
 }
 .fill-blank-input-slot {
   position: relative;
-  display: inline-block;
+  display: inline-grid;
   vertical-align: baseline;
 }
 .fill-blank-input-sizing {
   display: block;
+  grid-area: 1 / 1;
   box-sizing: content-box;
   padding-inline: var(--blank-input-padding, 0px);
   width: var(--blank-sizing-width, var(--blank-width, 4ch));
@@ -169,6 +170,9 @@
   visibility: hidden;
   font: inherit;
   white-space: pre;
+}
+.fill-blank-input-growth {
+  width: max-content;
 }
 .fill-blank-input {
   position: absolute;
