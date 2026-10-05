@@ -75,6 +75,7 @@ export const KnowledgeCheck = defineComponent({
 
       const previousSelectedId = selectedId.value;
       const previousSetupTarget = setupTarget.value;
+      const previousLibraryCollapsed = libraryCollapsed.value;
       const item = insertCheck(
         props.model.items,
         { parentId: null, parentName: 'Top level' },
@@ -99,8 +100,9 @@ export const KnowledgeCheck = defineComponent({
         setupTarget.value = previousSetupTarget;
         const restoredId = previousSelectedId && findItem(props.model.items, previousSelectedId)
           ? previousSelectedId
-          : firstEntry(props.model.items)?.id ?? null;
+          : null;
         selectedId.value = restoredId;
+        libraryCollapsed.value = previousLibraryCollapsed;
         if (restoredId) library.value?.reveal(restoredId);
         message.value = '';
       };
