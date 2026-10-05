@@ -15,6 +15,7 @@
   min-height: 0;
 }
 .card-set-layout.card-list-resizing { user-select: none; }
+.card-set-layout.card-list-collapsed { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
 .card-set {
   grid-column: 1;
   grid-row: 1;

@@ -4,7 +4,7 @@ import type { ReviewOrder } from './review-setup.ts';
 import type { FillBlankEditorHandle } from './fill-blank-editor.ts';
 import { Icon } from '../../components/icon.ts';
 import { createCard, MAX_CARDS, shuffledCardIds } from './card-model.ts';
-import { CardList } from './card-list.ts';
+import { CardList, type CardListHandle } from './card-list.ts';
 import { FillBlankEditor } from './fill-blank-editor.ts';
 import { FillBlankPaper, type FillBlankPaperHandle } from './fill-blank-paper.ts';
 import { FillBlankReviewSetup } from './fill-blank-review-setup.ts';
@@ -26,9 +26,19 @@ export const FillBlankSet = defineComponent({
     totalCards: { type: Number, required: true },
     cardListWidth: { type: Number as PropType<number | null>, default: null },
     tutorialReview: Boolean,
+    cardListCollapsed: Boolean,
   },
-  emits: { 'resize-card-list': (_width: number) => true, 'reset-card-list': () => true },
+  emits: { 'resize-card-list': (_width: number) => true, 'reset-card-list': () => true, 'toggle-card-list': () => true },
   setup(props, { emit }) {
+    const cardList = ref<CardListHandle | null>(null);
+    const showCardsButton = ref<HTMLButtonElement | null>(null);
+    async function toggleCardList() {
+      const hiding = !props.cardListCollapsed;
+      cardListResizing.value = false;
+      emit('toggle-card-list');
+      await nextTick();
+      if (hiding) showCardsButton.value?.focus(); else cardList.value?.focusHide();
+    }
     const currentId = ref(props.set.cards[0]?.id ?? null);
     const reviewOrder = ref<ReviewOrder>('forward');
     const reviewSetupOpen = ref(false);
@@ -387,7 +397,7 @@ export const FillBlankSet = defineComponent({
 
       return h('div', {
         ref: layout,
-        class: ['card-set-layout', 'fill-blank-set-layout', { 'card-list-resizing': cardListResizing.value }],
+        class: ['card-set-layout', 'fill-blank-set-layout', { 'card-list-resizing': cardListResizing.value, 'card-list-collapsed': props.cardListCollapsed }],
         style: props.cardListWidth === null ? null : { '--card-list-width': `${props.cardListWidth}px` },
         onKeydown: shortcuts,
       }, [
@@ -563,7 +573,7 @@ export const FillBlankSet = defineComponent({
             onCancel: cancelReview, onStart: startReview,
           }) : null,
         ]),
-        h('div', {
+        !props.cardListCollapsed ? h('div', {
           class: 'card-list-resizer', role: 'separator', tabindex: 0,
           'aria-label': 'Resize Cards panel', 'aria-orientation': 'vertical',
           'aria-valuemin': MIN_CARD_LIST_WIDTH, 'aria-valuemax': maxCardListWidth(),
@@ -571,8 +581,9 @@ export const FillBlankSet = defineComponent({
           onPointerdown: beginCardListResize, onPointermove: resizeCardListFromPointer,
           onPointerup: endCardListResize, onPointercancel: endCardListResize,
           onKeydown: resizeCardListFromKeyboard, onDblclick: () => emit('reset-card-list'),
-        }),
+        }) : null,
         h(CardList, {
+          ref: cardList, hidden: props.cardListCollapsed, onHide: toggleCardList,
           cards: orderedCards.value, selectedId: card?.id ?? null,
           atLimit: atLimit.value, previewSide: 'front', maskBlanks: true,
           orderLabel: reviewActive.value ? `${orderDescription} · fill in the blanks` : 'Saved order',
