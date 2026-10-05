@@ -258,9 +258,6 @@ export const IndexCards = defineComponent({
 
       await nextTick();
       return () => restoreTipsState(previous, item.id);
-
-      await nextTick();
-      return () => restoreTipsState(previous, item.id);
     }
 
     function handleTipsAction(event: CustomEvent<TutorialRequest>) {
