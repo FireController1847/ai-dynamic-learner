@@ -235,6 +235,9 @@
   text-align: center;
   vertical-align: baseline;
 }
+.fill-blank-result.is-incorrect .fill-blank-correct-answer {
+  border-bottom: 1px solid var(--danger);
+}
 .fill-blank-wrong-answer {
   position: absolute;
   top: calc(50% + 0.9em);
@@ -247,10 +250,6 @@
   font-weight: 650;
   line-height: 1;
   text-align: center;
-  text-decoration-line: line-through;
-  text-decoration-color: var(--danger);
-  text-decoration-thickness: 1px;
-  text-decoration-skip-ink: none;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
