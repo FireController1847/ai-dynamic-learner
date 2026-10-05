@@ -2,11 +2,18 @@
 import type { PageMetadataOverrides } from '../core/metadata.ts';
 
 export type FeatureId = 'calculator' | 'notebook' | 'todo-list' | 'index-cards' | 'word-search' | 'crossword' | 'study-guide' | 'knowledge-check';
+export type FeatureGroup = 'helpers' | 'applications' | 'mastery';
+export const featureGroups: readonly { id: FeatureGroup; label: string }[] = [
+  { id: 'helpers', label: 'Utilities' },
+  { id: 'applications', label: 'Applications' },
+  { id: 'mastery', label: 'Mastery' },
+];
 
 export interface FeatureDefinition {
   hidden?: boolean;
   imageSrc?: string;
   id: FeatureId;
+  group: FeatureGroup;
   label: string;
   version: `${number}.${number}.${number}`;
   path: `/${string}/`;
@@ -19,6 +26,7 @@ export interface FeatureDefinition {
 export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'calculator', label: 'Calculator', path: '/calculator/', icon: 'calculator',
+    group: 'helpers',
     version: '1.3.0',
     image: 'assets/calculator.png',
     description: 'A scientific calculator for expressions and functions.',
@@ -35,12 +43,14 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   },
   {
     id: 'notebook', label: 'Notebook', path: '/notebook/', icon: 'document',
+    group: 'helpers',
     version: '1.4.3',
     image: 'assets/notebook.png',
     description: 'Organize notes into groups and keep your documents together in one notebook.',
   },
   {
     id: 'todo-list', label: 'Todo List', path: '/todo-list/', icon: 'checklist',
+    group: 'helpers',
     version: '1.5.0',
     image: 'assets/todo-list.png',
     description: 'Write, organize, and prioritize tasks in simple lists that archive automatically.',
@@ -57,18 +67,21 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   },
   {
     id: 'index-cards', label: 'Index Cards', path: '/index-cards/', icon: 'cards',
+    group: 'applications',
     version: '1.10.1',
     image: 'assets/index-cards.png',
     description: 'Create flash cards or fill-in-the-blanks sets and review them at your own pace.',
   },
   {
     id: 'word-search', label: 'Word Search', path: '/word-search/', icon: 'word-search',
+    group: 'applications',
     version: '1.5.11',
     image: 'assets/word-search.png',
     description: 'Create your own word searches, find every word, and pick up where you left off.'
   },
   {
     id: 'crossword', label: 'Crossword', path: '/crossword/', icon: 'crossword',
+    group: 'applications',
     version: '1.1.6',
     image: 'assets/crossword.png',
     description: 'Create your own crosswords, solve the clues, and pick up where you left off.',
@@ -85,12 +98,14 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   },
   {
     id: 'study-guide', label: 'Study Guide', path: '/study-guide/', icon: 'document',
+    group: 'mastery',
     version: '0.1.0',
     image: '',
     description: 'Create and organize study guides for the material you want to learn.',
   },
   {
     id: 'knowledge-check', label: 'Review', path: '/knowledge-check/', icon: 'checklist',
+    group: 'mastery',
     version: '1.2.2',
     image: 'assets/knowledge-check.png',
     description: 'Make knowledge sets to study, quiz yourself, or take a test.',
