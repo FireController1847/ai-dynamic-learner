@@ -228,7 +228,6 @@
   display: inline-block;
   min-width: 100%;
   padding: 0 0.16em;
-  border-bottom: 2px solid var(--success);
   color: var(--success);
   font-weight: 700;
   line-height: inherit;
