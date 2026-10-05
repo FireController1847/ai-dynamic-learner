@@ -1,11 +1,11 @@
 import type { CardSet as CardSetModel } from './tree-model.ts';
-import type { Card, CardSide } from './card-model.ts';
+import type { Card } from './card-model.ts';
 import type { ReviewOrder } from './review-setup.ts';
-import type { FocusHandle } from '../../core/dom.ts';
+import type { FillBlankEditorHandle } from './fill-blank-editor.ts';
 import { Icon } from '../../components/icon.ts';
-import { createCard, MAX_CARDS, MAX_CARD_TEXT_LENGTH, shuffledCardIds } from './card-model.ts';
+import { createCard, MAX_CARDS, shuffledCardIds } from './card-model.ts';
 import { CardList } from './card-list.ts';
-import { CardPaper } from './card-paper.ts';
+import { FillBlankEditor } from './fill-blank-editor.ts';
 import { FillBlankPaper } from './fill-blank-paper.ts';
 import { FillBlankReviewSetup } from './fill-blank-review-setup.ts';
 import { isFillBlankAnswerCorrect, parseFillBlankTemplate } from './fill-blank-model.ts';
@@ -26,7 +26,6 @@ export const FillBlankSet = defineComponent({
   emits: { 'resize-card-list': (_width: number) => true, 'reset-card-list': () => true },
   setup(props, { emit }) {
     const currentId = ref(props.set.cards[0]?.id ?? null);
-    const side = ref<CardSide>('front');
     const reviewOrder = ref<ReviewOrder>('forward');
     const reviewSetupOpen = ref(false);
     const reviewActive = ref(false);
@@ -36,7 +35,7 @@ export const FillBlankSet = defineComponent({
     const shuffleOrder = ref<string[] | null>(null);
     const responses = ref<string[]>([]);
     const verified = ref(false);
-    const editor = ref<FocusHandle | null>(null);
+    const editor = ref<FillBlankEditorHandle | null>(null);
     const addButton = ref<HTMLButtonElement | null>(null);
     const deleteButton = ref<HTMLButtonElement | null>(null);
     const layout = ref<HTMLElement | null>(null);
@@ -57,7 +56,6 @@ export const FillBlankSet = defineComponent({
     watch(() => props.set.cards.length, (length) => {
       if (!length && reviewActive.value) endReview(false);
     });
-
     onDeactivated(() => {
       reviewSetupOpen.value = false;
       cardListResizing.value = false;
@@ -68,22 +66,18 @@ export const FillBlankSet = defineComponent({
       return Math.max(MIN_CARD_LIST_WIDTH,
         Math.min(MAX_CARD_LIST_WIDTH, available - MIN_EDITOR_WIDTH));
     }
-
     function currentCardListWidth() {
       return props.cardListWidth ??
         layout.value?.querySelector('.card-list-panel')?.getBoundingClientRect().width ??
         224;
     }
-
     function setCardListWidth(width: number) {
       emit('resize-card-list',
         Math.round(Math.min(Math.max(width, MIN_CARD_LIST_WIDTH), maxCardListWidth())));
     }
-
     function keepCardListWidthInBounds() {
       if (props.cardListWidth !== null) setCardListWidth(props.cardListWidth);
     }
-
     function beginCardListResize(event: PointerEvent) {
       if (event.button !== 0) return;
       event.preventDefault();
@@ -91,20 +85,17 @@ export const FillBlankSet = defineComponent({
       (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
       resizeCardListFromPointer(event);
     }
-
     function resizeCardListFromPointer(event: PointerEvent) {
       if (!cardListResizing.value || !layout.value) return;
       const bounds = layout.value.getBoundingClientRect();
       setCardListWidth(bounds.right - event.clientX);
     }
-
     function endCardListResize(event: PointerEvent) {
       cardListResizing.value = false;
       if ((event.currentTarget as HTMLElement).hasPointerCapture(event.pointerId)) {
         (event.currentTarget as HTMLElement).releasePointerCapture(event.pointerId);
       }
     }
-
     function resizeCardListFromKeyboard(event: KeyboardEvent) {
       const step = event.shiftKey ? 48 : 16;
       let width = currentCardListWidth();
@@ -130,7 +121,6 @@ export const FillBlankSet = defineComponent({
       responses.value = [];
       verified.value = false;
     }
-
     async function addCard(duplicate = false) {
       if (atLimit.value) return;
       const card = createCard(duplicate ? current.value : null);
@@ -138,27 +128,19 @@ export const FillBlankSet = defineComponent({
       props.set.cards.splice(sourceIndex + 1, 0, card);
       if (shuffleOrder.value) shuffleOrder.value.splice(index.value + 1, 0, card.id);
       currentId.value = card.id;
-      side.value = 'front';
       resetAttempt();
       message.value = duplicate ? 'Card duplicated.' : 'New card added.';
       await nextTick();
       if (!reviewActive.value) editor.value?.focus();
     }
-
     function selectCard(id: string) {
       currentId.value = id;
-      side.value = 'front';
       resetAttempt();
       message.value = '';
     }
-
     function go(offset: number) {
       const card = orderedCards.value[index.value + offset];
       if (card) selectCard(card.id);
-    }
-
-    function flip() {
-      if (current.value && !reviewActive.value) side.value = side.value === 'front' ? 'back' : 'front';
     }
 
     async function startReview(order: ReviewOrder) {
@@ -167,19 +149,16 @@ export const FillBlankSet = defineComponent({
       reviewOrder.value = order;
       shuffleOrder.value = order === 'shuffle' ? shuffledCardIds(props.set.cards) : null;
       currentId.value = orderedCards.value[0]?.id ?? null;
-      side.value = 'front';
       resetAttempt();
       reviewSetupOpen.value = false;
       message.value = `Review started: ${order}.`;
       await nextTick();
       stack.value?.focus();
     }
-
     async function endReview(finished = false) {
       reviewActive.value = false;
       reviewOrder.value = 'forward';
       shuffleOrder.value = null;
-      side.value = 'front';
       resetAttempt();
       reviewNotice.value = finished
         ? 'Review finished. Keep editing, or start another review.'
@@ -187,20 +166,17 @@ export const FillBlankSet = defineComponent({
       await nextTick();
       reviewButton.value?.focus();
     }
-
     async function cancelReview() {
       reviewSetupOpen.value = false;
       await nextTick();
       reviewButton.value?.focus();
     }
-
     function updateResponse(blankIndex: number, value: string) {
       const next = [...responses.value];
       next[blankIndex] = value;
       responses.value = next;
       message.value = '';
     }
-
     function verify() {
       const card = current.value;
       if (!card) return;
@@ -222,15 +198,17 @@ export const FillBlankSet = defineComponent({
       if (savedIndex >= 0) props.set.cards.splice(savedIndex, 1);
       if (shuffleOrder.value) shuffleOrder.value = shuffleOrder.value.filter((cardId) => cardId !== id);
       currentId.value = next?.id ?? null;
-      side.value = 'front';
       resetAttempt();
       message.value = 'Card deleted.';
       await nextTick();
       (current.value ? deleteButton.value : addButton.value)?.focus();
     }
 
+    function preserveEditorSelection(event: MouseEvent) {
+      event.preventDefault();
+    }
     function shortcuts(event: KeyboardEvent) {
-      if ((event.target instanceof Element && event.target.closest('textarea, input, select, button, a, dialog, summary')) ||
+      if ((event.target instanceof Element && event.target.closest('[contenteditable], input, select, button, a, dialog, summary')) ||
           event.isComposing || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
       if (event.key === 'ArrowLeft') {
         event.preventDefault();
@@ -241,9 +219,6 @@ export const FillBlankSet = defineComponent({
           event.preventDefault();
           go(1);
         }
-      } else if (event.key === ' ' && !reviewActive.value) {
-        event.preventDefault();
-        flip();
       }
     }
 
@@ -275,176 +250,136 @@ export const FillBlankSet = defineComponent({
               h('strong', reviewActive.value ? 'Fill-in review' : 'Browse & edit'),
               h('p', { role: 'status' }, reviewActive.value
                 ? `${position} · ${blankCount} ${blankCount === 1 ? 'blank' : 'blanks'} · ${orderDescription}`
-                : `${position} · ${reviewNotice.value || 'Mark answers with {{double braces}}'}`),
+                : `${position} · ${blankCount} ${blankCount === 1 ? 'blank' : 'blanks'}`),
             ]),
             h('div', { class: 'card-review-session-actions' }, [
               h('button', {
-                ref: reviewButton,
-                type: 'button',
-                class: 'quiet-button card-review-button',
-                'aria-haspopup': 'dialog',
-                onClick: () => { reviewSetupOpen.value = true; },
+                ref: reviewButton, type: 'button', class: 'quiet-button card-review-button',
+                'aria-haspopup': 'dialog', onClick: () => { reviewSetupOpen.value = true; },
               }, reviewActive.value ? 'Change setup' : 'Review'),
               reviewActive.value ? h('button', {
-                type: 'button',
-                class: 'quiet-button',
-                onClick: () => endReview(false),
+                type: 'button', class: 'quiet-button', onClick: () => endReview(false),
               }, 'End review') : null,
             ]),
           ]) : null,
-          card ? h('div', {
-            ref: stack,
-            class: ['ruled-card-stack', {
-              'has-second-card': props.set.cards.length > 1,
-              'has-third-card': props.set.cards.length > 2,
-            }],
-            tabindex: 0,
-            role: 'group',
-            'aria-label': reviewActive.value
-              ? `Card ${index.value + 1} of ${orderedCards.value.length}. Fill every blank, then verify.`
-              : `Card ${index.value + 1} of ${orderedCards.value.length}. Use left and right arrows to navigate, Space to flip.`,
-          }, [
-            reviewActive.value
-              ? h(FillBlankPaper, {
-                key: `review-${card.id}`,
-                card,
-                position: index.value + 1,
-                responses: responses.value,
-                verified: verified.value,
-                onUpdateResponse: updateResponse,
-              })
-              : h(CardPaper, {
-                key: `edit-${card.id}`,
-                ref: editor,
-                card,
-                side: side.value,
-                position: index.value + 1,
-              }),
+          card ? h('div', { class: ['fill-blank-stage', { 'is-reviewing': reviewActive.value }] }, [
+            h('div', {
+              ref: stack,
+              class: ['ruled-card-stack', {
+                'has-second-card': props.set.cards.length > 1,
+                'has-third-card': props.set.cards.length > 2,
+              }],
+              tabindex: reviewActive.value ? 0 : -1,
+              role: 'group',
+              'aria-label': reviewActive.value
+                ? `Card ${index.value + 1} of ${orderedCards.value.length}. Fill every blank, then verify.`
+                : `Card ${index.value + 1} of ${orderedCards.value.length}. Select text and use the blank tools to edit the exercise.`,
+            }, [
+              reviewActive.value
+                ? h(FillBlankPaper, {
+                  key: `review-${card.id}`, card, position: index.value + 1,
+                  responses: responses.value, verified: verified.value,
+                  onUpdateResponse: updateResponse,
+                })
+                : h(FillBlankEditor, {
+                  key: `edit-${card.id}`, ref: editor, card, position: index.value + 1,
+                  onMessage: (value: string) => { message.value = value; },
+                }),
+            ]),
+            !reviewActive.value ? h('aside', { class: 'fill-blank-tools', 'aria-label': 'Blank editing tools' }, [
+              h('strong', 'Blanks'),
+              h('button', {
+                type: 'button', class: 'quiet-button fill-blank-tool-button',
+                onMousedown: preserveEditorSelection,
+                onClick: () => editor.value?.makeBlank(),
+              }, [h(Icon, { name: 'plus' }), 'Make blank']),
+              h('button', {
+                type: 'button', class: 'quiet-button fill-blank-tool-button',
+                onMousedown: preserveEditorSelection,
+                onClick: () => editor.value?.removeBlank(),
+              }, [h(Icon, { name: 'minus' }), 'Remove blank']),
+              h('p', 'Select text to make a blank. Put the cursor in a highlighted blank to remove it.'),
+            ]) : null,
           ]) : h('div', { class: 'card-set-empty' }, [
             h(Icon, { name: 'cards' }),
             h('h3', 'A fresh fill-in set.'),
-            h('p', 'Add a card, then wrap each answer in {{double braces}} to create blanks.'),
+            h('p', 'Add a card, write the prompt, then select the words learners should recall.'),
             h('button', {
-              ref: addButton,
-              type: 'button',
-              class: 'card-primary-button',
-              disabled: atLimit.value,
-              onClick: () => addCard(),
+              ref: addButton, type: 'button', class: 'card-primary-button',
+              disabled: atLimit.value, onClick: () => addCard(),
             }, [h(Icon, { name: 'plus' }), 'Add first card']),
           ]),
           card ? h('div', { class: 'card-controls' }, [
-            reviewActive.value ? h('div', { class: 'card-review-controls', 'aria-label': 'Fill in the blanks review' }, [
+            h('div', {
+              class: 'card-review-controls',
+              'aria-label': reviewActive.value ? 'Fill in the blanks review' : 'Browse cards',
+            }, [
               h('button', {
-                type: 'button',
-                class: 'quiet-button card-previous',
-                title: 'Previous card',
-                'aria-label': 'Previous card',
-                disabled: index.value === 0,
-                onClick: () => go(-1),
+                type: 'button', class: 'quiet-button card-previous',
+                title: 'Previous card', 'aria-label': 'Previous card',
+                disabled: index.value === 0, onClick: () => go(-1),
               }, [h(Icon, { name: 'chevron' }), 'Previous']),
+              reviewActive.value ? h('button', {
+                type: 'button', class: 'card-flip-button fill-blank-verify-button',
+                disabled: !allFilled || verified.value, onClick: verify,
+              }, [h(Icon, { name: verified.value ? 'verified' : 'checklist' }), verified.value ? 'Verified' : 'Verify'])
+                : h('div', { class: 'fill-blank-edit-summary', 'aria-live': 'polite' },
+                  `${blankCount} ${blankCount === 1 ? 'blank' : 'blanks'}`),
               h('button', {
-                type: 'button',
-                class: 'card-flip-button fill-blank-verify-button',
-                disabled: !allFilled || verified.value,
-                onClick: verify,
-              }, [h(Icon, { name: verified.value ? 'verified' : 'flip' }), verified.value ? 'Verified' : 'Verify']),
-              h('button', {
-                type: 'button',
-                class: 'quiet-button',
-                disabled: !canAdvance,
-                onClick: () => lastCard ? endReview(true) : go(1),
-              }, lastCard && canAdvance ? 'Finish review' : blankCount === 0 ? 'Skip' : ['Next card', h(Icon, { name: 'chevron' })]),
-            ]) : h('div', { class: 'card-review-controls', 'aria-label': 'Browse cards' }, [
-              h('button', {
-                type: 'button',
-                class: 'quiet-button card-previous',
-                title: 'Previous card',
-                'aria-label': 'Previous card',
-                disabled: index.value === 0,
-                onClick: () => go(-1),
-              }, [h(Icon, { name: 'chevron' }), 'Previous']),
-              h('button', {
-                type: 'button',
-                class: 'card-flip-button',
-                'aria-label': `Flip to ${side.value === 'front' ? 'back' : 'front'}`,
-                onClick: flip,
-              }, [h(Icon, { name: 'flip' }), side.value === 'front' ? 'Show back' : 'Show front']),
-              h('button', {
-                type: 'button',
-                class: 'quiet-button',
-                disabled: lastCard,
-                onClick: () => go(1),
-              }, ['Next card', h(Icon, { name: 'chevron' })]),
+                type: 'button', class: 'quiet-button',
+                disabled: reviewActive.value ? !canAdvance : lastCard,
+                onClick: () => reviewActive.value && lastCard ? endReview(true) : go(1),
+              }, reviewActive.value && lastCard && canAdvance
+                ? 'Finish review'
+                : reviewActive.value && blankCount === 0
+                  ? 'Skip'
+                  : ['Next card', h(Icon, { name: 'chevron' })]),
             ]),
-            reviewActive.value ? h('p', { class: 'card-review-instruction' },
-              blankCount === 0
-                ? 'No blanks found on this card. End review to edit it, or skip to the next card.'
-                : verified.value
-                  ? `${correctCount} of ${blankCount} correct. Correct answers are green; missed answers appear below them in red.`
-                  : 'Fill every blank before Verify becomes available. Answers are checked together when the card flips.'
-            ) : h('p', { class: 'card-review-instruction fill-blank-authoring-hint' },
-              'Wrap an answer in {{double braces}} to turn it into a blank during review. The back can hold optional explanation or notes.'),
+            h('p', { class: 'card-review-instruction fill-blank-authoring-hint' },
+              reviewActive.value
+                ? blankCount === 0
+                  ? 'No blanks are defined on this card. End review to edit it, or skip to the next card.'
+                  : verified.value
+                    ? `${correctCount} of ${blankCount} correct. Correct answers are green; missed answers appear below them in red.`
+                    : 'Fill every blank before Verify becomes available. All answers are checked together.'
+                : message.value || 'Write directly on the card, select a word or phrase, then choose Make blank.'),
             !reviewActive.value ? h('div', { class: 'card-edit-controls', 'aria-label': 'Card actions' }, [
               h('button', {
-                ref: addButton,
-                type: 'button',
-                class: 'quiet-button',
-                disabled: atLimit.value,
-                onClick: () => addCard(),
+                ref: addButton, type: 'button', class: 'quiet-button',
+                disabled: atLimit.value, onClick: () => addCard(),
               }, [h(Icon, { name: 'plus' }), 'New card']),
               h('button', {
-                type: 'button',
-                class: 'quiet-button',
-                disabled: atLimit.value,
-                onClick: () => addCard(true),
+                type: 'button', class: 'quiet-button',
+                disabled: atLimit.value, onClick: () => addCard(true),
               }, [h(Icon, { name: 'duplicate' }), 'Duplicate']),
               h('button', {
-                ref: deleteButton,
-                type: 'button',
-                class: 'icon-button delete-button',
-                title: 'Delete card',
-                'aria-label': 'Delete card',
-                onClick: deleteCurrentCard,
+                ref: deleteButton, type: 'button', class: 'icon-button delete-button',
+                title: 'Delete card', 'aria-label': 'Delete card', onClick: deleteCurrentCard,
               }, [h(Icon, { name: 'trash' })]),
             ]) : null,
-            !reviewActive.value ? h('p', { class: 'card-edit-hint' },
-              `${blankCount} ${blankCount === 1 ? 'blank' : 'blanks'} · ${card[side.value].length} / ${MAX_CARD_TEXT_LENGTH}`) : null,
           ]) : null,
           atLimit.value ? h('p', { class: 'card-limit-message', role: 'status' },
             `Workspace limit reached: ${MAX_CARDS} cards.`) : null,
           h('p', { class: 'visually-hidden', role: 'status' }, message.value),
           reviewSetupOpen.value ? h(FillBlankReviewSetup, {
-            initialOrder: reviewOrder.value,
-            cardCount: props.set.cards.length,
-            onCancel: cancelReview,
-            onStart: startReview,
+            initialOrder: reviewOrder.value, cardCount: props.set.cards.length,
+            onCancel: cancelReview, onStart: startReview,
           }) : null,
         ]),
         h('div', {
-          class: 'card-list-resizer',
-          role: 'separator',
-          tabindex: 0,
-          'aria-label': 'Resize Cards panel',
-          'aria-orientation': 'vertical',
-          'aria-valuemin': MIN_CARD_LIST_WIDTH,
-          'aria-valuemax': maxCardListWidth(),
+          class: 'card-list-resizer', role: 'separator', tabindex: 0,
+          'aria-label': 'Resize Cards panel', 'aria-orientation': 'vertical',
+          'aria-valuemin': MIN_CARD_LIST_WIDTH, 'aria-valuemax': maxCardListWidth(),
           'aria-valuenow': Math.round(currentCardListWidth()),
-          onPointerdown: beginCardListResize,
-          onPointermove: resizeCardListFromPointer,
-          onPointerup: endCardListResize,
-          onPointercancel: endCardListResize,
-          onKeydown: resizeCardListFromKeyboard,
-          onDblclick: () => emit('reset-card-list'),
+          onPointerdown: beginCardListResize, onPointermove: resizeCardListFromPointer,
+          onPointerup: endCardListResize, onPointercancel: endCardListResize,
+          onKeydown: resizeCardListFromKeyboard, onDblclick: () => emit('reset-card-list'),
         }),
         h(CardList, {
-          cards: orderedCards.value,
-          selectedId: card?.id ?? null,
-          atLimit: atLimit.value,
-          previewSide: 'front',
-          maskBlanks: true,
+          cards: orderedCards.value, selectedId: card?.id ?? null,
+          atLimit: atLimit.value, previewSide: 'front', maskBlanks: true,
           orderLabel: reviewActive.value ? `${orderDescription} · fill in the blanks` : 'Saved order',
-          onSelect: selectCard,
-          onAdd: () => addCard(),
+          onSelect: selectCard, onAdd: () => addCard(),
         }),
       ]);
     };
