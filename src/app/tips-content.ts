@@ -260,7 +260,7 @@ export const tipsCatalog: TipsCatalog = {
           {
             title: 'Make a set',
             body: 'Press New knowledge set to make one.',
-            target: '#knowledge-check-library [aria-label="New knowledge set"]',
+            target: '#knowledge-check-library [aria-label="New question set"]',
             targetLabel: 'New knowledge set button',
             placement: 'right',
           },
