@@ -2,7 +2,7 @@ export type TipsFeatureId = string;
 export interface TipsFeature { id: TipsFeatureId; label: string }
 export type TargetSelector = string | string[];
 export type Placement = 'top' | 'bottom' | 'left' | 'right' | 'center';
-export interface StepAction { click: TargetSelector }
+export interface StepAction { click: TargetSelector; prepare?: string }
 export interface TipStep {
   title: string; body: string; target: TargetSelector; targetLabel: string;
   placement?: Placement; nextAction?: StepAction; backAction?: StepAction;
