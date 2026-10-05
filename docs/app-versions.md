@@ -14,7 +14,7 @@ Follow [Semantic Versioning 2.0.0](https://semver.org/). For these browser apps,
 
 Keep the source version explicit and review its increment with future changes. These versions are independent of the npm package version, tutorial completion versions, and workspace backup format version.
 
-Knowledge Check is an empty scaffold at `0.1.0`; it has no quiz workflows or saved data yet.
+Knowledge Check is an empty scaffold at `0.1.1`; it has no quiz workflows or saved data yet. Its `0.1.1` presentation patch adds dedicated app artwork to the initial `0.1.0` scaffold.
 
 ## History-derived starting versions
 

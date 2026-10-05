@@ -85,8 +85,18 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   },
   {
     id: 'knowledge-check', label: 'Knowledge Check', path: '/knowledge-check/', icon: 'checklist',
-    version: '0.1.0',
-    image: '',
+    version: '0.1.1',
+    image: 'assets/knowledge-check.png',
     description: 'Quiz yourself and check what you know.',
+    metadata: {
+      keywords: ['knowledge check', 'quiz', 'self assessment', 'learning'],
+      socialImage: {
+        path: 'assets/knowledge-check.png',
+        type: 'image/png',
+        width: 1254,
+        height: 1254,
+        alt: 'Knowledge Check — Glossy blue-and-white quiz sheet with a question mark, answer choices, and a checkmark badge.',
+      },
+    },
   },
 ];
