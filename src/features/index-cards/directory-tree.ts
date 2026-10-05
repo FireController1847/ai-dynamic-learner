@@ -1,4 +1,4 @@
-export interface DirectoryTreeHandle { reveal(id: string): void; focusToggle(): void; createSet(): void; }
+export interface DirectoryTreeHandle { reveal(id: string): void; focusToggle(): void; focusNewSet(): void; beginRename(id: string): void; }
 import type { VNode } from 'vue';
 import type { LibraryItem, MovePosition } from './tree-model.ts';
 import { inputValue } from '../../core/dom.ts';
@@ -15,7 +15,7 @@ export const DirectoryTree = defineComponent({
     selectedId: { type: String as PropType<string | null>, default: null },
     collapsed: Boolean,
   },
-  emits: { 'select': (_id: string | null) => true, 'open-item': () => true, 'toggle-library': () => true },
+  emits: { 'select': (_id: string | null) => true, 'open-item': () => true, 'toggle-library': () => true, 'new-set': () => true },
   setup(props, { emit, expose, slots }) {
     const expanded = ref(new Set<string>());
     const editingId = ref<string | null>(null);
@@ -26,6 +26,7 @@ export const DirectoryTree = defineComponent({
     const announcement = ref('');
     const pendingDelete = ref<LibraryItem | null>(null);
     const createGroupButton = ref<HTMLButtonElement | null>(null);
+    const newSetButton = ref<HTMLButtonElement | null>(null);
     const collapseButton = ref<HTMLButtonElement | null>(null);
     const labels = new Map<string | null, HTMLElement>();
     let deleteTrigger: HTMLElement | null = null;
@@ -102,7 +103,7 @@ export const DirectoryTree = defineComponent({
       }
     }
 
-    function create(kind: 'group' | 'set') {
+    function createGroup() {
       if (countItems(props.items) >= MAX_ITEMS) {
         announcement.value = `The workspace limit is ${MAX_ITEMS} groups and sets.`;
         return;
@@ -114,20 +115,20 @@ export const DirectoryTree = defineComponent({
         return;
       }
 
-      const item = createItem(kind);
+      const item = createItem('group');
       if (selected?.item.kind === 'group') {
         selected.item.children.unshift(item);
         expanded.value.add(selected.item.id);
-        announcement.value = `Created a new ${kind} inside ${selected.item.name}.`;
+        announcement.value = `Created a new group inside ${selected.item.name}.`;
       } else if (selected) {
         selected.siblings.splice(selected.index + 1, 0, item);
-        announcement.value = `Created a new ${kind} after ${selected.item.name}.`;
+        announcement.value = `Created a new group after ${selected.item.name}.`;
       } else {
         props.items.unshift(item);
-        announcement.value = `Created a new ${kind} at the top level.`;
+        announcement.value = 'Created a new group at the top level.';
       }
 
-      if (kind === 'group') expanded.value.add(item.id);
+      expanded.value.add(item.id);
       rename(item);
     }
 
@@ -143,7 +144,15 @@ export const DirectoryTree = defineComponent({
         parentId = findItem(props.items, parentId)?.parentId;
       }
     }
-    expose({ reveal, focusToggle: () => collapseButton.value?.focus(), createSet: () => create('set') });
+    expose({
+      reveal,
+      focusToggle: () => collapseButton.value?.focus(),
+      focusNewSet: () => newSetButton.value?.focus(),
+      beginRename: (id: string) => {
+        const found = findItem(props.items, id);
+        if (found) rename(found.item);
+      },
+    });
 
     function endDrag() {
       draggedId.value = null;
@@ -274,11 +283,12 @@ export const DirectoryTree = defineComponent({
           h('button', {
             ref: createGroupButton,
             type: 'button', class: 'icon-button', title: 'New group',
-            'aria-label': 'New group', onClick: () => create('group'),
+            'aria-label': 'New group', onClick: createGroup,
           }, [h(Icon, { name: 'folder' })]),
           h('button', {
+            ref: newSetButton,
             type: 'button', class: 'icon-button', title: 'New set',
-            'aria-label': 'New set', onClick: () => create('set'),
+            'aria-label': 'New set', onClick: () => emit('new-set'),
           }, [h(Icon, { name: 'cards' })]),
           h('button', {
             ref: collapseButton, type: 'button', class: 'icon-button',
