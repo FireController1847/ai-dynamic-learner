@@ -346,6 +346,7 @@ export const tipsCatalog: TipsCatalog = {
             back: false,
           },
         ],
+        finishAction: { click: '[aria-label="End review"]' },
       },
       {
         id: 'fill-in-the-blanks',
@@ -409,6 +410,7 @@ export const tipsCatalog: TipsCatalog = {
             back: false,
           },
         ],
+        finishAction: { click: '[aria-label="End review"]' },
       },
     ],
   },
