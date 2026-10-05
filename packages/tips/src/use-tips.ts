@@ -201,7 +201,13 @@ export function useTips(props: Readonly<TipsProps>) {
       }
 
       try {
-        target.click();
+        if (target instanceof HTMLButtonElement &&
+            target.type === 'submit' &&
+            target.form) {
+          target.form.requestSubmit(target);
+        } else {
+          target.click();
+        }
       } finally {
         for (const element of inertAncestors) element.inert = true;
       }
