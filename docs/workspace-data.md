@@ -15,7 +15,8 @@ Downloads are JSON files containing the current canonical workspace:
     "todo-list": { "items": [] },
     "index-cards": { "items": [] },
     "word-search": { "items": [] },
-    "crossword": { "items": [] }
+    "crossword": { "items": [] },
+    "knowledge-check": { "items": [] }
   }
 }
 ```
@@ -125,3 +126,11 @@ The right-hand list displays every card in the selected set in the current revie
 Review activity and its progress display are temporary UI state. Finish review and End review restore front-first, saved-order browsing while keeping the current card selected. Editing remains enabled throughout, and ending a review never rolls back edits or changes the saved card order.
 
 Manually edit different front/back titles, flip repeatedly, duplicate, reload, and download/restore a backup. Check an older backup with only `title`: its front title should remain and its back title should be blank. Test back-first review: the list uses back titles, falling back to card numbers for blank titles without exposing front titles. Invalid or oversized back titles must reject uploads without replacing the workspace.
+
+## Knowledge Check library
+
+`features["knowledge-check"]` contains `{ items }`, an ordered hierarchy of groups (`{ id, kind: "group", name, children }`) and check placeholders (`{ id, kind: "check", name, type }`). Supported types are `multiple-choice`, `true-false`, and `short-answer`; no question content or review results exist yet. IDs must be valid and unique within the library, names must contain 1–120 characters, and the library allows up to 5,000 entries at up to 32 levels. Unsupported keys, types, invalid names/IDs, and excessive nesting reject an import before replacement. Missing Knowledge Check data in older version-1 backups becomes an empty library.
+
+Creation inserts at the start of a selected group, immediately after a selected check, or at the start of the root. Groups can be renamed, reordered, moved, and nested; descendant moves and excessive depth are blocked. Empty checks/groups delete immediately; groups with children require confirmation. Canonical library data saves locally and travels in backups. Selection, creation-menu state, expansion, and collapse remain transient, while panel width is a separate browser-local preference.
+
+Manual review: create each type at root and inside nested groups, rename with Enter/Escape/F2, drag entries and use Location and order with the keyboard, then collapse/resize the library. Check creation cancellation, deletion and fallback selection, mobile overlay dismissal, first-entry selection after returning, reload, old-backup imports, and backup round trips. Malformed data must reject replacement without changing current work.

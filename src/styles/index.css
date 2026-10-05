@@ -46,4 +46,5 @@
 @import '../features/crossword/puzzle-form.css';
 @import '../features/crossword/puzzle-game.css';
 @import '../features/crossword/display-settings.css';
+@import '../features/knowledge-check/knowledge-check.css';
 @import './mobile.css';

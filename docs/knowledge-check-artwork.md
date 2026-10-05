@@ -10,4 +10,4 @@ Use case: stylized-concept. Asset type: Knowledge Check app icon for Dynamic Lea
 
 ## Manual review
 
-Inspect the icon beside other apps on Home, in navigation, and in the page header at desktop and phone widths, in Light and Dark themes. Open `/knowledge-check/` directly and refresh. After the next requested production build, inspect its Open Graph/Twitter image URL, dimensions, alternative description, and JSON-LD. The feature remains an empty scaffold with no quiz workflows or saved data.
+Inspect the icon beside other apps on Home, in navigation, and in the page header at desktop and phone widths, in Light and Dark themes. Open `/knowledge-check/` directly and refresh. After the next requested production build, inspect its Open Graph/Twitter image URL, dimensions, alternative description, and JSON-LD. The feature provides library scaffolding; question authoring and review remain unimplemented.

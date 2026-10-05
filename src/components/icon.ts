@@ -4,6 +4,7 @@ import { defineComponent, type PropType, h } from 'vue';
 const paths: Record<string, string> = {
   calculator: 'M5 2h14a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2ZM7 6h10v4H7M8 14h1M12 14h1M16 14h1M8 18h1M12 18h1M16 18h1',
   folder: 'M3 5h6l2 2h10v13H3Z',
+  check: 'm5 12 4 4L19 6',
   checklist: 'M9 5h12M9 12h12M9 19h12M2 5l2 2 3-4M2 12l2 2 3-4M2 19l2 2 3-4',
   archive: 'M3 3h18v5H3ZM5 8v13h14V8M9 12h6',
   document: 'M6 3h9l4 4v14H6ZM15 3v5h5M9 12h6M9 16h6',
