@@ -74,6 +74,10 @@ Returns:
 
 The returned refs/computed values are Vue reactive values. The operation methods control tutorial state and presentation.
 
+```ts
+prepareAndStart(section: TipSection, fromMenu?: boolean): Promise<void>
+```
+
 ### Tutorial action bridge
 
 #### `TIPS_ACTION_EVENT`
