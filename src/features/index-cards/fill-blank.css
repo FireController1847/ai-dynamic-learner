@@ -205,6 +205,13 @@
 .fill-blank-results {
   padding-bottom: 1.5cqw;
 }
+.fill-blank-results.has-incorrect {
+  color: var(--danger);
+}
+.fill-blank-results.has-incorrect .fill-blank-text,
+.fill-blank-results.has-incorrect .fill-blank-number {
+  color: var(--danger);
+}
 .fill-blank-result {
   align-items: baseline;
   vertical-align: baseline;
