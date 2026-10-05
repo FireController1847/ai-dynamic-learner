@@ -318,7 +318,7 @@ export const tipsCatalog: TipsCatalog = {
             targetLabel: 'Starting side',
             placement: 'right',
             blockTarget: true,
-            nextAction: { click: '.review-setup input[value="front"]' },
+            nextAction: { click: '.review-setup button[type="submit"]' },
           },
           {
             title: 'Choose the card order',
