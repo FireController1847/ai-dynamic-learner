@@ -77,7 +77,7 @@ export const CardList = defineComponent({
               props.maskBlanks && props.previewSide === 'front'
                 ? maskFillBlankAnswers(card.front)
                 : card[props.previewSide]
-            ).trim().replace(/\s+/g, ' ').slice(0, 160) || `Blank ${props.previewSide}`),
+            ).trim().replace(/\s+/g, ' ').slice(0, 160) || (props.maskBlanks ? 'Empty card' : `Blank ${props.previewSide}`)),
           ]),
         ])]),
       )) : h('p', { class: 'card-list-empty' }, 'Your cards will appear here.'),
