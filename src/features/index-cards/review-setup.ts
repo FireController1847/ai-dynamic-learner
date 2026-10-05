@@ -38,47 +38,58 @@ export const ReviewSetup = defineComponent({
       ]);
     }
 
-    return () => h('dialog', {
-      ref: dialog,
-      class: 'review-setup',
-      'aria-labelledby': 'review-setup-heading',
-      'data-tips-tutorial': !props.modal ? '' : undefined,
-      inert: !props.modal,
-      onCancel: (event: Event) => { event.preventDefault(); emit('cancel'); },
-    }, [h('form', {
-      onSubmit: (event: Event) => {
-        event.preventDefault();
-        if (step.value === 1) changeStep(2);
-        else emit('start', { side: side.value, order: order.value });
-      },
-    }, [
-      h('p', { class: 'review-setup-step' }, `Set up review · Step ${step.value} of 2 · ${props.cardCount} ${props.cardCount === 1 ? 'card' : 'cards'}`),
-      h('h2', { ref: heading, id: 'review-setup-heading', tabindex: -1 }, step.value === 1 ? 'Which side should you see first?' : 'What order should the cards use?'),
-      h('p', { class: 'review-setup-description' }, step.value === 1
-        ? 'You will see one side first. Try to remember the other side, then flip the card.'
-        : `Each card will start on the ${side.value}. Pick the order you want to study them in.`),
-      h('fieldset', { class: 'review-choices', key: step.value }, [
-        h('legend', { class: 'visually-hidden' }, step.value === 1 ? 'Starting side' : 'Review order'),
-        ...(step.value === 1 ? [
-          choice('front', 'Front first', 'See the front, then flip to the back.'),
-          choice('back', 'Back first', 'See the back, then flip to the front.'),
-        ] : [
-          choice('forward', 'First to last', 'Start with your first card.'),
-          choice('backward', 'Last to first', 'Start with your last card.'),
-          choice('shuffle', 'Mix them up', 'Use a new random order.'),
+    function renderForm() {
+      return h('form', {
+        onSubmit: (event: Event) => {
+          event.preventDefault();
+          if (step.value === 1) changeStep(2);
+          else emit('start', { side: side.value, order: order.value });
+        },
+      }, [
+        h('p', { class: 'review-setup-step' }, `Set up review · Step ${step.value} of 2 · ${props.cardCount} ${props.cardCount === 1 ? 'card' : 'cards'}`),
+        h('h2', { ref: heading, id: 'review-setup-heading', tabindex: -1 }, step.value === 1 ? 'Which side should you see first?' : 'What order should the cards use?'),
+        h('p', { class: 'review-setup-description' }, step.value === 1
+          ? 'You will see one side first. Try to remember the other side, then flip the card.'
+          : `Each card will start on the ${side.value}. Pick the order you want to study them in.`),
+        h('fieldset', { class: 'review-choices', key: step.value }, [
+          h('legend', { class: 'visually-hidden' }, step.value === 1 ? 'Starting side' : 'Review order'),
+          ...(step.value === 1 ? [
+            choice('front', 'Front first', 'See the front, then flip to the back.'),
+            choice('back', 'Back first', 'See the back, then flip to the front.'),
+          ] : [
+            choice('forward', 'First to last', 'Start with your first card.'),
+            choice('backward', 'Last to first', 'Start with your last card.'),
+            choice('shuffle', 'Mix them up', 'Use a new random order.'),
+          ]),
         ]),
-      ]),
-      h('div', { class: 'review-setup-actions' }, [
-        h('button', {
-          type: 'button', class: 'quiet-button review-cancel-button',
-          onClick: () => emit('cancel'),
-        }, 'Cancel'),
-        step.value === 2 ? h('button', {
-          type: 'button', class: 'quiet-button review-previous-button',
-          onClick: () => changeStep(1),
-        }, 'Previous step') : null,
-        h('button', { type: 'submit', class: 'card-primary-button' }, step.value === 1 ? 'Next' : 'Start review'),
-      ]),
-    ])]);
+        h('div', { class: 'review-setup-actions' }, [
+          h('button', {
+            type: 'button', class: 'quiet-button review-cancel-button',
+            onClick: () => emit('cancel'),
+          }, 'Cancel'),
+          step.value === 2 ? h('button', {
+            type: 'button', class: 'quiet-button review-previous-button',
+            onClick: () => changeStep(1),
+          }, 'Previous step') : null,
+          h('button', { type: 'submit', class: 'card-primary-button' }, step.value === 1 ? 'Next' : 'Start review'),
+        ]),
+      ]);
+    }
+
+    return () => props.modal
+      ? h('dialog', {
+        ref: dialog,
+        class: 'review-setup',
+        'aria-labelledby': 'review-setup-heading',
+        onCancel: (event: Event) => { event.preventDefault(); emit('cancel'); },
+      }, [renderForm()])
+      : h('div', {
+        class: 'review-setup review-setup-tutorial',
+        role: 'dialog',
+        'aria-labelledby': 'review-setup-heading',
+        'aria-modal': 'false',
+        'data-tips-tutorial': '',
+      }, [renderForm()]);
+
   },
 });
