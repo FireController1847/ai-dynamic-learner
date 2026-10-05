@@ -49,8 +49,5 @@ export function isFillBlankAnswerCorrect(answer: string, response: string): bool
 }
 
 export function maskFillBlankAnswers(source: string): string {
-  return source.replace(BLANK_PATTERN, (_match, answer: string) => {
-    const length = Math.max(4, Math.min(16, answer.trim().length));
-    return '_'.repeat(length);
-  });
+  return source.replace(BLANK_PATTERN, '______');
 }
