@@ -324,7 +324,7 @@ export const FillBlankSet = defineComponent({
           ]),
           card ? h('div', { class: 'card-controls' }, [
             h('div', {
-              class: 'card-review-controls',
+              class: ['card-review-controls', { 'fill-blank-edit-controls': !reviewActive.value }],
               'aria-label': reviewActive.value ? 'Fill in the blanks review' : 'Browse cards',
             }, [
               h('button', {
@@ -346,36 +346,40 @@ export const FillBlankSet = defineComponent({
                     disabled: !allFilled,
                     onClick: verify,
                   }, [h(Icon, { name: 'checklist' }), 'Verify'])
-                : h('div', {
-                  class: 'fill-blank-control-tools',
-                  role: 'group',
-                  'aria-label': 'Blank editing tools',
-                }, [
+                : h('div', { class: 'fill-blank-edit-center' }, [
+                  h('div', {
+                    class: 'fill-blank-control-tools',
+                    role: 'group',
+                    'aria-label': 'Blank editing tools',
+                  }, [
+                    h('button', {
+                      type: 'button',
+                      class: 'fill-blank-segment-button',
+                      title: 'Make blank',
+                      'aria-label': 'Make blank from selected text',
+                      disabled: editSide.value === 'back',
+                      onMousedown: preserveEditorSelection,
+                      onClick: () => editor.value?.makeBlank(),
+                    }, [h(Icon, { name: 'blank-add' })]),
+                    h('button', {
+                      type: 'button',
+                      class: 'fill-blank-segment-button',
+                      title: 'Remove blank',
+                      'aria-label': 'Remove blank at the cursor',
+                      disabled: editSide.value === 'back',
+                      onMousedown: preserveEditorSelection,
+                      onClick: () => editor.value?.removeBlank(),
+                    }, [h(Icon, { name: 'blank-remove' })]),
+                  ]),
                   h('button', {
                     type: 'button',
-                    class: 'fill-blank-segment-button',
-                    title: 'Make blank',
-                    'aria-label': 'Make blank from selected text',
-                    disabled: editSide.value === 'back',
-                    onMousedown: preserveEditorSelection,
-                    onClick: () => editor.value?.makeBlank(),
-                  }, [h(Icon, { name: 'blank-add' })]),
-                  h('button', {
-                    type: 'button',
-                    class: 'fill-blank-segment-button',
-                    title: 'Remove blank',
-                    'aria-label': 'Remove blank at the cursor',
-                    disabled: editSide.value === 'back',
-                    onMousedown: preserveEditorSelection,
-                    onClick: () => editor.value?.removeBlank(),
-                  }, [h(Icon, { name: 'blank-remove' })]),
-                  h('button', {
-                    type: 'button',
-                    class: 'fill-blank-segment-button',
-                    title: editSide.value === 'front' ? 'Show answer key' : 'Show prompt',
-                    'aria-label': editSide.value === 'front' ? 'Show answer key' : 'Show prompt',
+                    class: 'card-flip-button',
+                    'aria-label': editSide.value === 'front' ? 'Flip to back' : 'Flip to front',
                     onClick: () => { editSide.value = editSide.value === 'front' ? 'back' : 'front'; },
-                  }, [h(Icon, { name: 'flip' })]),
+                  }, [
+                    h(Icon, { name: 'flip' }),
+                    editSide.value === 'front' ? 'Show back' : 'Show front',
+                  ]),
                 ]),
               h('button', {
                 type: 'button', class: 'quiet-button',
