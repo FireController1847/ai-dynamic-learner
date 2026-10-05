@@ -209,8 +209,12 @@
   align-items: baseline;
   vertical-align: baseline;
 }
-.fill-blank-result.is-incorrect .fill-blank-number {
+.fill-blank-result.is-incorrect {
   color: var(--danger);
+}
+.fill-blank-result.is-incorrect .fill-blank-number,
+.fill-blank-result.is-incorrect .fill-blank-wrong-answer {
+  color: inherit;
 }
 .fill-blank-result-copy {
   position: relative;
@@ -244,6 +248,7 @@
   line-height: 1;
   text-align: center;
   text-decoration: line-through;
+  text-decoration-color: currentColor;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
