@@ -10,6 +10,7 @@ export interface CardDisplayOptions {
   textSize: number;
   baseline: number;
   cardSize: number;
+  blankLength: 'short' | 'medium' | 'long';
 }
 
 export interface DisplayOptions {
@@ -33,6 +34,11 @@ export const DISPLAY_FIELDS: DisplayField<CardDisplayOptions>[] = [
   ] },
   { key: 'textSize', label: 'Text size', default: 100, min: 80, max: 130, step: 5, unit: '%' },
   { key: 'baseline', label: 'Text vertical offset', default: 1, min: -4, max: 6, step: 1, unit: 'px' },
+  { key: 'blankLength', label: 'Blank length', default: 'short', choices: [
+    { value: 'short', label: 'Short' },
+    { value: 'medium', label: 'Medium' },
+    { value: 'long', label: 'Long' },
+  ] },
   { key: 'cardSize', label: 'Card size', default: 100, min: 75, max: 125, step: 5, unit: '%' },
 ];
 
@@ -62,6 +68,7 @@ function validateCardDisplayOptions(value: unknown): asserts value is CardDispla
   }
 
   if (!Object.hasOwn(value, 'paper')) value.paper = 'white';
+  if (!Object.hasOwn(value, 'blankLength')) value.blankLength = 'short';
 
   for (const field of DISPLAY_FIELDS) {
     const setting = value[field.key];
@@ -102,6 +109,9 @@ export function validateDisplayOptions(value: unknown): asserts value is Display
 export function displayStyles(options: CardDisplayOptions) {
   const choice = (key: keyof CardDisplayOptions) => choiceStyle(DISPLAY_FIELDS, key, options[key]);
   return {
+    '--blank-sizing-width': options.blankLength === 'medium' ? 'max-content'
+      : options.blankLength === 'long' ? 'initial' : '4ch',
+    '--blank-input-padding': options.blankLength === 'long' ? '0.18em' : '0px',
     '--paper': choice('paper'),
     '--paper-font': choice('font'),
     '--paper-ink': choice('ink'),

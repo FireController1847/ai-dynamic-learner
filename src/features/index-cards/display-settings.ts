@@ -118,7 +118,10 @@ export const DisplaySettings = defineComponent({
             ]),
             h('div', { class: 'fill-blank-writing fill-blank-settings-sample' }, [
               'The capital of France is ',
-              h('span', { class: 'fill-blank-input fill-blank-input-preview' }, 'Paris'),
+              h('span', { class: 'fill-blank-input-slot', style: { '--blank-width': '6ch' } }, [
+                h('span', { class: 'fill-blank-input-sizing', 'aria-hidden': 'true' }, 'Paris'),
+                h('span', { class: 'fill-blank-input fill-blank-input-preview' }, 'Paris'),
+              ]),
               '.',
             ]),
           ]),
@@ -170,9 +173,12 @@ export const DisplaySettings = defineComponent({
           hidden: tab.value !== mode.id,
           tabindex: 0,
         }, tab.value !== mode.id ? [] : [
-          h('div', { class: 'display-settings-fields' }, DISPLAY_FIELDS.map(control)),
+          h('div', { class: 'display-settings-fields' }, DISPLAY_FIELDS.filter((field) =>
+            field.key !== 'blankLength' || mode.id === 'fill-in-the-blanks').map(control)),
           h('p', { class: 'display-settings-description' },
             'Text size changes the letters, not the line spacing. Positive vertical offsets move text down. Card size keeps the 5:3 shape and fits the available space.'),
+          mode.id === 'fill-in-the-blanks' ? h('p', { class: 'display-settings-description' },
+            'Short uses four character widths. Medium matches the answer’s width. Long uses the original expanding blank lengths.') : null,
           mode.id === 'fill-in-the-blanks' ? fillBlankPreview(current) : flashPreview(current),
           h('button', {
             type: 'button',

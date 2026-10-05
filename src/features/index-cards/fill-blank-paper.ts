@@ -73,26 +73,28 @@ export const FillBlankPaper = defineComponent({
           const width = Math.max(6, Math.min(28, response.length + 1));
           return h('span', { key: `blank-${segment.index}`, class: 'fill-blank-review-blank' }, [
             blankNumber(segment.index),
-            h('input', {
-              ref: (element) => { inputs[segment.index] = element instanceof HTMLInputElement ? element : null; },
-              class: 'fill-blank-input',
-              type: 'text',
-              value: response,
-              readonly: props.verified,
-              autocomplete: 'off',
-              spellcheck: false,
-              style: { width: `${width}ch` },
-              'aria-label': `Blank ${segment.index + 1} of ${template.answers.length}`,
-              onFocus: () => emit('blank-focus', segment.index),
-              onInput: (event: Event) => {
-                if (!props.verified) emit('update-response', segment.index, inputValue(event));
-              },
-              onKeydown: (event: KeyboardEvent) => {
-                if (props.verified || event.key !== 'Enter') return;
-                event.preventDefault();
-                emit('blank-enter', segment.index, event.shiftKey ? -1 : 1);
-              },
-            }),
+            h('span', { class: 'fill-blank-input-slot', style: { '--blank-width': `${width}ch` } }, [
+              h('span', { class: 'fill-blank-input-sizing', 'aria-hidden': 'true' }, segment.answer),
+              h('input', {
+                ref: (element) => { inputs[segment.index] = element instanceof HTMLInputElement ? element : null; },
+                class: 'fill-blank-input',
+                type: 'text',
+                value: response,
+                readonly: props.verified,
+                autocomplete: 'off',
+                spellcheck: false,
+                'aria-label': `Blank ${segment.index + 1} of ${template.answers.length}`,
+                onFocus: () => emit('blank-focus', segment.index),
+                onInput: (event: Event) => {
+                  if (!props.verified) emit('update-response', segment.index, inputValue(event));
+                },
+                onKeydown: (event: KeyboardEvent) => {
+                  if (props.verified || event.key !== 'Enter') return;
+                  event.preventDefault();
+                  emit('blank-enter', segment.index, event.shiftKey ? -1 : 1);
+                },
+              }),
+            ]),
           ]);
         })),
       ]);

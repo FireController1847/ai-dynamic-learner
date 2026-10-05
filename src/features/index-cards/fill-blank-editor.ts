@@ -75,6 +75,8 @@ export const FillBlankEditor = defineComponent({
 
       const line = document.createElement('span');
       line.className = 'fill-blank-author-line';
+      line.textContent = answer;
+      line.setAttribute('aria-hidden', 'true');
       const width = Math.max(4, Math.min(18, answer.length + 1));
       line.style.setProperty('--blank-width', `${width}ch`);
 

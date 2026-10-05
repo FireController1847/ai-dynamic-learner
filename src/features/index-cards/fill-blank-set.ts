@@ -410,42 +410,40 @@ export const FillBlankSet = defineComponent({
               }, 'End review') : null,
             ]),
           ]) : null,
-          card ? h('div', { class: ['fill-blank-stage', { 'is-reviewing': reviewActive.value }] }, [
-            h('div', {
-              ref: stack,
-              class: ['ruled-card-stack', {
-                'has-second-card': props.set.cards.length > 1,
-                'has-third-card': props.set.cards.length > 2,
-              }],
-              tabindex: reviewActive.value ? 0 : -1,
-              role: 'group',
-              'aria-label': reviewActive.value
-                ? `Card ${index.value + 1} of ${orderedCards.value.length}. Fill every blank, then verify.`
-                : `Card ${index.value + 1} of ${orderedCards.value.length}. Select text and use the blank controls below the card.`,
-            }, [
-              reviewActive.value
-                ? h(FillBlankPaper, {
-                  key: `review-${card.id}`,
-                  ref: reviewPaper,
-                  card,
-                  position: index.value + 1,
-                  responses: responses.value,
-                  verified: verified.value,
-                  side: reviewSide.value,
-                  resultReviewIndex: resultReviewIndex.value,
-                  onUpdateResponse: updateResponse,
-                  onBlankFocus: (blankIndex: number) => { activeBlankIndex.value = blankIndex; },
-                  onBlankEnter: handleBlankEnter,
-                })
-                : h(FillBlankEditor, {
-                  key: `edit-${card.id}`,
-                  ref: editor,
-                  card,
-                  position: index.value + 1,
-                  side: editSide.value,
-                  onMessage: (value: string) => { message.value = value; },
-                }),
-            ]),
+          card ? h('div', {
+            ref: stack,
+            class: ['ruled-card-stack', {
+              'has-second-card': props.set.cards.length > 1,
+              'has-third-card': props.set.cards.length > 2,
+            }],
+            tabindex: reviewActive.value ? 0 : -1,
+            role: 'group',
+            'aria-label': reviewActive.value
+              ? `Card ${index.value + 1} of ${orderedCards.value.length}. Fill every blank, then verify.`
+              : `Card ${index.value + 1} of ${orderedCards.value.length}. Select text and use the blank controls below the card.`,
+          }, [
+            reviewActive.value
+              ? h(FillBlankPaper, {
+                key: `review-${card.id}`,
+                ref: reviewPaper,
+                card,
+                position: index.value + 1,
+                responses: responses.value,
+                verified: verified.value,
+                side: reviewSide.value,
+                resultReviewIndex: resultReviewIndex.value,
+                onUpdateResponse: updateResponse,
+                onBlankFocus: (blankIndex: number) => { activeBlankIndex.value = blankIndex; },
+                onBlankEnter: handleBlankEnter,
+              })
+              : h(FillBlankEditor, {
+                key: `edit-${card.id}`,
+                ref: editor,
+                card,
+                position: index.value + 1,
+                side: editSide.value,
+                onMessage: (value: string) => { message.value = value; },
+              }),
           ]) : h('div', { class: 'card-set-empty' }, [
             h(Icon, { name: 'cards' }),
             h('h3', 'A fresh fill-in set.'),
