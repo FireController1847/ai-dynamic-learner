@@ -278,8 +278,7 @@ export const FillBlankEditor = defineComponent({
           inert: props.side !== 'back',
           'aria-hidden': props.side !== 'back',
         }, [
-          h('div', { class: 'card-face-heading' }, [
-            h('span', { class: 'fill-blank-review-title' }, props.card.title?.trim() || 'Untitled card'),
+          h('div', { class: 'card-face-heading fill-blank-back-heading' }, [
             h('span', { class: 'card-face-side' }, 'Answer key'),
             h('span', { class: 'card-face-number', 'aria-hidden': 'true' }, String(props.position).padStart(2, '0')),
           ]),
