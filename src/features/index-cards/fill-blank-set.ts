@@ -29,16 +29,9 @@ export const FillBlankSet = defineComponent({
     cardListCollapsed: Boolean,
   },
   emits: { 'resize-card-list': (_width: number) => true, 'reset-card-list': () => true, 'toggle-card-list': () => true },
-  setup(props, { emit }) {
+  setup(props, { emit, expose }) {
     const cardList = ref<CardListHandle | null>(null);
-    const showCardsButton = ref<HTMLButtonElement | null>(null);
-    async function toggleCardList() {
-      const hiding = !props.cardListCollapsed;
-      cardListResizing.value = false;
-      emit('toggle-card-list');
-      await nextTick();
-      if (hiding) showCardsButton.value?.focus(); else cardList.value?.focusHide();
-    }
+    expose({ focusCardListToggle: () => cardList.value?.focusHide() });
     const currentId = ref(props.set.cards[0]?.id ?? null);
     const reviewOrder = ref<ReviewOrder>('forward');
     const reviewSetupOpen = ref(false);
@@ -583,7 +576,8 @@ export const FillBlankSet = defineComponent({
           onKeydown: resizeCardListFromKeyboard, onDblclick: () => emit('reset-card-list'),
         }) : null,
         h(CardList, {
-          ref: cardList, hidden: props.cardListCollapsed, onHide: toggleCardList,
+          ref: cardList, hidden: props.cardListCollapsed,
+          onHide: () => { cardListResizing.value = false; emit('toggle-card-list'); },
           cards: orderedCards.value, selectedId: card?.id ?? null,
           atLimit: atLimit.value, previewSide: 'front', maskBlanks: true,
           orderLabel: reviewActive.value ? `${orderDescription} · fill in the blanks` : 'Saved order',
