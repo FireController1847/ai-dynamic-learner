@@ -1,0 +1,139 @@
+.fill-blank-face { color: var(--paper-ink); font-family: var(--paper-font); }
+
+.fill-blank-review-title {
+  flex: 1;
+  min-width: 0;
+  height: 5cqw;
+  overflow: hidden;
+  transform: translateY(calc(0.9cqw + var(--card-baseline) - 2px));
+  color: var(--paper-ink);
+  font-family: var(--paper-font);
+  font-size: var(--card-title-size);
+  line-height: 5cqw;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fill-blank-writing {
+  --rule-spacing: 5cqw;
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  padding: calc(0.9cqw + var(--card-baseline)) 4cqw 1cqw 10cqw;
+  overflow: auto;
+  background-color: transparent;
+  background-image:
+    linear-gradient(var(--paper), var(--paper)),
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent calc(var(--rule-spacing) - 1px),
+      var(--paper-blue-line) calc(var(--rule-spacing) - 1px),
+      var(--paper-blue-line) var(--rule-spacing)
+    );
+  background-size: 100% 2px, auto;
+  background-position: left bottom, left top;
+  background-repeat: no-repeat, repeat;
+  color: var(--paper-ink);
+  font-family: var(--paper-font);
+  font-size: var(--card-text-size);
+  font-weight: 400;
+  line-height: var(--rule-spacing);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.fill-blank-input {
+  display: inline-block;
+  box-sizing: content-box;
+  min-width: 4ch;
+  max-width: 28ch;
+  height: calc(var(--rule-spacing) - 0.7cqw);
+  margin: 0 0.18em;
+  padding: 0 0.18em;
+  transform: translateY(0.08em);
+  border: 0;
+  border-bottom: 2px solid var(--brand);
+  border-radius: 0;
+  outline: 0;
+  color: var(--paper-ink);
+  background: color-mix(in srgb, var(--brand-tint) 42%, transparent);
+  font: inherit;
+  line-height: calc(var(--rule-spacing) - 0.8cqw);
+  text-align: center;
+  vertical-align: baseline;
+  transition: width var(--motion-fast) var(--ease-out), border-color var(--motion-fast), background-color var(--motion-fast);
+}
+.fill-blank-input:focus {
+  border-bottom-color: var(--brand-hover);
+  background: var(--brand-tint);
+  box-shadow: 0 2px 0 color-mix(in srgb, var(--brand) 28%, transparent);
+}
+.fill-blank-input-preview {
+  width: 7ch;
+  color: var(--text-secondary);
+  pointer-events: none;
+}
+
+.fill-blank-results { padding-bottom: 1.5cqw; }
+.fill-blank-result {
+  display: inline-flex;
+  position: relative;
+  flex-direction: column;
+  align-items: center;
+  min-width: 3ch;
+  margin: 0 0.18em;
+  line-height: 1.05;
+  vertical-align: middle;
+  animation: fill-blank-result-enter 220ms var(--ease-out) 170ms both;
+}
+.fill-blank-correct-answer {
+  min-width: 100%;
+  padding: 0 0.16em 0.12em;
+  border-bottom: 2px solid var(--success);
+  color: var(--success);
+  font-weight: 700;
+  line-height: calc(var(--rule-spacing) * 0.62);
+  text-align: center;
+}
+.fill-blank-wrong-answer {
+  max-width: 24ch;
+  margin-top: 0.08em;
+  overflow: hidden;
+  color: var(--danger);
+  font-size: 0.62em;
+  font-weight: 650;
+  line-height: 1.1;
+  text-align: center;
+  text-decoration: line-through;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fill-blank-explanation {
+  flex: 0 0 auto;
+  max-height: 18cqw;
+  margin: 0 4cqw 2cqw 10cqw;
+  padding: 1.4cqw 1.8cqw;
+  overflow: auto;
+  border: 1px solid color-mix(in srgb, var(--control-border) 75%, transparent);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--paper) 86%, var(--surface-subtle));
+  color: var(--paper-ink);
+  font-family: var(--paper-font);
+  font-size: calc(var(--card-text-size) * 0.78);
+  line-height: 1.35;
+}
+.fill-blank-explanation strong { display: block; margin-bottom: 0.35em; font-size: 0.86em; text-transform: uppercase; letter-spacing: 0.04em; }
+.fill-blank-explanation p { margin: 0; white-space: pre-wrap; }
+
+.fill-blank-authoring-hint code { font-family: ui-monospace, Consolas, monospace; }
+.fill-blank-verify-button:disabled { cursor: not-allowed; }
+
+@keyframes fill-blank-result-enter {
+  from { opacity: 0; transform: translateY(0.28em) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fill-blank-result { animation: none; }
+}
