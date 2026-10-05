@@ -1,7 +1,7 @@
 import { computed, defineComponent, h, ref, type PropType } from 'vue';
 import { createId } from '../../core/ids.ts';
 import { inputValue } from '../../core/dom.ts';
-import { createListGuideData, MAP_GRID, MAP_HEIGHT, MAP_MAP_TOPIC_HEIGHT, MAP_MAP_TOPIC_WIDTH, MAP_WIDTH, MAX_TEXT_LENGTH, MAX_TOPICS, type MapGuideData, type MapTopic } from './library-model.ts';
+import { createListGuideData, MAP_GRID, MAP_HEIGHT, MAP_TOPIC_HEIGHT, MAP_TOPIC_WIDTH, MAP_WIDTH, MAX_TEXT_LENGTH, MAX_TOPICS, type MapGuideData, type MapTopic } from './library-model.ts';
 import { StudyGuideListEditor } from './list-editor.ts';
 const snap=(v:number)=>Math.round(v/MAP_GRID)*MAP_GRID;
 const clamp=(v:number,max:number)=>Math.max(0,Math.min(max,v));
