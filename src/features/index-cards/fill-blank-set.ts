@@ -332,54 +332,47 @@ export const FillBlankSet = defineComponent({
                 title: 'Previous card', 'aria-label': 'Previous card',
                 disabled: index.value === 0, onClick: () => go(-1),
               }, [h(Icon, { name: 'chevron' }), 'Previous']),
-              reviewActive.value
-                ? verified.value
-                  ? h('button', {
-                    type: 'button',
-                    class: 'card-flip-button',
-                    'aria-label': reviewSide.value === 'front' ? 'Show verified answers' : 'Show prompt',
-                    onClick: () => { reviewSide.value = reviewSide.value === 'front' ? 'back' : 'front'; },
-                  }, [h(Icon, { name: 'flip' }), reviewSide.value === 'front' ? 'Show answers' : 'Show prompt'])
-                  : h('button', {
-                    type: 'button',
-                    class: 'card-primary-button fill-blank-verify-button',
-                    disabled: !allFilled,
-                    onClick: verify,
-                  }, [h(Icon, { name: 'checklist' }), 'Verify'])
-                : h('div', { class: 'fill-blank-edit-center' }, [
-                  h('div', {
-                    class: 'fill-blank-control-tools',
-                    role: 'group',
-                    'aria-label': 'Blank editing tools',
-                  }, [
-                    h('button', {
+              ...(reviewActive.value
+                ? [
+                  verified.value
+                    ? h('button', {
                       type: 'button',
-                      class: 'fill-blank-segment-button',
-                      title: 'Make blank',
-                      'aria-label': 'Make blank from selected text',
-                      disabled: editSide.value === 'back',
-                      onMousedown: preserveEditorSelection,
-                      onClick: () => editor.value?.makeBlank(),
-                    }, [h(Icon, { name: 'blank-add' })]),
-                    h('button', {
+                      class: 'card-flip-button',
+                      'aria-label': `Flip to ${reviewSide.value === 'front' ? 'back' : 'front'}`,
+                      onClick: () => { reviewSide.value = reviewSide.value === 'front' ? 'back' : 'front'; },
+                    }, [h(Icon, { name: 'flip' }), reviewSide.value === 'front' ? 'Show back' : 'Show front'])
+                    : h('button', {
                       type: 'button',
-                      class: 'fill-blank-segment-button',
-                      title: 'Remove blank',
-                      'aria-label': 'Remove blank at the cursor',
-                      disabled: editSide.value === 'back',
-                      onMousedown: preserveEditorSelection,
-                      onClick: () => editor.value?.removeBlank(),
-                    }, [h(Icon, { name: 'blank-remove' })]),
-                  ]),
+                      class: 'card-primary-button fill-blank-verify-button',
+                      disabled: !allFilled,
+                      onClick: verify,
+                    }, [h(Icon, { name: 'checklist' }), 'Verify']),
+                ]
+                : [
+                  h('button', {
+                    type: 'button',
+                    class: 'fill-blank-segment-button',
+                    title: 'Make blank',
+                    'aria-label': 'Make blank from selected text',
+                    disabled: editSide.value === 'back',
+                    onMousedown: preserveEditorSelection,
+                    onClick: () => editor.value?.makeBlank(),
+                  }, [h(Icon, { name: 'blank-add' })]),
+                  h('button', {
+                    type: 'button',
+                    class: 'fill-blank-segment-button',
+                    title: 'Remove blank',
+                    'aria-label': 'Remove blank at the cursor',
+                    disabled: editSide.value === 'back',
+                    onMousedown: preserveEditorSelection,
+                    onClick: () => editor.value?.removeBlank(),
+                  }, [h(Icon, { name: 'blank-remove' })]),
                   h('button', {
                     type: 'button',
                     class: 'card-flip-button',
-                    'aria-label': editSide.value === 'front' ? 'Flip to back' : 'Flip to front',
+                    'aria-label': `Flip to ${editSide.value === 'front' ? 'back' : 'front'}`,
                     onClick: () => { editSide.value = editSide.value === 'front' ? 'back' : 'front'; },
-                  }, [
-                    h(Icon, { name: 'flip' }),
-                    editSide.value === 'front' ? 'Show back' : 'Show front',
-                  ]),
+                  }, [h(Icon, { name: 'flip' }), editSide.value === 'front' ? 'Show back' : 'Show front']),
                 ]),
               h('button', {
                 type: 'button', class: 'quiet-button',
