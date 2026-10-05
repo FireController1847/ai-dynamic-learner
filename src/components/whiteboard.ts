@@ -111,10 +111,12 @@ export const Whiteboard = defineComponent({
     }
 
     function clampGeometry() {
-      const maxWidth = Math.max(MIN_WIDTH, window.innerWidth - VIEWPORT_GAP * 2);
-      const maxHeight = Math.max(MIN_HEIGHT, window.innerHeight - VIEWPORT_GAP * 2);
-      width.value = Math.min(Math.max(MIN_WIDTH, width.value), maxWidth);
-      height.value = Math.min(Math.max(MIN_HEIGHT, height.value), maxHeight);
+      const minWidth = Math.min(MIN_WIDTH, Math.max(220, window.innerWidth - VIEWPORT_GAP * 2));
+      const minHeight = Math.min(MIN_HEIGHT, Math.max(180, window.innerHeight - VIEWPORT_GAP * 2));
+      const maxWidth = Math.max(minWidth, window.innerWidth - VIEWPORT_GAP * 2);
+      const maxHeight = Math.max(minHeight, window.innerHeight - VIEWPORT_GAP * 2);
+      width.value = Math.min(Math.max(minWidth, width.value), maxWidth);
+      height.value = Math.min(Math.max(minHeight, height.value), maxHeight);
       x.value = Math.min(Math.max(VIEWPORT_GAP, x.value), Math.max(VIEWPORT_GAP, window.innerWidth - width.value - VIEWPORT_GAP));
       y.value = Math.min(Math.max(VIEWPORT_GAP, y.value), Math.max(VIEWPORT_GAP, window.innerHeight - height.value - VIEWPORT_GAP));
     }
@@ -211,7 +213,7 @@ export const Whiteboard = defineComponent({
     }
 
     function pointerDown(event: PointerEvent) {
-      if (event.pointerType === 'mouse' && event.button !== 0) return;
+      if (activePointer !== null || (event.pointerType === 'mouse' && event.button !== 0)) return;
       event.preventDefault();
       activePointer = event.pointerId;
       canvas.value?.setPointerCapture(event.pointerId);
@@ -223,13 +225,14 @@ export const Whiteboard = defineComponent({
     function pointerMove(event: PointerEvent) {
       if (activePointer !== event.pointerId || !activeStroke) return;
       event.preventDefault();
-      const coalesced = event.getCoalescedEvents?.() ?? [event];
-      for (const sample of coalesced) appendPointer(sample);
+      const coalesced = event.getCoalescedEvents?.();
+      for (const sample of coalesced?.length ? coalesced : [event]) appendPointer(sample);
     }
 
     function finishStroke(event: PointerEvent) {
       if (activePointer !== event.pointerId) return;
       event.preventDefault();
+      appendPointer(event);
       if (activeStroke && !activeStroke.points.length) strokes.value.pop();
       activePointer = null;
       activeStroke = null;
@@ -339,6 +342,7 @@ export const Whiteboard = defineComponent({
       tabindex: -1,
       style: { left: `${x.value}px`, top: `${y.value}px`, width: `${width.value}px`, height: `${height.value}px` },
       'aria-label': 'Whiteboard',
+      onKeydown: (event: KeyboardEvent) => { if (event.key === 'Escape') void close(); },
     }, [
       h('header', { class: 'whiteboard-titlebar', onPointerdown: dragStart }, [
         h('div', { class: 'whiteboard-title' }, [h(Icon, { name: 'whiteboard' }), h('strong', 'Whiteboard')]),
