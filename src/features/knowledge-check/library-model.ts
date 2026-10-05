@@ -1,9 +1,10 @@
 import { isRecord } from '../../core/validation.ts';
 import { createId, isValidId } from '../../core/ids.ts';
 import { createTreeOperations, type TreeMovePosition } from '../../core/tree.ts';
-import { getCheckType, isCheckType, normalizeCheckType, type CheckTypeId } from './check-types.ts';
+import { isCheckMode, type CheckModeId } from './check-types.ts';
+import { validateQuestions, type Question } from './question-model.ts';
 
-export interface CheckItem { id: string; kind: 'check'; name: string; type: CheckTypeId }
+export interface CheckItem { id: string; kind: 'set'; name: string; questions: Question[]; mode?: CheckModeId }
 export interface Group { id: string; kind: 'group'; name: string; children: LibraryItem[] }
 export type LibraryItem = Group | CheckItem;
 export interface KnowledgeCheck { items: LibraryItem[] }
@@ -24,17 +25,18 @@ export function createGroup(): Group {
   return { id: createId(), kind: 'group', name: 'New group', children: [] };
 }
 
-export function insertCheck(items: LibraryItem[], target: CheckTarget, type: CheckTypeId): CheckItem {
-  if (!isCheckType(type)) throw new Error('Choose a supported check type.');
+export function insertCheck(items: LibraryItem[], target: CheckTarget, name: string, questions: unknown): CheckItem {
+  validateQuestions(questions);
+  if (!name.trim() || name.trim().length > MAX_NAME_LENGTH) throw new Error('Enter a set name of 1–120 characters.');
   if (countItems(items) >= MAX_ITEMS) throw new Error(`The Knowledge Check library supports ${MAX_ITEMS} items.`);
   const parent = target.parentId ? findItem(items, target.parentId) : null;
   if (target.parentId && (!parent || parent.item.kind !== 'group')) {
     throw new Error('The destination group no longer exists. Cancel and choose a new destination.');
   }
   if (parent && parent.depth >= MAX_DEPTH) throw new Error(`Groups can be at most ${MAX_DEPTH} levels deep.`);
-  const item: CheckItem = { id: createId(), kind: 'check', name: `New ${getCheckType(type).label.toLowerCase()} check`, type };
+  const item: CheckItem = { id: createId(), kind: 'set', name: name.trim(), questions };
   const selected = target.selectedId ? findItem(items, target.selectedId) : null;
-  if (selected?.item.kind === 'check' && selected.parentId === target.parentId) {
+  if (selected?.item.kind === 'set' && selected.parentId === target.parentId) {
     selected.siblings.splice(selected.index + 1, 0, item);
   } else {
     (parent?.item.kind === 'group' ? parent.item.children : items).unshift(item);
@@ -67,12 +69,17 @@ export function validateKnowledgeCheck(value: unknown): asserts value is Knowled
         }
         visit(item.children, depth + 1);
       } else {
-        // Earlier scaffold entries have no question data; retain them under the new modes.
-        item.type = normalizeCheckType(item.type);
-        if (item.kind !== 'check' || !isCheckType(item.type) ||
-          Object.keys(item).some((key) => !['id', 'kind', 'name', 'type'].includes(key))) {
-          throw new Error('A knowledge check contains unsupported data.');
+        if (item.kind === 'check' && ['study', 'quiz', 'test', 'multiple-choice', 'true-false', 'short-answer'].includes(String(item.type)) &&
+            Object.keys(item).every((key) => ['id', 'kind', 'name', 'type'].includes(key))) {
+          item.kind = 'set';
+          item.questions = [];
+          delete item.type;
         }
+        if (item.kind !== 'set' || Object.keys(item).some((key) => !['id', 'kind', 'name', 'questions', 'mode'].includes(key))) {
+          throw new Error('A knowledge set contains unsupported data.');
+        }
+        if (Object.hasOwn(item, 'mode') && !isCheckMode(item.mode)) throw new Error('The knowledge set mode is invalid.');
+        validateQuestions(item.questions);
       }
     }
   }

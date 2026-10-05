@@ -53,7 +53,7 @@ The current application includes:
 | **Index Cards** | Creates nested study sets in Flash Cards or Fill in the Blanks mode, with editable card content, guided review, per-mode appearance controls, and resumable workspace storage. |
 | **Word Search** | Builds custom word-search puzzles with configurable difficulty and appearance, saved grids, hints, answer reveal, and persistent progress. |
 | **Crossword** | Builds custom crosswords from answer-and-clue pairs, automatically arranges Across and Down entries, and saves typed progress with checking, hints, reveals, and display controls. |
-| **Knowledge Check** | Organizes grouped check placeholders with Study, Quiz, and Test creation choices. Question editing and review are coming soon. |
+| **Knowledge Check** | Builds grouped knowledge sets with multiple-choice, true/false, and short-answer questions, then uses the same questions for Study, Quiz, or Test. |
 
 The interface uses a Fluent-inspired visual language with neutral surfaces, compact controls, blue accents, and responsive layouts. The tools are meant to feel related without forcing every feature into the same interaction model.
 

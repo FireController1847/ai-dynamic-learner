@@ -1,7 +1,6 @@
 export interface KnowledgeCheckLibraryHandle { reveal(id: string): void; focusToggle(): void; focusNewKnowledgeCheck(): void }
 import type { VNode } from 'vue';
 import type { LibraryItem, MovePosition } from './library-model.ts';
-import { getCheckType } from './check-types.ts';
 import { inputValue } from '../../core/dom.ts';
 import { Icon } from '../../components/icon.ts';
 import { DeleteConfirmation } from '../../components/delete-confirmation.ts';
@@ -176,7 +175,7 @@ export const KnowledgeCheckLibrary = defineComponent({
 
     function requestDelete(item: LibraryItem, event: MouseEvent) {
       endDrag();
-      if (item.kind === 'check' || item.children.length === 0) {
+      if (item.kind === 'set' ? item.questions.length === 0 : item.children.length === 0) {
         confirmDelete(item.id);
         return;
       }
@@ -254,10 +253,10 @@ export const KnowledgeCheckLibrary = defineComponent({
             'aria-expanded': isOpen,
             onClick: () => toggle(item.id),
           }, [h(Icon, { name: 'chevron' })]) : h('span', { class: 'knowledge-check-tree-toggle-space' }),
-          h(Icon, { name: item.kind === 'group' ? 'folder' : getCheckType(item.type).icon }),
+          h(Icon, { name: item.kind === 'group' ? 'folder' : 'cards' }),
           isEditing ? h('input', {
             ref: input, class: 'knowledge-check-rename', value: draft.value,
-            'aria-label': `Rename ${isGroup ? 'group' : 'check'}`,
+            'aria-label': `Rename ${isGroup ? 'group' : 'knowledge set'}`,
             maxlength: MAX_NAME_LENGTH,
             onInput: (event: Event) => { draft.value = inputValue(event); },
             onBlur: () => finishRename(true),
@@ -312,8 +311,8 @@ export const KnowledgeCheckLibrary = defineComponent({
           }, [h(Icon, { name: 'folder' })]),
           h('button', {
             ref: createKnowledgeCheckButton,
-            type: 'button', class: 'icon-button', title: 'New knowledge check',
-            'aria-label': 'New knowledge check', onClick: requestKnowledgeCheckSetup,
+            type: 'button', class: 'icon-button', title: 'New knowledge set',
+            'aria-label': 'New knowledge set', onClick: requestKnowledgeCheckSetup,
           }, [h(Icon, { name: 'checklist' })]),
           h('button', {
             ref: collapseButton,
@@ -327,20 +326,20 @@ export const KnowledgeCheckLibrary = defineComponent({
       h('div', { class: 'knowledge-check-library-scroll' }, [
         rootTarget('before', 'Top level'),
         props.items.length
-          ? h('ul', { class: 'knowledge-check-library-list', 'aria-label': 'Groups and checks' },
+          ? h('ul', { class: 'knowledge-check-library-list', 'aria-label': 'Groups and knowledge sets' },
             props.items.map(renderItem))
-          : h('p', { class: 'knowledge-check-library-empty' }, 'No groups or checks yet.'),
+          : h('p', { class: 'knowledge-check-library-empty' }, 'No groups or knowledge sets yet.'),
         draggedId.value ? rootTarget('after', 'Move to end of top level') : null,
       ]),
       h('p', { class: 'visually-hidden', role: 'status' }, announcement.value),
       slots.footer ? h('div', { class: 'knowledge-check-library-footer' }, slots.footer()) : null,
       pendingDelete.value ? h(DeleteConfirmation, {
         itemName: pendingDelete.value.name,
-        itemLabel: pendingDelete.value.kind === 'check' ? 'check' : 'group',
+        itemLabel: pendingDelete.value.kind === 'set' ? 'knowledge set' : 'group',
         detail: pendingDelete.value.kind === 'group'
-          ? `This also deletes ${countItems(pendingDelete.value.children)} nested library items, including ${countChecks(pendingDelete.value.children)} checks.`
-          : 'The saved check will be removed from the library.',
-        confirmLabel: pendingDelete.value.kind === 'group' ? 'Delete group' : 'Delete check',
+          ? `This also deletes ${countItems(pendingDelete.value.children)} nested library items, including ${countChecks(pendingDelete.value.children)} knowledge sets.`
+          : 'The knowledge set and its questions will be removed from the library.',
+        confirmLabel: pendingDelete.value.kind === 'group' ? 'Delete group' : 'Delete knowledge set',
         onCancel: cancelDelete,
         onConfirm: confirmDelete,
       }) : null,

@@ -7,7 +7,8 @@ import { useLibrarySelection } from '../../components/use-library-selection.ts';
 import { usePersistedPanelResize } from '../../components/use-persisted-panel-resize.ts';
 import { KnowledgeCheckLibrary } from './library.ts';
 import { CheckBuilder } from './check-builder.ts';
-import { getCheckType, type CheckTypeId } from './check-types.ts';
+import type { Question } from './question-model.ts';
+import { KnowledgeSet } from './knowledge-set.ts';
 import { canMove, findItem, firstEntry, groupOptions, moveItem, insertCheck } from './library-model.ts';
 
 import {
@@ -105,10 +106,10 @@ export const KnowledgeCheck = defineComponent({
       else library.value?.focusNewKnowledgeCheck();
     }
 
-    function completeSetup(type: CheckTypeId) {
+    function completeSetup(name: string, questions: Question[]) {
       if (!setupTarget.value) return;
       try {
-        const item = insertCheck(props.model.items, setupTarget.value, type);
+        const item = insertCheck(props.model.items, setupTarget.value, name, questions);
         selectedId.value = item.id;
         setupTarget.value = null;
         library.value?.reveal(item.id);
@@ -192,7 +193,7 @@ export const KnowledgeCheck = defineComponent({
           h(CheckBuilder, {
             key: setupVersion.value,
             destination: setupTarget.value.parentName,
-            onCreate: completeSetup,
+            onSave: completeSetup,
             onCancel: cancelSetup,
           }),
           message.value ? h('p', { class: 'knowledge-check-placeholder', role: 'status' }, message.value) : null,
@@ -209,9 +210,9 @@ export const KnowledgeCheck = defineComponent({
           h(LibraryEmptyState, {
             class: { 'has-organization': item !== undefined },
             icon: 'checklist',
-            title: item?.name ?? 'Build your knowledge check library',
-            description: item ? 'Create a knowledge check in this group, or select one from the Library.' : 'Create knowledge checks and organize them in groups.',
-            actionLabel: 'New knowledge check',
+            title: item?.name ?? 'Build your knowledge library',
+            description: item ? 'Create a knowledge set in this group, or select one from the Library.' : 'Build question sets and organize them in groups.',
+            actionLabel: 'New knowledge set',
             onCreate: () => openNewKnowledgeCheck({ parentId: item?.id ?? null, parentName: item?.name ?? 'Top level' }),
           }),
           item ? organizationControls(item) : null,
@@ -222,16 +223,13 @@ export const KnowledgeCheck = defineComponent({
       return h('section', {
         class: 'knowledge-check-detail is-check',
         inert: libraryOverlay.value && !libraryCollapsed.value,
-        'aria-label': 'Selected knowledge check',
+        'aria-label': 'Selected knowledge set',
       }, [
         h('header', { class: 'knowledge-check-item-heading' }, [
           h('h2', { ref: workspaceHeading, tabindex: -1 }, item.name),
-          h('p', getCheckType(item.type).label),
+          h('p', 'Knowledge set'),
         ]),
-        h('div', { class: 'knowledge-check-placeholder' }, [
-          h(Icon, { name: getCheckType(item.type).icon }),
-          h('p', 'Your check is ready. Question editing and review are coming soon.'),
-        ]),
+        h(KnowledgeSet, { key: item.id, item }),
         organizationControls(item),
         h('p', { class: 'visually-hidden', role: 'status' }, message.value),
       ]);
