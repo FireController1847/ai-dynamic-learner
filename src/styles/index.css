@@ -6,6 +6,7 @@
 @import './library-empty-state.css';
 @import './shell.css';
 @import './theme.css';
+@import './whiteboard.css';
 @import '../../packages/tips/src/tips.css';
 
 .tips-layer,
