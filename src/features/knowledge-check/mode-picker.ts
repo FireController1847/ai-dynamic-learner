@@ -7,7 +7,7 @@ export const ModePicker = defineComponent({
   props: { setName: { type: String, required: true } },
   emits: { choose: (_mode: CheckModeId) => true, build: () => true },
   setup(props, { emit }) {
-    return () => h('section', { class: 'knowledge-check-builder', 'aria-label': 'Choose how to use this knowledge set' }, [
+    return () => h('section', { class: 'knowledge-check-builder', 'aria-label': 'Choose how to use this question set' }, [
       h('header', { class: 'knowledge-check-builder-intro' }, [h('p', { class: 'knowledge-check-builder-eyebrow' }, 'One knowledge set'),
         h('h2', props.setName), h('p', 'Pick a way to use your questions. You can change it later.')]),
       h('div', { class: 'knowledge-check-type-grid' }, CHECK_MODES.map((mode) => h('button', {
