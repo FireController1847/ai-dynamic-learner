@@ -81,6 +81,7 @@ export const IndexCards = defineComponent({
     const message = ref('');
     const settingsOpen = ref(false);
     const tutorialReviewSetId = ref<string | null>(null);
+    const tutorialFillBlankReviewSetId = ref<string | null>(null);
     const settingsButton = ref<HTMLButtonElement | null>(null);
     const displayOptions = computed(() => resolvedDisplayOptions(props.model.display));
     onDeactivated(() => { settingsOpen.value = false; });
@@ -182,6 +183,7 @@ export const IndexCards = defineComponent({
     async function restoreTipsState(previous: { selectedId: string | null; lastSelectedSetId: string | null; creationTarget: CreationTarget | null; libraryCollapsed: boolean }, temporaryId: string) {
       if (temporaryId) deleteItem(props.model.items, temporaryId);
       if (tutorialReviewSetId.value === temporaryId) tutorialReviewSetId.value = null;
+      if (tutorialFillBlankReviewSetId.value === temporaryId) tutorialFillBlankReviewSetId.value = null;
       const previousSelection = previous.selectedId && findItem(props.model.items, previous.selectedId);
       creationTarget.value = previous.creationTarget;
       selectedId.value = previousSelection ? previous.selectedId : null;
@@ -200,49 +202,67 @@ export const IndexCards = defineComponent({
         libraryCollapsed: libraryCollapsed.value,
       };
 
-      if (action === 'set') {
+      if (action === 'creation') {
         creationTarget.value = null;
-        const item = createItem('set');
-        item.name = 'Lorem ipsum';
-        props.model.items.unshift(item);
-        selectedId.value = item.id;
-        if (libraryOverlay.value) libraryCollapsed.value = true;
-        tree.value?.reveal(item.id);
+        beginSetCreation();
         await nextTick();
-        return () => restoreTipsState(previous, item.id);
+        return () => restoreTipsState(previous, '');
       }
 
-      if (action === 'review') {
-        creationTarget.value = null;
-        const item = createItem('set');
-        item.name = 'Lorem ipsum';
+      const mode = action === 'fill-blank' || action === 'fill-blank-review'
+        ? 'fill-in-the-blanks'
+        : 'flash-cards';
+      const item = createItem('set', mode);
+      item.name = 'Lorem ipsum';
+
+      if (mode === 'fill-in-the-blanks') {
         item.cards.push(
           createCard({
             title: 'Lorem ipsum',
-            front: 'Lorem ipsum dolor sit amet.',
-            back: 'Consectetur adipiscing elit.',
+            front: 'The capital of France is {{Paris}}.',
+            back: 'Paris',
           }),
           createCard({
             title: 'Dolor sit amet',
-            front: 'Sed do eiusmod tempor incididunt.',
-            back: 'Ut labore et dolore magna aliqua.',
-          }),
-          createCard({
-            title: 'Magna aliqua',
-            front: 'Ut enim ad minim veniam.',
-            back: 'Quis nostrud exercitation ullamco.',
+            front: 'Water freezes at {{0°C}}.',
+            back: '0°C',
           }),
         );
-        props.model.items.unshift(item);
-        selectedId.value = item.id;
-        if (libraryOverlay.value) libraryCollapsed.value = true;
-        tree.value?.reveal(item.id);
-        tutorialReviewSetId.value = item.id;
+      } else {
+        item.cards.push(
+          createCard({
+            title: 'Lorem ipsum',
+            front: 'What is the capital of France?',
+            back: 'Paris.',
+          }),
+          createCard({
+            title: 'Dolor sit amet',
+            front: 'What is 2 + 2?',
+            back: '4.',
+          }),
+        );
+      }
+
+      props.model.items.unshift(item);
+      selectedId.value = item.id;
+      if (libraryOverlay.value) libraryCollapsed.value = true;
+      tree.value?.reveal(item.id);
+
+      if (action === 'flash-cards' || action === 'fill-blank') {
         await nextTick();
         return () => restoreTipsState(previous, item.id);
       }
 
-      throw new Error('Unknown Index Cards tutorial action.');
+      if (action === 'review' || action === 'flash-cards-review') {
+        tutorialReviewSetId.value = item.id;
+      } else if (action === 'fill-blank-review') {
+        tutorialFillBlankReviewSetId.value = item.id;
+      } else {
+        throw new Error('Unknown Index Cards tutorial action.');
+      }
+
+      await nextTick();
+      return () => restoreTipsState(previous, item.id);
     }
 
     function handleTipsAction(event: CustomEvent<TutorialRequest>) {
