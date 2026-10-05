@@ -320,7 +320,7 @@ export const FillBlankSet = defineComponent({
                 disabled: index.value === 0, onClick: () => go(-1),
               }, [h(Icon, { name: 'chevron' }), 'Previous']),
               reviewActive.value ? h('button', {
-                type: 'button', class: 'card-flip-button fill-blank-verify-button',
+                type: 'button', class: 'card-primary-button fill-blank-verify-button',
                 disabled: !allFilled || verified.value, onClick: verify,
               }, [h(Icon, { name: verified.value ? 'verified' : 'checklist' }), verified.value ? 'Verified' : 'Verify'])
                 : h('div', { class: 'fill-blank-edit-summary', 'aria-live': 'polite' },
