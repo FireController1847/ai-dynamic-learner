@@ -15,6 +15,9 @@ import { defineComponent, type PropType, computed, h, nextTick, onBeforeUnmount,
 const MIN_CARD_LIST_WIDTH = 160;
 const MAX_CARD_LIST_WIDTH = 480;
 const MIN_EDITOR_WIDTH = 400;
+const RESULT_REVIEW_START_DELAY_MS = 420;
+const RESULT_REVIEW_STEP_MS = 750;
+const RESULT_REVIEW_SETTLE_MS = 620;
 
 export const FillBlankSet = defineComponent({
   name: 'FillBlankSet',
@@ -40,6 +43,10 @@ export const FillBlankSet = defineComponent({
     const editor = ref<FillBlankEditorHandle | null>(null);
     const reviewPaper = ref<FillBlankPaperHandle | null>(null);
     const activeBlankIndex = ref(0);
+    const resultReviewIndex = ref<number | null>(null);
+    let resultReviewTimer: number | undefined;
+    let resultReviewNextIndex = 0;
+    let resultReviewComplete = false;
     const addButton = ref<HTMLButtonElement | null>(null);
     const deleteButton = ref<HTMLButtonElement | null>(null);
     const layout = ref<HTMLElement | null>(null);
@@ -63,6 +70,7 @@ export const FillBlankSet = defineComponent({
     onDeactivated(() => {
       reviewSetupOpen.value = false;
       cardListResizing.value = false;
+      stopResultReview();
     });
 
     function maxCardListWidth() {
@@ -119,13 +127,54 @@ export const FillBlankSet = defineComponent({
         layoutObserver.observe(layout.value);
       }
     });
-    onBeforeUnmount(() => layoutObserver?.disconnect());
+    onBeforeUnmount(() => {
+      layoutObserver?.disconnect();
+      stopResultReview();
+    });
+
+    function stopResultReview() {
+      if (resultReviewTimer !== undefined) window.clearTimeout(resultReviewTimer);
+      resultReviewTimer = undefined;
+      resultReviewIndex.value = null;
+    }
+
+    function scheduleResultReview(delay = RESULT_REVIEW_START_DELAY_MS) {
+      if (!verified.value || reviewSide.value !== 'back' || resultReviewComplete) return;
+      const count = currentTemplate().answers.length;
+      if (!count || resultReviewNextIndex >= count) {
+        resultReviewComplete = true;
+        resultReviewIndex.value = null;
+        return;
+      }
+
+      if (resultReviewTimer !== undefined) window.clearTimeout(resultReviewTimer);
+      resultReviewTimer = window.setTimeout(() => {
+        resultReviewTimer = undefined;
+        if (!verified.value || reviewSide.value !== 'back') return;
+
+        resultReviewIndex.value = resultReviewNextIndex;
+        resultReviewNextIndex += 1;
+
+        if (resultReviewNextIndex < count) {
+          scheduleResultReview(RESULT_REVIEW_STEP_MS);
+        } else {
+          resultReviewTimer = window.setTimeout(() => {
+            resultReviewTimer = undefined;
+            resultReviewIndex.value = null;
+            resultReviewComplete = true;
+          }, RESULT_REVIEW_SETTLE_MS);
+        }
+      }, delay);
+    }
 
     function resetAttempt() {
+      stopResultReview();
       responses.value = [];
       verified.value = false;
       reviewSide.value = 'front';
       activeBlankIndex.value = 0;
+      resultReviewNextIndex = 0;
+      resultReviewComplete = false;
     }
 
     function currentTemplate() {
@@ -148,8 +197,15 @@ export const FillBlankSet = defineComponent({
 
     async function toggleReviewSide() {
       if (!reviewActive.value) return;
-      reviewSide.value = reviewSide.value === 'front' ? 'back' : 'front';
-      if (reviewSide.value === 'front' && !verified.value) await focusReviewBlank();
+      const nextSide = reviewSide.value === 'front' ? 'back' : 'front';
+      if (nextSide === 'front') stopResultReview();
+      reviewSide.value = nextSide;
+
+      if (reviewSide.value === 'front' && !verified.value) {
+        await focusReviewBlank();
+      } else if (reviewSide.value === 'back' && verified.value && !resultReviewComplete) {
+        scheduleResultReview();
+      }
     }
 
     async function handleBlankEnter(blankIndex: number, direction: 1 | -1) {
@@ -249,8 +305,12 @@ export const FillBlankSet = defineComponent({
       const template = parseFillBlankTemplate(card.front);
       if (!template.answers.length ||
           template.answers.some((_answer, blankIndex) => !(responses.value[blankIndex] ?? '').trim())) return;
+      stopResultReview();
       verified.value = true;
       reviewSide.value = 'back';
+      resultReviewNextIndex = 0;
+      resultReviewComplete = false;
+      scheduleResultReview();
       const correct = template.answers.filter((answer, blankIndex) =>
         isFillBlankAnswerCorrect(answer, responses.value[blankIndex] ?? '')).length;
       message.value = `${correct} of ${template.answers.length} ${template.answers.length === 1 ? 'blank' : 'blanks'} correct.`;
@@ -370,6 +430,7 @@ export const FillBlankSet = defineComponent({
                   responses: responses.value,
                   verified: verified.value,
                   side: reviewSide.value,
+                  resultReviewIndex: resultReviewIndex.value,
                   onUpdateResponse: updateResponse,
                   onBlankFocus: (blankIndex: number) => { activeBlankIndex.value = blankIndex; },
                   onBlankEnter: handleBlankEnter,
