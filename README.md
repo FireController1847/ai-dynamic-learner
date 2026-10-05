@@ -50,7 +50,7 @@ The current application includes:
 | **Calculator** | Uses a MathPrint-style scientific entry display with editable stacked fractions, expression history navigation, normal precedence, scientific functions, DEG/RAD and fraction/decimal modes, configurable decimal places, memory controls, and a reusable session-history panel. |
 | **Notebook** | Organizes documents into a nested library. Write on Lined Paper with automatic overflow pages, use Markdown source and preview, or combine expressions and visual drawing on Graph Paper with point coordinates, line measurements, and closed-region areas. Customize appearance separately for each paper type. |
 | **Todo List** | Lined-paper tasks with adjustable fonts and alignment, checkboxes, centered section priorities, and shared section-name prefixes. Lists are organized by creation date and gradually fade into an archive with configurable expiry. |
-| **Index Cards** | Creates nested groups and card sets with editable fronts and backs, review modes, appearance controls, and resumable workspace storage. |
+| **Index Cards** | Creates nested study sets in Flash Cards or Fill in the Blanks mode, with editable card content, guided review, per-mode appearance controls, and resumable workspace storage. |
 | **Word Search** | Builds custom word-search puzzles with configurable difficulty and appearance, saved grids, hints, answer reveal, and persistent progress. |
 | **Crossword** | Builds custom crosswords from answer-and-clue pairs, automatically arranges Across and Down entries, and saves typed progress with checking, hints, reveals, and display controls. |
 
