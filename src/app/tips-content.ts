@@ -241,6 +241,151 @@ export const tipsCatalog: TipsCatalog = {
     ],
   },
 
+  'knowledge-check': {
+    version: 1,
+    sections: [
+      {
+        id: 'library',
+        title: 'Knowledge Check library',
+        description: 'Keep your question sets organized.',
+        when: '#knowledge-check-library',
+        steps: [
+          {
+            title: 'Your sets live here',
+            body: 'Your question sets and groups are here. Pick a set to open it.',
+            target: '#knowledge-check-library',
+            targetLabel: 'Knowledge Check library',
+            placement: 'right',
+          },
+          {
+            title: 'Make a set',
+            body: 'Press New knowledge set to make one.',
+            target: '#knowledge-check-library [aria-label="New knowledge set"]',
+            targetLabel: 'New knowledge set button',
+            placement: 'right',
+          },
+        ],
+      },
+      {
+        id: 'builder',
+        title: 'Build questions',
+        description: 'Learn the basics of making a question set.',
+        when: '.knowledge-set-toolbar',
+        prepare: 'builder',
+        steps: [
+          {
+            title: 'Open the question builder',
+            body: 'Press Build questions to add or change questions.',
+            target: '.knowledge-set-toolbar .quiet-button',
+            targetLabel: 'Build questions button',
+            placement: 'bottom',
+            nextAction: { click: '.knowledge-set-toolbar .quiet-button' },
+          },
+          {
+            title: 'Choose a question type',
+            body: 'Pick Multiple Choice, True or False, or Short Answer.',
+            target: '.knowledge-question-editor .knowledge-field select',
+            targetLabel: 'Question type',
+            placement: 'right',
+          },
+          {
+            title: 'Write the question',
+            body: 'Add the question and its answer. You can add an explanation too.',
+            target: '.knowledge-question-editor',
+            targetLabel: 'Question editor',
+            placement: 'left',
+          },
+        ],
+      },
+      {
+        id: 'modes',
+        title: 'Choose a way to learn',
+        description: 'See the three ways to use your questions.',
+        when: '.knowledge-check-builder',
+        prepare: 'mode',
+        steps: [
+          {
+            title: 'Choose how to learn',
+            body: 'Study shows answers. Quiz checks as you go. Test shows your score at the end.',
+            target: '.knowledge-check-type-grid',
+            targetLabel: 'Study, Quiz, and Test',
+            placement: 'left',
+            nextAction: { click: '.knowledge-check-type-grid button:first-child' },
+          },
+          {
+            title: 'Reveal an answer',
+            body: 'In Study, reveal the answer when you are ready.',
+            target: '.knowledge-study-answer, .knowledge-session .card-primary-button',
+            targetLabel: 'Reveal answer',
+            placement: 'left',
+            nextAction: { click: '.knowledge-session .card-primary-button' },
+          },
+          {
+            title: 'Keep learning',
+            body: 'Use Next question to move through the set.',
+            target: '.knowledge-session-navigation',
+            targetLabel: 'Question navigation',
+            placement: 'bottom',
+          },
+        ],
+      },
+      {
+        id: 'quiz',
+        title: 'Quiz',
+        description: 'Practice and check your answers as you go.',
+        when: '.knowledge-session',
+        prepare: 'quiz',
+        steps: [
+          {
+            title: 'Answer the question',
+            body: 'Choose the answer you think is right.',
+            target: '.knowledge-answer-choices',
+            targetLabel: 'Answer choices',
+            placement: 'left',
+          },
+          {
+            title: 'Check your answer',
+            body: 'Press Check answer to see how you did.',
+            target: '.knowledge-prompt .card-primary-button',
+            targetLabel: 'Check answer',
+            placement: 'bottom',
+            nextAction: { click: '.knowledge-prompt .card-primary-button' },
+          },
+          {
+            title: 'Keep going',
+            body: 'Use Next question to continue. See your score at the end.',
+            target: '.knowledge-session-navigation',
+            targetLabel: 'Question navigation',
+            placement: 'bottom',
+          },
+        ],
+      },
+      {
+        id: 'test',
+        title: 'Test',
+        description: 'Answer on your own, then see your score.',
+        when: '.knowledge-session',
+        prepare: 'test',
+        steps: [
+          {
+            title: 'Answer each question',
+            body: 'Choose or type your answer. Your answers stay hidden until you submit.',
+            target: '.knowledge-prompt',
+            targetLabel: 'Question',
+            placement: 'left',
+          },
+          {
+            title: 'Submit your test',
+            body: 'When you finish, press Submit test to see your score.',
+            target: '.knowledge-session-navigation',
+            targetLabel: 'Submit test',
+            placement: 'bottom',
+          },
+        ],
+      },
+    ],
+  },
+
   'index-cards': {
     version: 6,
     sections: [
