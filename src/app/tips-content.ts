@@ -317,6 +317,7 @@ export const tipsCatalog: TipsCatalog = {
             target: '.review-setup .review-choices',
             targetLabel: 'Starting side',
             placement: 'right',
+            blockTarget: true,
             nextAction: { click: '.review-setup input[value="front"]' },
           },
           {
@@ -387,7 +388,8 @@ export const tipsCatalog: TipsCatalog = {
             target: '.review-setup .review-choices',
             targetLabel: 'Card order',
             placement: 'right',
-            nextAction: { click: '.review-setup button[type="submit"]' },
+            blockTarget: true,
+            nextAction: { click: '.review-setup button[type="submit"] },
           },
           {
             title: 'Fill the blanks',
