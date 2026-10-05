@@ -13,9 +13,11 @@ import type { IndexCards as IndexCardsModel } from './index-cards/tree-model.ts'
 import type { WordSearch as WordSearchModel } from './word-search/library-model.ts';
 import type { Crossword as CrosswordModel } from './crossword/library-model.ts';
 import type { KnowledgeCheck as KnowledgeCheckModel } from './knowledge-check/library-model.ts';
+import type { StudyGuideModel } from './study-guide/library-model.ts';
 import type { TodoLists } from './todo-list/library-model.ts';
 
 export interface FeatureModels {
+  'study-guide': StudyGuideModel;
   'knowledge-check': KnowledgeCheckModel;
   notebook: NotebookModel;
   'todo-list': TodoLists;
@@ -32,7 +34,7 @@ const renderers: Record<FeatureId, (definition: FeatureDefinition, models: Featu
   'index-cards': (definition, models) => h(IndexCards, { key: definition.id, title: definition.label, model: models['index-cards'] }),
   'word-search': (definition, models) => h(WordSearch, { key: definition.id, title: definition.label, model: models['word-search'] }),
   crossword: (definition, models) => h(Crossword, { key: definition.id, title: definition.label, model: models.crossword }),
-  'study-guide': (definition) => h(StudyGuide, { key: definition.id, title: definition.label }),
+  'study-guide': (definition, models) => h(StudyGuide, { key: definition.id, title: definition.label, model: models['study-guide'] }),
   'knowledge-check': (definition, models) => h(KnowledgeCheck, { key: definition.id, title: definition.label, model: models['knowledge-check'] }),
 };
 

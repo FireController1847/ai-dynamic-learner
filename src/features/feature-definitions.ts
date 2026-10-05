@@ -99,9 +99,9 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'study-guide', label: 'Study Guide', path: '/study-guide/', icon: 'document',
     group: 'mastery',
-    version: '0.1.1',
+    version: '0.2.0',
     image: 'assets/study-guide.png',
-    description: 'Create and organize study guides for the material you want to learn.',
+    description: 'Build simple bullet-point study guides or arrange topic guides on a visual map.',
     metadata: {
       keywords: ['study guide', 'study notes', 'learning', 'revision'],
       socialImage: {
