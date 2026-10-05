@@ -194,15 +194,16 @@ export const FillBlankSet = defineComponent({
       await nextTick();
       if (!reviewActive.value) editor.value?.focus();
     }
-    function selectCard(id: string) {
+    async function selectCard(id: string) {
       currentId.value = id;
       resetAttempt();
       resetEditSide();
       message.value = '';
+      if (reviewActive.value) await focusReviewBlank(0);
     }
-    function go(offset: number) {
+    async function go(offset: number) {
       const card = orderedCards.value[index.value + offset];
-      if (card) selectCard(card.id);
+      if (card) await selectCard(card.id);
     }
 
     async function startReview(order: ReviewOrder) {
@@ -268,7 +269,8 @@ export const FillBlankSet = defineComponent({
       resetEditSide();
       message.value = 'Card deleted.';
       await nextTick();
-      (current.value ? deleteButton.value : addButton.value)?.focus();
+      if (reviewActive.value && current.value) await focusReviewBlank(0);
+      else (current.value ? deleteButton.value : addButton.value)?.focus();
     }
 
     function preserveEditorSelection(event: MouseEvent) {
