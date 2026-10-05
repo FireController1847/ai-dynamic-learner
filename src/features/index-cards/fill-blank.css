@@ -253,6 +253,104 @@
   white-space: nowrap;
 }
 
+.fill-blank-result.is-reviewing-result {
+  border-radius: 5px;
+  transform-origin: center;
+}
+.fill-blank-result.is-reviewing-result.is-correct {
+  animation: fill-blank-review-correct-pulse 620ms cubic-bezier(0.18, 1, 0.3, 1);
+}
+.fill-blank-result.is-reviewing-result.is-incorrect {
+  animation: fill-blank-review-incorrect-pulse 620ms cubic-bezier(0.18, 1, 0.3, 1);
+}
+.fill-blank-result.is-reviewing-result.is-correct .fill-blank-number {
+  animation: fill-blank-review-correct-number 620ms ease-out;
+}
+
+.fill-blank-correct-effect {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 2;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.fill-blank-correct-spark {
+  --result-spark-x: 0px;
+  --result-spark-y: -22px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  color: var(--success);
+  font: 800 8px/1 var(--font-family);
+  opacity: 0;
+  text-shadow: 0 0 5px color-mix(in srgb, var(--success) 70%, transparent);
+  animation: fill-blank-correct-spark 600ms cubic-bezier(0.18, 0.8, 0.24, 1) forwards;
+}
+.fill-blank-correct-spark-1 { --result-spark-x: 0px; --result-spark-y: -24px; }
+.fill-blank-correct-spark-2 { --result-spark-x: 18px; --result-spark-y: -17px; animation-delay: 20ms; }
+.fill-blank-correct-spark-3 { --result-spark-x: 24px; --result-spark-y: 0px; animation-delay: 35ms; }
+.fill-blank-correct-spark-4 { --result-spark-x: 17px; --result-spark-y: 18px; animation-delay: 10ms; }
+.fill-blank-correct-spark-5 { --result-spark-x: 0px; --result-spark-y: 24px; animation-delay: 30ms; }
+.fill-blank-correct-spark-6 { --result-spark-x: -18px; --result-spark-y: 17px; animation-delay: 15ms; }
+.fill-blank-correct-spark-7 { --result-spark-x: -24px; --result-spark-y: 0px; animation-delay: 40ms; }
+.fill-blank-correct-spark-8 { --result-spark-x: -17px; --result-spark-y: -18px; animation-delay: 5ms; }
+
+@keyframes fill-blank-review-correct-pulse {
+  0%, 100% {
+    background: transparent;
+    box-shadow: 0 0 0 color-mix(in srgb, var(--success) 0%, transparent);
+    transform: scale(1);
+  }
+  35% {
+    background: color-mix(in srgb, var(--success) 14%, transparent);
+    box-shadow: 0 0 14px color-mix(in srgb, var(--success) 22%, transparent);
+    transform: scale(1.035);
+  }
+  62% {
+    background: color-mix(in srgb, var(--success) 8%, transparent);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--success) 14%, transparent);
+    transform: scale(1.015);
+  }
+}
+@keyframes fill-blank-review-incorrect-pulse {
+  0%, 100% {
+    background: transparent;
+    box-shadow: 0 0 0 color-mix(in srgb, var(--danger) 0%, transparent);
+    transform: scale(1);
+  }
+  35% {
+    background: color-mix(in srgb, var(--danger) 14%, transparent);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--danger) 20%, transparent);
+    transform: scale(1.025);
+  }
+  62% {
+    background: color-mix(in srgb, var(--danger) 8%, transparent);
+    box-shadow: 0 0 7px color-mix(in srgb, var(--danger) 12%, transparent);
+    transform: scale(1.01);
+  }
+}
+@keyframes fill-blank-review-correct-number {
+  0%, 100% { color: var(--text-secondary); }
+  35%, 62% { color: var(--success); }
+}
+@keyframes fill-blank-correct-spark {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.3);
+  }
+  16% { opacity: 1; }
+  70% { opacity: 0.95; }
+  100% {
+    opacity: 0;
+    transform: translate(
+      calc(-50% + var(--result-spark-x)),
+      calc(-50% + var(--result-spark-y))
+    ) scale(0.85) rotate(70deg);
+  }
+}
+
 /* Editing preserves the normal Flash Cards Previous / Flip / Next controls.
    Two compact blank-authoring controls occupy dedicated tracks immediately
    before the standard flip button. */
@@ -354,5 +452,16 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .fill-blank-result-copy { animation: none; }
+  .fill-blank-result-copy,
+  .fill-blank-result.is-reviewing-result,
+  .fill-blank-result.is-reviewing-result .fill-blank-number {
+    animation: none;
+  }
+  .fill-blank-correct-effect { display: none; }
+  .fill-blank-result.is-reviewing-result.is-correct {
+    background: color-mix(in srgb, var(--success) 12%, transparent);
+  }
+  .fill-blank-result.is-reviewing-result.is-incorrect {
+    background: color-mix(in srgb, var(--danger) 12%, transparent);
+  }
 }
