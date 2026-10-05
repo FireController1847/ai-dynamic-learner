@@ -1,0 +1,504 @@
+.tips-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.tips-scrim {
+  position: fixed;
+  z-index: 0;
+  background: var(--tips-scrim, rgba(0, 0, 0, 0.42));
+  cursor: default;
+  pointer-events: auto;
+}
+
+.tips-spotlight {
+  position: fixed;
+  z-index: 1;
+  border: 2px solid var(--tips-brand, #0067c5);
+  border-radius: calc(var(--tips-radius, 4px) + 4px);
+  box-shadow: 0 0 0 4px var(--tips-brand-tint, rgba(0, 103, 197, 0.14)), var(--tips-overlay-shadow, 0 12px 32px rgba(0, 0, 0, 0.2));
+  pointer-events: none;
+  transition:
+    top var(--tips-fast, 160ms ease),
+    left var(--tips-fast, 160ms ease),
+    width var(--tips-fast, 160ms ease),
+    height var(--tips-fast, 160ms ease);
+}
+
+.tips-spotlight.is-blocking {
+  pointer-events: auto;
+}
+
+.tips-card {
+  position: fixed;
+  z-index: 2;
+  width: min(400px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+  padding: 16px;
+  border: 1px solid var(--tips-border, #d1d1d1);
+  border-radius: calc(var(--tips-radius, 4px) * 2);
+  color: var(--tips-text, #1f1f1f);
+  background: var(--tips-background, #ffffff);
+  box-shadow: var(--tips-overlay-shadow, 0 12px 32px rgba(0, 0, 0, 0.2));
+  overflow: auto;
+  pointer-events: auto;
+  transition:
+    top var(--tips-fast, 160ms ease),
+    left var(--tips-fast, 160ms ease),
+    transform var(--tips-fast, 160ms ease);
+}
+
+.tips-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 30px;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.tips-drag-handle {
+  color: var(--tips-text-secondary, #5f5f5f);
+  font-size: 14px;
+  letter-spacing: 3px;
+  line-height: 1;
+  opacity: 0.55;
+}
+
+.tips-card.is-dragging {
+  transition: none;
+}
+
+.tips-card.is-dragging .tips-header {
+  cursor: grabbing;
+}
+
+.tips-header button {
+  cursor: pointer;
+}
+
+.tips-skip {
+  min-height: 30px;
+  padding: 2px 8px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--tips-text-secondary, #5f5f5f);
+  font-size: 12px;
+}
+
+.tips-body {
+  padding: 10px 4px 16px;
+  text-align: left;
+}
+
+.tips-body h2 {
+  max-width: 440px;
+  margin: 14px 0 0;
+  font-size: 1.25rem;
+  line-height: 1.25;
+}
+
+.tips-copy {
+  max-width: 440px;
+  margin: 8px 0 0;
+  color: var(--tips-text-secondary, #5f5f5f);
+}
+
+.tips-progress {
+  display: flex;
+  gap: 6px;
+  margin: 2px 0 0;
+}
+
+.tips-progress-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--tips-control-border, #a19f9d);
+  transition: width var(--tips-fast, 160ms ease), background-color var(--tips-fast, 160ms ease);
+}
+
+.tips-progress-dot.complete {
+  background: var(--tips-brand-tint, rgba(0, 103, 197, 0.14));
+}
+
+.tips-progress-dot.active {
+  width: 22px;
+  background: var(--tips-brand, #0067c5);
+}
+
+.tips-footer {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--tips-border, #d1d1d1);
+}
+
+.tips-navigation {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.tips-more {
+  position: relative;
+  color: var(--tips-text-secondary, #5f5f5f);
+  font-size: 12px;
+}
+
+.tips-more > summary {
+  width: max-content;
+  padding: 6px 2px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.tips-more-menu {
+  display: grid;
+  gap: 4px;
+  min-width: 180px;
+  margin-top: 4px;
+  padding: 8px;
+  border: 1px solid var(--tips-border, #d1d1d1);
+  border-radius: var(--tips-radius, 4px);
+  background: var(--tips-background, #ffffff);
+}
+
+.tips-more-menu .tips-button {
+  justify-content: flex-start;
+  width: 100%;
+  min-height: 34px;
+  text-align: left;
+}
+
+.tips-section-list {
+  display: grid;
+  gap: 8px;
+}
+
+.tips-section-choice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  min-height: 62px;
+  padding: 10px 12px;
+  border: 1px solid var(--tips-control-border, #a19f9d);
+  border-radius: var(--tips-radius, 4px);
+  color: inherit;
+  background: var(--tips-background, #ffffff);
+  text-align: left;
+  transition: background-color var(--tips-fast, 160ms ease), border-color var(--tips-fast, 160ms ease);
+}
+
+.tips-section-choice:hover:not(:disabled) {
+  background: var(--tips-hover, #f3f2f1);
+  border-color: var(--tips-text-secondary, #5f5f5f);
+}
+
+.tips-section-choice:disabled {
+  cursor: default;
+  opacity: 0.58;
+}
+
+.tips-section-choice-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.tips-section-choice-copy strong {
+  font-size: 14px;
+}
+
+.tips-section-choice-copy > span {
+  color: var(--tips-text-secondary, #5f5f5f);
+  font-size: 12px;
+}
+
+.tips-section-state {
+  flex: 0 0 auto;
+  max-width: 145px;
+  color: var(--tips-text-secondary, #5f5f5f);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: right;
+}
+
+.tips-section-state.complete {
+  color: var(--tips-brand-text, var(--tips-brand, #0067c5));
+}
+
+@media (max-width: 560px) {
+  .tips-card {
+    width: calc(100% - 20px);
+    max-height: calc(100dvh - 20px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    padding: 14px;
+  }
+
+  .tips-footer {
+    align-items: center;
+  }
+
+  .tips-navigation > button {
+    min-height: 44px;
+  }
+
+  .tips-section-choice {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .tips-section-state {
+    max-width: none;
+    text-align: left;
+  }
+}
+
+
+.tips-section-state.is-action {
+  color: var(--tips-brand, #0067c5);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+
+.tips-menu-reset {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--tips-border, #d1d1d1);
+}
+
+.tips-reset-button {
+  min-height: 34px;
+}
+
+
+/* TIPS phone layout: keep the lesson readable without hiding the whole page. */
+@media (max-width: 560px) {
+  .tips-card:not(.is-menu) {
+    max-height: min(60dvh, calc(100dvh - 20px - env(safe-area-inset-top) - env(safe-area-inset-bottom)));
+    overscroll-behavior: contain;
+  }
+
+  .tips-header {
+    min-height: 44px;
+  }
+
+  .tips-skip,
+  .tips-more > summary,
+  .tips-more-menu .tips-button,
+  .tips-reset-button {
+    min-height: 44px;
+  }
+
+  .tips-more > summary {
+    display: inline-flex;
+    align-items: center;
+    padding-inline: 4px;
+  }
+
+  .tips-more-menu {
+    min-width: min(220px, calc(100vw - 48px));
+  }
+
+  .tips-section-choice {
+    min-height: 72px;
+    padding: 12px;
+  }
+
+  .tips-menu-reset {
+    position: sticky;
+    bottom: -14px;
+    margin-inline: -14px;
+    padding: 12px 14px max(12px, env(safe-area-inset-bottom));
+    background: var(--tips-background, #ffffff);
+  }
+}
+
+@media (pointer: coarse) {
+  .tips-header {
+    min-height: 44px;
+  }
+
+  .tips-skip,
+  .tips-more > summary,
+  .tips-more-menu .tips-button,
+  .tips-reset-button {
+    min-height: 44px;
+  }
+}
+
+
+.tips-menu-dialog {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: 12px;
+  border: 0;
+  color: var(--tips-text, #1f1f1f);
+  background: transparent;
+}
+
+.tips-menu-dialog[open] {
+  display: grid;
+  place-items: center;
+}
+
+.tips-menu-dialog::backdrop {
+  background: var(--tips-scrim, rgba(0, 0, 0, 0.42));
+}
+
+.tips-menu-card {
+  width: min(560px, 100%);
+  max-height: calc(100dvh - 24px);
+  padding: 16px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--tips-border, #d1d1d1);
+  border-radius: calc(var(--tips-radius, 4px) * 2);
+  background: var(--tips-background, #ffffff);
+  box-shadow: var(--tips-overlay-shadow, 0 12px 32px rgba(0, 0, 0, 0.2));
+}
+
+.tips-menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 4px 14px;
+}
+
+.tips-menu-header h2 {
+  margin: 0;
+  font-size: 1.3rem;
+}
+
+.tips-menu-close {
+  flex: 0 0 auto;
+  min-height: 30px;
+  padding: 2px 8px;
+  border: 0;
+  border-radius: var(--tips-radius, 4px);
+  color: var(--tips-text-secondary, #5f5f5f);
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.tips-menu-reset {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--tips-border, #d1d1d1);
+}
+
+.tips-reset-button {
+  min-height: 34px;
+}
+
+.tips-button,
+.tips-primary-button,
+.tips-danger-button {
+  font: inherit;
+  cursor: pointer;
+}
+
+.tips-button {
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 1px solid var(--tips-control-border, #a19f9d);
+  border-radius: var(--tips-radius, 4px);
+  color: var(--tips-text, #1f1f1f);
+  background: var(--tips-background, #ffffff);
+}
+
+.tips-button:hover {
+  background: var(--tips-hover, #f3f2f1);
+}
+
+.tips-button:focus-visible,
+.tips-more > summary:focus-visible,
+.tips-section-choice:focus-visible,
+.tips-menu-close:focus-visible {
+  outline: 2px solid var(--tips-brand, #0067c5);
+  outline-offset: 2px;
+}
+
+.tips-primary-button {
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 1px solid var(--tips-brand, #0067c5);
+  border-radius: var(--tips-radius, 4px);
+  color: #ffffff;
+  background: var(--tips-brand, #0067c5);
+  font-weight: 600;
+}
+
+.tips-primary-button:hover {
+  filter: brightness(0.92);
+}
+
+.tips-danger-button {
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 1px solid #c42b1c;
+  border-radius: var(--tips-radius, 4px);
+  color: #c42b1c;
+  background: transparent;
+  font-weight: 600;
+}
+
+.tips-danger-button:hover {
+  background: rgba(196, 43, 28, 0.08);
+}
+
+@media (max-width: 560px) {
+  .tips-menu-dialog {
+    padding: 10px;
+  }
+
+  .tips-menu-card {
+    width: 100%;
+    max-height: calc(100dvh - 20px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    padding: 14px;
+  }
+
+  .tips-menu-header {
+    gap: 10px;
+  }
+
+  .tips-menu-close,
+  .tips-danger-button {
+    min-height: 44px;
+  }
+
+  .tips-menu-reset {
+    position: sticky;
+    bottom: -14px;
+    margin-inline: -14px;
+    padding: 12px 14px max(12px, env(safe-area-inset-bottom));
+    background: var(--tips-background, #ffffff);
+  }
+}
+
+@media (pointer: coarse) {
+  .tips-menu-close,
+  .tips-danger-button {
+    min-height: 44px;
+  }
+}

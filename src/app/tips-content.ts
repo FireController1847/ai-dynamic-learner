@@ -1,24 +1,7 @@
-import type { FeatureId } from '../features/feature-definitions.ts';
-export type TipsFeatureId = FeatureId | 'home';
-export interface TipsFeature { id: TipsFeatureId; label: string }
-export type TargetSelector = string | string[];
-export type Placement = 'top' | 'bottom' | 'left' | 'right' | 'center';
-export interface StepAction { click: TargetSelector }
-export interface TipStep {
-  title: string; body: string; target: TargetSelector; targetLabel: string;
-  placement?: Placement; nextAction?: StepAction; backAction?: StepAction;
-  nextLabel?: string; back?: boolean;
-}
-export interface TipSection {
-  id: string; title: string; description: string; steps: TipStep[];
-  when?: TargetSelector; prepare?: string; auto?: boolean; finishLabel?: string;
-  continueToAvailable?: boolean; finishAction?: StepAction;
-}
-export interface Tutorial { version: number; sections: TipSection[] }
+import type { TipsCatalog } from '../../packages/tips/src/index.ts';
 
-// TIPS content is separate from feature components so onboarding can change without
-// changing the apps themselves. Each section appears when that part of the app is open.
-export const tipsCatalog: Record<TipsFeatureId, Tutorial> = {
+// Dynamic Learner's guide content lives here; the reusable TIPS engine does not know these selectors or feature IDs.
+export const tipsCatalog: TipsCatalog = {
   home: {
     version: 1,
     sections: [
@@ -41,6 +24,35 @@ export const tipsCatalog: Record<TipsFeatureId, Tutorial> = {
             target: '.home-app-grid',
             targetLabel: 'Learning apps',
             placement: 'top',
+          },
+        ],
+      },
+    ],
+  },
+
+
+  calculator: {
+    version: 7,
+    sections: [
+      {
+        id: 'basics',
+        title: 'Calculator',
+        description: 'See what makes it different.',
+        when: '.calculator-page',
+        steps: [
+          {
+            title: 'Use the MathPrint display',
+            body: 'Enter fractions with n/d, use ▲/▼ to move through fractions or recent entries, and press = to replace the entry with its answer.',
+            target: ['.calculator-display', '.calculator-basic-keypad'],
+            targetLabel: 'Calculator display and keypad',
+            placement: 'bottom',
+          },
+          {
+            title: 'Scientific and answer controls',
+            body: 'Scientific opens advanced functions. DEG/RAD, FR↔DC, and Settings control how calculations and answers behave.',
+            target: ['.calculator-scientific-toggle', '.calculator-angle-mode', '.calculator-fraction-toggle', '.calculator-settings-trigger'],
+            targetLabel: 'Calculator controls',
+            placement: 'bottom',
           },
         ],
       },
@@ -230,24 +242,24 @@ export const tipsCatalog: Record<TipsFeatureId, Tutorial> = {
   },
 
   'index-cards': {
-    version: 5,
+    version: 6,
     sections: [
       {
         id: 'library',
         title: 'Card library',
-        description: 'Keep your groups and card sets organized.',
+        description: 'Keep your sets and groups organized.',
         when: '#index-cards-library',
         steps: [
           {
-            title: 'Your card sets live here',
-            body: 'Groups help you sort things. Sets hold the cards you study. Pick a set to open it.',
+            title: 'Your sets live here',
+            body: 'Groups keep sets together. Pick a set to open it.',
             target: '#index-cards-library',
             targetLabel: 'Card library',
             placement: 'right',
           },
           {
-            title: 'Make a new set',
-            body: 'Press this button to make a new set. The folder button next to it makes a new group.',
+            title: 'Make a set',
+            body: 'Press New set, then choose how you want to study.',
             target: '#index-cards-library [aria-label="New set"]',
             targetLabel: 'New set button',
             placement: 'right',
@@ -255,88 +267,150 @@ export const tipsCatalog: Record<TipsFeatureId, Tutorial> = {
         ],
       },
       {
-        id: 'set',
-        title: 'Making cards',
-        description: 'Add cards and write what you want to study.',
-        when: '.index-cards-detail.is-set',
-        prepare: 'set',
-        continueToAvailable: true,
+        id: 'creation',
+        title: 'Choose a study mode',
+        description: 'Choose how you want to use your cards.',
+        when: '.index-cards-builder',
+        prepare: 'creation',
         steps: [
           {
-            title: 'Add a card and write on it',
-            body: 'A card has a front and a back. Add your first card, then type what you want to study.',
-            target: ['.card-set-empty', '.ruled-card-stack'],
-            targetLabel: 'Card',
-            placement: 'left',
-          },
-          {
-            title: 'See all your cards here',
-            body: 'This list shows every card in the set. Press a card to jump to it.',
-            target: ['.card-list-panel', '.index-cards-detail.is-set'],
-            targetLabel: 'Cards list',
+            title: 'Choose a study mode',
+            body: 'Flash Cards use a front and back. Fill in the Blanks hides words for you to recall.',
+            target: '.index-cards-mode-grid',
+            targetLabel: 'Study modes',
             placement: 'left',
           },
         ],
       },
       {
-        id: 'review',
-        title: 'Flip and review',
-        description: 'Flip a card, then learn Review mode.',
-        when: '.card-flip-button',
-        prepare: 'review',
+        id: 'flash-cards',
+        title: 'Flash Cards',
+        description: 'Learn how to make and review flash cards.',
+        when: '.card-set:not(.fill-blank-set)',
+        prepare: 'flash-cards',
         steps: [
           {
+            title: 'Write both sides',
+            body: 'Put a prompt on the front and the answer on the back.',
+            target: '.ruled-card-stack',
+            targetLabel: 'Flash card',
+            placement: 'left',
+          },
+          {
             title: 'Flip the card',
-            body: 'Press this button to switch between the front and back.',
+            body: 'Press Show back to see the answer. Show front takes you back.',
             target: '.card-flip-button',
-            targetLabel: 'Flip button',
+            targetLabel: 'Flip card button',
             placement: 'bottom',
           },
           {
-            title: 'Start Review mode',
-            body: 'Review helps you practice the whole set. We will open it for you.',
+            title: 'Start a review',
+            body: 'Review lets you practice the whole set.',
             target: '.card-review-button',
             targetLabel: 'Review button',
             placement: 'bottom',
-            nextLabel: 'Open Review',
-            nextAction: { click: '.card-review-button' },
+            nextAction: { prepare: 'enable-review', click: '.card-review-button' },
           },
           {
-            title: 'Pick which side you see first',
-            body: 'Choose Front first or Back first. You will try to remember the other side before you flip the card.',
+            title: 'Choose the starting side',
+            body: 'Choose whether to see the front or back first.',
             target: '.review-setup .review-choices',
             targetLabel: 'Starting side',
             placement: 'right',
+            blockTarget: true,
             nextAction: { click: '.review-setup button[type="submit"]' },
-            backAction: { click: '.review-setup .review-cancel-button' },
           },
           {
-            title: 'Pick the card order',
-            body: 'Go from first to last, last to first, or mix the cards up.',
+            title: 'Choose the card order',
+            body: 'Study from first to last, last to first, or mix the cards up.',
             target: '.review-setup .review-choices',
             targetLabel: 'Card order',
             placement: 'right',
-            nextLabel: 'Start Review',
+            blockTarget: true,
             nextAction: { click: '.review-setup button[type="submit"]' },
-            backAction: { click: '.review-setup .review-previous-button' },
           },
           {
-            title: 'Now you are reviewing',
-            body: 'Look at the first side and try to remember the answer. Then flip the card to check yourself.',
+            title: 'Review your cards',
+            body: 'Try to remember the answer, then flip the card to check yourself.',
             target: '.card-review-session',
             targetLabel: 'Review status',
             placement: 'bottom',
             back: false,
           },
           {
-            title: 'Flip, then move to the next card',
-            body: 'Show the other side, then press Next card. On the last card, that button finishes the review.',
+            title: 'Keep going',
+            body: 'Flip the card, then press Next card. Finish the review on the last card.',
             target: '.card-review-controls',
-            targetLabel: 'Review buttons',
+            targetLabel: 'Review controls',
             placement: 'bottom',
             back: false,
           },
         ],
+        finishAction: { click: '[aria-label="End review"]' },
+      },
+      {
+        id: 'fill-in-the-blanks',
+        title: 'Fill in the Blanks',
+        description: 'Learn how to make and review fill-in-the-blank cards.',
+        when: '.fill-blank-set',
+        prepare: 'fill-blank',
+        steps: [
+          {
+            title: 'Write a prompt',
+            body: 'Write a sentence or question for the card.',
+            target: '.fill-blank-visual-editor',
+            targetLabel: 'Prompt editor',
+            placement: 'left',
+          },
+          {
+            title: 'Make a blank',
+            body: 'Select a word, then press Make blank. Remove blank puts it back.',
+            target: '.fill-blank-edit-controls',
+            targetLabel: 'Blank controls',
+            placement: 'bottom',
+          },
+          {
+            title: 'See the answers',
+            body: 'Press Show back to see the answer key. Show front takes you back.',
+            target: '.fill-blank-edit-flipper .card-flip-button, .fill-blank-set .card-flip-button',
+            targetLabel: 'Flip card button',
+            placement: 'bottom',
+          },
+          {
+            title: 'Start a review',
+            body: 'Review lets you practice the missing words.',
+            target: '.card-review-button',
+            targetLabel: 'Review button',
+            placement: 'bottom',
+            nextAction: { prepare: 'enable-review', click: '.card-review-button' },
+          },
+          {
+            title: 'Choose the card order',
+            body: 'Study from first to last, last to first, or mix the cards up.',
+            target: '.review-setup .review-choices',
+            targetLabel: 'Card order',
+            placement: 'right',
+            blockTarget: true,
+            nextAction: { click: '.review-setup button[type="submit"]' },
+          },
+          {
+            title: 'Fill the blanks',
+            body: 'Type each missing word, then press Verify.',
+            target: '.fill-blank-review-card',
+            targetLabel: 'Fill-in-the-blank card',
+            placement: 'left',
+            nextAction: { click: '.fill-blank-verify-button' },
+          },
+          {
+            title: 'Check your answers',
+            body: 'Correct answers are green. Missed answers show the right answer.',
+            target: '.fill-blank-results-card',
+            targetLabel: 'Review results',
+            placement: 'left',
+            back: false,
+          },
+        ],
+        finishAction: { click: '[aria-label="End review"]' },
       },
     ],
   },

@@ -1,0 +1,406 @@
+import { Icon } from '../../components/icon.ts';
+import { clearPreference, readNumberPreference, writeNumberPreference } from '../../core/ui-preferences.ts';
+import { formatExpression } from './expression-engine.ts';
+import { parseMathPrint, type MathPrintNode } from './calculator-entry.ts';
+import { CalculatorSettings } from './calculator-settings.ts';
+import { CalculatorModel, type HistoryEntry, type Operator } from './calculator-model.ts';
+import type { DecimalPlaces, FractionParts } from './calculator-format.ts';
+
+import {
+  defineComponent, h, nextTick, onActivated, onBeforeUnmount, onDeactivated, reactive, ref,
+  type VNode,
+} from 'vue';
+
+const DECIMAL_PLACES_PREFERENCE = 'dynamic-learner.ui.calculator.decimal-places';
+
+function savedDecimalPlaces(): DecimalPlaces {
+  const stored = readNumberPreference(DECIMAL_PLACES_PREFERENCE);
+  return stored !== null && Number.isInteger(stored) && stored >= 0 && stored <= 9 ? stored : null;
+}
+
+export const Calculator = defineComponent({
+  name: 'Calculator',
+  props: { title: { type: String, required: true } },
+  setup(props) {
+    const calculator = reactive(new CalculatorModel(savedDecimalPlaces()));
+    const scientificOpen = ref(false);
+    const settingsOpen = ref(false);
+    const settingsButton = ref<HTMLButtonElement | null>(null);
+    let listening = false;
+
+    function handleKeyboard(event: KeyboardEvent) {
+      if (event.ctrlKey || event.metaKey || event.altKey || document.querySelector('dialog[open]')) return;
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      if (target?.matches('input, textarea, select, [contenteditable="true"]') || target?.closest('a[href]')) return;
+      const button = target?.closest('button');
+      if (button && !button.closest('.calculator-page')) return;
+      if (button && (event.key === 'Enter' || event.key === ' ')) return;
+
+      if (/^\d$/.test(event.key)) calculator.inputDigit(event.key);
+      else if (event.key === '.' || event.key === ',') calculator.inputDecimal();
+      else if (['+', '-', '*', '/', '^'].includes(event.key)) calculator.chooseOperator(event.key as Operator);
+      else if (event.key === '(') calculator.inputParenthesis(true);
+      else if (event.key === ')') calculator.inputParenthesis(false);
+      else if (event.key === '!') calculator.inputPostfix('!');
+      else if (event.key === '%') calculator.inputPostfix('%');
+      else if (event.key === 'Enter' || event.key === '=') calculator.equals();
+      else if (event.key === 'Backspace') calculator.backspace();
+      else if (event.key === 'Delete') calculator.clearEntry();
+      else if (event.key === 'Escape') calculator.clearAll();
+      else if (event.key === 'ArrowUp') calculator.moveVertical('up');
+      else if (event.key === 'ArrowDown') calculator.moveVertical('down');
+      else if (event.key === 'ArrowRight') calculator.moveRight();
+      else return;
+      event.preventDefault();
+    }
+
+    function startListening() {
+      if (listening) return;
+      window.addEventListener('keydown', handleKeyboard);
+      listening = true;
+    }
+
+    function stopListening() {
+      if (!listening) return;
+      window.removeEventListener('keydown', handleKeyboard);
+      listening = false;
+    }
+
+    function updateDecimalPlaces(value: DecimalPlaces) {
+      calculator.setDecimalPlaces(value);
+      if (value === null) clearPreference(DECIMAL_PLACES_PREFERENCE);
+      else writeNumberPreference(DECIMAL_PLACES_PREFERENCE, value);
+    }
+
+    async function closeSettings() {
+      settingsOpen.value = false;
+      await nextTick();
+      settingsButton.value?.focus();
+    }
+
+    onActivated(startListening);
+    onDeactivated(() => {
+      stopListening();
+      settingsOpen.value = false;
+    });
+    onBeforeUnmount(stopListening);
+    startListening();
+
+    const key = (
+      label: string,
+      action: () => void,
+      kind: 'number' | 'operator' | 'function' | 'equals' = 'number',
+      ariaLabel?: string,
+      tooltip?: string,
+    ) => h('button', {
+      type: 'button',
+      class: ['calculator-key', `calculator-key--${kind}`],
+      'aria-label': ariaLabel ?? label,
+      title: tooltip,
+      onClick: action,
+    }, label);
+
+    const memoryKey = (label: string, action: () => void, disabled = false, ariaLabel?: string, tooltip?: string) =>
+      h('button', {
+        type: 'button',
+        class: 'calculator-memory-key',
+        disabled,
+        'aria-label': ariaLabel ?? label,
+        title: tooltip ?? ariaLabel,
+        onClick: action,
+      }, label);
+
+    const stackedFraction = (fraction: FractionParts, compact = false) => h('span', {
+      class: ['calculator-stacked-fraction', { 'is-compact': compact }],
+      'aria-hidden': 'true',
+    }, [
+      h('span', { class: 'calculator-fraction-numerator' }, String(fraction.numerator)),
+      h('span', { class: 'calculator-fraction-bar' }),
+      h('span', { class: 'calculator-fraction-denominator' }, String(fraction.denominator)),
+    ]);
+
+    function renderTextNode(node: Extract<MathPrintNode, { kind: 'text' }>, cursor: number | null) {
+      if (cursor === null || cursor < node.start || cursor > node.end) {
+        return h('span', formatExpression(node.text));
+      }
+      const offset = cursor - node.start;
+      return h('span', [
+        formatExpression(node.text.slice(0, offset)),
+        h('span', { class: 'calculator-entry-caret', 'aria-hidden': 'true' }),
+        formatExpression(node.text.slice(offset)),
+      ]);
+    }
+
+    function renderMathNodes(nodes: MathPrintNode[], cursor: number | null): VNode[] {
+      return nodes.map((node) => {
+        if (node.kind === 'text') return renderTextNode(node, cursor);
+
+        const numeratorActive = cursor !== null
+          && cursor >= node.numeratorStart && cursor <= node.numeratorEnd;
+        const denominatorActive = cursor !== null
+          && cursor >= node.denominatorStart && cursor <= node.denominatorEnd;
+
+        const numerator = renderMathNodes(node.numerator, numeratorActive ? cursor : null);
+        const denominator = renderMathNodes(node.denominator, denominatorActive ? cursor : null);
+
+        return h('span', { class: 'calculator-mathprint-fraction' }, [
+          h('span', {
+            class: ['calculator-mathprint-part', { 'is-active': numeratorActive }],
+          }, numerator.length ? numerator : numeratorActive
+            ? [h('span', { class: 'calculator-entry-caret', 'aria-hidden': 'true' })]
+            : [h('span', { class: 'calculator-mathprint-placeholder' }, '□')]),
+          h('span', { class: 'calculator-mathprint-bar' }),
+          h('span', {
+            class: ['calculator-mathprint-part', { 'is-active': denominatorActive }],
+          }, denominator.length ? denominator : denominatorActive
+            ? [h('span', { class: 'calculator-entry-caret', 'aria-hidden': 'true' })]
+            : [h('span', { class: 'calculator-mathprint-placeholder' }, '□')]),
+        ]);
+      });
+    }
+
+    function renderMathPrint(source: string, cursor: number | null = null) {
+      if (!source) {
+        return cursor === null
+          ? h('span', { class: 'calculator-mathprint-empty' }, '\u00a0')
+          : h('span', { class: 'calculator-entry-caret', 'aria-hidden': 'true' });
+      }
+      return renderMathNodes(parseMathPrint(source), cursor);
+    }
+
+    function renderResult(value: number, compact = false) {
+      const fraction = calculator.fractionPartsForResult(value);
+      return fraction ? stackedFraction(fraction, compact) : calculator.formatResult(value);
+    }
+
+    function historyPanelEntry(entry: HistoryEntry) {
+      return h('li', { key: entry.id }, [
+        h('button', {
+          type: 'button',
+          class: 'calculator-history-entry',
+          title: 'Recall this expression to the calculator',
+          onClick: () => calculator.recallHistoryEntry(entry),
+        }, [
+          h('span', { class: 'calculator-history-expression' }, renderMathPrint(entry.source)),
+          h('strong', { class: 'calculator-history-result' }, renderResult(entry.result, true)),
+        ]),
+      ]);
+    }
+
+    return () => {
+      const historyEntry = calculator.visibleHistoryEntry();
+      const displayFraction = calculator.displayFractionParts();
+
+      return h('section', { class: 'calculator-page', 'aria-label': props.title }, [
+        h('div', { class: 'calculator-layout' }, [
+          h('div', { class: 'calculator-machine' }, [
+            h('div', { class: 'calculator-display', 'aria-live': 'polite', 'aria-atomic': 'true' }, [
+              h('div', {
+                class: ['calculator-lcd-row', 'calculator-history-row', {
+                  'is-selected': calculator.isBrowsingHistory(),
+                }],
+              }, [
+                h('span', {
+                  class: ['calculator-memory-indicator', { 'is-active': calculator.memory !== null }],
+                  title: calculator.memory === null ? 'Memory is empty' : `Memory: ${calculator.formatResult(calculator.memory)}`,
+                }, 'M'),
+                historyEntry ? h('span', { class: 'calculator-history-math' }, [
+                  h('span', { class: 'calculator-history-source' }, renderMathPrint(historyEntry.source)),
+                  h('span', { class: 'calculator-history-answer' }, renderResult(historyEntry.result, true)),
+                ]) : h('span', { class: 'calculator-history-empty-line' }, '\u00a0'),
+              ]),
+              h('div', {
+                class: ['calculator-lcd-row', 'calculator-entry-row', {
+                  'is-error': calculator.hasError,
+                  'is-result': calculator.justEvaluated,
+                  'is-fraction': Boolean(displayFraction),
+                }],
+              }, calculator.hasError
+                ? [h('span', { class: 'calculator-error-text' }, calculator.display)]
+                : calculator.justEvaluated
+                  ? [h('output', {
+                      class: 'calculator-current-result',
+                      'aria-label': displayFraction
+                        ? `Calculator result: ${displayFraction.numerator} over ${displayFraction.denominator}`
+                        : `Calculator result: ${calculator.display}`,
+                    }, displayFraction ? stackedFraction(displayFraction) : calculator.display)]
+                  : [h('div', {
+                      class: 'calculator-current-entry',
+                      'aria-label': calculator.formattedExpression() || 'Empty calculator entry',
+                    }, renderMathPrint(calculator.expression, calculator.cursor))]),
+              h('div', { class: 'calculator-history-arrows', 'aria-label': 'Calculator history navigation' }, [
+                h('button', {
+                  type: 'button',
+                  class: 'calculator-history-arrow',
+                  title: 'Move up in a fraction template or browse older calculations',
+                  'aria-label': 'Up',
+                  onClick: () => calculator.moveVertical('up'),
+                }, '▲'),
+                h('button', {
+                  type: 'button',
+                  class: 'calculator-history-arrow',
+                  title: 'Move down in a fraction template or browse newer calculations',
+                  'aria-label': 'Down',
+                  onClick: () => calculator.moveVertical('down'),
+                }, '▼'),
+              ]),
+            ]),
+            h('div', { class: 'calculator-mode-row' }, [
+              h('button', {
+                type: 'button',
+                class: 'quiet-button calculator-angle-mode',
+                title: calculator.angleMode === 'DEG'
+                  ? 'Angles use degrees. Click to switch to radians.'
+                  : 'Angles use radians. Click to switch to degrees.',
+                'aria-label': `Angle mode: ${calculator.angleMode}. Change angle mode`,
+                onClick: () => calculator.toggleAngleMode(),
+              }, calculator.angleMode),
+              h('button', {
+                type: 'button',
+                class: ['quiet-button', 'calculator-fraction-toggle', {
+                  'is-active': calculator.displayMode === 'fraction',
+                }],
+                'aria-pressed': calculator.displayMode === 'fraction',
+                title: calculator.displayMode === 'fraction'
+                  ? 'FR↔DC: Fraction result mode is on. Click to return to decimal; C also resets it.'
+                  : 'FR↔DC: Prefer fraction form for eligible results until toggled off or C is pressed.',
+                'aria-label': calculator.displayMode === 'fraction'
+                  ? 'Fraction result mode on. Switch to decimal results'
+                  : 'Decimal result mode on. Switch to fraction results',
+                onClick: () => calculator.toggleFractionDecimal(),
+              }, 'FR↔DC'),
+              h('button', {
+                type: 'button',
+                class: 'quiet-button calculator-scientific-toggle',
+                'aria-expanded': scientificOpen.value,
+                'aria-controls': 'calculator-scientific-keypad',
+                title: scientificOpen.value ? 'Hide scientific functions' : 'Show scientific functions',
+                onClick: () => { scientificOpen.value = !scientificOpen.value; },
+              }, scientificOpen.value ? 'Hide scientific' : 'Scientific'),
+              h('span', { class: 'calculator-mode-description' }, 'MathPrint · expression history'),
+              h('button', {
+                ref: settingsButton,
+                type: 'button',
+                class: 'icon-button calculator-settings-trigger',
+                title: 'Calculator settings',
+                'aria-label': 'Calculator settings',
+                'aria-haspopup': 'dialog',
+                onClick: () => { settingsOpen.value = true; },
+              }, [h(Icon, { name: 'settings' })]),
+            ]),
+            h('div', { class: 'calculator-memory', 'aria-label': 'Memory controls' }, [
+              memoryKey('MC', () => { calculator.memory = null; }, calculator.memory === null,
+                'Clear memory', 'MC: Clear the stored memory value.'),
+              memoryKey('MR', () => calculator.memoryRecall(), calculator.memory === null,
+                'Recall memory', 'MR: Recall the stored memory value into the entry.'),
+              memoryKey('M+', () => calculator.memoryAdjust(1), false,
+                'Add to memory', 'M+: Add the current value to memory.'),
+              memoryKey('M−', () => calculator.memoryAdjust(-1), false,
+                'Subtract from memory', 'M−: Subtract the current value from memory.'),
+              memoryKey('MS', () => calculator.memoryStore(), false,
+                'Store in memory', 'MS: Store the current value in memory.'),
+            ]),
+            h('div', {
+              id: 'calculator-scientific-keypad',
+              class: ['calculator-scientific-keypad', { 'is-expanded': scientificOpen.value }],
+              'aria-label': 'Scientific functions',
+            }, [
+              key('(', () => calculator.inputParenthesis(true), 'function', 'Open parenthesis'),
+              key(')', () => calculator.inputParenthesis(false), 'function', 'Close parenthesis'),
+              key('%', () => calculator.inputPostfix('%'), 'function', 'Percent'),
+              key('π', () => calculator.inputConstant('pi'), 'function', 'Pi'),
+              key('e', () => calculator.inputConstant('e'), 'function', 'Euler’s number'),
+
+              key('Ans', () => calculator.inputConstant('ans'), 'function', 'Previous answer',
+                'Ans: Insert the previous evaluated answer.'),
+              key('sin', () => calculator.inputFunction('sin'), 'function', 'Sine'),
+              key('cos', () => calculator.inputFunction('cos'), 'function', 'Cosine'),
+              key('tan', () => calculator.inputFunction('tan'), 'function', 'Tangent'),
+              key('ln', () => calculator.inputFunction('ln'), 'function', 'Natural logarithm',
+                'ln: Natural logarithm, base e.'),
+
+              key('log', () => calculator.inputFunction('log'), 'function', 'Base 10 logarithm',
+                'log: Common logarithm, base 10.'),
+              key('sin⁻¹', () => calculator.inputFunction('asin'), 'function', 'Inverse sine',
+                'sin⁻¹: Inverse sine (arcsin).'),
+              key('cos⁻¹', () => calculator.inputFunction('acos'), 'function', 'Inverse cosine',
+                'cos⁻¹: Inverse cosine (arccos).'),
+              key('tan⁻¹', () => calculator.inputFunction('atan'), 'function', 'Inverse tangent',
+                'tan⁻¹: Inverse tangent (arctan).'),
+              key('√x', () => calculator.inputFunction('sqrt'), 'function', 'Square root',
+                '√x: Take the square root of a value.'),
+
+              key('xʸ', () => calculator.chooseOperator('^'), 'function', 'Raise to a power',
+                'xʸ: Raise the current value to a power.'),
+              key('x²', () => calculator.inputPowerShortcut('2'), 'function', 'Square',
+                'x²: Square the current value.'),
+              key('1/x', () => calculator.inputPowerShortcut('-1'), 'function', 'Reciprocal',
+                '1/x: Take the reciprocal of the current value.'),
+              key('n!', () => calculator.inputPostfix('!'), 'function', 'Factorial',
+                'n!: Factorial. Multiplies each positive integer from n down to 1.'),
+              key('10ˣ', () => calculator.inputPowerFunction('10'), 'function', 'Ten to a power',
+                '10ˣ: Raise 10 to a power.'),
+              key('eˣ', () => calculator.inputPowerFunction('e'), 'function', 'Euler’s number to a power',
+                'eˣ: Raise Euler’s number e to a power.'),
+            ]),
+            h('div', { class: 'calculator-keypad calculator-basic-keypad', 'aria-label': 'Calculator keypad' }, [
+              key('n/d', () => calculator.inputFraction(), 'function', 'Fraction template',
+                'n/d: Enter a stacked MathPrint fraction. Use ▼ to move to the denominator.'),
+              key('CE', () => calculator.clearEntry(), 'function', 'Clear entry'),
+              key('C', () => calculator.clearAll(), 'function', 'Clear expression',
+                'C: Clear the entry and reset fraction result mode to decimal.'),
+              key('⌫', () => calculator.backspace(), 'function', 'Backspace'),
+
+              key('7', () => calculator.inputDigit('7')),
+              key('8', () => calculator.inputDigit('8')),
+              key('9', () => calculator.inputDigit('9')),
+              key('÷', () => calculator.chooseOperator('/'), 'operator', 'Divide'),
+
+              key('4', () => calculator.inputDigit('4')),
+              key('5', () => calculator.inputDigit('5')),
+              key('6', () => calculator.inputDigit('6')),
+              key('×', () => calculator.chooseOperator('*'), 'operator', 'Multiply'),
+
+              key('1', () => calculator.inputDigit('1')),
+              key('2', () => calculator.inputDigit('2')),
+              key('3', () => calculator.inputDigit('3')),
+              key('−', () => calculator.chooseOperator('-'), 'operator', 'Subtract'),
+
+              key('±', () => calculator.toggleSign(), 'function', 'Toggle sign'),
+              key('0', () => calculator.inputDigit('0')),
+              key('.', () => calculator.inputDecimal(), 'number', 'Decimal point'),
+              key('+', () => calculator.chooseOperator('+'), 'operator', 'Add'),
+
+              key('=', () => calculator.equals(), 'equals',
+                calculator.isBrowsingHistory() ? 'Recall selected history expression' : 'Evaluate expression'),
+            ]),
+            h('p', { class: 'calculator-keyboard-hint' },
+              'Keyboard: 0–9, operators, parentheses, !, %, Enter, Backspace, Delete, Escape, and arrow keys.'),
+          ]),
+          h('aside', { class: 'calculator-history', 'aria-labelledby': 'calculator-history-title' }, [
+            h('div', { class: 'calculator-history-header' }, [
+              h('h2', { id: 'calculator-history-title' }, 'History'),
+              h('button', {
+                type: 'button',
+                class: 'quiet-button',
+                disabled: calculator.history.length === 0,
+                onClick: () => calculator.clearHistory(),
+              }, 'Clear'),
+            ]),
+            calculator.history.length
+              ? h('ol', { class: 'calculator-history-list' }, calculator.history.map(historyPanelEntry))
+              : h('div', { class: 'calculator-history-empty' }, [
+                  h('p', 'No calculations yet.'),
+                  h('span', 'Completed calculations stay here for this session.'),
+                ]),
+          ]),
+        ]),
+        settingsOpen.value ? h(CalculatorSettings, {
+          decimalPlaces: calculator.decimalPlaces,
+          onUpdateDecimalPlaces: updateDecimalPlaces,
+          onClose: closeSettings,
+        }) : null,
+      ]);
+    };
+  },
+});

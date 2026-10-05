@@ -1,6 +1,6 @@
 import type { ConfiguredWordSearch, BoardRotation } from './library-model.ts';
 import type { DisplayOptions } from './display-options.ts';
-import type { PuzzleGridHandle, SelectionAttempt } from './puzzle-grid.ts';
+import type { PuzzleGridHandle, SelectionAttempt, WordCelebration } from './puzzle-grid.ts';
 import { DIFFICULTIES } from './puzzle-model.ts';
 import { lineCells, matchSelection, wordOnLine } from './game-model.ts';
 import { generatePuzzle } from './puzzle-generator.ts';
@@ -28,14 +28,21 @@ export const PuzzleGame = defineComponent({
     const grid = ref<PuzzleGridHandle | null>(null);
     const gridVersion = ref(0);
     const attempt = ref<SelectionAttempt | null>(null);
+    const celebration = ref<WordCelebration | null>(null);
     const boardTurns = ref((props.item.boardRotation ?? 0) / 90);
     const rotating = ref(false);
     let attemptTimer: number | undefined;
+    let celebrationTimer: number | undefined;
     let rotationTimer: number | undefined;
     let attemptId = 0;
+    let celebrationId = 0;
     function clearAttempt() {
       clearTimeout(attemptTimer);
       attempt.value = null;
+    }
+    function clearCelebration() {
+      clearTimeout(celebrationTimer);
+      celebration.value = null;
     }
     const restartButton = ref<HTMLButtonElement | null>(null);
     const cancelButton = ref<HTMLButtonElement | null>(null);
@@ -48,6 +55,7 @@ export const PuzzleGame = defineComponent({
     onBeforeUnmount(() => {
       controller?.abort();
       clearAttempt();
+      clearCelebration();
       clearTimeout(rotationTimer);
     });
     onDeactivated(() => {
@@ -56,11 +64,13 @@ export const PuzzleGame = defineComponent({
       revealedWords.value = new Set<string>();
       hint.value = null;
       clearAttempt();
+      clearCelebration();
     });
     onMounted(() => { if (!game.value) generate(); });
 
     async function generate() {
       clearAttempt();
+      clearCelebration();
       controller?.abort();
       const request = new AbortController();
       controller = request;
@@ -108,7 +118,16 @@ export const PuzzleGame = defineComponent({
       if (foundWords.value.has(match.word)) { message.value = `${recognized}${match.word} is already found.`; return; }
       game.value.found.push(match);
       hint.value = null;
-      message.value = recognized + (complete.value ? `You found ${match.word}—and completed the puzzle!` : `Found ${match.word}!`);
+      const completed = game.value.found.length === props.item.puzzle.words.length;
+      clearCelebration();
+      celebration.value = {
+        id: ++celebrationId,
+        start: match.start,
+        end: match.end,
+        complete: completed,
+      };
+      celebrationTimer = setTimeout(clearCelebration, completed ? 2100 : 1050);
+      message.value = recognized + (completed ? `You found ${match.word}—and completed the puzzle!` : `Found ${match.word}!`);
     }
 
     function giveHint() {
@@ -133,6 +152,7 @@ export const PuzzleGame = defineComponent({
     function rotateBoard() {
       if (rotating.value || loading.value) return;
       clearAttempt();
+      clearCelebration();
       grid.value?.cancelSelection();
       boardTurns.value += 1;
       props.item.boardRotation = (((boardTurns.value % 4) + 4) % 4 * 90) as BoardRotation;
@@ -159,6 +179,7 @@ export const PuzzleGame = defineComponent({
 
     async function confirmAction() {
       clearAttempt();
+      clearCelebration();
       const action = pending.value;
       pending.value = null;
       if (action === 'new') await generate();
@@ -199,6 +220,7 @@ export const PuzzleGame = defineComponent({
             revealed: revealed.value, hint: hint.value, onSelect: select,
             options: props.options,
             attempt: attempt.value,
+            celebration: celebration.value,
             rotationTurns: boardTurns.value,
             rotating: rotating.value,
           }),

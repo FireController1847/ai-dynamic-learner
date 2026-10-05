@@ -2,9 +2,11 @@ import { defineComponent, h, ref, type PropType } from 'vue';
 import { useDialog } from '../../components/use-dialog.ts';
 import { inputValue } from '../../core/dom.ts';
 import { DOCUMENT_TYPES, type DocumentTypeId } from './document-types.ts';
+import { GraphPaper } from './graph-paper.ts';
+import { defaultGraphView } from './graph-model.ts';
 import {
-  LINED_FIELDS, MARKDOWN_FIELDS, defaultLinedDisplay, defaultMarkdownDisplay,
-  notebookDisplayStyles, validateNotebookDisplay, type NotebookDisplay,
+  LINED_FIELDS, MARKDOWN_FIELDS, GRAPH_FIELDS, defaultLinedDisplay, defaultMarkdownDisplay, defaultGraphDisplay,
+  notebookDisplayStyles, resolvedNotebookDisplay, validateNotebookDisplay, type NotebookDisplay,
 } from './display-options.ts';
 
 export const DisplaySettings = defineComponent({
@@ -28,14 +30,14 @@ export const DisplaySettings = defineComponent({
       tab.value = DOCUMENT_TYPES[next]!.id;
       dialog.value?.querySelector<HTMLButtonElement>(`#notebook-tab-${tab.value}`)?.focus();
     }
-    function control(field: (typeof LINED_FIELDS)[number] | (typeof MARKDOWN_FIELDS)[number]) {
+    function control(field: (typeof LINED_FIELDS)[number] | (typeof MARKDOWN_FIELDS)[number] | (typeof GRAPH_FIELDS)[number]) {
       const type = tab.value;
-      if (type === 'graph') return null;
-      const value = Reflect.get(props.options[type], field.key) as string | number;
+      const options = resolvedNotebookDisplay(props.options);
+      const value = Reflect.get(options[type], field.key) as string | number;
       const id = `notebook-display-${type}-${field.key}`;
       const update = (event: Event) => {
         const next = { ...props.options, [type]: {
-          ...props.options[type], [field.key]: field.choices ? inputValue(event) : Number(inputValue(event)),
+          ...options[type], [field.key]: field.choices ? inputValue(event) : Number(inputValue(event)),
         } };
         validateNotebookDisplay(next);
         emit('update', next);
@@ -51,7 +53,13 @@ export const DisplaySettings = defineComponent({
           ]),
       ]);
     }
-    function preview(type: 'lined' | 'markdown') {
+    function preview(type: DocumentTypeId) {
+      if (type === 'graph') return h('div', { class: 'notebook-graph-preview', 'aria-label': 'Graph Paper appearance preview' }, [
+        h(GraphPaper, { view: defaultGraphView(), options: resolvedNotebookDisplay(props.options).graph,
+          title: 'A curve to explore', preview: true,
+          plots: [{ color: 'blue', plot: { kind: 'function', evaluate: (x: number) => x * x / 4 } }],
+        }),
+      ]);
       if (type === 'markdown') return h('div', { class: 'notebook-display-sample', 'aria-label': 'Markdown appearance preview' }, [
         h('pre', { class: 'notebook-source-sample' }, '# A thought to keep\n\nA little space to learn.'),
         h('div', { class: 'notebook-display-sample--markdown' }, [
@@ -92,15 +100,15 @@ export const DisplaySettings = defineComponent({
       ...DOCUMENT_TYPES.map(type => h('section', {
         key: type.id, id: `notebook-display-panel-${type.id}`, role: 'tabpanel',
         'aria-labelledby': `notebook-tab-${type.id}`, hidden: tab.value !== type.id, tabindex: 0,
-      }, tab.value !== type.id ? [] : type.id === 'graph' ? [
-        h('p', 'Graph Paper editing is coming soon. Its display controls will be available with the editor.'),
-      ] : [
-        h('div', { class: 'display-settings-fields' }, (type.id === 'lined' ? LINED_FIELDS : MARKDOWN_FIELDS).map(control)),
+      }, tab.value !== type.id ? [] : [
+        h('div', { class: 'display-settings-fields' },
+          (type.id === 'lined' ? LINED_FIELDS : type.id === 'graph' ? GRAPH_FIELDS : MARKDOWN_FIELDS).map(control)),
         type.id === 'lined' ? h('p', { class: 'display-settings-description' },
           'Text size changes the letters, not the ruling. Negative offsets move text up. Paper size, font, and ruling can change page breaks.') : null,
         preview(type.id),
         h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('update', {
-          ...props.options, [type.id]: type.id === 'lined' ? defaultLinedDisplay() : defaultMarkdownDisplay(),
+          ...props.options, [type.id]: type.id === 'lined' ? defaultLinedDisplay()
+            : type.id === 'graph' ? defaultGraphDisplay() : defaultMarkdownDisplay(),
         }) }, `Reset ${type.label} defaults`),
       ])),
     ]);

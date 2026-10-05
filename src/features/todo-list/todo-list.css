@@ -9,11 +9,6 @@
 .todo-list-layout.library-collapsed { grid-template-columns: 0 minmax(0, 1fr); }
 .todo-list-layout.library-resizing { transition: none; user-select: none; }
 .todo-list-detail { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: auto; }
-.todo-list-empty-state { width: min(100%, 520px); margin: auto; padding: 32px 24px; text-align: center; }
-.todo-list-empty-state > .ui-icon { width: 48px; height: 48px; margin-bottom: 16px; color: var(--brand); }
-.todo-list-artwork { display: block; width: 96px; height: 96px; margin: 0 auto 16px; object-fit: contain; }
-.todo-list-empty-state h2, .todo-list-empty-state h3 { font-size: 20px; line-height: 28px; }
-.todo-list-empty-state p { margin: 12px 0 20px; color: var(--text-secondary); }
 .todo-library-intro { margin: 0; padding: 8px 16px; color: var(--text-secondary); font-size: 12px; line-height: 18px; }
 .todo-date-section + .todo-date-section { margin-top: 16px; }
 .todo-date-section h4 { margin: 4px 8px 8px; font-size: 12px; line-height: 18px; font-weight: 600; color: var(--text-secondary); }
@@ -85,8 +80,8 @@
   --todo-margin-width: var(--todo-margin, 116px);
   --todo-text-size: calc(18px * var(--todo-text-scale, 1));
   --todo-text-offset: calc(var(--todo-rule-spacing) * 0.18 + var(--todo-baseline, 0px));
-  background: repeating-linear-gradient(to bottom, var(--todo-paper, #fff) 0, var(--todo-paper, #fff) calc(var(--todo-rule-spacing) - 1px), var(--paper-blue-line) calc(var(--todo-rule-spacing) - 1px), var(--paper-blue-line) var(--todo-rule-spacing));
-  color: var(--todo-ink, #3d3d3d); font-family: var(--todo-font, 'Times New Roman', Times, serif);
+  background: repeating-linear-gradient(to bottom, var(--todo-paper, var(--paper-white)) 0, var(--todo-paper, var(--paper-white)) calc(var(--todo-rule-spacing) - 1px), var(--paper-blue-line) calc(var(--todo-rule-spacing) - 1px), var(--paper-blue-line) var(--todo-rule-spacing));
+  color: var(--todo-ink, var(--paper-ink-pencil)); font-family: var(--todo-font, 'Times New Roman', Times, serif);
   border: 1px solid var(--border-color); border-radius: var(--radius); box-shadow: var(--shadow-paper);
   min-height: 480px; position: relative; padding: var(--todo-rule-spacing) 0;
 }
@@ -156,18 +151,18 @@
 .todo-task-row { position: relative; display: grid; grid-template-columns: var(--todo-margin-width) minmax(0, 1fr); align-items: start; min-height: var(--todo-rule-spacing); }
 .todo-task-margin { position: relative; display: flex; justify-content: flex-end; align-items: center; gap: 2px; height: var(--todo-rule-spacing); padding: 0 10px 0 4px; transform: translateY(var(--todo-text-offset)); }
 .todo-section-priority-area { position: absolute; top: 0; left: 4px; width: calc(var(--todo-margin-width) - 54px); display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 1; transform: translateY(var(--todo-text-offset)); }
-.todo-section-priority-marker { display: flex; align-items: center; max-width: 100%; gap: 1px; padding: 3px 2px; border: 0; border-radius: 0; font-size: calc(var(--todo-text-size) * var(--todo-priority-scale, 1)); line-height: 1.2; font-weight: 700; color: #a58a8a; background: transparent; pointer-events: auto; }
-.todo-section-priority-marker.has-priority { color: #922c36; }
-.todo-section-priority-marker input { width: 3ch; min-width: 0; flex: 1; padding: 0 2px; border: 1px solid #cbb5b8; border-radius: 2px; background: transparent; color: inherit; font: inherit; line-height: inherit; }
-.todo-section-priority-marker input::placeholder { color: #a58a8a; opacity: 0.7; }
+.todo-section-priority-marker { display: flex; align-items: center; max-width: 100%; gap: 1px; padding: 3px 2px; border: 0; border-radius: 0; font-size: calc(var(--todo-text-size) * var(--todo-priority-scale, 1)); line-height: 1.2; font-weight: 700; color: var(--paper-priority-muted); background: transparent; pointer-events: auto; }
+.todo-section-priority-marker.has-priority { color: var(--paper-priority); }
+.todo-section-priority-marker input { width: 3ch; min-width: 0; flex: 1; padding: 0 2px; border: 1px solid var(--paper-priority-border); border-radius: 2px; background: transparent; color: inherit; font: inherit; line-height: inherit; }
+.todo-section-priority-marker input::placeholder { color: var(--paper-priority-muted); opacity: 0.7; }
 /* A direct skip toggle stays immediately left of the completion checkbox. */
 .todo-skip-button { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 16px; width: 16px; height: 18px; margin: 0; padding: 0; border: 0; background: transparent; color: #888; font: 600 14px/1 var(--font-family); cursor: pointer; }
-.todo-skip-button:hover, .todo-skip-button.is-active { color: #922c36; }
+.todo-skip-button:hover, .todo-skip-button.is-active { color: var(--paper-priority); }
 .todo-skip-button.is-active { font-weight: 800; }
 .todo-task-margin input[type=checkbox], .todo-checkbox-space { width: 18px; height: 18px; margin: 0; flex-shrink: 0; }
 .todo-task-margin input[type=checkbox] {
   appearance: none; position: relative; z-index: 1; padding: 0; border: 0; border-radius: 2px;
-  background: transparent; color: #242424; cursor: pointer; transition: color 140ms ease-out;
+  background: transparent; color: var(--paper-ink-dark); cursor: pointer; transition: color 140ms ease-out;
 }
 .todo-task-margin input[type=checkbox]::before {
   content: ''; position: absolute; left: 4px; top: 4px; width: 10px; height: 10px; box-sizing: border-box;
@@ -308,13 +303,13 @@
 .todo-task-paper, .todo-task-writing, .todo-section-prefix, .todo-section-name,
 .todo-task-writing textarea, .todo-section-priority-marker input { font-variant-numeric: lining-nums tabular-nums; }
 .todo-task-row.is-skipped textarea, .todo-task-row.is-skipped .todo-task-dash,
-.todo-task-row.is-skipped .todo-section-prefix, .todo-task-row.is-skipped .todo-section-name { text-decoration: line-through; text-decoration-color: #000; text-decoration-thickness: 1.5px; color: #000; }
+.todo-task-row.is-skipped .todo-section-prefix, .todo-task-row.is-skipped .todo-section-name { text-decoration: line-through; text-decoration-color: var(--paper-ink-black); text-decoration-thickness: 1.5px; color: var(--paper-ink-black); }
 /* Draw one uninterrupted stroke across each writing line, including gaps between fields. */
 .todo-task-row.is-skipped .todo-task-writing::after {
   content: ''; position: absolute; inset: 0 40px 0 var(--todo-inset, 12px); pointer-events: none; z-index: 1;
   background: repeating-linear-gradient(to bottom,
     transparent 0, transparent calc(var(--todo-rule-spacing) * 0.5),
-    #000 calc(var(--todo-rule-spacing) * 0.5), #000 calc(var(--todo-rule-spacing) * 0.5 + 2px),
+    var(--paper-ink-black) calc(var(--todo-rule-spacing) * 0.5), var(--paper-ink-black) calc(var(--todo-rule-spacing) * 0.5 + 2px),
     transparent calc(var(--todo-rule-spacing) * 0.5 + 2px), transparent var(--todo-rule-spacing));
 }
 .todo-task-row.is-draft:not(.is-section-start):not(:focus-within) .todo-task-dash,

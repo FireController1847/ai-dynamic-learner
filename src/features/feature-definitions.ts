@@ -1,13 +1,14 @@
 // Shared by the browser registry and webpack build; keep this data browser-neutral.
 import type { PageMetadataOverrides } from '../core/metadata.ts';
 
-export type FeatureId = 'notebook' | 'todo-list' | 'index-cards' | 'word-search' | 'crossword' | 'knowledge-check';
+export type FeatureId = 'calculator' | 'notebook' | 'todo-list' | 'index-cards' | 'word-search' | 'crossword' | 'knowledge-check';
 
 export interface FeatureDefinition {
   hidden?: boolean;
   imageSrc?: string;
   id: FeatureId;
   label: string;
+  version: `${number}.${number}.${number}`;
   path: `/${string}/`;
   icon: string;
   image: string;
@@ -17,12 +18,30 @@ export interface FeatureDefinition {
 
 export const featureDefinitions: readonly FeatureDefinition[] = [
   {
+    id: 'calculator', label: 'Calculator', path: '/calculator/', icon: 'calculator',
+    version: '1.3.0',
+    image: 'assets/calculator.png',
+    description: 'A scientific calculator for expressions and functions.',
+    metadata: {
+      keywords: ['calculator', 'scientific calculator', 'arithmetic', 'trigonometry', 'logarithms'],
+      socialImage: {
+        path: 'assets/calculator.png',
+        type: 'image/png',
+        width: 1254,
+        height: 1254,
+        alt: 'Calculator — Glossy blue-and-white calculator with a 123 display and rounded number and arithmetic keys.',
+      },
+    },
+  },
+  {
     id: 'notebook', label: 'Notebook', path: '/notebook/', icon: 'document',
+    version: '1.4.3',
     image: 'assets/notebook.png',
     description: 'Organize notes into groups and keep your documents together in one notebook.',
   },
   {
     id: 'todo-list', label: 'Todo List', path: '/todo-list/', icon: 'checklist',
+    version: '1.4.3',
     image: 'assets/todo-list.png',
     description: 'Write, organize, and prioritize tasks in simple lists that archive automatically.',
     metadata: {
@@ -38,16 +57,19 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   },
   {
     id: 'index-cards', label: 'Index Cards', path: '/index-cards/', icon: 'cards',
+    version: '1.10.1',
     image: 'assets/index-cards.png',
-    description: 'Organize your sets, write on both sides, and review at your own pace.',
+    description: 'Create flash cards or fill-in-the-blanks sets and review them at your own pace.',
   },
   {
     id: 'word-search', label: 'Word Search', path: '/word-search/', icon: 'word-search',
+    version: '1.5.11',
     image: 'assets/word-search.png',
     description: 'Create your own word searches, find every word, and pick up where you left off.'
   },
   {
     id: 'crossword', label: 'Crossword', path: '/crossword/', icon: 'crossword',
+    version: '1.1.6',
     image: 'assets/crossword.png',
     description: 'Create your own crosswords, solve the clues, and pick up where you left off.',
     metadata: {
@@ -63,6 +85,7 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   },
   {
     id: 'knowledge-check', label: 'Knowledge Check', path: '/knowledge-check/', icon: 'checklist',
+    version: '0.1.0',
     image: '',
     description: 'Quiz yourself and check what you know.',
   },

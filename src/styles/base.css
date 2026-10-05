@@ -16,6 +16,11 @@ button { cursor: pointer; }
 button:disabled { cursor: default; opacity: 0.45; }
 :focus-visible { outline: 2px solid var(--text-color); outline-offset: 2px; }
 .ui-icon { flex-shrink: 0; vertical-align: middle; width: 20px; height: 20px; }
+.organization-summary {
+  min-height: var(--control-height);
+  padding-block: calc((var(--control-height) - 20px) / 2);
+  line-height: 20px;
+}
 
 /* All action buttons share metrics, including the card flip action. */
 .quiet-button, .card-primary-button, .card-flip-button,
@@ -54,7 +59,7 @@ button:disabled { cursor: default; opacity: 0.45; }
 .delete-cancel-button:active { background: var(--surface-pressed); }
 
 .card-primary-button, .card-flip-button {
-  color: #fff;
+  color: var(--on-accent);
   background: var(--brand);
   border-color: var(--brand);
 }
@@ -66,8 +71,8 @@ button:disabled { cursor: default; opacity: 0.45; }
   background: var(--brand-pressed);
   border-color: var(--brand-pressed);
 }
-.delete-confirm-button { color: #fff; background: var(--danger); border-color: var(--danger); }
-.delete-confirm-button:hover { background: var(--danger-hover); border-color: var(--danger-hover); }
+.delete-confirm-button { color: var(--on-accent); background: var(--danger-fill); border-color: var(--danger-fill); }
+.delete-confirm-button:hover { background: var(--danger-fill-hover); border-color: var(--danger-fill-hover); }
 .delete-cancel-button { border-color: var(--text-secondary); }
 .delete-button { color: var(--danger); }
 .delete-button:hover:not(:disabled) { background: var(--danger-tint); }

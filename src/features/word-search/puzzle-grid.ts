@@ -2,6 +2,7 @@ import type { Game } from './game-model.ts';
 import type { DisplayOptions } from './display-options.ts';
 import type { GridPoint } from './word-outline.ts';
 export interface SelectionAttempt { id: number; start: number; end: number; cells: number[]; matched: boolean }
+export interface WordCelebration { id: number; start: number; end: number; complete: boolean }
 export interface PuzzleGridHandle { focusCell(cell: number): void; cancelSelection(): void }
 import { lineCells } from './game-model.ts';
 import { defaultDisplayOptions, displayStyles } from './display-options.ts';
@@ -19,6 +20,7 @@ export const PuzzleGrid = defineComponent({
     options: { type: Object as PropType<DisplayOptions>, default: defaultDisplayOptions },
     helpId: { type: String, default: 'word-search-play-help' },
     attempt: { type: Object as PropType<SelectionAttempt | null>, default: null },
+    celebration: { type: Object as PropType<WordCelebration | null>, default: null },
     rotationTurns: { type: Number, default: 0 },
     rotating: Boolean,
   },
@@ -200,9 +202,56 @@ export const PuzzleGrid = defineComponent({
         props.attempt && !props.attempt?.matched ? wordOutline(
           props.attempt.start, props.attempt.end, size.value,
           `miss-${props.attempt?.id}`, 'miss') : null,
+        props.celebration ? wordOutline(
+          props.celebration.start, props.celebration.end, size.value,
+          `success-${props.celebration.id}`, 'success') : null,
         anchor.value !== null ? wordOutline(
           anchor.value, endpoint.value ?? anchor.value, size.value,
           'selection', 'selection', pointerPoint.value) : null,
+      ]);
+    }
+
+    function celebrationLayer() {
+      if (!props.celebration) return null;
+      const startRow = Math.floor(props.celebration.start / size.value);
+      const startCol = props.celebration.start % size.value;
+      const endRow = Math.floor(props.celebration.end / size.value);
+      const endCol = props.celebration.end % size.value;
+      const midpointX = ((startCol + endCol) / 2 + 0.5) / size.value * 100;
+      const midpointY = ((startRow + endRow) / 2 + 0.5) / size.value * 100;
+
+      const sparks = Array.from({ length: 8 }, (_, index) =>
+        h('span', {
+          key: `spark-${props.celebration?.id}-${index}`,
+          class: ['word-search-success-spark', `spark-${index + 1}`],
+          'aria-hidden': 'true',
+        }, index % 2 ? '✦' : '•'));
+
+      const completionPieces = props.celebration.complete
+        ? Array.from({ length: 18 }, (_, index) => h('span', {
+          key: `complete-${props.celebration?.id}-${index}`,
+          class: ['word-search-completion-piece', { 'is-star': index % 3 === 0 }],
+          'aria-hidden': 'true',
+        }, index % 3 === 0 ? '✦' : ''))
+        : [];
+
+      return h('div', {
+        key: `celebration-${props.celebration.id}`,
+        class: ['word-search-celebration-layer', {
+          'is-complete': props.celebration.complete,
+        }],
+        'aria-hidden': 'true',
+      }, [
+        h('div', {
+          class: 'word-search-success-burst',
+          style: { left: `${midpointX}%`, top: `${midpointY}%` },
+        }, sparks),
+        props.celebration.complete ? h('div', {
+          class: 'word-search-completion-wash',
+        }) : null,
+        props.celebration.complete ? h('div', {
+          class: 'word-search-completion-party',
+        }, completionPieces) : null,
       ]);
     }
 
@@ -230,8 +279,11 @@ export const PuzzleGrid = defineComponent({
               '--letter-to': `${-props.rotationTurns * 90}deg`,
             },
           }, [
-            h('div', { class: 'word-search-board-frame' }, [
+            h('div', { class: ['word-search-board-frame', {
+              'is-complete-celebrating': Boolean(props.celebration?.complete),
+            }] }, [
               outlines(),
+              celebrationLayer(),
               h('div', {
                 ref: grid,
                 class: 'word-search-grid',

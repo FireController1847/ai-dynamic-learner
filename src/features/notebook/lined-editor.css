@@ -30,9 +30,9 @@
   aspect-ratio: var(--lined-aspect, 17 / 22);
   overflow: hidden;
   border-radius: var(--radius);
-  background: var(--lined-paper-color, #fff);
+  background: var(--lined-paper-color, var(--paper-white));
   box-shadow: 0 0 0 1px var(--control-border), var(--shadow-paper);
-  color: var(--lined-ink, #3d3d3d);
+  color: var(--lined-ink, var(--paper-ink-pencil));
   font-family: var(--lined-font, Georgia, 'Times New Roman', serif);
 }
 .lined-paper::after {
@@ -121,7 +121,7 @@
   transform: translateY(-50%);
   border-radius: 50%;
   background: var(--surface-workspace);
-  box-shadow: inset 1px 2px 3px rgb(0 0 0 / 18%), 0 1px 0 rgb(255 255 255 / 80%);
+  box-shadow: inset 1px 2px 3px rgb(0 0 0 / 18%), 0 1px 0 var(--paper-hole-highlight);
 }
 .lined-paper-holes i:first-child { top: 13.636364%; }
 .lined-paper-holes i:last-child { top: 86.363636%; }

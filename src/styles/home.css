@@ -1,19 +1,27 @@
 .home-page {
   display: flex;
   flex-direction: column;
-  gap: 48px;
+  gap: 16px;
   width: min(100%, 1080px);
-  min-height: 100%;
+  height: 100%;
+  min-height: 0;
   margin-inline: auto;
-  padding-top: 16px;
+  container: home / inline-size;
 }
-.home-intro { margin: 8px 0 24px; color: var(--text-secondary); }
+.home-apps { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.home-apps h2, .home-intro { flex-shrink: 0; }
+.home-intro { margin: 4px 0 12px; color: var(--text-secondary); }
 .home-app-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  flex: 1;
+  min-height: 0;
   gap: 16px;
   margin: 0;
-  padding: 0;
+  padding: 4px;
+  overflow: auto;
+  overscroll-behavior: contain;
   list-style: none;
 }
 .home-app-grid > li { min-width: 0; }
@@ -38,13 +46,20 @@
 .home-app-card p { margin: 0; color: var(--text-secondary); }
 .home-app-open { display: inline-flex; align-items: center; gap: 4px; margin-top: auto; padding-top: 8px; color: var(--brand-text); font-weight: 600; }
 .home-app-open .ui-icon { width: 16px; height: 16px; }
-.home-footer { margin-top: auto; padding-block: 20px 8px; border-top: 1px solid var(--border-color); color: var(--text-secondary); font-size: 12px; line-height: 18px; }
+.home-footer { flex-shrink: 0; padding-top: 12px; border-top: 1px solid var(--border-color); color: var(--text-secondary); font-size: 12px; line-height: 18px; }
 .home-footer p { margin: 0 0 8px; }
 .home-footer-details { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 24px; }
 .home-footer a { color: var(--brand-text); text-underline-offset: 3px; }
+@container home (min-width: 440px) {
+  .home-app-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container home (min-width: 700px) {
+  .home-app-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
 @media (max-width: 700px) {
-  .home-page { padding-top: 0; gap: 32px; }
+  .app-content.app-content--home { padding: 12px; }
+  .home-page { gap: 12px; }
   .home-app-card { min-height: 200px; padding: 20px; }
-  .home-footer-details { align-items: flex-start; flex-direction: column; gap: 4px; }
+  .home-footer-details { gap: 4px 16px; }
   .home-footer a { display: inline-flex; align-items: center; min-height: 44px; }
 }

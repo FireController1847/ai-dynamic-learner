@@ -1,5 +1,5 @@
 import { computed, ref, type Ref } from 'vue';
-import type { TargetSelector, Placement, TipStep } from './tips-content.ts';
+import type { TargetSelector, Placement, TipStep } from './types.ts';
 
 interface Rect { left: number; top: number; right: number; bottom: number; width: number; height: number }
 const SPOTLIGHT_PADDING = 8;
@@ -18,7 +18,7 @@ function selectorList(target?: TargetSelector) {
 export function visibleTarget(selectors?: TargetSelector) {
   for (const selector of selectorList(selectors)) {
   for (const element of document.querySelectorAll<HTMLElement>(selector)) {
-    if (element.closest('[aria-hidden="true"], [inert]')) continue;
+    if (element.closest('[aria-hidden="true"], [inert]:not([data-tips-tutorial])')) continue;
     const rect = element.getBoundingClientRect();
     const style = getComputedStyle(element);
     if (rect.width > 0 && rect.height > 0 && style.display !== 'none' &&

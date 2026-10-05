@@ -1,5 +1,5 @@
 import type { FeatureDefinition } from '../features/feature-definitions.ts';
-import type { TipsHandle } from './tips.ts';
+import type { TipsHandle } from '../../packages/tips/src/index.ts';
 import '../styles/index.css';
 import { appConfig } from './app-config.ts';
 import { features } from '../features/feature-registry.ts';
@@ -7,12 +7,16 @@ import { NavigationDrawer } from './navigation-drawer.ts';
 import { pageHref, useNavigation } from './navigation.ts';
 import { useWorkspace } from './workspace.ts';
 import { WorkspaceTools } from './workspace-tools.ts';
+import { ThemeMenu, type ThemeMenuHandle } from './theme-menu.ts';
+import { initializeTheme } from './theme.ts';
 import { HomePage } from './home-page.ts';
-import { TipsExperience } from './tips.ts';
+import { TipsExperience } from '../../packages/tips/src/index.ts';
 import { tipsCatalog } from './tips-content.ts';
 import { Icon } from '../components/icon.ts';
 
 import { defineComponent, type PropType, computed, createApp, h, KeepAlive, nextTick, ref } from 'vue';
+
+initializeTheme();
 
 const appLogoSrc = new URL('assets/dynamic-learner.png', document.baseURI).href;
 const homeTipsFeature = Object.freeze({ id: 'home', label: appConfig.name });
@@ -36,6 +40,7 @@ const App = defineComponent({
     const sidebarOpen = ref(false);
     const menuButton = ref<HTMLButtonElement | null>(null);
     const tipsExperience = ref<TipsHandle | null>(null);
+    const themeMenu = ref<ThemeMenuHandle | null>(null);
     const main = ref<HTMLElement | null>(null);
     let focusContentOnClose = false;
     const { currentPath, navigate } = useNavigation(onNavigate);
@@ -97,16 +102,28 @@ const App = defineComponent({
             ? h(Icon, { name: activeFeature.value.icon })
             : h('img', { class: 'app-logo app-header-logo', src: appLogoSrc, alt: '', 'aria-hidden': 'true' }),
         h('h1', activeFeature.value?.label ?? (currentPath.value === '/' ? appConfig.name : 'Page not found')),
-        tipsFeature.value ? h('button', {
-          type: 'button',
-          class: 'quiet-button tips-trigger',
-          title: currentPath.value === '/' ? 'Show tips' : `Show ${tipsFeature.value.label} tips`,
-          'aria-haspopup': 'dialog',
-          onClick: (event: MouseEvent) => tipsExperience.value?.open(event.currentTarget),
-        }, [
-          h(Icon, { name: 'lightbulb' }),
-          h('span', { class: 'tips-trigger-label' }, 'Tips'),
-        ]) : null,
+        h('div', { class: 'app-header-actions' }, [
+          h('button', {
+            type: 'button',
+            class: 'quiet-button app-header-action theme-trigger',
+            title: 'Theme settings',
+            'aria-haspopup': 'dialog',
+            onClick: (event: MouseEvent) => themeMenu.value?.open(event.currentTarget),
+          }, [
+            h(Icon, { name: 'theme' }),
+            h('span', { class: 'app-header-action-label' }, 'Theme'),
+          ]),
+          tipsFeature.value ? h('button', {
+            type: 'button',
+            class: 'quiet-button app-header-action tips-trigger',
+            title: currentPath.value === '/' ? 'Show tips' : `Show ${tipsFeature.value.label} tips`,
+            'aria-haspopup': 'dialog',
+            onClick: (event: MouseEvent) => tipsExperience.value?.open(event.currentTarget),
+          }, [
+            h(Icon, { name: 'lightbulb' }),
+            h('span', { class: 'app-header-action-label tips-trigger-label' }, 'Tips'),
+          ]) : null,
+        ]),
       ]),
       h(NavigationDrawer, {
         open: sidebarOpen.value,
@@ -121,7 +138,13 @@ const App = defineComponent({
       }, {
         footer: () => h(WorkspaceTools, { workspace }),
       }),
-      h(TipsExperience, { ref: tipsExperience, feature: tipsFeature.value }),
+      h(ThemeMenu, { ref: themeMenu }),
+      h(TipsExperience, {
+        ref: tipsExperience,
+        feature: tipsFeature.value,
+        catalog: tipsCatalog,
+        storageKey: 'dynamic-learner.tips.v1',
+      }),
       workspace.storageProblem.value ? h('p', {
         class: 'workspace-storage-warning', role: 'alert',
       }, workspace.storageProblem.value) : null,
@@ -129,6 +152,7 @@ const App = defineComponent({
         h('main', {
           ref: main,
           class: ['app-content', {
+            'app-content--home': currentPath.value === '/',
             'app-content--workspace': ['notebook', 'todo-list', 'index-cards', 'word-search', 'crossword'].includes(activeFeature.value?.id ?? ''),
           }],
           tabindex: -1,
@@ -139,6 +163,9 @@ const App = defineComponent({
           }),
         ]),
       ]),
+      activeFeature.value ? h('span', {
+        class: 'app-version',
+      }, `v${activeFeature.value.version}`) : null,
     ]);
   },
 });

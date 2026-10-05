@@ -1,49 +1,25 @@
-import { isRecord } from '../core/validation.ts';
-import { TIPS_ACTION_EVENT, type TutorialCleanup, type TutorialRequest } from '../core/tutorial.ts';
-import type { TipsFeature, TipSection, StepAction } from './tips-content.ts';
-interface TipsPreferences { enabled: boolean; seen: Record<string, unknown> }
-import { useTipsPosition, visibleTarget } from './tips-position.ts';
-import { tipsCatalog } from './tips-content.ts';
-
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { readTipsPreferences, writeTipsPreferences } from './preferences.ts';
+import { dispatchTutorialAction } from './tutorial-events.ts';
+import type { StepAction, TipSection, TipsPreferences, TipsProps, TutorialCleanup, TutorialRequest } from './types.ts';
+import { useTipsPosition, visibleTarget } from './position.ts';
 
-const STORAGE_KEY = 'dynamic-learner.tips.v1';
-
-function readPreferences(): TipsPreferences {
-  try {
-  const value: unknown = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}');
-  const stored = isRecord(value) ? value : {};
-  return {
-    enabled: stored.enabled !== false,
-    seen: isRecord(stored.seen)
-      ? { ...stored.seen }
-      : {},
-  };
-  } catch {
-  return { enabled: true, seen: {} };
-  }
-}
-
-function writePreferences(preferences: TipsPreferences) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(preferences)); }
-  catch { /* TIPS preferences are best-effort only. */ }
-}
-
-export function useTips(props: Readonly<{ feature: TipsFeature | null }>) {
+export function useTips(props: Readonly<TipsProps>) {
   const primaryFocus = ref<HTMLElement | null>(null);
   const openState = ref(false);
   const mode = ref('menu');
   const activeSectionId = ref<string | null>(null);
   const stepIndex = ref(0);
-  const preferences = ref(readPreferences());
+  const preferences = ref(readTipsPreferences(props.storageKey));
 
   let returnFocus: HTMLElement | null = null;
   let contextObserver: MutationObserver | null = null;
   let autoFrame = 0;
+  let autoPreparing = false;
   let returnToMenu = false;
-  let activeCleanup: TutorialCleanup | null = null;
+  let activeCleanups: TutorialCleanup[] = [];
 
-  const tutorial = computed(() => props.feature ? tipsCatalog[props.feature.id] : null);
+  const tutorial = computed(() => props.feature ? props.catalog[props.feature.id] : null);
   const sections = computed(() => tutorial.value?.sections ?? []);
   const activeSection = computed(() =>
     sections.value.find((section) => section.id === activeSectionId.value) ?? null);
@@ -74,7 +50,7 @@ export function useTips(props: Readonly<{ feature: TipsFeature | null }>) {
 
   function savePreferences(nextPreferences: TipsPreferences) {
     preferences.value = nextPreferences;
-    writePreferences(nextPreferences);
+    writeTipsPreferences(props.storageKey, nextPreferences);
   }
 
   function sectionAvailable(section: TipSection) {
@@ -94,29 +70,31 @@ export function useTips(props: Readonly<{ feature: TipsFeature | null }>) {
         resolve,
         reject,
       };
-      window.dispatchEvent(new CustomEvent(TIPS_ACTION_EVENT, { detail }));
+      dispatchTutorialAction(props.actionEventName, detail);
       if (!detail.handled) reject(new Error('This guide cannot be opened automatically.'));
     });
   }
 
   async function cleanupActiveDemo() {
-    const cleanup = activeCleanup;
-    activeCleanup = null;
-    if (typeof cleanup !== 'function') return;
-    try { await cleanup(); }
-    catch (error) { console.warn('TIPS example cleanup failed.', error); }
+    const cleanups = activeCleanups.splice(0).reverse();
+    for (const cleanup of cleanups) {
+      try { await cleanup(); }
+      catch (error) { console.warn('TIPS example cleanup failed.', error); }
+    }
   }
 
-  async function prepareAndStart(section: TipSection) {
-    if (!section?.prepare) return;
+  async function prepareAndStart(section: TipSection, fromMenu = true) {
+    if (!section) return;
     await cleanupActiveDemo();
     try {
-      const cleanup = await requestTutorialAction(section.prepare);
-      activeCleanup = typeof cleanup === 'function' ? cleanup : null;
-      await nextTick();
-      await new Promise<number>((resolve) => requestAnimationFrame(resolve));
+      if (section.prepare) {
+        const cleanup = await requestTutorialAction(section.prepare);
+        if (typeof cleanup === 'function') activeCleanups.push(cleanup);
+        await nextTick();
+        await new Promise<number>((resolve) => requestAnimationFrame(resolve));
+      }
       if (!sectionAvailable(section)) throw new Error('The requested guide did not open.');
-      startSection(section, true);
+      startSection(section, fromMenu);
     } catch (error) {
       await cleanupActiveDemo();
       console.warn('TIPS could not open this guide.', error);
@@ -152,11 +130,14 @@ export function useTips(props: Readonly<{ feature: TipsFeature | null }>) {
     markSectionSeen(section);
 
     if (section?.finishAction?.click) {
-      close();
-      await nextTick();
-      visibleTarget(section.finishAction.click)?.click();
+      // Run the host action before closing TIPS. This matters for tutorials
+      // attached to an already-open feature state: closing TIPS can cause
+      // the host UI to re-render before the action target is resolved.
+      const target = visibleTarget(section.finishAction.click);
+      target?.click();
       await nextTick();
       await new Promise<number>((resolve) => requestAnimationFrame(resolve));
+      close();
       await cleanupActiveDemo();
       return;
     }
@@ -199,10 +180,44 @@ export function useTips(props: Readonly<{ feature: TipsFeature | null }>) {
 
   async function runStepAction(action?: StepAction) {
     if (!action) return true;
+
+    let stepCleanup: TutorialCleanup | null = null;
+    if (action.prepare) {
+      try {
+        stepCleanup = await requestTutorialAction(action.prepare);
+        if (typeof stepCleanup === 'function') activeCleanups.push(stepCleanup);
+      } catch (error) {
+        console.warn('TIPS step preparation failed.', error);
+        return false;
+      }
+    }
+
     if (action.click) {
       const target = visibleTarget(action.click);
       if (!target) return false;
-      target.click();
+
+      const inertAncestors: HTMLElement[] = [];
+      let ancestor: HTMLElement | null = target instanceof HTMLElement ? target : null;
+      while (ancestor) {
+        if (ancestor.inert) {
+          inertAncestors.push(ancestor);
+          ancestor.inert = false;
+        }
+        ancestor = ancestor.parentElement;
+      }
+
+      try {
+        if (target instanceof HTMLButtonElement &&
+            target.type === 'submit' &&
+            target.form) {
+          target.form.requestSubmit(target);
+        } else {
+          target.click();
+        }
+      } finally {
+        for (const element of inertAncestors) element.inert = true;
+      }
+
       await nextTick();
       await new Promise<number>((resolve) => requestAnimationFrame(resolve));
       return true;
@@ -255,9 +270,12 @@ export function useTips(props: Readonly<{ feature: TipsFeature | null }>) {
     if (openState.value || !preferences.value.enabled || !tutorial.value) return;
     const section = sections.value.find((candidate) =>
       candidate.auto !== false && sectionAvailable(candidate) && !hasSeenSection(candidate));
-    if (section) {
+    if (section && !autoPreparing) {
       returnFocus = null;
-      startSection(section, false);
+      autoPreparing = true;
+      void prepareAndStart(section, false).finally(() => {
+        autoPreparing = false;
+      });
     }
   }
 
@@ -266,11 +284,10 @@ export function useTips(props: Readonly<{ feature: TipsFeature | null }>) {
   }
 
   function handleKeydown(event: KeyboardEvent) {
-    if (event.key !== 'Escape' || !openState.value) return;
+    if (event.key !== 'Escape' || !openState.value || mode.value !== 'tour') return;
     event.preventDefault();
     event.stopPropagation();
-    if (mode.value === 'menu') close();
-    else skipSection();
+    skipSection();
   }
 
   function installGlobalTracking() {
@@ -278,13 +295,13 @@ export function useTips(props: Readonly<{ feature: TipsFeature | null }>) {
     document.addEventListener('scroll', requestPositionUpdate, true);
     document.addEventListener('keydown', handleKeydown, true);
 
-    const appLayout = document.querySelector('.app-layout');
-    if (appLayout && window.MutationObserver) {
+    const trackingRoot = document.body;
+    if (trackingRoot && window.MutationObserver) {
       contextObserver = new MutationObserver(() => {
         if (openState.value && mode.value === 'tour') requestPositionUpdate();
         else requestAutoStart();
       });
-      contextObserver.observe(appLayout, { childList: true, subtree: true, attributes: true });
+      contextObserver.observe(trackingRoot, { childList: true, subtree: true, attributes: true });
     }
   }
 

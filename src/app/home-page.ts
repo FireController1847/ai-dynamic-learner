@@ -26,7 +26,7 @@ export const HomePage = defineComponent({
       const date = today.value;
       const dateValue = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
       return h('div', { class: 'home-page' }, [
-        h('section', { 'aria-labelledby': 'home-apps-title' }, [
+        h('section', { class: 'home-apps', 'aria-labelledby': 'home-apps-title' }, [
           h('h2', { id: 'home-apps-title' }, 'Your learning apps'),
           h('p', { class: 'home-intro' }, 'Choose a place to begin.'),
           h('ul', { class: 'home-app-grid' }, featureDefinitions.filter((feature) => !feature.hidden).map((feature) =>
