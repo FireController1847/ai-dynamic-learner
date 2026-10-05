@@ -9,8 +9,9 @@ import { DirectoryTree } from './directory-tree.ts';
 import { SetBuilder } from './set-builder.ts';
 import { getSetMode } from './set-modes.ts';
 import { CardSet } from './card-set.ts';
+import { FillBlankSet } from './fill-blank-set.ts';
 import { DisplaySettings } from './display-settings.ts';
-import { defaultDisplayOptions, displayStyles } from './display-options.ts';
+import { displayForMode, displayStyles, resolvedDisplayOptions } from './display-options.ts';
 import { Icon } from '../../components/icon.ts';
 import { LibraryEmptyState } from '../../components/library-empty-state.ts';
 import { useLibrarySelection } from '../../components/use-library-selection.ts';
@@ -81,7 +82,7 @@ export const IndexCards = defineComponent({
     const settingsOpen = ref(false);
     const tutorialReviewSetId = ref<string | null>(null);
     const settingsButton = ref<HTMLButtonElement | null>(null);
-    const displayOptions = computed(() => props.model.display ?? defaultDisplayOptions());
+    const displayOptions = computed(() => resolvedDisplayOptions(props.model.display));
     onDeactivated(() => { settingsOpen.value = false; });
 
     async function closeSettings() {
@@ -90,6 +91,9 @@ export const IndexCards = defineComponent({
       settingsButton.value?.focus();
     }
     const selection = computed(() => findItem(props.model.items, selectedId.value));
+    const selectedMode = computed<SetModeId>(() =>
+      selection.value?.item.kind === 'set' ? selection.value.item.mode ?? 'flash-cards' : 'flash-cards');
+    const activeDisplay = computed(() => displayForMode(displayOptions.value, selectedMode.value));
     const totalCards = computed(() => countCards(props.model.items));
 
     // Remember sets only; browsing a group must not replace the last opened set.
@@ -249,7 +253,7 @@ export const IndexCards = defineComponent({
     }
 
     return () => h('section', {
-      class: 'index-cards-page', 'aria-label': props.title, style: displayStyles(displayOptions.value),
+      class: 'index-cards-page', 'aria-label': props.title, style: displayStyles(activeDisplay.value),
       onKeydown: (event: KeyboardEvent) => {
         if (event.key === 'Escape' && libraryOverlay.value && !libraryCollapsed.value &&
             !(event.target instanceof Element && event.target.closest('dialog'))) {
@@ -322,15 +326,26 @@ export const IndexCards = defineComponent({
             h('h2', selection.value.item.name),
             h('p', { class: 'item-summary' }, `${getSetMode(selection.value.item.mode)?.label ?? 'Flash Cards'} · ${selection.value.item.cards.length} cards`),
           ]) : null,
-          !creationTarget.value && selection.value?.item.kind === 'set' ? h(CardSet, {
-            key: selection.value.item.id,
-            set: selection.value.item,
-            totalCards: totalCards.value,
-            cardListWidth: cardListWidth.value,
-            tutorialReview: tutorialReviewSetId.value === selection.value.item.id,
-            onResizeCardList: setCardListWidth,
-            onResetCardList: resetCardListWidth,
-          }) : !creationTarget.value ? h(LibraryEmptyState, {
+          !creationTarget.value && selection.value?.item.kind === 'set'
+            ? selectedMode.value === 'fill-in-the-blanks'
+              ? h(FillBlankSet, {
+                key: selection.value.item.id,
+                set: selection.value.item,
+                totalCards: totalCards.value,
+                cardListWidth: cardListWidth.value,
+                onResizeCardList: setCardListWidth,
+                onResetCardList: resetCardListWidth,
+              })
+              : h(CardSet, {
+                key: selection.value.item.id,
+                set: selection.value.item,
+                totalCards: totalCards.value,
+                cardListWidth: cardListWidth.value,
+                tutorialReview: tutorialReviewSetId.value === selection.value.item.id,
+                onResizeCardList: setCardListWidth,
+                onResetCardList: resetCardListWidth,
+              })
+            : !creationTarget.value ? h(LibraryEmptyState, {
             class: { 'has-organization': selection.value !== null },
             icon: 'cards',
             title: selection.value?.item.name ?? 'Build your index-card library',
@@ -373,6 +388,7 @@ export const IndexCards = defineComponent({
       ]),
       settingsOpen.value ? h(DisplaySettings, {
         options: displayOptions.value,
+        initialTab: selectedMode.value,
         onUpdate: (options) => { props.model.display = options; },
         onClose: closeSettings,
       }) : null,
