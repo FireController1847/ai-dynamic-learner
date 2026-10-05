@@ -6,7 +6,7 @@ export interface StepAction { click: TargetSelector }
 export interface TipStep {
   title: string; body: string; target: TargetSelector; targetLabel: string;
   placement?: Placement; nextAction?: StepAction; backAction?: StepAction;
-  nextLabel?: string; back?: boolean;
+  nextLabel?: string; back?: boolean; blockTarget?: boolean;
 }
 export interface TipSection {
   id: string; title: string; description: string; steps: TipStep[];
