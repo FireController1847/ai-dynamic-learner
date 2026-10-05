@@ -181,6 +181,7 @@ interface TipStep {
   backAction?: StepAction;
   nextLabel?: string;
   back?: boolean;
+  blockTarget?: boolean;
 }
 ```
 
@@ -201,6 +202,7 @@ type Placement = 'top' | 'bottom' | 'left' | 'right' | 'center';
 ```ts
 interface StepAction {
   click: TargetSelector;
+  prepare?: string;
 }
 ```
 
