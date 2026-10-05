@@ -248,18 +248,16 @@ export const IndexCards = defineComponent({
       if (libraryOverlay.value) libraryCollapsed.value = true;
       tree.value?.reveal(item.id);
 
-      if (action === 'flash-cards' || action === 'fill-blank') {
-        await nextTick();
-        return () => restoreTipsState(previous, item.id);
-      }
-
-      if (action === 'review' || action === 'flash-cards-review') {
+      if (action === 'flash-cards' || action === 'flash-cards-review' || action === 'review') {
         tutorialReviewSetId.value = item.id;
-      } else if (action === 'fill-blank-review') {
+      } else if (action === 'fill-blank' || action === 'fill-blank-review') {
         tutorialFillBlankReviewSetId.value = item.id;
-      } else {
+      } else if (action !== 'creation') {
         throw new Error('Unknown Index Cards tutorial action.');
       }
+
+      await nextTick();
+      return () => restoreTipsState(previous, item.id);
 
       await nextTick();
       return () => restoreTipsState(previous, item.id);
