@@ -26,3 +26,27 @@
   .display-settings { padding: 16px; }
   .display-setting { grid-template-columns: 1fr; gap: 4px; }
 }
+
+.index-cards-display-tabs {
+  display: flex;
+  gap: 4px;
+  margin-top: 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+.index-cards-display-tabs button {
+  flex: 1;
+  min-height: var(--control-height);
+  padding: 10px 8px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+}
+.index-cards-display-tabs button[aria-selected='true'] {
+  border-bottom-color: var(--brand);
+  color: var(--brand);
+  font-weight: 600;
+}
+.fill-blank-settings-sample {
+  display: block;
+  padding-top: calc(8cqw + var(--card-baseline));
+}
