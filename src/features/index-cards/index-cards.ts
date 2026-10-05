@@ -209,6 +209,24 @@ export const IndexCards = defineComponent({
         return () => restoreTipsState(previous, '');
       }
 
+      if (action === 'enable-review') {
+        const item = selection.value?.item;
+        if (!item || item.kind !== 'set') {
+          throw new Error('No Index Cards set is selected.');
+        }
+
+        if (item.mode === 'fill-in-the-blanks') {
+          tutorialFillBlankReviewSetId.value = item.id;
+        } else {
+          tutorialReviewSetId.value = item.id;
+        }
+
+        return () => {
+          if (tutorialReviewSetId.value === item.id) tutorialReviewSetId.value = null;
+          if (tutorialFillBlankReviewSetId.value === item.id) tutorialFillBlankReviewSetId.value = null;
+        };
+      }
+
       const mode = action === 'fill-blank' || action === 'fill-blank-review'
         ? 'fill-in-the-blanks'
         : 'flash-cards';
