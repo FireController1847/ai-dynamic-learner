@@ -26,6 +26,8 @@ export const MAX_TEXT_LENGTH = 10000;
 export const MAP_WIDTH = 1440;
 export const MAP_HEIGHT = 896;
 export const MAP_GRID = 32;
+export const MAP_TOPIC_WIDTH = 160;
+export const MAP_TOPIC_HEIGHT = 56;
 
 const tree = createTreeOperations<LibraryItem>({ children: item => item.kind === 'group' ? item.children : null, maxDepth: MAX_DEPTH });
 export const { findItem, firstEntry, countItems, deleteItem, canMove, moveItem, groupOptions } = tree;
@@ -80,8 +82,8 @@ function mapData(value: unknown, ids: Set<string>): asserts value is MapGuideDat
   for (const topic of value.topics) {
     if (!isRecord(topic) || !isValidId(topic.id) || ids.has(topic.id) ||
         Object.keys(topic).some(key => !['id','title','x','y','guide'].includes(key)) ||
-        typeof topic.x !== 'number' || !Number.isInteger(topic.x) || topic.x < 0 || topic.x > MAP_WIDTH ||
-        typeof topic.y !== 'number' || !Number.isInteger(topic.y) || topic.y < 0 || topic.y > MAP_HEIGHT)
+        typeof topic.x !== 'number' || !Number.isInteger(topic.x) || topic.x < 0 || topic.x > MAP_WIDTH - MAP_TOPIC_WIDTH ||
+        typeof topic.y !== 'number' || !Number.isInteger(topic.y) || topic.y < 0 || topic.y > MAP_HEIGHT - MAP_TOPIC_HEIGHT)
       throw new Error('A Study Guide map topic is invalid.');
     ids.add(topic.id); text(topic.title, 'Topic title'); listData(topic.guide, ids);
   }

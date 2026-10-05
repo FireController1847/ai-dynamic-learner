@@ -1,9 +1,8 @@
 import { computed, defineComponent, h, ref, type PropType } from 'vue';
 import { createId } from '../../core/ids.ts';
 import { inputValue } from '../../core/dom.ts';
-import { createListGuideData, MAP_GRID, MAP_HEIGHT, MAP_WIDTH, MAX_TEXT_LENGTH, type MapGuideData, type MapTopic } from './library-model.ts';
+import { createListGuideData, MAP_GRID, MAP_HEIGHT, MAP_MAP_TOPIC_HEIGHT, MAP_MAP_TOPIC_WIDTH, MAP_WIDTH, MAX_TEXT_LENGTH, MAX_TOPICS, type MapGuideData, type MapTopic } from './library-model.ts';
 import { StudyGuideListEditor } from './list-editor.ts';
-const TOPIC_WIDTH=160, TOPIC_HEIGHT=56;
 const snap=(v:number)=>Math.round(v/MAP_GRID)*MAP_GRID;
 const clamp=(v:number,max:number)=>Math.max(0,Math.min(max,v));
 export const StudyGuideMapEditor=defineComponent({
@@ -13,18 +12,19 @@ export const StudyGuideMapEditor=defineComponent({
     const drag=ref<{id:string;clientX:number;clientY:number;x:number;y:number}|null>(null);
     const selected=computed(()=>props.data.topics.find(t=>t.id===selectedId.value)??null);
     function addTopic(){
+      if (props.data.topics.length >= MAX_TOPICS) return;
       const i=props.data.topics.length;
       const topic:MapTopic={id:createId(),title:'New topic',x:snap(64+(i%5)*224),y:snap(64+Math.floor(i/5)*128),guide:createListGuideData()};
       props.data.topics.push(topic); selectedId.value=topic.id;
     }
     function removeTopic(id:string){const i=props.data.topics.findIndex(t=>t.id===id);if(i<0)return;props.data.topics.splice(i,1);selectedId.value=props.data.topics[Math.min(i,props.data.topics.length-1)]?.id??null;}
-    function move(topic:MapTopic,dx:number,dy:number){topic.x=clamp(snap(topic.x+dx),MAP_WIDTH-TOPIC_WIDTH);topic.y=clamp(snap(topic.y+dy),MAP_HEIGHT-TOPIC_HEIGHT);}
+    function move(topic:MapTopic,dx:number,dy:number){topic.x=clamp(snap(topic.x+dx),MAP_WIDTH-MAP_TOPIC_WIDTH);topic.y=clamp(snap(topic.y+dy),MAP_HEIGHT-MAP_TOPIC_HEIGHT);}
     function down(e:PointerEvent,topic:MapTopic){if(e.button!==0)return;selectedId.value=topic.id;drag.value={id:topic.id,clientX:e.clientX,clientY:e.clientY,x:topic.x,y:topic.y};(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);}
-    function moving(e:PointerEvent,topic:MapTopic){const d=drag.value;if(!d||d.id!==topic.id)return;topic.x=clamp(snap(d.x+e.clientX-d.clientX),MAP_WIDTH-TOPIC_WIDTH);topic.y=clamp(snap(d.y+e.clientY-d.clientY),MAP_HEIGHT-TOPIC_HEIGHT);}
+    function moving(e:PointerEvent,topic:MapTopic){const d=drag.value;if(!d||d.id!==topic.id)return;topic.x=clamp(snap(d.x+e.clientX-d.clientX),MAP_WIDTH-MAP_TOPIC_WIDTH);topic.y=clamp(snap(d.y+e.clientY-d.clientY),MAP_HEIGHT-MAP_TOPIC_HEIGHT);}
     function up(e:PointerEvent){const el=e.currentTarget as HTMLElement;if(el.hasPointerCapture(e.pointerId))el.releasePointerCapture(e.pointerId);drag.value=null;}
-    const points=()=>props.data.topics.map(t=>String(t.x+TOPIC_WIDTH/2)+','+String(t.y+TOPIC_HEIGHT/2)).join(' ');
+    const points=()=>props.data.topics.map(t=>String(t.x+MAP_TOPIC_WIDTH/2)+','+String(t.y+MAP_TOPIC_HEIGHT/2)).join(' ');
     return ()=>h('div',{class:'study-guide-map-editor'},[
-      h('div',{class:'study-guide-map-toolbar'},[h('button',{type:'button',class:'card-primary-button',onClick:addTopic},'+ Topic'),
+      h('div',{class:'study-guide-map-toolbar'},[h('button',{type:'button',class:'card-primary-button',disabled:props.data.topics.length>=MAX_TOPICS,onClick:addTopic},'+ Topic'),
         h('span',props.data.topics.length+(props.data.topics.length===1?' topic':' topics'))]),
       h('div',{class:'study-guide-map-layout'},[
         h('div',{class:'study-guide-map-scroll'},[h('div',{class:'study-guide-map-canvas',style:{width:MAP_WIDTH+'px',height:MAP_HEIGHT+'px','--study-guide-grid':MAP_GRID+'px'},role:'group','aria-label':'Topic map'},[

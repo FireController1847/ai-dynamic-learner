@@ -44,7 +44,7 @@ export const StudyGuideLibrary=defineComponent({
       h('div',{class:'directory-scroll'},[props.items.length?h('ul',{class:'directory-list','aria-label':'Groups and study guides'},props.items.map(renderItem)):h('p',{class:'directory-empty'},'No groups or study guides yet.')]),
       h('p',{class:'visually-hidden',role:'status'},announcement.value),
       pendingDelete.value?h(DeleteConfirmation,{itemName:pendingDelete.value.name,itemLabel:pendingDelete.value.kind==='group'?'group':'study guide',
-        detail:pendingDelete.value.kind==='group'?'This also deletes '+countGuides(pendingDelete.value.children)+' study guides inside it.':'The study guide and its content will be removed from the library.',
+        detail:pendingDelete.value.kind==='group'?'This also deletes everything inside this group, including '+countGuides(pendingDelete.value.children)+' study guides.':'The study guide and its content will be removed from the library.',
         confirmLabel:pendingDelete.value.kind==='group'?'Delete group':'Delete study guide',onCancel:cancelDelete,onConfirm:confirmDelete}):null
     ]);
   }
