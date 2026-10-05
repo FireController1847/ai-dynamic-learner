@@ -16,8 +16,8 @@ export const CheckBuilder = defineComponent({
     }, [
       h('header', { class: 'knowledge-check-builder-intro' }, [
         h('p', { class: 'knowledge-check-builder-eyebrow' }, 'New knowledge check'),
-        h('h2', { id: 'knowledge-check-builder-title' }, 'Choose a check type'),
-        h('p', `Saved in ${props.destination}. Choose the kind of knowledge check you want to create.`),
+        h('h2', { id: 'knowledge-check-builder-title' }, 'Choose a mode'),
+        h('p', `Saved in ${props.destination}. Choose how you want to check your knowledge.`),
       ]),
       h('div', { class: 'knowledge-check-type-grid' }, CHECK_TYPES.map((type) =>
         h('button', {

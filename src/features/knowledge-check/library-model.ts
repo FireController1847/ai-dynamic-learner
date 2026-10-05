@@ -1,7 +1,7 @@
 import { isRecord } from '../../core/validation.ts';
 import { createId, isValidId } from '../../core/ids.ts';
 import { createTreeOperations, type TreeMovePosition } from '../../core/tree.ts';
-import { getCheckType, isCheckType, type CheckTypeId } from './check-types.ts';
+import { getCheckType, isCheckType, normalizeCheckType, type CheckTypeId } from './check-types.ts';
 
 export interface CheckItem { id: string; kind: 'check'; name: string; type: CheckTypeId }
 export interface Group { id: string; kind: 'group'; name: string; children: LibraryItem[] }
@@ -66,9 +66,13 @@ export function validateKnowledgeCheck(value: unknown): asserts value is Knowled
           throw new Error('A Knowledge Check group contains unsupported data.');
         }
         visit(item.children, depth + 1);
-      } else if (item.kind !== 'check' || !isCheckType(item.type) ||
+      } else {
+        // Earlier scaffold entries have no question data; retain them under the new modes.
+        item.type = normalizeCheckType(item.type);
+        if (item.kind !== 'check' || !isCheckType(item.type) ||
           Object.keys(item).some((key) => !['id', 'kind', 'name', 'type'].includes(key))) {
-        throw new Error('A knowledge check contains unsupported data.');
+          throw new Error('A knowledge check contains unsupported data.');
+        }
       }
     }
   }

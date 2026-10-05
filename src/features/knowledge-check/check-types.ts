@@ -1,10 +1,19 @@
-export type CheckTypeId = 'multiple-choice' | 'true-false' | 'short-answer';
+export type CheckTypeId = 'study' | 'quiz' | 'test';
 
 export const CHECK_TYPES: readonly { id: CheckTypeId; label: string; description: string; icon: string }[] = [
-  { id: 'multiple-choice', label: 'Multiple Choice', description: 'Choose an answer from a set of options.', icon: 'checklist' },
-  { id: 'true-false', label: 'True or False', description: 'Decide whether each statement is true or false.', icon: 'check' },
-  { id: 'short-answer', label: 'Short Answer', description: 'Recall an answer and write it in your own words.', icon: 'pencil' },
+  { id: 'study', label: 'Study', description: 'Review material at your own pace.', icon: 'cards' },
+  { id: 'quiz', label: 'Quiz', description: 'Practice checking what you know.', icon: 'checklist' },
+  { id: 'test', label: 'Test', description: 'Assess your knowledge.', icon: 'document' },
 ];
+
+export function normalizeCheckType(value: unknown): unknown {
+  switch (value) {
+    case 'multiple-choice': return 'study';
+    case 'true-false': return 'quiz';
+    case 'short-answer': return 'test';
+    default: return value;
+  }
+}
 
 export function isCheckType(value: unknown): value is CheckTypeId {
   return typeof value === 'string' && CHECK_TYPES.some((type) => type.id === value);
