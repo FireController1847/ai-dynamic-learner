@@ -273,7 +273,7 @@ export const FillBlankSet = defineComponent({
               role: 'group',
               'aria-label': reviewActive.value
                 ? `Card ${index.value + 1} of ${orderedCards.value.length}. Fill every blank, then verify.`
-                : `Card ${index.value + 1} of ${orderedCards.value.length}. Select text and use the blank tools to edit the exercise.`,
+                : `Card ${index.value + 1} of ${orderedCards.value.length}. Select text and use the blank controls below the card.`,
             }, [
               reviewActive.value
                 ? h(FillBlankPaper, {
@@ -286,26 +286,6 @@ export const FillBlankSet = defineComponent({
                   onMessage: (value: string) => { message.value = value; },
                 }),
             ]),
-            !reviewActive.value ? h('aside', { class: 'fill-blank-tools', 'aria-label': 'Blank editing tools' }, [
-              h('button', {
-                type: 'button',
-                class: 'icon-button fill-blank-tool-button',
-                title: 'Make blank',
-                'aria-label': 'Make blank from selected text',
-                'data-tooltip': 'Make blank',
-                onMousedown: preserveEditorSelection,
-                onClick: () => editor.value?.makeBlank(),
-              }, [h(Icon, { name: 'plus' })]),
-              h('button', {
-                type: 'button',
-                class: 'icon-button fill-blank-tool-button',
-                title: 'Remove blank',
-                'aria-label': 'Remove blank at the cursor',
-                'data-tooltip': 'Remove blank',
-                onMousedown: preserveEditorSelection,
-                onClick: () => editor.value?.removeBlank(),
-              }, [h(Icon, { name: 'minus' })]),
-            ]) : null,
           ]) : h('div', { class: 'card-set-empty' }, [
             h(Icon, { name: 'cards' }),
             h('h3', 'A fresh fill-in set.'),
@@ -329,8 +309,20 @@ export const FillBlankSet = defineComponent({
                 type: 'button', class: 'card-primary-button fill-blank-verify-button',
                 disabled: !allFilled || verified.value, onClick: verify,
               }, [h(Icon, { name: verified.value ? 'verified' : 'checklist' }), verified.value ? 'Verified' : 'Verify'])
-                : h('div', { class: 'fill-blank-edit-summary', 'aria-live': 'polite' },
-                  `${blankCount} ${blankCount === 1 ? 'blank' : 'blanks'}`),
+                : h('div', { class: 'fill-blank-control-tools', 'aria-label': 'Blank editing tools' }, [
+                  h('button', {
+                    type: 'button',
+                    class: 'quiet-button fill-blank-control-button',
+                    onMousedown: preserveEditorSelection,
+                    onClick: () => editor.value?.makeBlank(),
+                  }, [h(Icon, { name: 'plus' }), 'Make blank']),
+                  h('button', {
+                    type: 'button',
+                    class: 'quiet-button fill-blank-control-button',
+                    onMousedown: preserveEditorSelection,
+                    onClick: () => editor.value?.removeBlank(),
+                  }, [h(Icon, { name: 'minus' }), 'Remove blank']),
+                ]),
               h('button', {
                 type: 'button', class: 'quiet-button',
                 disabled: reviewActive.value ? !canAdvance : lastCard,
