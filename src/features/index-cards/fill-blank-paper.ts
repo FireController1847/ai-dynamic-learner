@@ -33,7 +33,7 @@ export const FillBlankPaper = defineComponent({
     } satisfies FillBlankPaperHandle);
 
     function title() {
-      return props.card.title?.trim() || 'Untitled card';
+      return props.card.title?.trim() || '';
     }
 
     function blankNumber(index: number) {

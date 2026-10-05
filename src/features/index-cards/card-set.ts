@@ -247,7 +247,7 @@ export const CardSet = defineComponent({
           role: 'group',
           'aria-label': `Card ${index.value + 1} of ${orderedCards.value.length}. Use left and right arrows to navigate, Space to flip.`,
         }, [h(CardPaper, {
-          key: card.id, ref: editor, card, side: side.value, position: index.value + 1,
+          key: card.id, ref: editor, card, side: side.value, position: index.value + 1, reviewing: reviewActive.value,
         })]) : h('div', { class: 'card-set-empty' }, [
           h(Icon, { name: 'cards' }),
           h('h3', 'A fresh stack.'),
