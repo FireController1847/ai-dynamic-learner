@@ -353,6 +353,7 @@ export const IndexCards = defineComponent({
                 set: selection.value.item,
                 totalCards: totalCards.value,
                 cardListWidth: cardListWidth.value,
+                tutorialReview: tutorialFillBlankReviewSetId.value === selection.value.item.id,
                 onResizeCardList: setCardListWidth,
                 onResetCardList: resetCardListWidth,
               })
