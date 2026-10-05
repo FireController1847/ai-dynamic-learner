@@ -12,8 +12,6 @@ const paths: Record<string, string> = {
   trash: 'M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7',
   plus: 'M12 5v14M5 12h14',
   minus: 'M5 12h14',
-  'blank-add': 'M4 17h12M18 5v6M15 8h6',
-  'blank-remove': 'M4 17h12M15 8h6',
   search: 'M17 10a7 7 0 1 1-14 0 7 7 0 1 1 14 0M15 15l6 6',
   settings: 'M10 3h4l.5 3 2 1.2 2.8-1 2 3.5-2.3 2v2.6l2.3 2-2 3.5-2.8-1-2 1.2-.5 3h-4l-.5-3-2-1.2-2.8 1-2-3.5 2.3-2v-2.6l-2.3-2 2-3.5 2.8 1 2-1.2ZM15 13a3 3 0 1 0-6 0 3 3 0 0 0 6 0Z',
   duplicate: 'M8 8h13v13H8ZM16 8V3H3v13h5',
@@ -48,6 +46,18 @@ export const Icon = defineComponent({
         fill: 'none',
       }),
       h('path', { d: 'm7.4 12.2 2.8 2.8 6.4-6.4', fill: 'none', 'stroke-width': 2 }),
+    ] : props.name === 'blank-add' ? [
+      h('path', { d: 'M3 6h4M17 6h4' }),
+      h('rect', { x: 9, y: 3.5, width: 6, height: 5, rx: 1.5, fill: 'currentColor', 'fill-opacity': 0.16 }),
+      h('rect', { x: 9, y: 3.5, width: 6, height: 5, rx: 1.5 }),
+      h('path', { d: 'M12 10.5v5M9.5 13l2.5 2.5 2.5-2.5' }),
+      h('path', { d: 'M6 20h12' }),
+    ] : props.name === 'blank-remove' ? [
+      h('path', { d: 'M6 4h12' }),
+      h('path', { d: 'M12 8.5v5M9.5 11l2.5 2.5 2.5-2.5' }),
+      h('path', { d: 'M3 19h5M16 19h5' }),
+      h('rect', { x: 9, y: 16.5, width: 6, height: 5, rx: 1.5, fill: 'currentColor', 'fill-opacity': 0.16 }),
+      h('rect', { x: 9, y: 16.5, width: 6, height: 5, rx: 1.5 }),
     ] : props.name === 'crossword' ? [
       h('rect', { x: 2, y: 2, width: 20, height: 20, rx: 1 }),
       ...[7, 12, 17].flatMap((position) => [
