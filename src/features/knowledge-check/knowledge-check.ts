@@ -284,9 +284,9 @@ export const KnowledgeCheck = defineComponent({
           h(LibraryEmptyState, {
             class: { 'has-organization': item !== undefined },
             icon: 'checklist',
-            title: item?.name ?? 'Build your knowledge library',
-            description: item ? 'Create a knowledge set in this group, or select one from the Library.' : 'Build question sets and organize them in groups.',
-            actionLabel: 'New knowledge set',
+            title: item?.name ?? 'Build your question library',
+            description: item ? 'Create a question set in this group, or select one from the Library.' : 'Make question sets and keep them organized.',
+            actionLabel: 'New question set',
             onCreate: () => openNewKnowledgeCheck({ parentId: item?.id ?? null, parentName: item?.name ?? 'Top level' }),
           }),
           item ? organizationControls(item) : null,
@@ -297,11 +297,11 @@ export const KnowledgeCheck = defineComponent({
       return h('section', {
         class: 'knowledge-check-detail is-check',
         inert: libraryOverlay.value && !libraryCollapsed.value,
-        'aria-label': 'Selected knowledge set',
+        'aria-label': 'Selected question set',
       }, [
         h('header', { class: 'knowledge-check-item-heading' }, [
           h('h2', { ref: workspaceHeading, tabindex: -1 }, item.name),
-          h('p', 'Knowledge set'),
+          h('p', 'Question set'),
         ]),
         h(KnowledgeSet, { key: item.id, item }),
         organizationControls(item),
