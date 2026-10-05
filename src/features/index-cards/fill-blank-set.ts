@@ -309,19 +309,27 @@ export const FillBlankSet = defineComponent({
                 type: 'button', class: 'card-primary-button fill-blank-verify-button',
                 disabled: !allFilled || verified.value, onClick: verify,
               }, [h(Icon, { name: verified.value ? 'verified' : 'checklist' }), verified.value ? 'Verified' : 'Verify'])
-                : h('div', { class: 'fill-blank-control-tools', 'aria-label': 'Blank editing tools' }, [
+                : h('div', {
+                  class: 'fill-blank-control-tools',
+                  role: 'group',
+                  'aria-label': 'Blank editing tools',
+                }, [
                   h('button', {
                     type: 'button',
-                    class: 'quiet-button fill-blank-control-button',
+                    class: 'fill-blank-segment-button',
+                    title: 'Make blank',
+                    'aria-label': 'Make blank from selected text',
                     onMousedown: preserveEditorSelection,
                     onClick: () => editor.value?.makeBlank(),
-                  }, [h(Icon, { name: 'plus' }), 'Make blank']),
+                  }, [h(Icon, { name: 'blank-add' })]),
                   h('button', {
                     type: 'button',
-                    class: 'quiet-button fill-blank-control-button',
+                    class: 'fill-blank-segment-button',
+                    title: 'Remove blank',
+                    'aria-label': 'Remove blank at the cursor',
                     onMousedown: preserveEditorSelection,
                     onClick: () => editor.value?.removeBlank(),
-                  }, [h(Icon, { name: 'minus' }), 'Remove blank']),
+                  }, [h(Icon, { name: 'blank-remove' })]),
                 ]),
               h('button', {
                 type: 'button', class: 'quiet-button',
