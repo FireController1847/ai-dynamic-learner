@@ -14,7 +14,7 @@ Follow [Semantic Versioning 2.0.0](https://semver.org/). For these browser apps,
 
 Keep the source version explicit and review its increment with future changes. These versions are independent of the npm package version, tutorial completion versions, and workspace backup format version.
 
-Knowledge Check is a library scaffold at `0.2.0`. The initial `0.1.0` shell received dedicated artwork in `0.1.1`; `0.2.0` adds grouped libraries, type-selection creation cards, and compatible persistence. Question authoring and review remain unimplemented.
+Knowledge Check is a library scaffold at `0.2.1`. The initial `0.1.0` shell received dedicated artwork in `0.1.1`; `0.2.0` adds grouped libraries, type-selection creation cards, and compatible persistence; `0.2.1` registers it for the shell's full-viewport workspace layout. Question authoring and review remain unimplemented.
 
 ## History-derived starting versions
 
