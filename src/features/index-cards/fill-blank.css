@@ -247,11 +247,19 @@
   font-weight: 650;
   line-height: 1;
   text-align: center;
-  text-decoration: line-through;
-  text-decoration-color: var(--danger);
-  text-decoration-thickness: 1px;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.fill-blank-wrong-answer::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  transform: translateY(-50%);
+  background: var(--danger);
+  pointer-events: none;
 }
 
 /* Editing preserves the normal Flash Cards Previous / Flip / Next controls.
