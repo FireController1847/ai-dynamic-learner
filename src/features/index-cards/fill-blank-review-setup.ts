@@ -8,10 +8,11 @@ export const FillBlankReviewSetup = defineComponent({
   props: {
     initialOrder: { type: String as PropType<ReviewOrder>, required: true },
     cardCount: { type: Number, required: true },
+    modal: { type: Boolean, default: true },
   },
   emits: { 'cancel': () => true, 'start': (_order: ReviewOrder) => true },
   setup(props, { emit }) {
-    const { dialog } = useDialog();
+    const { dialog } = useDialog({ modal: () => props.modal });
     const order = ref(props.initialOrder);
 
     function choice(value: ReviewOrder, label: string, description: string) {
