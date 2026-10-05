@@ -315,6 +315,9 @@ export const IndexCards = defineComponent({
             onCreate: createSet,
             onCancel: cancelSetCreation,
           }) : null,
+          creationTarget.value && message.value
+            ? h('p', { class: 'index-cards-builder-error', role: 'alert' }, message.value)
+            : null,
           !creationTarget.value && selection.value?.item.kind === 'set' ? h('header', { class: 'item-heading' }, [
             h('h2', selection.value.item.name),
             h('p', { class: 'item-summary' }, `${getSetMode(selection.value.item.mode)?.label ?? 'Flash Cards'} · ${selection.value.item.cards.length} cards`),
