@@ -279,7 +279,6 @@ export const FillBlankEditor = defineComponent({
           'aria-hidden': props.side !== 'back',
         }, [
           h('div', { class: 'card-face-heading fill-blank-back-heading' }, [
-            h('span', { class: 'card-face-side' }, 'Answer key'),
             h('span', { class: 'card-face-number', 'aria-hidden': 'true' }, String(props.position).padStart(2, '0')),
           ]),
           template.answers.length
