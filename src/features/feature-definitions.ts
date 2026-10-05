@@ -87,7 +87,7 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
     id: 'knowledge-check', label: 'Knowledge Check', path: '/knowledge-check/', icon: 'checklist',
     version: '1.0.0',
     image: 'assets/knowledge-check.png',
-    description: 'Quiz yourself and check what you know.',
+    description: 'Make question sets to study, quiz yourself, or take a test.',
     metadata: {
       keywords: ['knowledge check', 'quiz', 'self assessment', 'learning'],
       socialImage: {
