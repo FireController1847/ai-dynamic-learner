@@ -5,6 +5,8 @@ import { parseFillBlankTemplate } from './fill-blank-model.ts';
 
 import { defineComponent, type PropType, h, onMounted, ref } from 'vue';
 
+const CARET_ANCHOR = '\u200B';
+
 export interface FillBlankEditorHandle {
   focus(): void;
   makeBlank(): void;
@@ -21,8 +23,12 @@ function blankAnswer(blank: HTMLElement): string {
   return blank.dataset.answer ?? '';
 }
 
+function stripCaretAnchors(value: string): string {
+  return value.replaceAll(CARET_ANCHOR, '');
+}
+
 function serializeNode(node: Node): string {
-  if (node.nodeType === Node.TEXT_NODE) return node.textContent ?? '';
+  if (node.nodeType === Node.TEXT_NODE) return stripCaretAnchors(node.textContent ?? '');
   if (!(node instanceof HTMLElement)) return '';
 
   if (node.classList.contains('fill-blank-author-blank')) {
@@ -84,6 +90,15 @@ export const FillBlankEditor = defineComponent({
       });
     }
 
+    function trailingCaretNode(target: HTMLElement) {
+      if (!(target.lastElementChild?.classList.contains('fill-blank-author-blank'))) return null;
+      const last = target.lastChild;
+      if (last?.nodeType === Node.TEXT_NODE && last.textContent?.includes(CARET_ANCHOR)) return last as Text;
+      const anchor = document.createTextNode(CARET_ANCHOR);
+      target.append(anchor);
+      return anchor;
+    }
+
     function renderSource(source = props.card.front) {
       const target = editor.value;
       if (!target) return;
@@ -94,6 +109,7 @@ export const FillBlankEditor = defineComponent({
         if (segment.type === 'text') target.append(document.createTextNode(segment.text));
         else target.append(createBlankElement(segment.index, segment.answer));
       }
+      trailingCaretNode(target);
     }
 
     function syncFromEditor() {
@@ -129,7 +145,7 @@ export const FillBlankEditor = defineComponent({
       }
 
       const { target, selection, range } = context;
-      const answer = range.toString();
+      const answer = stripCaretAnchors(range.toString());
       if (!answer.trim()) {
         emit('message', 'Select some text before creating a blank.');
         return;
@@ -158,7 +174,18 @@ export const FillBlankEditor = defineComponent({
 
       if (!syncFromEditor()) return;
       const nextRange = document.createRange();
-      nextRange.setStartAfter(blank);
+      const nextNode = blank.nextSibling;
+      if (nextNode?.nodeType === Node.TEXT_NODE) {
+        const text = nextNode as Text;
+        if (!text.data.length) text.data = CARET_ANCHOR;
+        nextRange.setStart(text, text.data.startsWith(CARET_ANCHOR) ? 1 : 0);
+      } else if (!nextNode) {
+        const anchor = document.createTextNode(CARET_ANCHOR);
+        blank.after(anchor);
+        nextRange.setStart(anchor, 1);
+      } else {
+        nextRange.setStartAfter(blank);
+      }
       nextRange.collapse(true);
       selection.removeAllRanges();
       selection.addRange(nextRange);
@@ -210,7 +237,7 @@ export const FillBlankEditor = defineComponent({
       if (!context) return;
       const { selection, range } = context;
       range.deleteContents();
-      const node = document.createTextNode(text);
+      const node = document.createTextNode(stripCaretAnchors(text));
       range.insertNode(node);
       range.setStartAfter(node);
       range.collapse(true);
