@@ -39,7 +39,11 @@ export const ReviewSetup = defineComponent({
     }
 
     return () => h('dialog', {
-      ref: dialog, class: 'review-setup', 'aria-labelledby': 'review-setup-heading',
+      ref: dialog,
+      class: 'review-setup',
+      'aria-labelledby': 'review-setup-heading',
+      'data-tips-tutorial': !props.modal ? '' : undefined,
+      inert: !props.modal,
       onCancel: (event: Event) => { event.preventDefault(); emit('cancel'); },
     }, [h('form', {
       onSubmit: (event: Event) => {
