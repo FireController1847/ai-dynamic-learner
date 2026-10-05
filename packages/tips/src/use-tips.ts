@@ -15,6 +15,7 @@ export function useTips(props: Readonly<TipsProps>) {
   let returnFocus: HTMLElement | null = null;
   let contextObserver: MutationObserver | null = null;
   let autoFrame = 0;
+  let autoPreparing = false;
   let returnToMenu = false;
   let activeCleanups: TutorialCleanup[] = [];
 
@@ -82,16 +83,18 @@ export function useTips(props: Readonly<TipsProps>) {
     }
   }
 
-  async function prepareAndStart(section: TipSection) {
-    if (!section?.prepare) return;
+  async function prepareAndStart(section: TipSection, fromMenu = true) {
+    if (!section) return;
     await cleanupActiveDemo();
     try {
-      const cleanup = await requestTutorialAction(section.prepare);
-      if (typeof cleanup === 'function') activeCleanups.push(cleanup);
-      await nextTick();
-      await new Promise<number>((resolve) => requestAnimationFrame(resolve));
+      if (section.prepare) {
+        const cleanup = await requestTutorialAction(section.prepare);
+        if (typeof cleanup === 'function') activeCleanups.push(cleanup);
+        await nextTick();
+        await new Promise<number>((resolve) => requestAnimationFrame(resolve));
+      }
       if (!sectionAvailable(section)) throw new Error('The requested guide did not open.');
-      startSection(section, true);
+      startSection(section, fromMenu);
     } catch (error) {
       await cleanupActiveDemo();
       console.warn('TIPS could not open this guide.', error);
@@ -267,9 +270,12 @@ export function useTips(props: Readonly<TipsProps>) {
     if (openState.value || !preferences.value.enabled || !tutorial.value) return;
     const section = sections.value.find((candidate) =>
       candidate.auto !== false && sectionAvailable(candidate) && !hasSeenSection(candidate));
-    if (section) {
+    if (section && !autoPreparing) {
       returnFocus = null;
-      startSection(section, false);
+      autoPreparing = true;
+      void prepareAndStart(section, false).finally(() => {
+        autoPreparing = false;
+      });
     }
   }
 
