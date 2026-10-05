@@ -232,6 +232,14 @@ export const FillBlankSet = defineComponent({
           event.preventDefault();
           go(1);
         }
+      } else if (event.key === ' ') {
+        if (!reviewActive.value) {
+          event.preventDefault();
+          editSide.value = editSide.value === 'front' ? 'back' : 'front';
+        } else if (verified.value) {
+          event.preventDefault();
+          reviewSide.value = reviewSide.value === 'front' ? 'back' : 'front';
+        }
       }
     }
 
