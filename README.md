@@ -55,7 +55,7 @@ The current application includes:
 | **Index Cards** | Creates nested study sets in Flash Cards or Fill in the Blanks mode, with editable card content, guided review, per-mode appearance controls, and resumable workspace storage. |
 | **Word Search** | Builds custom word-search puzzles with configurable difficulty and appearance, saved grids, hints, answer reveal, and persistent progress. |
 | **Crossword** | Builds custom crosswords from answer-and-clue pairs, automatically arranges Across and Down entries, and saves typed progress with checking, hints, reveals, and display controls. |
-| **Study Guide** | An initial workspace scaffold for study guides; guide-building tools are not implemented yet. |
+| **Study Guide** | Builds either lightweight titled bullet lists or visual topic maps where each snapped map stop owns its own mini study guide. |
 | **Review** | Builds grouped knowledge sets with multiple-choice, true/false, and short-answer questions. Study with hints and retries, take a Quiz with immediate feedback, or start a Test with optional timing and answer review. |
 
 The interface uses a Fluent-inspired visual language with neutral surfaces, compact controls, blue accents, and responsive layouts. The tools are meant to feel related without forcing every feature into the same interaction model.
