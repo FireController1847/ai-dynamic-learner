@@ -99,9 +99,19 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'study-guide', label: 'Study Guide', path: '/study-guide/', icon: 'document',
     group: 'mastery',
-    version: '0.1.0',
-    image: '',
+    version: '0.1.1',
+    image: 'assets/study-guide.png',
     description: 'Create and organize study guides for the material you want to learn.',
+    metadata: {
+      keywords: ['study guide', 'study notes', 'learning', 'revision'],
+      socialImage: {
+        path: 'assets/study-guide.png',
+        type: 'image/png',
+        width: 1254,
+        height: 1254,
+        alt: 'Study Guide — Glossy blue-and-white open book with a ribbon bookmark, note lines, and a highlighted star.',
+      },
+    },
   },
   {
     id: 'knowledge-check', label: 'Review', path: '/knowledge-check/', icon: 'checklist',
