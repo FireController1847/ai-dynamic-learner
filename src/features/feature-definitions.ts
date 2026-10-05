@@ -85,7 +85,7 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   },
   {
     id: 'knowledge-check', label: 'Knowledge Check', path: '/knowledge-check/', icon: 'checklist',
-    version: '1.0.0',
+    version: '1.0.1',
     image: 'assets/knowledge-check.png',
     description: 'Make question sets to study, quiz yourself, or take a test.',
     metadata: {
