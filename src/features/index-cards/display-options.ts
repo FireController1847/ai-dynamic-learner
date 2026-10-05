@@ -1,8 +1,9 @@
 import { isRecord } from '../../core/validation.ts';
 import { choiceStyle } from '../../core/display-fields.ts';
 import type { DisplayField } from '../../core/display-fields.ts';
+import type { SetModeId } from './set-modes.ts';
 
-export interface DisplayOptions {
+export interface CardDisplayOptions {
   paper: 'cream' | 'white';
   font: 'serif' | 'sans';
   ink: 'pencil' | 'dark' | 'black';
@@ -10,8 +11,13 @@ export interface DisplayOptions {
   baseline: number;
   cardSize: number;
 }
-// Canonical display choices, defaults, and bounds; no Vue or DOM dependencies.
-export const DISPLAY_FIELDS: DisplayField<DisplayOptions>[] = [
+
+export interface DisplayOptions {
+  flashCards: CardDisplayOptions;
+  fillInTheBlanks: CardDisplayOptions;
+}
+
+export const DISPLAY_FIELDS: DisplayField<CardDisplayOptions>[] = [
   { key: 'paper', label: 'Paper', default: 'white', choices: [
     { value: 'white', label: 'White', css: 'var(--paper-white)' },
     { value: 'cream', label: 'Cream', css: 'var(--paper-cream)' },
@@ -30,19 +36,33 @@ export const DISPLAY_FIELDS: DisplayField<DisplayOptions>[] = [
   { key: 'cardSize', label: 'Card size', default: 100, min: 75, max: 125, step: 5, unit: '%' },
 ];
 
-export function defaultDisplayOptions(): DisplayOptions {
-  return Object.fromEntries(DISPLAY_FIELDS.map((field) => [field.key, field.default])) as unknown as DisplayOptions;
+export function defaultCardDisplayOptions(): CardDisplayOptions {
+  return Object.fromEntries(DISPLAY_FIELDS.map((field) => [field.key, field.default])) as unknown as CardDisplayOptions;
 }
 
-export function validateDisplayOptions(value: unknown): asserts value is DisplayOptions {
-  if (!isRecord(value)) throw new Error('Index Cards display settings are invalid.');
+export function defaultDisplayOptions(): DisplayOptions {
+  return {
+    flashCards: defaultCardDisplayOptions(),
+    fillInTheBlanks: defaultCardDisplayOptions(),
+  };
+}
 
-  // Display settings saved before paper color existed use the current paper default.
-  if (!Object.hasOwn(value, 'paper')) value.paper = 'white';
+export function resolvedDisplayOptions(options?: DisplayOptions): DisplayOptions {
+  return options ?? defaultDisplayOptions();
+}
 
-  if (Object.keys(value).some((key) => !DISPLAY_FIELDS.some((field) => field.key === key))) {
+export function displayForMode(options: DisplayOptions, mode: SetModeId | undefined): CardDisplayOptions {
+  return mode === 'fill-in-the-blanks' ? options.fillInTheBlanks : options.flashCards;
+}
+
+function validateCardDisplayOptions(value: unknown): asserts value is CardDisplayOptions {
+  if (!isRecord(value) ||
+      Object.keys(value).some((key) => !DISPLAY_FIELDS.some((field) => field.key === key))) {
     throw new Error('Index Cards display settings are invalid.');
   }
+
+  if (!Object.hasOwn(value, 'paper')) value.paper = 'white';
+
   for (const field of DISPLAY_FIELDS) {
     const setting = value[field.key];
     const valid = field.choices ? field.choices.some((choice) => choice.value === setting)
@@ -52,8 +72,35 @@ export function validateDisplayOptions(value: unknown): asserts value is Display
   }
 }
 
-export function displayStyles(options: DisplayOptions) {
-  const choice = (key: keyof DisplayOptions) => choiceStyle(DISPLAY_FIELDS, key, options[key]);
+export function validateDisplayOptions(value: unknown): asserts value is DisplayOptions {
+  if (!isRecord(value)) throw new Error('Index Cards display settings are invalid.');
+
+  const legacyKeys = DISPLAY_FIELDS.map((field) => String(field.key));
+  const looksLegacy = !Object.hasOwn(value, 'flashCards') &&
+    Object.keys(value).every((key) => legacyKeys.includes(key));
+
+  if (looksLegacy) {
+    validateCardDisplayOptions(value);
+    const legacy = { ...value } as unknown as CardDisplayOptions;
+    for (const key of legacyKeys) delete value[key];
+    value.flashCards = legacy;
+    value.fillInTheBlanks = { ...legacy };
+  }
+
+  if (Object.keys(value).some((key) => !['flashCards', 'fillInTheBlanks'].includes(key)) ||
+      !Object.hasOwn(value, 'flashCards')) {
+    throw new Error('Index Cards display settings are invalid.');
+  }
+
+  validateCardDisplayOptions(value.flashCards);
+  if (!Object.hasOwn(value, 'fillInTheBlanks')) {
+    value.fillInTheBlanks = { ...value.flashCards };
+  }
+  validateCardDisplayOptions(value.fillInTheBlanks);
+}
+
+export function displayStyles(options: CardDisplayOptions) {
+  const choice = (key: keyof CardDisplayOptions) => choiceStyle(DISPLAY_FIELDS, key, options[key]);
   return {
     '--paper': choice('paper'),
     '--paper-font': choice('font'),
