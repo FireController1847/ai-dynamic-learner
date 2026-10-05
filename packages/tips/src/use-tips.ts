@@ -127,11 +127,14 @@ export function useTips(props: Readonly<TipsProps>) {
     markSectionSeen(section);
 
     if (section?.finishAction?.click) {
-      close();
-      await nextTick();
-      visibleTarget(section.finishAction.click)?.click();
+      // Run the host action before closing TIPS. This matters for tutorials
+      // attached to an already-open feature state: closing TIPS can cause
+      // the host UI to re-render before the action target is resolved.
+      const target = visibleTarget(section.finishAction.click);
+      target?.click();
       await nextTick();
       await new Promise<number>((resolve) => requestAnimationFrame(resolve));
+      close();
       await cleanupActiveDemo();
       return;
     }
