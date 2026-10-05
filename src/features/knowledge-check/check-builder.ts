@@ -43,9 +43,9 @@ export const CheckBuilder = defineComponent({
     }
     return () => {
       const question = questions.value[selected.value];
-      return h('section', { class: 'knowledge-set-builder', 'aria-label': 'Knowledge set builder' }, [
+      return h('section', { class: 'knowledge-set-builder', 'aria-label': 'Question set builder' }, [
         h('header', { class: 'knowledge-builder-header' }, [
-          h('div', [h('p', { class: 'knowledge-eyebrow' }, 'Knowledge set builder'), h('h2', 'One set. Three ways to learn.'),
+          h('div', [h('p', { class: 'knowledge-eyebrow' }, 'Question set builder'), h('h2', 'One set. Three ways to learn.'),
             h('p', 'Add questions, then use them to study or test yourself.')]),
           h('div', { class: 'knowledge-actions' }, [
             h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel') }, 'Cancel'),
