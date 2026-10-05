@@ -9,7 +9,7 @@ export const ModePicker = defineComponent({
   setup(props, { emit }) {
     return () => h('section', { class: 'knowledge-check-builder', 'aria-label': 'Choose how to use this knowledge set' }, [
       h('header', { class: 'knowledge-check-builder-intro' }, [h('p', { class: 'knowledge-check-builder-eyebrow' }, 'One knowledge set'),
-        h('h2', props.setName), h('p', 'Choose how you want to use these questions. You can switch modes at any time.')]),
+        h('h2', props.setName), h('p', 'Pick a way to use your questions. You can change it later.')]),
       h('div', { class: 'knowledge-check-type-grid' }, CHECK_MODES.map((mode) => h('button', {
         key: mode.id, type: 'button', class: 'knowledge-check-type-card', onClick: () => emit('choose', mode.id),
       }, [h(Icon, { name: mode.icon, class: 'knowledge-check-type-icon' }), h('span', { class: 'knowledge-check-type-copy' },
