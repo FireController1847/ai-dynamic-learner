@@ -34,7 +34,7 @@ export const FillBlankPaper = defineComponent({
           template.segments.map((segment) => {
             if (segment.type === 'text') return h('span', { class: 'fill-blank-text' }, segment.text);
             const response = props.responses[segment.index] ?? '';
-            const width = Math.max(4, Math.min(28, Math.max(segment.answer.length, response.length) + 1));
+            const width = Math.max(6, Math.min(28, response.length + 1));
             return h('input', {
               key: `blank-${segment.index}`,
               class: 'fill-blank-input',
