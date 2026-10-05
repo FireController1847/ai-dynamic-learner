@@ -18,7 +18,7 @@ export const SET_MODES: readonly SetMode[] = Object.freeze([
   }),
   Object.freeze({
     id: 'fill-in-the-blanks',
-    available: false,
+    available: true,
     label: 'Fill in the Blanks',
     description: 'Practice recalling missing words from a prompt.',
   }),
