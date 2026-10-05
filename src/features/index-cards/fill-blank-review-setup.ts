@@ -36,6 +36,8 @@ export const FillBlankReviewSetup = defineComponent({
       ref: dialog,
       class: 'review-setup',
       'aria-labelledby': 'fill-blank-review-setup-heading',
+      'data-tips-tutorial': !props.modal ? '' : undefined,
+      inert: !props.modal,
       onCancel: (event: Event) => { event.preventDefault(); emit('cancel'); },
     }, [
       h('form', {
