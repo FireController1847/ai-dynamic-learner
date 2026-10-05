@@ -25,6 +25,7 @@ export const FillBlankSet = defineComponent({
     set: { type: Object as PropType<CardSetModel>, required: true },
     totalCards: { type: Number, required: true },
     cardListWidth: { type: Number as PropType<number | null>, default: null },
+    tutorialReview: Boolean,
   },
   emits: { 'resize-card-list': (_width: number) => true, 'reset-card-list': () => true },
   setup(props, { emit }) {
@@ -559,6 +560,7 @@ export const FillBlankSet = defineComponent({
           h('p', { class: 'visually-hidden', role: 'status' }, message.value),
           reviewSetupOpen.value ? h(FillBlankReviewSetup, {
             initialOrder: reviewOrder.value, cardCount: props.set.cards.length,
+            modal: !props.tutorialReview,
             onCancel: cancelReview, onStart: startReview,
           }) : null,
         ]),
