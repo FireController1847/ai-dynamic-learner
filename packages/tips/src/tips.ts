@@ -176,7 +176,7 @@ export const TipsExperience = defineComponent({
           onClick: skipSection,
         })),
         spotlight ? h('div', {
-          class: 'tips-spotlight',
+          class: ['tips-spotlight', { 'is-blocking': currentStep?.blockTarget }],
           'aria-hidden': 'true',
           style: {
             top: `${spotlight.top}px`,
