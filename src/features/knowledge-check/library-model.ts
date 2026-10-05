@@ -27,7 +27,7 @@ export function createGroup(): Group {
 
 export function insertCheck(items: LibraryItem[], target: CheckTarget, name: string, questions: unknown): CheckItem {
   validateQuestions(questions);
-  if (!name.trim() || name.trim().length > MAX_NAME_LENGTH) throw new Error('Enter a set name of 1–120 characters.');
+  if (!name.trim() || name.trim().length > MAX_NAME_LENGTH) throw new Error('Enter a name of 1–120 characters.');
   if (countItems(items) >= MAX_ITEMS) throw new Error(`The Knowledge Check library supports ${MAX_ITEMS} items.`);
   const parent = target.parentId ? findItem(items, target.parentId) : null;
   if (target.parentId && (!parent || parent.item.kind !== 'group')) {
@@ -76,9 +76,9 @@ export function validateKnowledgeCheck(value: unknown): asserts value is Knowled
           delete item.type;
         }
         if (item.kind !== 'set' || Object.keys(item).some((key) => !['id', 'kind', 'name', 'questions', 'mode'].includes(key))) {
-          throw new Error('A knowledge set contains unsupported data.');
+          throw new Error('A question set contains unsupported data.');
         }
-        if (Object.hasOwn(item, 'mode') && !isCheckMode(item.mode)) throw new Error('The knowledge set mode is invalid.');
+        if (Object.hasOwn(item, 'mode') && !isCheckMode(item.mode)) throw new Error('The question set mode is invalid.');
         validateQuestions(item.questions);
       }
     }
