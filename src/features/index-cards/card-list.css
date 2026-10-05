@@ -9,6 +9,9 @@
   border-left: 1px solid var(--border-color);
   background: var(--surface-subtle);
 }
+.card-list-panel[hidden] { display: none; }
+.card-list-actions { display: flex; gap: 0; }
+.card-list-show { align-self: flex-end; margin-bottom: 12px; }
 .card-list-resizer {
   grid-column: 2;
   grid-row: 1;

@@ -47,6 +47,7 @@ export const IndexCards = defineComponent({
     const overlayQuery = window.matchMedia('(max-width: 700px), (max-width: 1100px) and (pointer: coarse)');
     const libraryOverlay = ref(overlayQuery.matches);
     const libraryCollapsed = ref(overlayQuery.matches && selectedId.value !== null);
+    const cardListCollapsed = ref(false);
     const cardListWidth = ref(readNumberPreference(CARD_LIST_WIDTH_KEY));
     const layout = ref<HTMLElement | null>(null);
     const {
@@ -365,7 +366,8 @@ export const IndexCards = defineComponent({
                 key: selection.value.item.id,
                 set: selection.value.item,
                 totalCards: totalCards.value,
-                cardListWidth: cardListWidth.value,
+                cardListWidth: cardListWidth.value, cardListCollapsed: cardListCollapsed.value,
+                onToggleCardList: () => { cardListCollapsed.value = !cardListCollapsed.value; },
                 tutorialReview: tutorialFillBlankReviewSetId.value === selection.value.item.id,
                 onResizeCardList: setCardListWidth,
                 onResetCardList: resetCardListWidth,
@@ -374,7 +376,8 @@ export const IndexCards = defineComponent({
                 key: selection.value.item.id,
                 set: selection.value.item,
                 totalCards: totalCards.value,
-                cardListWidth: cardListWidth.value,
+                cardListWidth: cardListWidth.value, cardListCollapsed: cardListCollapsed.value,
+                onToggleCardList: () => { cardListCollapsed.value = !cardListCollapsed.value; },
                 tutorialReview: tutorialReviewSetId.value === selection.value.item.id,
                 onResizeCardList: setCardListWidth,
                 onResetCardList: resetCardListWidth,

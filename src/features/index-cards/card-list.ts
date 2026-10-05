@@ -5,6 +5,8 @@ import { maskFillBlankAnswers } from './fill-blank-model.ts';
 
 import { defineComponent, type PropType, h, nextTick, onMounted, ref, watch } from 'vue';
 
+export interface CardListHandle { focusHide(): void }
+
 export const CardList = defineComponent({
   name: 'CardList',
   props: {
@@ -14,10 +16,13 @@ export const CardList = defineComponent({
     previewSide: { type: String as PropType<CardSide>, default: 'front' },
     orderLabel: { type: String, default: 'Forward · front first' },
     maskBlanks: Boolean,
+    hidden: Boolean,
   },
-  emits: { 'select': (_id: string) => true, 'add': () => true },
-  setup(props, { emit }) {
+  emits: { 'select': (_id: string) => true, 'add': () => true, 'hide': () => true },
+  setup(props, { emit, expose }) {
     const list = ref<HTMLElement | null>(null);
+    const hideButton = ref<HTMLButtonElement | null>(null);
+    expose({ focusHide: () => { revealSelected(); hideButton.value?.focus(); } } satisfies CardListHandle);
     const rows = new Map<string | null, HTMLElement>();
 
     function revealSelected() {
@@ -52,13 +57,18 @@ export const CardList = defineComponent({
       rows.get(card.id)?.querySelector('button')?.focus({ preventScroll: true });
     }
 
-    return () => h('aside', { class: 'card-list-panel', 'aria-label': 'Cards in this set' }, [
+    return () => h('aside', { id: 'index-cards-card-list', class: 'card-list-panel', hidden: props.hidden, inert: props.hidden, 'aria-label': 'Cards in this set' }, [
       h('div', { class: 'card-list-toolbar' }, [
         h('h3', ['Cards ', h('span', { class: 'card-list-count' }, String(props.cards.length))]),
-        h('button', {
-          type: 'button', class: 'icon-button', title: 'New card', 'aria-label': 'New card',
-          disabled: props.atLimit, onClick: () => emit('add'),
-        }, [h(Icon, { name: 'plus' })]),
+        h('div', { class: 'card-list-actions' }, [
+          h('button', {
+            type: 'button', class: 'icon-button', title: 'New card', 'aria-label': 'New card',
+            disabled: props.atLimit, onClick: () => emit('add'),
+          }, [h(Icon, { name: 'plus' })]),
+          h('button', { ref: hideButton, type: 'button', class: 'icon-button', title: 'Hide cards', 'aria-label': 'Hide cards',
+            'aria-controls': 'index-cards-card-list', 'aria-expanded': true, onClick: () => emit('hide'),
+          }, [h(Icon, { name: 'panel-open' })]),
+        ]),
       ]),
       h('p', { class: 'card-list-order' }, props.orderLabel),
       props.cards.length ? h('ol', { ref: list, class: 'card-list-items' }, props.cards.map((card, index) =>

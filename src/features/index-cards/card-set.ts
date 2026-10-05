@@ -4,7 +4,7 @@ import type { ReviewOrder, ReviewSettings } from './review-setup.ts';
 import type { FocusHandle } from '../../core/dom.ts';
 import { Icon } from '../../components/icon.ts';
 import { createCard, MAX_CARDS, MAX_CARD_TEXT_LENGTH, shuffledCardIds } from './card-model.ts';
-import { CardList } from './card-list.ts';
+import { CardList, type CardListHandle } from './card-list.ts';
 import { CardPaper } from './card-paper.ts';
 import { ReviewSetup } from './review-setup.ts';
 
@@ -21,9 +21,19 @@ export const CardSet = defineComponent({
     totalCards: { type: Number, required: true },
     cardListWidth: { type: Number as PropType<number | null>, default: null },
     tutorialReview: Boolean,
+    cardListCollapsed: Boolean,
   },
-  emits: { 'resize-card-list': (_width: number) => true, 'reset-card-list': () => true },
+  emits: { 'resize-card-list': (_width: number) => true, 'reset-card-list': () => true, 'toggle-card-list': () => true },
   setup(props, { emit }) {
+    const cardList = ref<CardListHandle | null>(null);
+    const showCardsButton = ref<HTMLButtonElement | null>(null);
+    async function toggleCardList() {
+      const hiding = !props.cardListCollapsed;
+      cardListResizing.value = false;
+      emit('toggle-card-list');
+      await nextTick();
+      if (hiding) showCardsButton.value?.focus(); else cardList.value?.focusHide();
+    }
     const currentId = ref(props.set.cards[0]?.id ?? null);
     const side = ref<CardSide>('front');
     const reviewSide = ref<CardSide>('front');
@@ -217,11 +227,14 @@ export const CardSet = defineComponent({
         : reviewOrder.value === 'backward' ? 'Last to first' : 'First to last';
       return h('div', {
         ref: layout,
-        class: ['card-set-layout', { 'card-list-resizing': cardListResizing.value }],
+        class: ['card-set-layout', { 'card-list-resizing': cardListResizing.value, 'card-list-collapsed': props.cardListCollapsed }],
         style: props.cardListWidth === null ? null : { '--card-list-width': `${props.cardListWidth}px` },
         onKeydown: shortcuts,
       }, [
         h('div', { class: 'card-set' }, [
+          props.cardListCollapsed ? h('button', { ref: showCardsButton, type: 'button', class: 'quiet-button card-list-show',
+            'aria-controls': 'index-cards-card-list', 'aria-expanded': false, onClick: toggleCardList,
+          }, [h(Icon, { name: 'panel-close' }), 'Show cards']) : null,
         card ? h('section', { class: 'card-review-session', 'aria-label': 'Review status' }, [
           h('div', { class: 'card-review-session-copy' }, [
             h('strong', reviewActive.value ? 'Review in progress' : 'Browse & edit'),
@@ -300,7 +313,7 @@ export const CardSet = defineComponent({
           onCancel: cancelReview, onStart: startReview,
         }) : null,
         ]),
-        h('div', {
+        !props.cardListCollapsed ? h('div', {
           class: 'card-list-resizer',
           role: 'separator',
           tabindex: 0,
@@ -315,8 +328,9 @@ export const CardSet = defineComponent({
           onPointercancel: endCardListResize,
           onKeydown: resizeCardListFromKeyboard,
           onDblclick: () => emit('reset-card-list'),
-        }),
+        }) : null,
         h(CardList, {
+          ref: cardList, hidden: props.cardListCollapsed, onHide: toggleCardList,
           cards: orderedCards.value, selectedId: card?.id ?? null,
           atLimit: atLimit.value, previewSide: reviewSide.value,
           orderLabel: reviewActive.value ? `${orderDescription} · ${reviewSide.value} first` : 'Saved order',
