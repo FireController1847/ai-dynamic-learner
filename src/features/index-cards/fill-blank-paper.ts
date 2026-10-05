@@ -4,6 +4,10 @@ import { isFillBlankAnswerCorrect, parseFillBlankTemplate } from './fill-blank-m
 
 import { defineComponent, type PropType, h } from 'vue';
 
+export interface FillBlankPaperHandle {
+  focusBlank(index: number): void;
+}
+
 export const FillBlankPaper = defineComponent({
   name: 'FillBlankPaper',
   props: {
@@ -13,14 +17,36 @@ export const FillBlankPaper = defineComponent({
     verified: Boolean,
     side: { type: String as PropType<'front' | 'back'>, default: 'front' },
   },
-  emits: { 'update-response': (_index: number, _value: string) => true },
-  setup(props, { emit }) {
+  emits: {
+    'update-response': (_index: number, _value: string) => true,
+    'blank-focus': (_index: number) => true,
+    'blank-enter': (_index: number, _direction: 1 | -1) => true,
+  },
+  setup(props, { emit, expose }) {
+    const inputs: Array<HTMLInputElement | null> = [];
+
+    expose({
+      focusBlank(index: number) {
+        inputs[index]?.focus();
+      },
+    } satisfies FillBlankPaperHandle);
+
     function title() {
       return props.card.title?.trim() || 'Untitled card';
     }
 
     function blankNumber(index: number) {
       return h('sub', { class: 'fill-blank-number', 'aria-hidden': 'true' }, String(index + 1));
+    }
+
+    function answerKey(answers: string[], label: string) {
+      return answers.length
+        ? h('ol', { class: 'fill-blank-answer-key fill-blank-review-answer-key', 'aria-label': label },
+          answers.map((answer, index) => h('li', { key: `${index}-${answer}` }, [
+            h('span', { class: 'fill-blank-answer-key-number', 'aria-hidden': 'true' }, `${index + 1}.`),
+            h('span', answer),
+          ])))
+        : h('p', { class: 'fill-blank-answer-key-empty' }, 'No blanks on this card.');
     }
 
     return () => {
@@ -47,6 +73,7 @@ export const FillBlankPaper = defineComponent({
           return h('span', { key: `blank-${segment.index}`, class: 'fill-blank-review-blank' }, [
             blankNumber(segment.index),
             h('input', {
+              ref: (element) => { inputs[segment.index] = element instanceof HTMLInputElement ? element : null; },
               class: 'fill-blank-input',
               type: 'text',
               value: response,
@@ -54,24 +81,23 @@ export const FillBlankPaper = defineComponent({
               autocomplete: 'off',
               spellcheck: false,
               style: { width: `${width}ch` },
-              'aria-label': `Blank ${segment.index + 1}`,
+              'aria-label': `Blank ${segment.index + 1} of ${template.answers.length}`,
+              onFocus: () => emit('blank-focus', segment.index),
               onInput: (event: Event) => {
                 if (!props.verified) emit('update-response', segment.index, inputValue(event));
+              },
+              onKeydown: (event: KeyboardEvent) => {
+                if (props.verified || event.key !== 'Enter') return;
+                event.preventDefault();
+                emit('blank-enter', segment.index, event.shiftKey ? -1 : 1);
               },
             }),
           ]);
         })),
       ]);
 
-      const results = h('div', {
-        class: 'card-face card-face--back fill-blank-face fill-blank-review-card fill-blank-results-card',
-        inert: props.side !== 'back',
-        'aria-hidden': props.side !== 'back',
-      }, [
-        h('div', { class: 'card-face-heading fill-blank-back-heading' }, [
-          h('span', { class: 'card-face-number', 'aria-hidden': 'true' }, String(props.position).padStart(2, '0')),
-        ]),
-        h('div', {
+      const backBody = props.verified
+        ? h('div', {
           class: 'fill-blank-writing fill-blank-results',
           'aria-label': `Verified answers for card ${props.position}`,
         }, template.segments.map((segment) => {
@@ -89,12 +115,23 @@ export const FillBlankPaper = defineComponent({
               !correct ? h('span', { class: 'fill-blank-wrong-answer' }, response) : null,
             ]),
           ]);
-        })),
+        }))
+        : answerKey(template.answers, `Answer key for card ${props.position}`);
+
+      const back = h('div', {
+        class: 'card-face card-face--back fill-blank-face fill-blank-review-card fill-blank-results-card',
+        inert: props.side !== 'back',
+        'aria-hidden': props.side !== 'back',
+      }, [
+        h('div', { class: 'card-face-heading fill-blank-back-heading' }, [
+          h('span', { class: 'card-face-number', 'aria-hidden': 'true' }, String(props.position).padStart(2, '0')),
+        ]),
+        backBody,
       ]);
 
       return h('div', {
         class: ['card-flipper', 'fill-blank-review-flipper', { 'is-back': props.side === 'back' }],
-      }, [prompt, results]);
+      }, [prompt, back]);
     };
   },
 });
