@@ -177,7 +177,23 @@ export function useTips(props: Readonly<TipsProps>) {
     if (action.click) {
       const target = visibleTarget(action.click);
       if (!target) return false;
-      target.click();
+
+      const inertAncestors: HTMLElement[] = [];
+      let ancestor: HTMLElement | null = target instanceof HTMLElement ? target : null;
+      while (ancestor) {
+        if (ancestor.inert) {
+          inertAncestors.push(ancestor);
+          ancestor.inert = false;
+        }
+        ancestor = ancestor.parentElement;
+      }
+
+      try {
+        target.click();
+      } finally {
+        for (const element of inertAncestors) element.inert = true;
+      }
+
       await nextTick();
       await new Promise<number>((resolve) => requestAnimationFrame(resolve));
       return true;
