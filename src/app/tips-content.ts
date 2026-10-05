@@ -326,7 +326,7 @@ export const tipsCatalog: TipsCatalog = {
             target: '.review-setup .review-choices',
             targetLabel: 'Card order',
             placement: 'right',
-            nextAction: { click: '.review-setup button[type="submit"] },
+            nextAction: { click: '.review-setup button[type="submit"]' },
           },
           {
             title: 'Review your cards',
@@ -389,7 +389,7 @@ export const tipsCatalog: TipsCatalog = {
             targetLabel: 'Card order',
             placement: 'right',
             blockTarget: true,
-            nextAction: { click: '.review-setup button[type="submit"] },
+            nextAction: { click: '.review-setup button[type="submit"]' },
           },
           {
             title: 'Fill the blanks',
