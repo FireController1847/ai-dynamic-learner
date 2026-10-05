@@ -1,7 +1,7 @@
 // Shared by the browser registry and webpack build; keep this data browser-neutral.
 import type { PageMetadataOverrides } from '../core/metadata.ts';
 
-export type FeatureId = 'calculator' | 'notebook' | 'todo-list' | 'index-cards' | 'word-search' | 'crossword' | 'knowledge-check';
+export type FeatureId = 'calculator' | 'notebook' | 'todo-list' | 'index-cards' | 'word-search' | 'crossword' | 'study-guide' | 'knowledge-check';
 
 export interface FeatureDefinition {
   hidden?: boolean;
@@ -82,6 +82,12 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
         alt: 'Crossword — Glossy blue-and-white puzzle grid with letters, clue numbers, and blue blocked squares.',
       },
     },
+  },
+  {
+    id: 'study-guide', label: 'Study Guide', path: '/study-guide/', icon: 'document',
+    version: '0.1.0',
+    image: '',
+    description: 'Create and organize study guides for the material you want to learn.',
   },
   {
     id: 'knowledge-check', label: 'Review', path: '/knowledge-check/', icon: 'checklist',

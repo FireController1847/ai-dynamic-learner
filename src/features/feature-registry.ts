@@ -5,6 +5,7 @@ import { TodoList } from './todo-list/todo-list.ts';
 import { IndexCards } from './index-cards/index-cards.ts';
 import { WordSearch } from './word-search/word-search.ts';
 import { Crossword } from './crossword/crossword.ts';
+import { StudyGuide } from './study-guide/study-guide.ts';
 import { KnowledgeCheck } from './knowledge-check/knowledge-check.ts';
 import { featureDefinitions, type FeatureDefinition, type FeatureId } from './feature-definitions.ts';
 import type { Notebook as NotebookModel } from './notebook/library-model.ts';
@@ -31,6 +32,7 @@ const renderers: Record<FeatureId, (definition: FeatureDefinition, models: Featu
   'index-cards': (definition, models) => h(IndexCards, { key: definition.id, title: definition.label, model: models['index-cards'] }),
   'word-search': (definition, models) => h(WordSearch, { key: definition.id, title: definition.label, model: models['word-search'] }),
   crossword: (definition, models) => h(Crossword, { key: definition.id, title: definition.label, model: models.crossword }),
+  'study-guide': (definition) => h(StudyGuide, { key: definition.id, title: definition.label }),
   'knowledge-check': (definition, models) => h(KnowledgeCheck, { key: definition.id, title: definition.label, model: models['knowledge-check'] }),
 };
 

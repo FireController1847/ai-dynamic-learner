@@ -242,6 +242,11 @@ export const tipsCatalog: TipsCatalog = {
     ],
   },
 
+  'study-guide': {
+    version: 1,
+    sections: [],
+  },
+
   'knowledge-check': knowledgeCheckTips,
 
   'index-cards': {
