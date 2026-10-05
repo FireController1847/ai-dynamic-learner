@@ -30,7 +30,7 @@ export const KnowledgeSession = defineComponent({
     return () => {
       const question = questions.value[position.value];
       if (!question) return h('section', { class: 'knowledge-session knowledge-builder-empty' }, [
-        h('h3', 'Give this set something to work with.'), h('p', 'Add complete questions and answers in the builder, then return here.'),
+        h('h3', 'Add questions to get started.'), h('p', 'Add questions and answers first.'),
         h('button', { type: 'button', class: 'card-primary-button', onClick: () => emit('build') }, 'Build questions'),
       ]);
       if (submitted.value) return h('section', { class: 'knowledge-session', 'aria-label': 'Results' }, [
@@ -69,7 +69,7 @@ export const KnowledgeSession = defineComponent({
               ]))]),
             props.mode === 'quiz' ? locked ? feedback(question) : h('button', { type: 'button', class: 'card-primary-button',
               disabled: !responses.value[question.id]?.trim(), onClick: () => checked.value.add(question.id) }, 'Check answer') :
-              h('p', { class: 'knowledge-muted' }, 'Answers and explanations stay hidden until you submit.'),
+              h('p', { class: 'knowledge-muted' }, 'Your answers stay hidden until you submit.'),
           ]),
         ]),
         h('div', { class: 'knowledge-session-navigation' }, [
