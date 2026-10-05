@@ -405,7 +405,8 @@ export const FillBlankSet = defineComponent({
                 'aria-haspopup': 'dialog', onClick: () => { reviewSetupOpen.value = true; },
               }, reviewActive.value ? 'Change setup' : 'Review'),
               reviewActive.value ? h('button', {
-                type: 'button', class: 'quiet-button', onClick: () => endReview(false),
+                type: 'button', class: 'quiet-button', 'aria-label': 'End review',
+                onClick: () => endReview(false),
               }, 'End review') : null,
             ]),
           ]) : null,
