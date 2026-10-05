@@ -20,7 +20,7 @@ export const KnowledgeSet = defineComponent({
     function save(name: string, questions: Question[]) {
       try {
         validateQuestions(questions);
-        if (!name.trim() || name.length > MAX_NAME_LENGTH) throw new Error('Enter a set name of 1–120 characters.');
+        if (!name.trim() || name.length > MAX_NAME_LENGTH) throw new Error('Enter a name of 1–120 characters.');
         props.item.name = name.trim(); props.item.questions = questions;
         building.value = false; revision.value += 1; message.value = '';
       } catch (error) { message.value = error instanceof Error ? error.message : String(error); }
