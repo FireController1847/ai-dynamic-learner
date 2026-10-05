@@ -1,7 +1,7 @@
 // Shared by the browser registry and webpack build; keep this data browser-neutral.
 import type { PageMetadataOverrides } from '../core/metadata.ts';
 
-export type FeatureId = 'calculator' | 'notebook' | 'todo-list' | 'index-cards' | 'word-search' | 'crossword';
+export type FeatureId = 'calculator' | 'notebook' | 'todo-list' | 'index-cards' | 'word-search' | 'crossword' | 'knowledge-check';
 
 export interface FeatureDefinition {
   hidden?: boolean;
@@ -80,6 +80,22 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
         width: 1254,
         height: 1254,
         alt: 'Crossword — Glossy blue-and-white puzzle grid with letters, clue numbers, and blue blocked squares.',
+      },
+    },
+  },
+  {
+    id: 'knowledge-check', label: 'Knowledge Check', path: '/knowledge-check/', icon: 'checklist',
+    version: '1.0.0',
+    image: 'assets/knowledge-check.png',
+    description: 'Quiz yourself and check what you know.',
+    metadata: {
+      keywords: ['knowledge check', 'quiz', 'self assessment', 'learning'],
+      socialImage: {
+        path: 'assets/knowledge-check.png',
+        type: 'image/png',
+        width: 1254,
+        height: 1254,
+        alt: 'Knowledge Check — Glossy blue-and-white quiz sheet with a question mark, answer choices, and a checkmark badge.',
       },
     },
   },

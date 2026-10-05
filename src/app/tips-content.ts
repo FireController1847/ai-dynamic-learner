@@ -588,4 +588,9 @@ export const tipsCatalog: TipsCatalog = {
       },
     ],
   },
+
+  'knowledge-check': {
+    version: 1,
+    sections: [],
+  },
 };

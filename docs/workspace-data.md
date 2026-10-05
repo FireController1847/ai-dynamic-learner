@@ -15,7 +15,8 @@ Downloads are JSON files containing the current canonical workspace:
     "todo-list": { "items": [] },
     "index-cards": { "items": [] },
     "word-search": { "items": [] },
-    "crossword": { "items": [] }
+    "crossword": { "items": [] },
+    "knowledge-check": { "items": [] }
   }
 }
 ```
@@ -125,3 +126,15 @@ The right-hand list displays every card in the selected set in the current revie
 Review activity and its progress display are temporary UI state. Finish review and End review restore front-first, saved-order browsing while keeping the current card selected. Editing remains enabled throughout, and ending a review never rolls back edits or changes the saved card order.
 
 Manually edit different front/back titles, flip repeatedly, duplicate, reload, and download/restore a backup. Check an older backup with only `title`: its front title should remain and its back title should be blank. Test back-first review: the list uses back titles, falling back to card numbers for blank titles without exposing front titles. Invalid or oversized back titles must reject uploads without replacing the workspace.
+
+## Knowledge Check library
+
+`features["knowledge-check"]` contains `{ items }`, an ordered hierarchy of groups (`{ id, kind: "group", name, children }`) and knowledge sets (`{ id, kind: "set", name, questions, mode? }`). `mode`, when present, is `study`, `quiz`, or `test`; it is the set's last selected mode rather than a separate library item type. New sets omit it and display the initial mode chooser after creation. Names contain 1–120 characters, IDs are valid/unique within the library, and up to 5,000 entries at 32 levels are supported. Missing feature data in old version-1 backups creates an empty library. Earlier `kind: "check"` placeholders with recognized modes/question types become empty sets, preserving names and IDs.
+
+Each set stores up to 200 questions as `{ id, type, prompt, answer, explanation, choices }`. Types are `multiple-choice`, `true-false`, and `short-answer`. Question IDs are valid and unique within their set; text fields and choice strings are limited to 2,000 characters. Multiple-choice questions permit up to eight choices and store the correct choice as answer text. True/false questions store `True` or `False` as the answer. Non-choice questions store an empty choices array. Incomplete question drafts may be saved; sessions include only questions with nonblank prompts/answers and, for multiple choice, at least two unique nonblank choices with the correct answer among them. Unknown keys, invalid types, malformed arrays, duplicate IDs, and excessive limits reject imports before replacement.
+
+New-set and question builders stage changes until Create knowledge set or Save questions; Cancel leaves saved data untouched. Creation inserts at the start of a selected group, after a selected set, or at the start of the root. Sets/groups can be renamed, dragged, or organized with keyboard controls. Empty sets/groups delete immediately; sets containing questions and groups containing children require confirmation. Stored questions, names, mode preference, and organization save locally and travel in backups. Session responses, reveals, scores, navigation, expansion, and collapse are transient; panel width is a separate browser-local preference.
+
+Study reveals answers/explanations without scoring. Quiz checks each response and shows immediate feedback, then a final score. Test accepts responses without exposing feedback and scores only after all questions are answered and the test is submitted. Short answers match case-insensitively with surrounding/repeated whitespace normalized; multiple-choice and true/false answers match exactly after trimming. Separate mode sessions retain progress while the set stays open; saved question changes reset cached sessions, and switching sets/reloading clears session progress.
+
+Manual review: build a mixed-format set, save/reopen it, choose a mode once, and use the top-left dropdown to switch modes. Check Study reveals, Quiz answer locking/results, Test feedback visibility before/after submission, incomplete drafts, choice editing, question reordering/deletion, builder Save/Cancel, cached sessions, mode persistence, library operations, desktop/mobile layouts, reload, legacy imports, and backup round trips. Malformed imports must reject replacement without changing current work.

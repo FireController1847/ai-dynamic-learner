@@ -1,6 +1,6 @@
 # App versions
 
-Each of the six learning apps has an independent semantic version in `src/features/feature-definitions.ts`. `src/app/app.ts` reads the active feature's version and renders only `vMAJOR.MINOR.PATCH`; `src/styles/shell.css` fixes that plain label in the bottom-right corner. It uses 11px text, the theme's secondary text color, 55% opacity, and a 16px right margin plus device safe-area insets. Its 16px line box is vertically centered within the shared control height: an 8px bottom margin on desktop and 14px on touch layouts, plus the bottom safe-area inset. The collapsed Location and order rows share those same 32px/44px control heights through `.organization-summary` in `src/styles/base.css`, keeping the labels aligned across Notebook, Index Cards, Word Search, and Crossword. The version cannot receive pointer events, keyboard focus, or text selection. Home is the launcher rather than a versioned learning app.
+Each learning app has an independent semantic version in `src/features/feature-definitions.ts`. `src/app/app.ts` reads the active feature's version and renders only `vMAJOR.MINOR.PATCH`; `src/styles/shell.css` fixes that plain label in the bottom-right corner. It uses 11px text, the theme's secondary text color, 55% opacity, and a 16px right margin plus device safe-area insets. Its 16px line box is vertically centered within the shared control height: an 8px bottom margin on desktop and 14px on touch layouts, plus the bottom safe-area inset. The collapsed Location and order rows share those same 32px/44px control heights through `.organization-summary` in `src/styles/base.css`, keeping the labels aligned across Notebook, Index Cards, Word Search, and Crossword. The version cannot receive pointer events, keyboard focus, or text selection. Home is the launcher rather than a versioned learning app.
 
 ## Version policy
 
@@ -13,6 +13,8 @@ Follow [Semantic Versioning 2.0.0](https://semver.org/). For these browser apps,
 - Documentation-only changes, internal refactors, compatible JavaScript/TypeScript conversions, build/deployment tooling, and shared navigation/theme infrastructure do not independently increment each app. Corrections to a particular app's theme styling do count as that app's patches.
 
 Keep the source version explicit and review its increment with future changes. These versions are independent of the npm package version, tutorial completion versions, and workspace backup format version.
+
+Knowledge Check is at `1.0.0`, its initial release with shared knowledge sets, staged question building, and Study, Quiz, and Test sessions. The initial `0.1.0` shell received artwork in `0.1.1`; `0.2.0` added grouped libraries and persistence, with full-viewport layout corrected in `0.2.1`. `0.3.0` introduced Study/Quiz/Test choices. `0.4.0` unified those modes around one saved knowledge set, added staged question building and mode-specific sessions, and migrated earlier empty placeholders without losing library entries.
 
 ## History-derived starting versions
 
