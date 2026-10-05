@@ -3,6 +3,7 @@ import type { VNode } from 'vue';
 import type { LibraryItem, MovePosition } from './tree-model.ts';
 import { inputValue } from '../../core/dom.ts';
 import { Icon } from '../../components/icon.ts';
+import { SetModeIcon } from './set-mode-icon.ts';
 import { DeleteConfirmation } from '../../components/delete-confirmation.ts';
 import { canMove, countItems, createItem, deleteItem, findItem, firstEntry, MAX_DEPTH, MAX_ITEMS, MAX_NAME_LENGTH, moveItem } from './tree-model.ts';
 
@@ -233,7 +234,9 @@ export const DirectoryTree = defineComponent({
             'aria-expanded': isOpen,
             onClick: () => toggle(item.id),
           }, [h(Icon, { name: 'chevron' })]) : h('span', { class: 'tree-toggle-space' }),
-          h(Icon, { name: isGroup ? 'folder' : 'cards' }),
+          isGroup
+            ? h(Icon, { name: 'folder' })
+            : h(SetModeIcon, { mode: item.mode ?? 'flash-cards', compact: true }),
           isEditing ? h('input', {
             ref: input, class: 'directory-rename', value: draft.value,
             'aria-label': `Rename ${item.kind}`, maxlength: MAX_NAME_LENGTH,
