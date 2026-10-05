@@ -91,9 +91,8 @@ export const FillBlankEditor = defineComponent({
     }
 
     function trailingCaretNode(target: HTMLElement) {
-      if (!(target.lastElementChild?.classList.contains('fill-blank-author-blank'))) return null;
       const last = target.lastChild;
-      if (last?.nodeType === Node.TEXT_NODE && last.textContent?.includes(CARET_ANCHOR)) return last as Text;
+      if (!(last instanceof HTMLElement) || !last.classList.contains('fill-blank-author-blank')) return null;
       const anchor = document.createTextNode(CARET_ANCHOR);
       target.append(anchor);
       return anchor;
