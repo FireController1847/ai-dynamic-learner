@@ -287,18 +287,24 @@ export const FillBlankSet = defineComponent({
                 }),
             ]),
             !reviewActive.value ? h('aside', { class: 'fill-blank-tools', 'aria-label': 'Blank editing tools' }, [
-              h('strong', 'Blanks'),
               h('button', {
-                type: 'button', class: 'quiet-button fill-blank-tool-button',
+                type: 'button',
+                class: 'icon-button fill-blank-tool-button',
+                title: 'Make blank',
+                'aria-label': 'Make blank from selected text',
+                'data-tooltip': 'Make blank',
                 onMousedown: preserveEditorSelection,
                 onClick: () => editor.value?.makeBlank(),
-              }, [h(Icon, { name: 'plus' }), 'Make blank']),
+              }, [h(Icon, { name: 'plus' })]),
               h('button', {
-                type: 'button', class: 'quiet-button fill-blank-tool-button',
+                type: 'button',
+                class: 'icon-button fill-blank-tool-button',
+                title: 'Remove blank',
+                'aria-label': 'Remove blank at the cursor',
+                'data-tooltip': 'Remove blank',
                 onMousedown: preserveEditorSelection,
                 onClick: () => editor.value?.removeBlank(),
-              }, [h(Icon, { name: 'minus' }), 'Remove blank']),
-              h('p', 'Select text to make a blank. Put the cursor in a highlighted blank to remove it.'),
+              }, [h(Icon, { name: 'minus' })]),
             ]) : null,
           ]) : h('div', { class: 'card-set-empty' }, [
             h(Icon, { name: 'cards' }),
@@ -335,14 +341,16 @@ export const FillBlankSet = defineComponent({
                   ? 'Skip'
                   : ['Next card', h(Icon, { name: 'chevron' })]),
             ]),
-            h('p', { class: 'card-review-instruction fill-blank-authoring-hint' },
-              reviewActive.value
-                ? blankCount === 0
-                  ? 'No blanks are defined on this card. End review to edit it, or skip to the next card.'
-                  : verified.value
-                    ? `${correctCount} of ${blankCount} correct. Correct answers are green; missed answers appear below them in red.`
-                    : 'Fill every blank before Verify becomes available. All answers are checked together.'
-                : message.value || 'Write directly on the card, select a word or phrase, then choose Make blank.'),
+            reviewActive.value || message.value
+              ? h('p', { class: 'card-review-instruction fill-blank-authoring-hint' },
+                reviewActive.value
+                  ? blankCount === 0
+                    ? 'No blanks are defined on this card. End review to edit it, or skip to the next card.'
+                    : verified.value
+                      ? `${correctCount} of ${blankCount} correct. Correct answers are green; missed answers appear below them in red.`
+                      : 'Fill every blank before Verify becomes available. All answers are checked together.'
+                  : message.value)
+              : null,
             !reviewActive.value ? h('div', { class: 'card-edit-controls', 'aria-label': 'Card actions' }, [
               h('button', {
                 ref: addButton, type: 'button', class: 'quiet-button',
