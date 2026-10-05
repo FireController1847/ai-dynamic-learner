@@ -17,6 +17,7 @@ export const KnowledgeCheckLibrary = defineComponent({
     items: { type: Array as PropType<LibraryItem[]>, required: true },
     selectedId: { type: String as PropType<string | null>, default: null },
     collapsed: Boolean,
+    beforeChange: { type: Function as PropType<() => boolean>, default: () => true },
   },
   emits: { 'select': (_id: string | null) => true, 'open-item': () => true, 'toggle-library': () => true, 'new-check': (_target: { parentId: string | null; parentName: string; selectedId?: string | null }) => true },
   setup(props, { emit, expose, slots }) {
@@ -37,6 +38,7 @@ export const KnowledgeCheckLibrary = defineComponent({
     onDeactivated(() => { pendingDelete.value = null; deleteTrigger = null; endDrag(); });
 
     async function rename(item: LibraryItem) {
+      if (!props.beforeChange()) return;
       emit('select', item.id);
       editingId.value = item.id;
       draft.value = item.name;
@@ -62,8 +64,9 @@ export const KnowledgeCheckLibrary = defineComponent({
     }
 
     function createGroupRelativeToSelection() {
+      if (!props.beforeChange()) return;
       if (countItems(props.items) >= MAX_ITEMS) {
-        announcement.value = `The Knowledge Check library limit is ${MAX_ITEMS} items.`;
+        announcement.value = `The Review library limit is ${MAX_ITEMS} items.`;
         return;
       }
 
@@ -153,6 +156,7 @@ export const KnowledgeCheckLibrary = defineComponent({
     function drop(event: DragEvent, id: string | null, position: MovePosition) {
       event.preventDefault();
       event.stopPropagation();
+      if (!props.beforeChange()) { endDrag(); return; }
       const sourceId = draggedId.value;
       if (sourceId && moveItem(props.items, sourceId, id, position)) {
         if (position === 'inside' && id) expanded.value.add(id);
@@ -197,6 +201,7 @@ export const KnowledgeCheckLibrary = defineComponent({
       const removesSelection = props.selectedId === item.id ||
         (item.kind === 'group' && Boolean(findItem(item.children, props.selectedId)));
 
+      if (removesSelection && !props.beforeChange()) { await cancelDelete(); return; }
       deleteItem(props.items, item.id);
       const fallbackId = firstEntry(props.items)?.id ?? null;
       const removed = [item];
@@ -256,7 +261,7 @@ export const KnowledgeCheckLibrary = defineComponent({
           h(Icon, { name: item.kind === 'group' ? 'folder' : 'cards' }),
           isEditing ? h('input', {
             ref: input, class: 'knowledge-check-rename', value: draft.value,
-            'aria-label': `Rename ${isGroup ? 'group' : 'question set'}`,
+            'aria-label': `Rename ${isGroup ? 'group' : 'knowledge set'}`,
             maxlength: MAX_NAME_LENGTH,
             onInput: (event: Event) => { draft.value = inputValue(event); },
             onBlur: () => finishRename(true),
@@ -299,7 +304,7 @@ export const KnowledgeCheckLibrary = defineComponent({
       class: 'knowledge-check-library',
       inert: props.collapsed,
       'aria-hidden': props.collapsed,
-      'aria-label': 'Knowledge Check library',
+      'aria-label': 'Review library',
     }, [
       h('div', { class: 'knowledge-check-library-toolbar' }, [
         h('h3', 'Library'),
@@ -311,8 +316,8 @@ export const KnowledgeCheckLibrary = defineComponent({
           }, [h(Icon, { name: 'folder' })]),
           h('button', {
             ref: createKnowledgeCheckButton,
-            type: 'button', class: 'icon-button', title: 'New question set',
-            'aria-label': 'New question set', onClick: requestKnowledgeCheckSetup,
+            type: 'button', class: 'icon-button', title: 'New knowledge set',
+            'aria-label': 'New knowledge set', onClick: requestKnowledgeCheckSetup,
           }, [h(Icon, { name: 'checklist' })]),
           h('button', {
             ref: collapseButton,
@@ -326,20 +331,20 @@ export const KnowledgeCheckLibrary = defineComponent({
       h('div', { class: 'knowledge-check-library-scroll' }, [
         rootTarget('before', 'Top level'),
         props.items.length
-          ? h('ul', { class: 'knowledge-check-library-list', 'aria-label': 'Groups and question sets' },
+          ? h('ul', { class: 'knowledge-check-library-list', 'aria-label': 'Groups and knowledge sets' },
             props.items.map(renderItem))
-          : h('p', { class: 'knowledge-check-library-empty' }, 'No groups or question sets yet.'),
+          : h('p', { class: 'knowledge-check-library-empty' }, 'No groups or knowledge sets yet.'),
         draggedId.value ? rootTarget('after', 'Move to end of top level') : null,
       ]),
       h('p', { class: 'visually-hidden', role: 'status' }, announcement.value),
       slots.footer ? h('div', { class: 'knowledge-check-library-footer' }, slots.footer()) : null,
       pendingDelete.value ? h(DeleteConfirmation, {
         itemName: pendingDelete.value.name,
-        itemLabel: pendingDelete.value.kind === 'set' ? 'question set' : 'group',
+        itemLabel: pendingDelete.value.kind === 'set' ? 'knowledge set' : 'group',
         detail: pendingDelete.value.kind === 'group'
-          ? `This also deletes ${countItems(pendingDelete.value.children)} nested library items, including ${countChecks(pendingDelete.value.children)} question sets.`
-          : 'The question set and its questions will be removed from the library.',
-        confirmLabel: pendingDelete.value.kind === 'group' ? 'Delete group' : 'Delete question set',
+          ? `This also deletes ${countItems(pendingDelete.value.children)} nested library items, including ${countChecks(pendingDelete.value.children)} knowledge sets.`
+          : 'The knowledge set and its questions will be removed from the library.',
+        confirmLabel: pendingDelete.value.kind === 'group' ? 'Delete group' : 'Delete knowledge set',
         onCancel: cancelDelete,
         onConfirm: confirmDelete,
       }) : null,

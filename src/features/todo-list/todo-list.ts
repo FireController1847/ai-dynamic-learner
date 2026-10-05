@@ -8,7 +8,8 @@ import { useLibrarySelection } from '../../components/use-library-selection.ts';
 import { usePersistedPanelResize } from '../../components/use-persisted-panel-resize.ts';
 import { TodoLibrary, type TodoLibraryHandle } from './library.ts';
 import { TodoLibrarySettings } from './library-settings.ts';
-import { createList, defaultLibrarySettings, isArchived, MAX_NAME_LENGTH, orderedLists, type TodoLists } from './library-model.ts';
+import { TodoCloneDialog } from './clone-dialog.ts';
+import { cloneList, createList, defaultLibrarySettings, isArchived, MAX_NAME_LENGTH, orderedLists, type TodoLists } from './library-model.ts';
 
 export const TodoList = defineComponent({
   name: 'TodoList',
@@ -39,6 +40,8 @@ export const TodoList = defineComponent({
     const settingsOpen = ref(false);
     const message = ref('');
     const pendingDelete = ref<string | null>(null);
+    const pendingClone = ref<string | null>(null);
+    const cloneError = ref('');
     const layout = ref<HTMLElement | null>(null);
     const library = ref<TodoLibraryHandle | null>(null);
     const showLibraryButton = ref<HTMLButtonElement | null>(null);
@@ -58,7 +61,7 @@ export const TodoList = defineComponent({
       if (event.matches && selectedId.value) collapsed.value = true;
     }
     onMounted(() => { startClock(); document.addEventListener('visibilitychange', refreshClock); overlayQuery.addEventListener('change', changeLayout); });
-    onDeactivated(() => { stopClock(); settingsOpen.value = false; pendingDelete.value = null; });
+    onDeactivated(() => { stopClock(); settingsOpen.value = false; pendingDelete.value = null; pendingClone.value = null; });
     onBeforeUnmount(() => { stopClock(); document.removeEventListener('visibilitychange', refreshClock); overlayQuery.removeEventListener('change', changeLayout); });
     watch(() => selected.value?.id, id => {
       if (id) props.model.lastSelectedListId = id;
@@ -82,6 +85,20 @@ export const TodoList = defineComponent({
     }
     function select(id: string) {
       selectedId.value = id; message.value = '';
+    }
+    async function clone(skipRemaining: boolean) {
+      const source = props.model.items.find(item => item.id === pendingClone.value);
+      if (!source) { pendingClone.value = null; return; }
+      refreshClock();
+      try {
+        const item = cloneList(props.model.items, source, skipRemaining, now.value);
+        pendingClone.value = null;
+        archiveOpen.value = false; selectedId.value = item.id;
+        message.value = skipRemaining ? `Cloned ${source.name} and skipped its remaining tasks.` : `Cloned ${source.name}.`;
+        collapsed.value = false;
+        await nextTick();
+        await library.value?.beginRename(item.id);
+      } catch (error) { cloneError.value = error instanceof Error ? error.message : String(error); }
     }
     function rename(id: string, name: string) {
       const item = props.model.items.find(item => item.id === id);
@@ -130,7 +147,9 @@ export const TodoList = defineComponent({
           onPointercancel: panel.endResize, onKeydown: panel.resizeFromKeyboard, onDblclick: panel.resetWidth,
         }) : null,
         h('section', { class: 'todo-list-detail', inert: overlay.value && !collapsed.value, 'aria-label': selected.value ? selected.value.name : 'Todo List getting started' }, [
-          selected.value ? h(TodoTaskEditor, { key: selected.value.id, item: selected.value, display: display.value }) : h(LibraryEmptyState, {
+          selected.value ? h(TodoTaskEditor, { key: selected.value.id, item: selected.value, display: display.value,
+            onClone: () => { pendingClone.value = selected.value?.id ?? null; cloneError.value = ''; },
+          }) : h(LibraryEmptyState, {
             icon: 'plus',
             title: archiveOpen.value ? 'Your past lists' : 'Build your todo library',
             description: archiveOpen.value ? 'No archived lists yet. Create a new list to get started.' : 'Create a list for your next steps.',
@@ -140,6 +159,10 @@ export const TodoList = defineComponent({
         ]),
       ]),
       h('p', { class: 'visually-hidden', role: 'status' }, message.value),
+      pendingClone.value ? h(TodoCloneDialog, {
+        listName: props.model.items.find(item => item.id === pendingClone.value)?.name ?? 'Todo list', error: cloneError.value,
+        onClose: () => { pendingClone.value = null; }, onClone: clone,
+      }) : null,
       pendingDelete.value ? h(DeleteConfirmation, { itemName: props.model.items.find(item => item.id === pendingDelete.value)?.name ?? 'Todo list', itemLabel: 'todo list', detail: 'All sections and tasks in this list will be removed.', confirmLabel: 'Delete list',
         onCancel: async () => { pendingDelete.value = null; await nextTick(); library.value?.focusToggle(); },
         onConfirm: () => { const id = pendingDelete.value; pendingDelete.value = null; if (id) void remove(id); },

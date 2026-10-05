@@ -9,7 +9,8 @@ export const TodoTaskEditor = defineComponent({
   name: 'TodoTaskEditor',
   props: { item: { type: Object as PropType<TodoListRecord>, required: true },
     display: { type: Object as PropType<TodoDisplay>, required: true } },
-  setup(props) {
+  emits: { clone: () => true },
+  setup(props, { emit }) {
     if (!props.item.sections?.length) props.item.sections = [newSection()];
     const sections = computed(() => props.item.sections ?? []);
     const sortMode = computed<SectionSort>(() => props.item.sectionSort ?? 'custom');
@@ -371,6 +372,7 @@ export const TodoTaskEditor = defineComponent({
           class: ['todo-editor-progress', { 'is-complete': listComplete.value, 'is-celebrating': celebratingList.value }],
         }, `${completed.value}/${count.value} done${skipped.value ? ` · ${skipped.value} skipped` : ''}`),
         undo.value ? h('button', { type: 'button', class: 'quiet-button', disabled: storedCount.value >= MAX_TASKS, onClick: restoreTask }, 'Undo remove') : null,
+        h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('clone') }, 'Clone list'),
       ]),
       h('div', { class: 'todo-task-paper' }, [
         h('h2', { class: 'todo-paper-title' }, props.item.name),

@@ -18,17 +18,36 @@ export const QUESTION_TYPES: readonly { id: QuestionType; label: string }[] = [
 export const MAX_QUESTIONS = 200;
 export const MAX_TEXT = 2000;
 
-export function createQuestion(type: QuestionType = 'short-answer'): Question {
-  return { id: createId(), type, prompt: '', answer: type === 'true-false' ? 'True' : '', explanation: '',
+export function createQuestion(type: QuestionType = 'multiple-choice'): Question {
+  return { id: createId(), type, prompt: '', answer: '', explanation: '',
     choices: type === 'multiple-choice' ? ['', '', '', ''] : [] };
 }
 
 export function questionReady(question: Question): boolean {
   if (!question.prompt.trim() || !question.answer.trim()) return false;
   if (question.type !== 'multiple-choice') return true;
-  const choices = question.choices.map((choice) => choice.trim());
+  const choices = question.choices.map((choice) => choice.trim()).filter(Boolean);
   return choices.length >= 2 && choices.every(Boolean) && new Set(choices).size === choices.length &&
     choices.includes(question.answer.trim());
+}
+
+export function questionHasContent(question: Question): boolean {
+  return Boolean(question.prompt.trim() || question.explanation.trim() || question.choices.some(choice => choice.trim()) ||
+    question.answer.trim());
+}
+export function questionProblem(question: Question): string {
+  if (!question.prompt.trim()) return 'Enter the question.';
+  if (!question.answer.trim()) return question.type === 'multiple-choice' ? 'Select a correct answer.' : 'Enter the correct answer.';
+  if (!questionReady(question)) return 'Add at least two distinct answer choices and select one as correct.';
+  return '';
+}
+export function questionsForSave(questions: Question[]): Question[] {
+  const entered = questions.filter(questionHasContent);
+  for (const [index, question] of entered.entries()) {
+    const problem = questionProblem(question);
+    if (problem) throw new Error(`Question ${index + 1}: ${problem}`);
+  }
+  return entered.map(question => ({ ...question, choices: question.choices.filter(choice => choice.trim()) }));
 }
 
 export function answerCorrect(question: Question, response: string): boolean {
@@ -48,7 +67,7 @@ export function validateQuestions(value: unknown): asserts value is Question[] {
         !Array.isArray(question.choices) || question.choices.length > 8 ||
         question.choices.some((choice) => typeof choice !== 'string' || choice.length > MAX_TEXT) ||
         (question.type !== 'multiple-choice' && question.choices.length !== 0) ||
-        (question.type === 'true-false' && !['True', 'False'].includes(String(question.answer)))) {
+        (question.type === 'true-false' && !['', 'True', 'False'].includes(String(question.answer)))) {
       throw new Error('A knowledge set contains invalid question data.');
     }
     ids.add(question.id);

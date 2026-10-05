@@ -1,10 +1,11 @@
+import { validateSetOptions, type SetOptions } from './set-options.ts';
 import { isRecord } from '../../core/validation.ts';
 import { createId, isValidId } from '../../core/ids.ts';
 import { createTreeOperations, type TreeMovePosition } from '../../core/tree.ts';
 import { isCheckMode, type CheckModeId } from './check-types.ts';
 import { validateQuestions, type Question } from './question-model.ts';
 
-export interface CheckItem { id: string; kind: 'set'; name: string; questions: Question[]; mode?: CheckModeId }
+export interface CheckItem { id: string; kind: 'set'; name: string; questions: Question[]; mode?: CheckModeId; options?: SetOptions }
 export interface Group { id: string; kind: 'group'; name: string; children: LibraryItem[] }
 export type LibraryItem = Group | CheckItem;
 export interface KnowledgeCheck { items: LibraryItem[] }
@@ -25,16 +26,18 @@ export function createGroup(): Group {
   return { id: createId(), kind: 'group', name: 'New group', children: [] };
 }
 
-export function insertCheck(items: LibraryItem[], target: CheckTarget, name: string, questions: unknown): CheckItem {
+export function insertCheck(items: LibraryItem[], target: CheckTarget, name: string, questions: unknown, options?: SetOptions): CheckItem {
   validateQuestions(questions);
+  if (options) validateSetOptions(options);
   if (!name.trim() || name.trim().length > MAX_NAME_LENGTH) throw new Error('Enter a name of 1–120 characters.');
-  if (countItems(items) >= MAX_ITEMS) throw new Error(`The Knowledge Check library supports ${MAX_ITEMS} items.`);
+  if (countItems(items) >= MAX_ITEMS) throw new Error(`The Review library supports ${MAX_ITEMS} items.`);
   const parent = target.parentId ? findItem(items, target.parentId) : null;
   if (target.parentId && (!parent || parent.item.kind !== 'group')) {
     throw new Error('The destination group no longer exists. Cancel and choose a new destination.');
   }
   if (parent && parent.depth >= MAX_DEPTH) throw new Error(`Groups can be at most ${MAX_DEPTH} levels deep.`);
   const item: CheckItem = { id: createId(), kind: 'set', name: name.trim(), questions };
+  if (options) item.options = { ...options };
   const selected = target.selectedId ? findItem(items, target.selectedId) : null;
   if (selected?.item.kind === 'set' && selected.parentId === target.parentId) {
     selected.siblings.splice(selected.index + 1, 0, item);
@@ -50,22 +53,22 @@ export function countChecks(items: LibraryItem[]): number {
 
 export function validateKnowledgeCheck(value: unknown): asserts value is KnowledgeCheck {
   if (!isRecord(value) || !Array.isArray(value.items) || Object.keys(value).some((key) => key !== 'items')) {
-    throw new Error('The Knowledge Check library is invalid.');
+    throw new Error('The Review library is invalid.');
   }
   const ids = new Set<string>();
   let count = 0;
   function visit(items: unknown[], depth: number): void {
-    if (items.length && depth > MAX_DEPTH) throw new Error(`Knowledge Check groups can be at most ${MAX_DEPTH} levels deep.`);
+    if (items.length && depth > MAX_DEPTH) throw new Error(`Review groups can be at most ${MAX_DEPTH} levels deep.`);
     for (const item of items) {
       if (!isRecord(item) || !isValidId(item.id) || ids.has(item.id) ||
           typeof item.name !== 'string' || !item.name.trim() || item.name.length > MAX_NAME_LENGTH) {
-        throw new Error('A Knowledge Check item has an invalid name or duplicate ID.');
+        throw new Error('A Review item has an invalid name or duplicate ID.');
       }
       ids.add(item.id);
-      if (++count > MAX_ITEMS) throw new Error(`The Knowledge Check library supports ${MAX_ITEMS} items.`);
+      if (++count > MAX_ITEMS) throw new Error(`The Review library supports ${MAX_ITEMS} items.`);
       if (item.kind === 'group') {
         if (!Array.isArray(item.children) || Object.keys(item).some((key) => !['id', 'kind', 'name', 'children'].includes(key))) {
-          throw new Error('A Knowledge Check group contains unsupported data.');
+          throw new Error('A Review group contains unsupported data.');
         }
         visit(item.children, depth + 1);
       } else {
@@ -75,11 +78,12 @@ export function validateKnowledgeCheck(value: unknown): asserts value is Knowled
           item.questions = [];
           delete item.type;
         }
-        if (item.kind !== 'set' || Object.keys(item).some((key) => !['id', 'kind', 'name', 'questions', 'mode'].includes(key))) {
-          throw new Error('A question set contains unsupported data.');
+        if (item.kind !== 'set' || Object.keys(item).some((key) => !['id', 'kind', 'name', 'questions', 'mode', 'options'].includes(key))) {
+          throw new Error('A knowledge set contains unsupported data.');
         }
-        if (Object.hasOwn(item, 'mode') && !isCheckMode(item.mode)) throw new Error('The question set mode is invalid.');
+        if (Object.hasOwn(item, 'mode') && !isCheckMode(item.mode)) throw new Error('The knowledge set mode is invalid.');
         validateQuestions(item.questions);
+        if (Object.hasOwn(item, 'options')) validateSetOptions(item.options);
       }
     }
   }

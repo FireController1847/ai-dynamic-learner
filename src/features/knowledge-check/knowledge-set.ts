@@ -1,27 +1,36 @@
 import type { CheckItem } from './library-model.ts';
 import { MAX_NAME_LENGTH } from './library-model.ts';
 import { CHECK_MODES, isCheckMode, type CheckModeId } from './check-types.ts';
-import { validateQuestions, type Question } from './question-model.ts';
+import { requestLeave } from '../../core/leave-guards.ts';
+import { validateSetOptions, type SetOptions } from './set-options.ts';
+import { validateQuestions, questionsForSave, type Question } from './question-model.ts';
 import { inputValue } from '../../core/dom.ts';
 import { CheckBuilder } from './check-builder.ts';
 import { ModePicker } from './mode-picker.ts';
 import { KnowledgeSession } from './knowledge-session.ts';
-import { defineComponent, h, KeepAlive, ref, type PropType } from 'vue';
+import { defineComponent, h, onDeactivated, ref, type PropType } from 'vue';
 
 export const KnowledgeSet = defineComponent({
   name: 'KnowledgeSet',
-  props: { item: { type: Object as PropType<CheckItem>, required: true } },
+  props: { item: { type: Object as PropType<CheckItem>, required: true }, initialBuilder: Boolean,
+    initialMode: { type: String as PropType<CheckModeId | null>, default: null } },
   setup(props) {
-    const mode = ref<CheckModeId | null>(props.item.mode ?? null);
-    const building = ref(false);
+    const mode = ref<CheckModeId | null>(props.initialMode);
+    const building = ref(props.initialBuilder);
     const revision = ref(0);
     const message = ref('');
-    function chooseMode(next: CheckModeId) { mode.value = next; props.item.mode = next; }
-    function save(name: string, questions: Question[]) {
+    onDeactivated(() => { mode.value = null; });
+    function chooseMode(next: CheckModeId) {
+      if (mode.value !== next && !requestLeave()) return;
+      mode.value = next;
+    }
+    function openBuilder() { if (requestLeave()) building.value = true; }
+    function save(name: string, questions: Question[], options: SetOptions) {
       try {
-        validateQuestions(questions);
+        validateQuestions(questions); validateSetOptions(options);
+        const ready = questionsForSave(questions);
         if (!name.trim() || name.length > MAX_NAME_LENGTH) throw new Error('Enter a name of 1–120 characters.');
-        props.item.name = name.trim(); props.item.questions = questions;
+        props.item.name = name.trim(); props.item.questions = ready; props.item.options = { ...options };
         building.value = false; revision.value += 1; message.value = '';
       } catch (error) { message.value = error instanceof Error ? error.message : String(error); }
     }
@@ -29,19 +38,20 @@ export const KnowledgeSet = defineComponent({
       h('header', { class: 'knowledge-set-toolbar' }, [
         h('label', { class: 'knowledge-mode-control' }, ['Mode', h('select', {
           value: mode.value ?? '', disabled: building.value,
-          onChange: (event: Event) => { const value = inputValue(event); if (isCheckMode(value)) chooseMode(value); },
+          onChange: (event: Event) => { const value = inputValue(event); if (isCheckMode(value)) chooseMode(value);
+            if (event.target instanceof HTMLSelectElement) event.target.value = mode.value ?? ''; },
         }, [h('option', { value: '', disabled: true }, 'Choose a mode'), ...CHECK_MODES.map((entry) => h('option', { value: entry.id }, entry.label))])]),
-        h('span', { class: 'knowledge-muted' }, `${props.item.questions.length} questions`),
+        h('span', { class: 'knowledge-muted' }, `${props.item.questions.length} ${props.item.questions.length === 1 ? 'question' : 'questions'}`),
         h('button', { type: 'button', class: 'quiet-button', disabled: building.value,
-          onClick: () => { building.value = true; } }, 'Build questions'),
+          onClick: openBuilder }, 'Build questions'),
       ]),
       building.value ? h(CheckBuilder, { key: `builder-${revision.value}`, item: props.item, onSave: save,
         onCancel: () => { building.value = false; message.value = ''; } }) : null,
       !building.value && !mode.value ? h(ModePicker, { setName: props.item.name,
-        onChoose: chooseMode, onBuild: () => { building.value = true; } }) : null,
-      h(KeepAlive, { key: revision.value }, { default: () => !building.value && mode.value ? h(KnowledgeSession, {
-        key: mode.value, item: props.item, mode: mode.value, onBuild: () => { building.value = true; },
-      }) : null }),
+        onChoose: chooseMode, onBuild: openBuilder }) : null,
+      !building.value && mode.value ? h(KnowledgeSession, {
+        key: `${revision.value}-${mode.value}`, item: props.item, mode: mode.value, onBuild: openBuilder,
+      }) : null,
       message.value ? h('p', { class: 'knowledge-message', role: 'alert' }, message.value) : null,
     ]);
   },

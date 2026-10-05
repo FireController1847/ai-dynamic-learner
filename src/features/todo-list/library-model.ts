@@ -24,6 +24,27 @@ export function createList(items: TodoListRecord[], now = Date.now()): TodoListR
   return item;
 }
 
+export function cloneList(items: TodoListRecord[], source: TodoListRecord, skipRemaining: boolean, now = Date.now()): TodoListRecord {
+  if (items.length >= MAX_LISTS) throw new Error(`The Todo List limit is ${MAX_LISTS} lists.`);
+  const suffix = ' (copy)';
+  const item: TodoListRecord = {
+    ...source, id: createId(), name: source.name.slice(0, MAX_NAME_LENGTH - suffix.length).trimEnd() + suffix,
+    createdAt: new Date(now).toISOString(),
+  };
+  if (source.sections) item.sections = source.sections.map(section => ({
+    ...section, id: createId(), tasks: section.tasks.map(task => ({ ...task, id: createId() })),
+  }));
+  items.push(item);
+  if (skipRemaining) {
+    for (const section of source.sections ?? []) {
+      for (const task of section.tasks) {
+        if (!task.done && !task.skipped && (task.text.trim() || task.priority?.trim())) task.skipped = true;
+      }
+    }
+  }
+  return item;
+}
+
 /** UTC expiry; calendar months clamp at month-end, and disabled expiry is infinite. */
 export function archiveTime(item: TodoListRecord, settings = defaultLibrarySettings()): number {
   const expiry = expirySetting(settings);

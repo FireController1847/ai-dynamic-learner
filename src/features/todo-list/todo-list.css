@@ -37,6 +37,10 @@
 .todo-expiry-controls input { width: 88px; }
 .todo-task-editor { padding: 16px 24px 32px; }
 .todo-editor-toolbar { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-bottom: 12px; }
+.todo-clone-options { display: grid; gap: 12px; }
+.todo-clone-options p { margin: 0; }
+.todo-clone-options button { display: grid; justify-content: stretch; justify-items: start; gap: 4px; padding: 12px; text-align: left; white-space: normal; }
+.todo-clone-options button span { color: var(--text-secondary); font-size: 12px; line-height: 16px; font-weight: normal; }
 .todo-sort-control { display: inline-flex; align-items: center; gap: 2px; padding: 2px; border: 1px solid var(--border-color); border-radius: var(--radius); background: var(--surface-subtle); }
 .todo-sort-label { padding: 0 6px; color: var(--text-secondary); font-size: 13px; font-weight: 600; }
 .todo-sort-control button { min-height: 30px; padding: 4px 9px; border: 0; border-radius: calc(var(--radius) - 2px); background: transparent; color: var(--text-secondary); }

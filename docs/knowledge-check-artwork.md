@@ -1,6 +1,8 @@
-# Knowledge Check artwork
+# Review artwork
 
-`src/assets/knowledge-check.png` is the transparent 1254 × 1254 PNG used by Home, navigation, and the Knowledge Check page header. The shared feature definition supplies the image, dimensions, media type, and alternative description to the existing Open Graph, Twitter, and JSON-LD metadata generator. Webpack's existing asset-copying configuration includes it in production output.
+The app is now named Review. The existing artwork and `knowledge-check` asset filename are retained; the generation prompt below records the original branding.
+
+`src/assets/knowledge-check.png` is the transparent 1254 × 1254 PNG used by Home, navigation, and the Review page header. The shared feature definition supplies the image, dimensions, media type, and alternative description to the existing Open Graph, Twitter, and JSON-LD metadata generator. Webpack's existing asset-copying configuration includes it in production output.
 
 Generated with the built-in image generation tool after inspecting the Todo List and Crossword artwork for style. The icon matches their glossy blue-and-white finish, cyan highlights, rounded bevels, and slight counterclockwise tilt. A question mark, answer choices, and checkmark badge identify the quiz scaffold.
 

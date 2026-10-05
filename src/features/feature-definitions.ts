@@ -41,7 +41,7 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   },
   {
     id: 'todo-list', label: 'Todo List', path: '/todo-list/', icon: 'checklist',
-    version: '1.4.3',
+    version: '1.5.0',
     image: 'assets/todo-list.png',
     description: 'Write, organize, and prioritize tasks in simple lists that archive automatically.',
     metadata: {
@@ -84,18 +84,18 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
     },
   },
   {
-    id: 'knowledge-check', label: 'Knowledge Check', path: '/knowledge-check/', icon: 'checklist',
-    version: '1.0.1',
+    id: 'knowledge-check', label: 'Review', path: '/knowledge-check/', icon: 'checklist',
+    version: '1.2.2',
     image: 'assets/knowledge-check.png',
-    description: 'Make question sets to study, quiz yourself, or take a test.',
+    description: 'Make knowledge sets to study, quiz yourself, or take a test.',
     metadata: {
-      keywords: ['knowledge check', 'quiz', 'self assessment', 'learning'],
+      keywords: ['review', 'study', 'quiz', 'self assessment', 'learning'],
       socialImage: {
         path: 'assets/knowledge-check.png',
         type: 'image/png',
         width: 1254,
         height: 1254,
-        alt: 'Knowledge Check — Glossy blue-and-white quiz sheet with a question mark, answer choices, and a checkmark badge.',
+        alt: 'Review — Glossy blue-and-white quiz sheet with a question mark, answer choices, and a checkmark badge.',
       },
     },
   },

@@ -1,5 +1,8 @@
 import type { KnowledgeCheck as FeatureModel, CheckTarget, LibraryItem } from './library-model.ts';
 import type { KnowledgeCheckLibraryHandle } from './library.ts';
+import { requestLeave } from '../../core/leave-guards.ts';
+import { validateSetOptions, type SetOptions } from './set-options.ts';
+import { questionsForSave } from './question-model.ts';
 import { inputValue } from '../../core/dom.ts';
 import { Icon } from '../../components/icon.ts';
 import { LibraryEmptyState } from '../../components/library-empty-state.ts';
@@ -47,6 +50,8 @@ export const KnowledgeCheck = defineComponent({
     const library = ref<KnowledgeCheckLibraryHandle | null>(null);
     const showLibraryButton = ref<HTMLButtonElement | null>(null);
     const message = ref('');
+    const tutorialBuilderId = ref<string | null>(null);
+    const tutorialSetId = ref<string | null>(null);
     let removeTipsActionListener: (() => void) | null = null;
 
     function createTutorialQuestions(): Question[] {
@@ -71,21 +76,26 @@ export const KnowledgeCheck = defineComponent({
 
     async function prepareTipsAction(action: string): Promise<TutorialCleanup> {
       const supported = ['builder', 'mode', 'study', 'quiz', 'test'];
-      if (!supported.includes(action)) throw new Error('Unknown Knowledge Check tutorial action.');
+      if (!supported.includes(action)) throw new Error('Unknown Review tutorial action.');
 
+      if (!requestLeave()) throw new Error('The active session was kept open.');
       const previousSelectedId = selectedId.value;
       const previousSetupTarget = setupTarget.value;
       const previousLibraryCollapsed = libraryCollapsed.value;
       const item = insertCheck(
         props.model.items,
         { parentId: null, parentName: 'Top level' },
-        'Lorem ipsum',
+        'Practice knowledge set',
         createTutorialQuestions(),
       );
 
       if (action !== 'mode') {
         item.mode = action === 'builder' ? 'study' : action as 'study' | 'quiz' | 'test';
       }
+      const previousTutorialBuilderId = tutorialBuilderId.value;
+      const previousTutorialSetId = tutorialSetId.value;
+      tutorialSetId.value = item.id;
+      tutorialBuilderId.value = action === 'builder' ? item.id : null;
 
       setupTarget.value = null;
       selectedId.value = item.id;
@@ -96,6 +106,8 @@ export const KnowledgeCheck = defineComponent({
       await nextTick();
 
       return () => {
+        tutorialSetId.value = previousTutorialSetId;
+        tutorialBuilderId.value = previousTutorialBuilderId;
         deleteItem(props.model.items, item.id);
         setupTarget.value = previousSetupTarget;
         const restoredId = previousSelectedId && findItem(props.model.items, previousSelectedId)
@@ -162,12 +174,14 @@ export const KnowledgeCheck = defineComponent({
     }
 
     function selectItem(id: string | null) {
+      if (id !== selectedId.value && !requestLeave()) return;
       selectedId.value = id;
       setupTarget.value = null;
       message.value = '';
     }
 
     function openNewKnowledgeCheck(target: SetupTarget) {
+      if (!requestLeave()) return;
       setupTarget.value = target;
       setupVersion.value += 1;
       message.value = '';
@@ -182,10 +196,11 @@ export const KnowledgeCheck = defineComponent({
       else library.value?.focusNewKnowledgeCheck();
     }
 
-    function completeSetup(name: string, questions: Question[]) {
+    function completeSetup(name: string, questions: Question[], options: SetOptions) {
       if (!setupTarget.value) return;
       try {
-        const item = insertCheck(props.model.items, setupTarget.value, name, questions);
+        validateSetOptions(options);
+        const item = insertCheck(props.model.items, setupTarget.value, name, questionsForSave(questions), options);
         selectedId.value = item.id;
         setupTarget.value = null;
         library.value?.reveal(item.id);
@@ -263,7 +278,7 @@ export const KnowledgeCheck = defineComponent({
       if (setupTarget.value) {
         return h('section', {
           class: 'knowledge-check-detail',
-          'aria-label': 'Knowledge Check setup',
+          'aria-label': 'Review setup',
           inert: libraryOverlay.value && !libraryCollapsed.value,
         }, [
           h(CheckBuilder, {
@@ -280,15 +295,15 @@ export const KnowledgeCheck = defineComponent({
       if (!item || item.kind === 'group') {
         return h('section', {
           class: 'knowledge-check-detail',
-          'aria-label': item ? 'Selected group' : 'Knowledge Check workspace',
+          'aria-label': item ? 'Selected group' : 'Review workspace',
           inert: libraryOverlay.value && !libraryCollapsed.value,
         }, [
           h(LibraryEmptyState, {
             class: { 'has-organization': item !== undefined },
             icon: 'checklist',
             title: item?.name ?? 'Build your question library',
-            description: item ? 'Create a question set in this group, or select one from the Library.' : 'Make question sets and keep them organized.',
-            actionLabel: 'New question set',
+            description: item ? 'Create a knowledge set in this group, or select one from the Library.' : 'Make knowledge sets and keep them organized.',
+            actionLabel: 'New knowledge set',
             onCreate: () => openNewKnowledgeCheck({ parentId: item?.id ?? null, parentName: item?.name ?? 'Top level' }),
           }),
           item ? organizationControls(item) : null,
@@ -299,13 +314,14 @@ export const KnowledgeCheck = defineComponent({
       return h('section', {
         class: 'knowledge-check-detail is-check',
         inert: libraryOverlay.value && !libraryCollapsed.value,
-        'aria-label': 'Selected question set',
+        'aria-label': 'Selected knowledge set',
       }, [
         h('header', { class: 'knowledge-check-item-heading' }, [
           h('h2', { ref: workspaceHeading, tabindex: -1 }, item.name),
-          h('p', 'Question set'),
+          h('p', 'Knowledge set'),
         ]),
-        h(KnowledgeSet, { key: item.id, item }),
+        h(KnowledgeSet, { key: item.id, item, initialBuilder: item.id === tutorialBuilderId.value,
+          initialMode: item.id === tutorialSetId.value ? item.mode ?? null : null }),
         organizationControls(item),
         h('p', { class: 'visually-hidden', role: 'status' }, message.value),
       ]);
@@ -349,6 +365,7 @@ export const KnowledgeCheck = defineComponent({
           onClick: () => setLibraryCollapsed(true),
         }) : null,
         h(KnowledgeCheckLibrary, {
+          beforeChange: requestLeave,
           ref: library,
           items: props.model.items,
           selectedId: selectedId.value,

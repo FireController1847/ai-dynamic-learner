@@ -1,0 +1,95 @@
+import { computed, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref } from 'vue';
+import { registerLeaveGuard } from '../../core/leave-guards.ts';
+import { defaultSetOptions } from './set-options.ts';
+import { answerCorrect, questionReady } from './question-model.ts';
+import type { CheckItem } from './library-model.ts';
+import type { CheckModeId } from './check-types.ts';
+
+export function useKnowledgeSession(item: CheckItem, mode: CheckModeId) {
+  const questions = computed(() => item.questions.filter(questionReady));
+  const options = computed(() => item.options ?? defaultSetOptions());
+  const position = ref(0);
+  const responses = ref<Record<string, string>>({});
+  const checked = ref(new Set<string>());
+  const revealed = ref(new Set<string>());
+  const hints = ref(new Set<string>());
+  const submitted = ref(false);
+  const started = ref(false);
+  const expired = ref(false);
+  const ended = ref(false);
+  const now = ref(Date.now());
+  const deadline = ref<number | null>(null);
+  const celebrating = ref<string | null>(null);
+  const attempts = ref<Record<string, number>>({});
+  const active = computed(() => mode !== 'study' && started.value && !submitted.value);
+  const answered = computed(() => questions.value.filter(question => responses.value[question.id]?.trim()).length);
+  const score = computed(() => questions.value.filter(question => answerCorrect(question, responses.value[question.id] ?? '')).length);
+  const remaining = computed(() => deadline.value === null ? null : Math.max(0, Math.ceil((deadline.value - now.value) / 1000)));
+  let timer: number | null = null;
+  let celebrationTimer: number | null = null;
+  let unregister: (() => void) | null = null;
+
+  function clearCelebration() {
+    if (celebrationTimer !== null) window.clearTimeout(celebrationTimer);
+    celebrationTimer = null; celebrating.value = null;
+  }
+  function submit(timedOut = false) {
+    expired.value = timedOut; submitted.value = true; deadline.value = null; clearCelebration();
+  }
+  function tick() {
+    now.value = Date.now();
+    if (active.value && deadline.value !== null && now.value >= deadline.value) submit(true);
+  }
+  function start() {
+    responses.value = {}; checked.value = new Set(); revealed.value = new Set(); hints.value = new Set(); attempts.value = {};
+    position.value = 0; submitted.value = false; expired.value = false; ended.value = false; clearCelebration();
+    now.value = Date.now(); started.value = true;
+    deadline.value = mode === 'test' && options.value.timeLimitMinutes !== null ? now.value + options.value.timeLimitMinutes * 60_000 : null;
+  }
+  function end() {
+    started.value = false; submitted.value = false; deadline.value = null; ended.value = true; clearCelebration();
+    responses.value = {}; checked.value = new Set(); revealed.value = new Set(); hints.value = new Set(); attempts.value = {}; position.value = 0;
+  }
+  function leave(): boolean {
+    tick();
+    if (!active.value) return true;
+    if (!window.confirm(`Leave this ${mode === 'test' ? 'Test' : 'Quiz'}? This will end your session and discard its answers.`)) return false;
+    end(); return true;
+  }
+  function check() {
+    tick();
+    if (submitted.value) return;
+    const question = questions.value[position.value];
+    if (!question || !responses.value[question.id]?.trim()) return;
+    checked.value.add(question.id);
+    attempts.value[question.id] = (attempts.value[question.id] ?? 0) + 1;
+    if (mode === 'quiz' && answerCorrect(question, responses.value[question.id]!)) {
+      clearCelebration(); celebrating.value = question.id;
+      celebrationTimer = window.setTimeout(clearCelebration, 900);
+    }
+  }
+  function beforeUnload(event: BeforeUnloadEvent) {
+    if (!active.value) return;
+    event.preventDefault(); event.returnValue = '';
+  }
+  function attach() {
+    if (unregister) return;
+    unregister = registerLeaveGuard(leave);
+    timer = window.setInterval(tick, 250);
+    window.addEventListener('beforeunload', beforeUnload);
+    document.addEventListener('visibilitychange', tick);
+    tick();
+  }
+  function detach() {
+    unregister?.(); unregister = null;
+    if (timer !== null) window.clearInterval(timer);
+    timer = null; clearCelebration();
+    window.removeEventListener('beforeunload', beforeUnload);
+    document.removeEventListener('visibilitychange', tick);
+  }
+  onMounted(attach); onActivated(attach);
+  onDeactivated(() => { if (active.value || (mode === 'study' && started.value)) end(); detach(); });
+  onBeforeUnmount(detach);
+  return { questions, options, position, responses, checked, revealed, hints, submitted, started, expired, ended,
+    active, answered, score, remaining, celebrating, attempts, start, end, check, submit, leave, tick };
+}

@@ -1,10 +1,12 @@
+import { defaultSetOptions, validateSetOptions, type SetOptions } from './set-options.ts';
+import { SetOptionsEditor } from './set-options-editor.ts';
 import type { CheckItem } from './library-model.ts';
 import { MAX_NAME_LENGTH } from './library-model.ts';
-import { createQuestion, MAX_QUESTIONS, MAX_TEXT, QUESTION_TYPES, type Question, type QuestionType } from './question-model.ts';
+import { createQuestion, questionHasContent, questionProblem, questionsForSave, MAX_QUESTIONS, MAX_TEXT, QUESTION_TYPES, type Question, type QuestionType } from './question-model.ts';
 import { inputValue } from '../../core/dom.ts';
 import { Icon } from '../../components/icon.ts';
 import { DeleteConfirmation } from '../../components/delete-confirmation.ts';
-import { defineComponent, h, ref, type PropType } from 'vue';
+import { defineComponent, h, ref, computed, type PropType } from 'vue';
 
 export const CheckBuilder = defineComponent({
   name: 'KnowledgeSetBuilder',
@@ -12,15 +14,37 @@ export const CheckBuilder = defineComponent({
     destination: { type: String, default: '' },
     item: { type: Object as PropType<CheckItem>, default: undefined },
   },
-  emits: { save: (_name: string, _questions: Question[]) => true, cancel: () => true },
+  emits: { save: (_name: string, _questions: Question[], _options: SetOptions) => true, cancel: () => true },
   setup(props, { emit }) {
     const name = ref(props.item?.name ?? 'New knowledge set');
     const questions = ref<Question[]>(props.item?.questions.map((question) => ({ ...question, choices: [...question.choices] })) ?? []);
     const selected = ref(0);
+    const tab = ref<'questions' | 'options'>('questions');
+    const options = ref<SetOptions>({ ...(props.item?.options ?? defaultSetOptions()) });
+    const message = ref('');
+    const invalid = computed(() => questions.value.findIndex(question => questionHasContent(question) && Boolean(questionProblem(question))));
+    const optionsProblem = computed(() => {
+      try { validateSetOptions(options.value); return ''; }
+      catch (error) { return error instanceof Error ? error.message : String(error); }
+    });
+    function canLeaveQuestion(): boolean {
+      const current = questions.value[selected.value];
+      if (current && questionHasContent(current) && questionProblem(current)) {
+        return false;
+      }
+      message.value = ''; return true;
+    }
+    function save() {
+      try {
+        if (invalid.value >= 0) { selected.value = invalid.value; tab.value = 'questions'; return; }
+        validateSetOptions(options.value);
+        emit('save', name.value.trim(), questionsForSave(questions.value), { ...options.value });
+      } catch (error) { message.value = error instanceof Error ? error.message : String(error); }
+    }
     const pendingDelete = ref<Question | null>(null);
 
     function addQuestion() {
-      if (questions.value.length >= MAX_QUESTIONS) return;
+      if (questions.value.length >= MAX_QUESTIONS || !canLeaveQuestion()) return;
       questions.value.push(createQuestion());
       selected.value = questions.value.length - 1;
     }
@@ -43,14 +67,14 @@ export const CheckBuilder = defineComponent({
     }
     return () => {
       const question = questions.value[selected.value];
-      return h('section', { class: 'knowledge-set-builder', 'aria-label': 'Question set builder' }, [
+      return h('section', { class: 'knowledge-set-builder', 'aria-label': 'Knowledge set builder' }, [
         h('header', { class: 'knowledge-builder-header' }, [
-          h('div', [h('p', { class: 'knowledge-eyebrow' }, 'Question set builder'), h('h2', 'One set. Three ways to learn.'),
+          h('div', [h('h2', 'Build knowledge set'),
             h('p', 'Add questions, then use them to study or test yourself.')]),
           h('div', { class: 'knowledge-actions' }, [
             h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel') }, 'Cancel'),
-            h('button', { type: 'button', class: 'card-primary-button', disabled: !name.value.trim(),
-              onClick: () => emit('save', name.value.trim(), questions.value.map((entry) => ({ ...entry, choices: [...entry.choices] }))) },
+            h('button', { type: 'button', class: 'card-primary-button', disabled: !name.value.trim() || invalid.value >= 0 || Boolean(optionsProblem.value),
+              onClick: save },
             props.item ? 'Save questions' : 'Create knowledge set'),
           ]),
         ]),
@@ -58,14 +82,21 @@ export const CheckBuilder = defineComponent({
         h('label', { class: 'knowledge-field' }, ['Set name', h('input', {
           value: name.value, maxlength: MAX_NAME_LENGTH, onInput: (event: Event) => { name.value = inputValue(event); },
         })]),
-        h('div', { class: 'knowledge-builder-layout' }, [
+        h('div', { class: 'knowledge-builder-tabs', role: 'group', 'aria-label': 'Builder pages' }, ['questions', 'options'].map(page => h('button', {
+          type: 'button', class: 'quiet-button', 'aria-pressed': tab.value === page,
+          onClick: () => { if (canLeaveQuestion()) tab.value = page as 'questions' | 'options'; },
+        }, page === 'questions' ? 'Questions' : 'Set options'))),
+        invalid.value >= 0 ? h('p', { class: 'knowledge-message', role: 'status' }, `Question ${invalid.value + 1}: ${questionProblem(questions.value[invalid.value]!)}`) : null,
+        message.value ? h('p', { class: 'knowledge-message', role: 'alert' }, message.value) : null,
+        optionsProblem.value ? h('p', { class: 'knowledge-message', role: 'alert' }, optionsProblem.value) : null,
+        tab.value === 'options' ? h(SetOptionsEditor, { options: options.value }) : h('div', { class: 'knowledge-builder-layout' }, [
           h('aside', { class: 'knowledge-question-list', 'aria-label': 'Questions' }, [
             h('div', { class: 'knowledge-builder-header' }, [h('h3', `Questions (${questions.value.length})`),
               h('button', { type: 'button', class: 'icon-button', title: 'Add question', 'aria-label': 'Add question',
                 disabled: questions.value.length >= MAX_QUESTIONS, onClick: addQuestion }, [h(Icon, { name: 'plus' })])]),
             ...questions.value.map((entry, index) => h('button', { key: entry.id, type: 'button',
               class: ['knowledge-question-row', { 'is-selected': index === selected.value }],
-              'aria-pressed': index === selected.value, onClick: () => { selected.value = index; } },
+              'aria-pressed': index === selected.value, onClick: () => { if (index === selected.value || canLeaveQuestion()) selected.value = index; } },
             `${index + 1}. ${entry.prompt.trim() || 'Untitled question'}`)),
             !questions.value.length ? h('p', { class: 'knowledge-muted' }, 'Add your first question.') : null,
           ]),
@@ -74,7 +105,7 @@ export const CheckBuilder = defineComponent({
               h('div', { class: 'knowledge-actions' }, [
                 ...([-1, 1] as const).map((direction) => h('button', { type: 'button', class: 'quiet-button',
                   disabled: direction < 0 ? selected.value === 0 : selected.value === questions.value.length - 1,
-                  onClick: () => { const index = selected.value; questions.value.splice(index, 1);
+                  onClick: () => { if (!canLeaveQuestion()) return; const index = selected.value; questions.value.splice(index, 1);
                     questions.value.splice(index + direction, 0, question); selected.value += direction; } }, direction < 0 ? 'Move up' : 'Move down')),
                 h('button', { type: 'button', class: 'icon-button delete-button', 'aria-label': 'Delete question', title: 'Delete question',
                   onClick: () => { if (question.prompt.trim() || question.explanation.trim() ||
@@ -103,7 +134,7 @@ export const CheckBuilder = defineComponent({
                 onClick: () => question.choices.push('') }, 'Add choice'),
             ]) : question.type === 'true-false' ? h('label', { class: 'knowledge-field' }, ['Correct answer', h('select', {
               value: question.answer, onChange: (event: Event) => { question.answer = inputValue(event); },
-            }, ['True', 'False'].map((answer) => h('option', { value: answer }, answer)))]) : textField('Expected answer', 'answer', question),
+            }, [h('option', { value: '', disabled: true }, 'Select the correct answer'), ...['True', 'False'].map((answer) => h('option', { value: answer }, answer))])]) : textField('Expected answer', 'answer', question),
             textField('Explanation (optional)', 'explanation', question),
           ]) : h('div', { class: 'knowledge-question-editor knowledge-builder-empty' }, [h(Icon, { name: 'cards' }),
             h('h3', 'Add a question.'), h('button', { type: 'button', class: 'card-primary-button', onClick: addQuestion }, 'Add question')]),
