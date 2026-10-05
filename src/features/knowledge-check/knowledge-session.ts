@@ -2,15 +2,26 @@ import type { CheckItem } from './library-model.ts';
 import type { CheckModeId } from './check-types.ts';
 import { answerCorrect, type Question } from './question-model.ts';
 import { inputValue } from '../../core/dom.ts';
+import { setWhiteboardBlocked } from '../../core/whiteboard-access.ts';
 import { SessionIntro } from './session-intro.ts';
 import { useKnowledgeSession } from './session-state.ts';
-import { defineComponent, h, type PropType } from 'vue';
+import { defineComponent, h, onActivated, onBeforeUnmount, onDeactivated, onMounted, type PropType } from 'vue';
 
 export const KnowledgeSession = defineComponent({
   name: 'KnowledgeSession',
   props: { item: { type: Object as PropType<CheckItem>, required: true }, mode: { type: String as PropType<CheckModeId>, required: true } },
   emits: { build: () => true },
   setup(props, { emit }) {
+    const whiteboardBlockToken = Symbol('review-session-whiteboard');
+    const blocksWhiteboard = props.mode === 'quiz' || props.mode === 'test';
+    const setWhiteboardAccess = (blocked: boolean) => {
+      if (blocksWhiteboard) setWhiteboardBlocked(whiteboardBlockToken, blocked);
+    };
+    onMounted(() => setWhiteboardAccess(true));
+    onActivated(() => setWhiteboardAccess(true));
+    onDeactivated(() => setWhiteboardAccess(false));
+    onBeforeUnmount(() => setWhiteboardAccess(false));
+
     const state = useKnowledgeSession(props.item, props.mode);
     const { questions, options, position, responses, checked, revealed, hints, submitted, started, expired, ended,
       answered, score, remaining, celebrating, start, end, check, submit, tick } = state;
