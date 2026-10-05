@@ -17,6 +17,7 @@
   font-family: var(--paper-font);
 }
 .fill-blank-editor-card,
+.fill-blank-answer-key-card,
 .fill-blank-review-card {
   height: 100%;
 }
@@ -36,13 +37,11 @@
 }
 
 .fill-blank-visual-editor,
-.fill-blank-writing {
+.fill-blank-writing,
+.fill-blank-answer-key {
   --rule-spacing: 5cqw;
-  flex: 1;
   width: 100%;
   min-height: 0;
-  padding: calc(0.9cqw + var(--card-baseline)) 4cqw 1cqw 10cqw;
-  overflow: auto;
   background-color: transparent;
   background-image:
     linear-gradient(var(--paper), var(--paper)),
@@ -61,6 +60,13 @@
   font-size: var(--card-text-size);
   font-weight: 400;
   line-height: var(--rule-spacing);
+}
+
+.fill-blank-visual-editor,
+.fill-blank-writing {
+  flex: 1;
+  padding: calc(0.9cqw + var(--card-baseline)) 4cqw 1cqw 10cqw;
+  overflow: auto;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
@@ -78,24 +84,90 @@
   color: var(--text-secondary);
   pointer-events: none;
 }
+
+/* Authored blanks are atomic tokens: the answer is stored internally while
+   the prompt only shows a numbered underline. */
+.fill-blank-author-blank,
+.fill-blank-review-blank {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.14em;
+  margin: 0 0.14em;
+  vertical-align: baseline;
+}
 .fill-blank-author-blank {
-  padding: 0.04em 0.24em 0.1em;
+  padding: 0.06em 0.12em;
   border-radius: 4px;
+  cursor: pointer;
+  user-select: all;
+}
+.fill-blank-author-blank:hover,
+.fill-blank-author-blank.is-selected {
   background: var(--brand-tint);
-  box-shadow: inset 0 -2px var(--brand);
-  color: var(--brand-text);
-  font-weight: 650;
-  box-decoration-break: clone;
-  -webkit-box-decoration-break: clone;
+}
+.fill-blank-author-blank.is-selected {
+  box-shadow: 0 0 0 1px var(--brand);
+}
+.fill-blank-number {
+  position: relative;
+  top: 0.18em;
+  flex: 0 0 auto;
+  color: var(--text-secondary);
+  font-family: var(--paper-font);
+  font-size: 0.52em;
+  font-weight: 600;
+  line-height: 1;
+  vertical-align: sub;
+}
+.fill-blank-author-line {
+  display: inline-block;
+  width: var(--blank-width, 6ch);
+  min-width: 4ch;
+  max-width: 18ch;
+  height: 0.92em;
+  border-bottom: 2px solid var(--paper-ink);
 }
 
+/* Edit-mode back: simple numbered answer key. */
+.fill-blank-answer-key {
+  flex: 1;
+  height: 50cqw;
+  margin: 0;
+  padding: calc(0.9cqw + var(--card-baseline)) 5cqw 1cqw 10cqw;
+  overflow: auto;
+  list-style: none;
+}
+.fill-blank-answer-key li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.8em;
+  min-height: var(--rule-spacing);
+}
+.fill-blank-answer-key-number {
+  flex: 0 0 2ch;
+  color: var(--text-secondary);
+  font-size: 0.72em;
+  font-weight: 650;
+  text-align: right;
+}
+.fill-blank-answer-key-empty {
+  margin: 0;
+  padding: calc(2cqw + var(--card-baseline)) 5cqw 0 10cqw;
+  color: var(--text-secondary);
+  font-family: var(--paper-font);
+  font-size: var(--card-text-size);
+}
+
+/* Review front. */
+.fill-blank-review-blank {
+  white-space: nowrap;
+}
 .fill-blank-input {
   display: inline-block;
   box-sizing: content-box;
   min-width: 4ch;
   max-width: 28ch;
   height: calc(var(--rule-spacing) - 0.7cqw);
-  margin: 0 0.18em;
   padding: 0 0.18em;
   transform: translateY(0.08em);
   border: 0;
@@ -115,26 +187,30 @@
   background: var(--brand-tint);
   box-shadow: 0 2px 0 color-mix(in srgb, var(--brand) 28%, transparent);
 }
+.fill-blank-input[readonly] {
+  cursor: default;
+}
 .fill-blank-input-preview {
   width: 7ch;
   color: var(--text-secondary);
   pointer-events: none;
 }
 
-.fill-blank-results { padding-bottom: 1.5cqw; }
-.fill-blank-review-card.is-verified {
-  animation: fill-blank-verify-card 320ms var(--ease-out);
+/* Review back after Verify. The entire card flips here; individual answers
+   then settle in with a short secondary reveal. */
+.fill-blank-results {
+  padding-bottom: 1.5cqw;
 }
 .fill-blank-result {
+  align-items: flex-start;
+}
+.fill-blank-result-copy {
   display: inline-flex;
-  position: relative;
   flex-direction: column;
   align-items: center;
   min-width: 3ch;
-  margin: 0 0.18em;
   line-height: 1.05;
-  vertical-align: middle;
-  animation: fill-blank-result-enter 220ms var(--ease-out) 80ms both;
+  animation: fill-blank-result-enter 220ms var(--ease-out) 150ms both;
 }
 .fill-blank-correct-answer {
   min-width: 100%;
@@ -159,6 +235,8 @@
   white-space: nowrap;
 }
 
+/* Three compact edit actions fit inside the same middle track used by the
+   normal Flip / Verify button without crowding Previous and Next. */
 .fill-blank-control-tools {
   justify-self: center;
   display: flex;
@@ -169,8 +247,8 @@
 .fill-blank-segment-button {
   display: grid;
   place-items: center;
-  width: 40px;
-  min-width: 40px;
+  width: 36px;
+  min-width: 36px;
   height: 36px;
   padding: 0;
   border: 1px solid var(--control-border);
@@ -179,33 +257,40 @@
   color: var(--text-color);
   box-shadow: 0 1px 2px rgb(0 0 0 / 4%);
 }
-.fill-blank-segment-button:hover {
+.fill-blank-segment-button:hover:not(:disabled) {
   border-color: var(--control-border-hover);
   background: var(--surface-hover);
 }
-.fill-blank-segment-button:active {
+.fill-blank-segment-button:active:not(:disabled) {
   background: var(--surface-pressed);
+}
+.fill-blank-segment-button:disabled {
+  color: var(--text-disabled);
+  background: var(--surface-subtle);
+  cursor: not-allowed;
 }
 .fill-blank-segment-button:focus-visible {
   outline: 2px solid var(--brand);
   outline-offset: 2px;
 }
 .fill-blank-segment-button .ui-icon {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
 }
 .fill-blank-verify-button:disabled { cursor: not-allowed; }
 
-@keyframes fill-blank-verify-card {
-  0% { transform: scale(1); }
-  45% { transform: scale(1.012); }
-  100% { transform: scale(1); }
-}
 @keyframes fill-blank-result-enter {
   from { opacity: 0; transform: translateY(0.28em) scale(0.96); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
+@container card-workspace (max-width: 380px) {
+  .fill-blank-control-tools { gap: 4px; }
+  .fill-blank-segment-button {
+    width: 32px;
+    min-width: 32px;
+  }
+}
 @media (pointer: coarse) {
   .fill-blank-segment-button {
     width: var(--control-height);
@@ -213,10 +298,6 @@
     height: var(--control-height);
   }
 }
-
 @media (prefers-reduced-motion: reduce) {
-  .fill-blank-review-card.is-verified,
-  .fill-blank-result {
-    animation: none;
-  }
+  .fill-blank-result-copy { animation: none; }
 }
