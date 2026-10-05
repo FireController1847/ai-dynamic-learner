@@ -16,6 +16,7 @@ export const FillBlankPaper = defineComponent({
     responses: { type: Array as PropType<string[]>, required: true },
     verified: Boolean,
     side: { type: String as PropType<'front' | 'back'>, default: 'front' },
+    resultReviewIndex: { type: Number as PropType<number | null>, default: null },
   },
   emits: {
     'update-response': (_index: number, _value: string) => true,
@@ -105,14 +106,23 @@ export const FillBlankPaper = defineComponent({
 
           const response = props.responses[segment.index] ?? '';
           const correct = isFillBlankAnswerCorrect(segment.answer, response);
+          const reviewing = props.resultReviewIndex === segment.index;
           return h('span', {
             key: `result-${segment.index}`,
-            class: ['fill-blank-review-blank', 'fill-blank-result', { 'is-correct': correct, 'is-incorrect': !correct }],
+            class: ['fill-blank-review-blank', 'fill-blank-result', {
+              'is-correct': correct,
+              'is-incorrect': !correct,
+              'is-reviewing-result': reviewing,
+            }],
           }, [
             blankNumber(segment.index),
             h('span', { class: 'fill-blank-result-copy' }, [
               h('span', { class: 'fill-blank-correct-answer' }, segment.answer),
               !correct ? h('span', { class: 'fill-blank-wrong-answer' }, response) : null,
+              reviewing && correct ? h('span', { class: 'fill-blank-correct-effect', 'aria-hidden': 'true' },
+                Array.from({ length: 8 }, (_, spark) => h('span', {
+                  class: `fill-blank-correct-spark fill-blank-correct-spark-${spark + 1}`,
+                }, '✦'))) : null,
             ]),
           ]);
         }))
