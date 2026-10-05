@@ -69,7 +69,6 @@ export const FillBlankPaper = defineComponent({
         'aria-hidden': props.side !== 'back',
       }, [
         h('div', { class: 'card-face-heading fill-blank-back-heading' }, [
-          h('span', { class: 'card-face-side' }, 'Verified'),
           h('span', { class: 'card-face-number', 'aria-hidden': 'true' }, String(props.position).padStart(2, '0')),
         ]),
         h('div', {
