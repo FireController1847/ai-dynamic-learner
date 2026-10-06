@@ -185,6 +185,27 @@ function answersMatchMorphology(answer: string, response: string): boolean {
     expected.every((word, index) => morphologyEquivalentWord(word, submitted[index]!));
 }
 
+interface SimpleCoordination {
+  connector: 'and' | 'or';
+  left: string;
+  right: string;
+}
+
+function simpleCoordination(value: string): SimpleCoordination | null {
+  const normalized = normalizeAnswer(value);
+  const matches = [...normalized.matchAll(/\s+(and|or)\s+/g)];
+  if (matches.length !== 1) return null;
+
+  const match = matches[0]!;
+  const connector = match[1];
+  if (connector !== 'and' && connector !== 'or') return null;
+
+  const start = match.index ?? 0;
+  const left = normalized.slice(0, start).trim();
+  const right = normalized.slice(start + match[0].length).trim();
+  return left && right ? { connector, left, right } : null;
+}
+
 function inSemanticFamily(word: string, family: readonly string[]): boolean {
   return family.some((member) => morphologyEquivalentWord(word, member));
 }
@@ -221,14 +242,12 @@ function semanticConfidence(answer: string, response: string): number {
   return semanticSubstitution ? confidence : 0;
 }
 
-export function evaluateAnswer(
+function evaluateAnswerInternal(
   answer: string,
   response: string,
-  options: AnswerMatchOptions = {},
+  strictness: AnswerStrictness,
+  allowCoordination: boolean,
 ): AnswerMatchResult {
-  const strictness = options.strictness ?? DEFAULT_ANSWER_STRICTNESS;
-  if (!isAnswerStrictness(strictness)) throw new RangeError('Answer strictness must be an integer from 1 through 4.');
-
   const expected = normalizeAnswer(answer);
   const submitted = normalizeAnswer(response);
   if (expected === submitted) {
@@ -239,6 +258,36 @@ export function evaluateAnswer(
 
   if (strictness >= 3 && answersMatchMorphology(expected, submitted)) {
     return { correct: true, reason: 'linguistic', similarity, confidence: 0.98 };
+  }
+
+  if (strictness >= 3 && allowCoordination) {
+    const expectedCoordination = simpleCoordination(expected);
+    const submittedCoordination = simpleCoordination(submitted);
+    if (expectedCoordination && submittedCoordination &&
+        expectedCoordination.connector === submittedCoordination.connector) {
+      const left = evaluateAnswerInternal(
+        expectedCoordination.left,
+        submittedCoordination.right,
+        strictness,
+        false,
+      );
+      const right = evaluateAnswerInternal(
+        expectedCoordination.right,
+        submittedCoordination.left,
+        strictness,
+        false,
+      );
+      if (left.correct && right.correct) {
+        return {
+          correct: true,
+          reason: strictness >= 4 && (left.reason === 'semantic' || right.reason === 'semantic')
+            ? 'semantic'
+            : 'linguistic',
+          similarity,
+          confidence: Math.min(left.confidence, right.confidence),
+        };
+      }
+    }
   }
 
   if (strictness >= 2 && similarity >= similarityThreshold(expected.length)) {
@@ -253,6 +302,16 @@ export function evaluateAnswer(
   }
 
   return { correct: false, reason: 'incorrect', similarity, confidence: 0 };
+}
+
+export function evaluateAnswer(
+  answer: string,
+  response: string,
+  options: AnswerMatchOptions = {},
+): AnswerMatchResult {
+  const strictness = options.strictness ?? DEFAULT_ANSWER_STRICTNESS;
+  if (!isAnswerStrictness(strictness)) throw new RangeError('Answer strictness must be an integer from 1 through 4.');
+  return evaluateAnswerInternal(answer, response, strictness, true);
 }
 
 export function isAnswerCorrect(

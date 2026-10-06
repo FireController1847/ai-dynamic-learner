@@ -48,3 +48,24 @@ test('higher levels include all lower-level behavior', () => {
     assert.equal(isAnswerCorrect('person', 'people', { strictness }), true);
   }
 });
+
+test('levels 3 and 4 accept reversed simple and/or coordination', () => {
+  for (const strictness of [3, 4] as const) {
+    assert.equal(isAnswerCorrect('alpha and beta', 'beta and alpha', { strictness }), true);
+    assert.equal(isAnswerCorrect('alpha or beta', 'beta or alpha', { strictness }), true);
+  }
+  assert.equal(isAnswerCorrect('alpha and beta', 'beta and alpha', { strictness: 2 }), false);
+  assert.equal(isAnswerCorrect('alpha or beta', 'beta or alpha', { strictness: 2 }), false);
+});
+
+test('reversed coordination keeps connectors and terms significant', () => {
+  assert.equal(isAnswerCorrect('alpha and beta', 'beta or alpha', { strictness: 4 }), false);
+  assert.equal(isAnswerCorrect('union and intersection', 'intersection and union', { strictness: 4 }), true);
+  assert.equal(isAnswerCorrect('union and intersection', 'difference and union', { strictness: 4 }), false);
+});
+
+test('reversed coordination uses the active linguistic and semantic layers per side', () => {
+  assert.equal(isAnswerCorrect('child and person', 'people and children', { strictness: 3 }), true);
+  assert.equal(isAnswerCorrect('union and begin', 'started and combined', { strictness: 4 }), true);
+  assert.equal(isAnswerCorrect('union or begin', 'started or intersection', { strictness: 4 }), false);
+});
