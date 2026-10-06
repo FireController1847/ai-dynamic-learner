@@ -34,7 +34,7 @@ Each feature owns its saved model and runtime validation:
 
 - Notebook: `src/features/notebook/library-model.ts` and document-type validators.
 - Todo List: `src/features/todo-list/library-model.ts` / task model.
-- Index Cards: `src/features/index-cards/tree-model.ts` / card and display models.
+- Index Cards: `src/features/index-cards/tree-model.ts` / card and display models. Fill-in-the-Blanks sets may persist `fillBlank.answerStrictness` as level 1–4; older sets without it normalize to level 4.
 - Word Search: `src/features/word-search/library-model.ts` plus puzzle/game/display models.
 - Crossword: `src/features/crossword/library-model.ts` plus puzzle/game/display models.
 - Study Guide: `src/features/study-guide/library-model.ts`.

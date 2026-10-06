@@ -16,7 +16,7 @@ Use this as a starting-file index, not a feature specification. Follow imports o
 | Delete confirmation | `src/components/delete-confirmation.ts`, `src/styles/delete-confirmation.css` |
 | Shared tree behavior | `src/core/tree.ts` plus the calling feature model |
 | IDs | `src/core/ids.ts` |
-| Answer matching / morphology | `src/core/answer-matching.ts` |
+| Answer matching / morphology / semantics | `packages/@dynamic-learner/answer-matching/`; `src/core/answer-matching.ts` is the legacy-behavior adapter |
 | Fill-in-the-blanks parsing | `src/core/fill-blank.ts` |
 | Leave warnings | `src/core/leave-guards.ts` |
 | Workspace save/load/backups | `src/app/workspace.ts`, `workspace-format.ts` |
