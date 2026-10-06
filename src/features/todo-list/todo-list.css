@@ -152,6 +152,7 @@
   100% { top: calc(100% + 16px); opacity: 0; transform: translateX(var(--party-drift)) rotate(var(--party-turn)) scale(1); }
 }
 .todo-task-rows { list-style: none; padding: 0; margin: 0; }
+.todo-section-spacer { height: var(--todo-rule-spacing); }
 .todo-task-row { position: relative; display: grid; grid-template-columns: var(--todo-margin-width) minmax(0, 1fr); align-items: start; min-height: var(--todo-rule-spacing); }
 .todo-task-margin { position: relative; display: flex; justify-content: flex-end; align-items: center; gap: 2px; height: var(--todo-rule-spacing); padding: 0 10px 0 4px; transform: translateY(var(--todo-text-offset)); }
 .todo-section-priority-area { position: absolute; top: 0; left: 4px; width: calc(var(--todo-margin-width) - 54px); display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 1; transform: translateY(var(--todo-text-offset)); }

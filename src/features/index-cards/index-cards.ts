@@ -2,6 +2,7 @@ import type { DirectoryTreeHandle } from './directory-tree.ts';
 import type { LibraryItem, SetTarget } from './tree-model.ts';
 import type { SetModeId } from './set-modes.ts';
 interface CreationTarget extends SetTarget { destination: string }
+interface CardSetHandle { focusCardListToggle(): void }
 import { addTutorialActionListener, type TutorialRequest } from '../../../packages/tips/src/index.ts';
 import type { IndexCards as FeatureModel } from './tree-model.ts';
 import { inputValue } from '../../core/dom.ts';
@@ -47,6 +48,7 @@ export const IndexCards = defineComponent({
     const overlayQuery = window.matchMedia('(max-width: 700px), (max-width: 1100px) and (pointer: coarse)');
     const libraryOverlay = ref(overlayQuery.matches);
     const libraryCollapsed = ref(overlayQuery.matches && selectedId.value !== null);
+    const cardListCollapsed = ref(false);
     const cardListWidth = ref(readNumberPreference(CARD_LIST_WIDTH_KEY));
     const layout = ref<HTMLElement | null>(null);
     const {
@@ -77,7 +79,9 @@ export const IndexCards = defineComponent({
     overlayQuery.addEventListener('change', updateLibraryLayout);
     onBeforeUnmount(() => overlayQuery.removeEventListener('change', updateLibraryLayout));
     const tree = ref<DirectoryTreeHandle | null>(null);
+    const activeSet = ref<CardSetHandle | null>(null);
     const showLibraryButton = ref<HTMLButtonElement | null>(null);
+    const showCardsButton = ref<HTMLButtonElement | null>(null);
     const message = ref('');
     const settingsOpen = ref(false);
     const tutorialReviewSetId = ref<string | null>(null);
@@ -132,6 +136,14 @@ export const IndexCards = defineComponent({
       await nextTick();
       if (collapsed) showLibraryButton.value?.focus();
       else tree.value?.focusToggle();
+    }
+
+    async function setCardListCollapsed(collapsed: boolean) {
+      if (cardListCollapsed.value === collapsed) return;
+      cardListCollapsed.value = collapsed;
+      await nextTick();
+      if (collapsed) showCardsButton.value?.focus();
+      else activeSet.value?.focusCardListToggle();
     }
 
     function beginSetCreation() {
@@ -300,6 +312,7 @@ export const IndexCards = defineComponent({
         class: ['index-cards-layout', {
           'library-collapsed': libraryCollapsed.value,
           'library-resizing': libraryResizing.value,
+          'cards-collapsed': cardListCollapsed.value && selection.value?.item.kind === 'set',
         }],
         style: libraryWidth.value === null ? null : { '--library-width': `${libraryWidth.value}px` },
       }, [
@@ -309,6 +322,12 @@ export const IndexCards = defineComponent({
           'aria-expanded': false, 'aria-controls': 'index-cards-library',
           onClick: () => setLibraryCollapsed(false),
         }, [h(Icon, { name: 'panel-open' })]) : null,
+        !creationTarget.value && selection.value?.item.kind === 'set' && cardListCollapsed.value ? h('button', {
+          ref: showCardsButton, type: 'button', class: 'icon-button card-list-floating-toggle',
+          title: 'Show cards', 'aria-label': 'Show cards',
+          'aria-expanded': false, 'aria-controls': 'index-cards-card-list',
+          onClick: () => setCardListCollapsed(false),
+        }, [h(Icon, { name: 'panel-close' })]) : null,
         libraryOverlay.value && !libraryCollapsed.value ? h('button', {
           type: 'button', class: 'library-scrim', 'aria-label': 'Close library',
           onClick: () => setLibraryCollapsed(true),
@@ -363,18 +382,22 @@ export const IndexCards = defineComponent({
             ? selectedMode.value === 'fill-in-the-blanks'
               ? h(FillBlankSet, {
                 key: selection.value.item.id,
+                ref: activeSet,
                 set: selection.value.item,
                 totalCards: totalCards.value,
-                cardListWidth: cardListWidth.value,
+                cardListWidth: cardListWidth.value, cardListCollapsed: cardListCollapsed.value,
+                onToggleCardList: () => setCardListCollapsed(true),
                 tutorialReview: tutorialFillBlankReviewSetId.value === selection.value.item.id,
                 onResizeCardList: setCardListWidth,
                 onResetCardList: resetCardListWidth,
               })
               : h(CardSet, {
                 key: selection.value.item.id,
+                ref: activeSet,
                 set: selection.value.item,
                 totalCards: totalCards.value,
-                cardListWidth: cardListWidth.value,
+                cardListWidth: cardListWidth.value, cardListCollapsed: cardListCollapsed.value,
+                onToggleCardList: () => setCardListCollapsed(true),
                 tutorialReview: tutorialReviewSetId.value === selection.value.item.id,
                 onResizeCardList: setCardListWidth,
                 onResetCardList: resetCardListWidth,

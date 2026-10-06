@@ -56,16 +56,18 @@
 .library-resizer:hover::after,
 .library-resizer:focus-visible::after,
 .library-resizing .library-resizer::after { background: var(--brand); }
-.library-floating-toggle {
+.library-floating-toggle, .card-list-floating-toggle {
   position: absolute;
-  left: 8px;
   top: 8px;
   z-index: 3;
   border-color: var(--control-border);
   background: var(--page-background);
   box-shadow: 0 1px 2px rgb(0 0 0 / 6%);
 }
+.library-floating-toggle { left: 8px; }
+.card-list-floating-toggle { right: 8px; }
 .library-collapsed .item-heading { padding-left: calc(var(--control-height) + 24px); }
+.cards-collapsed .item-heading { padding-right: calc(var(--control-height) + 24px); }
 .directory-toolbar, .card-list-toolbar {
   display: flex;
   flex-shrink: 0;
