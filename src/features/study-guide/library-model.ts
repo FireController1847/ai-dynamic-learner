@@ -108,6 +108,26 @@ function mapData(value: unknown, ids: Set<string>): asserts value is MapGuideDat
   if (value.topics.length && value.startTopicId === null) value.startTopicId = value.topics[0].id;
 
   const pairs = new Set<string>();
+  const acceptedConnections: MapConnection[] = [];
+  const adjacency = new Map<string, Set<string>>();
+  for (const topicId of topicIds) adjacency.set(topicId, new Set());
+
+  function alreadyConnected(first: string, second: string): boolean {
+    const reached = new Set<string>([first]);
+    const pending = [first];
+    while (pending.length) {
+      const current = pending.shift();
+      if (!current) break;
+      for (const neighbor of adjacency.get(current) ?? []) {
+        if (neighbor === second) return true;
+        if (reached.has(neighbor)) continue;
+        reached.add(neighbor);
+        pending.push(neighbor);
+      }
+    }
+    return false;
+  }
+
   for (const connection of value.connections) {
     if (!isRecord(connection) || !isValidId(connection.id) || ids.has(connection.id) ||
         Object.keys(connection).some(key => !['id','from','to'].includes(key)) ||
@@ -117,8 +137,17 @@ function mapData(value: unknown, ids: Set<string>): asserts value is MapGuideDat
     }
     const pair = [connection.from, connection.to].sort().join(':');
     if (pairs.has(pair)) throw new Error('A Study Guide map contains a duplicate connection.');
-    pairs.add(pair); ids.add(connection.id);
+    pairs.add(pair);
+    ids.add(connection.id);
+
+    // v0.3.0 briefly allowed arbitrary undirected graphs. Keep those maps loadable
+    // by preserving saved connection order and dropping only edges that close a loop.
+    if (alreadyConnected(connection.from, connection.to)) continue;
+    acceptedConnections.push(connection as unknown as MapConnection);
+    adjacency.get(connection.from)?.add(connection.to);
+    adjacency.get(connection.to)?.add(connection.from);
   }
+  value.connections = acceptedConnections;
 }
 
 export function validateStudyGuide(value: unknown): asserts value is StudyGuideModel {

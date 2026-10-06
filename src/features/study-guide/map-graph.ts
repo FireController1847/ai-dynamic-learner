@@ -24,10 +24,25 @@ export function connectionBetween(data: MapGuideData, first: string, second: str
     (connection.from === second && connection.to === first)) ?? null;
 }
 
+export function connectionWouldCreateCycle(data: MapGuideData, first: string, second: string): boolean {
+  if (first === second) return true;
+  const reached = new Set<string>([first]);
+  const pending = [first];
+  while (pending.length) {
+    const current = pending.shift();
+    if (!current) break;
+    for (const neighbor of connectedTopicIds(data, current)) {
+      if (neighbor === second) return true;
+      if (reached.has(neighbor)) continue;
+      reached.add(neighbor);
+      pending.push(neighbor);
+    }
+  }
+  return false;
+}
+
 export function connectTopics(data: MapGuideData, first: string, second: string): MapConnection | null {
-  if (first === second || !topicById(data, first) || !topicById(data, second)) return null;
-  const existing = connectionBetween(data, first, second);
-  if (existing) return existing;
+  if (!topicById(data, first) || !topicById(data, second) || connectionWouldCreateCycle(data, first, second)) return null;
   const connection = { id: createId(), from: first, to: second };
   data.connections.push(connection);
   return connection;
@@ -52,6 +67,12 @@ export function setStartTopic(data: MapGuideData, topicId: string): boolean {
 }
 
 export function mapStudyProblem(data: MapGuideData): string | null {
+  for (const connection of data.connections) {
+    const without = { ...data, connections: data.connections.filter(entry => entry.id !== connection.id) };
+    if (!connectionWouldCreateCycle(without, connection.from, connection.to)) continue;
+    return 'Remove the connection loop before studying.';
+  }
+
   const start = startTopic(data);
   if (!start) return 'Add at least one topic before studying.';
   if (data.topics.length === 1) return null;
