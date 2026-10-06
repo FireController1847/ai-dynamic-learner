@@ -148,7 +148,7 @@ export const CheckBuilder = defineComponent({
           ]) : h('div', { class: 'knowledge-question-editor knowledge-builder-empty' }, [h(Icon, { name: 'cards' }),
             h('h3', 'Add a question.'), h('button', { type: 'button', class: 'card-primary-button', onClick: addQuestion }, 'Add question')]),
         ]),
-        pendingDelete.value ? h(DeleteConfirmation, { itemName: pendingDelete.value.prompt.trim() || 'Untitled question', itemLabel: 'question',
+        pendingDelete.value ? h(DeleteConfirmation, { itemName: questionDisplayPrompt(pendingDelete.value).trim() || 'Untitled question', itemLabel: 'question',
           detail: 'The question and its answer will be removed from this set.', confirmLabel: 'Delete question',
           onCancel: () => { pendingDelete.value = null; }, onConfirm: () => { if (pendingDelete.value) removeQuestion(pendingDelete.value); } }) : null,
       ]);
