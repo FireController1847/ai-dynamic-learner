@@ -1,6 +1,7 @@
 .whiteboard-window {
   position: fixed;
   z-index: 40;
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
   min-width: 320px;
@@ -16,6 +17,10 @@
 
 .whiteboard-window[hidden] { display: none; }
 .whiteboard-window:focus { outline: none; }
+.whiteboard-window.is-snapped {
+  min-width: 0;
+  min-height: 0;
+}
 
 .whiteboard-titlebar {
   display: flex;
@@ -67,18 +72,23 @@
 .whiteboard-toolbar {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 8px;
+  min-height: 52px;
   margin-bottom: 10px;
   padding: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
   background: var(--surface-subtle);
+  scrollbar-width: thin;
 }
 
 .whiteboard-tool-button,
 .whiteboard-clear {
   display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: center;
   gap: 7px;
@@ -110,33 +120,9 @@
   height: 17px;
 }
 
-.whiteboard-eraser-tool {
-  min-height: 42px;
-  padding-inline: 8px 11px;
-}
-
-.whiteboard-eraser-block {
-  display: grid;
-  place-items: center;
-  width: 46px;
-  height: 28px;
-  border: 1px solid #858585;
-  border-radius: 5px;
-  color: #323232;
-  background:
-    linear-gradient(to bottom, #e6e6e6 0 44%, #747474 45% 100%);
-  box-shadow:
-    inset 0 1px rgb(255 255 255 / 0.75),
-    0 1px 2px rgb(0 0 0 / 0.16);
-}
-
-.whiteboard-eraser-block .ui-icon {
-  width: 21px;
-  height: 21px;
-}
-
 .whiteboard-colors {
   display: flex;
+  flex: 0 0 auto;
   gap: 5px;
   padding-inline: 2px;
 }
@@ -162,6 +148,7 @@
 
 .whiteboard-size {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: 5px;
   color: var(--text-secondary);
@@ -182,6 +169,7 @@
 }
 
 .whiteboard-input-hint {
+  flex: 0 0 auto;
   margin-left: auto;
   color: var(--text-secondary);
   font-size: 11px;
@@ -245,6 +233,42 @@
   height: 100%;
   cursor: crosshair;
   touch-action: none;
+}
+
+.whiteboard-canvas.is-eraser {
+  cursor: none;
+}
+
+.whiteboard-eraser-cursor {
+  position: absolute;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgb(45 45 45 / 0.55);
+  border-radius: 5px;
+  color: #282828;
+  background: rgb(247 247 247 / 0.9);
+  box-shadow: 0 2px 5px rgb(0 0 0 / 0.16);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+.whiteboard-eraser-cursor .ui-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.whiteboard-snap-preview {
+  position: fixed;
+  z-index: -1;
+  border: 2px solid var(--brand);
+  border-radius: calc(var(--radius) * 2);
+  background: var(--brand-tint);
+  box-shadow: inset 0 0 0 1px var(--page-background);
+  opacity: 0.6;
+  pointer-events: none;
 }
 
 .whiteboard-confirm-layer {
