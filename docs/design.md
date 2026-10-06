@@ -92,7 +92,7 @@ Manually create a connected map with at least one fork and one dead end, choose 
 
 ### Review session splash screens
 
-Use **knowledge set** for a Review library entry and **question** for an individual item inside it. Keep this terminology consistent in visible labels, accessibility text, confirmations, tips, metadata, and documentation.
+Use **knowledge set** for a Review library entry and **question** for an individual item inside it. Keep this terminology consistent in visible labels, accessibility text, confirmations, tips, metadata, and documentation. The empty/group Review workspace presents New knowledge set as the primary action and Import knowledge set immediately to its right as a quieter outlined secondary action. The library toolbar mirrors Import knowledge set with an upload icon immediately to the right of New knowledge set; both import entry points open the same destination-aware import workspace.
 
 Fill in the Blanks is a native Review question type. Authoring uses a normal editable question surface: select text and turn it into a numbered blank, or select a blank and restore its answer text; internal blank tokens are never shown to the learner. Study, Quiz, and Test render numbered inline inputs. Checking uses the same common-inflection and fuzzy spelling matcher as Index Cards for each blank; unanswered blanks are incorrect, and the Review question is scored correct only when every blank is correct. Study permits correction and retry after checking, Quiz locks the checked response, and Test keeps feedback until submission.
 
