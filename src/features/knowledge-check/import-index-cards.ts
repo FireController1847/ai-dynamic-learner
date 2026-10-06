@@ -2,7 +2,7 @@ import type { Card, CardSide } from '../index-cards/card-model.ts';
 import type { CardSet, IndexCards, LibraryItem as IndexCardLibraryItem } from '../index-cards/tree-model.ts';
 import { DEFAULT_SET_MODE, type SetModeId } from '../index-cards/set-modes.ts';
 import { parseFillBlankTemplate } from '../../core/fill-blank.ts';
-import { createQuestion, MAX_QUESTIONS, type Question } from './question-model.ts';
+import { createQuestion, MAX_QUESTIONS, MAX_TEXT, type Question } from './question-model.ts';
 
 export type IndexCardImportMapping = 'front-to-back' | 'back-to-front' | 'preserve-blanks';
 
@@ -68,7 +68,17 @@ export function indexCardMappings(set: CardSet | null): readonly { id: IndexCard
 function sidePrompt(card: Card, side: CardSide): string {
   const title = (side === 'front' ? card.title : card.backTitle)?.trim() ?? '';
   const body = card[side].trim();
-  return [title, body].filter(Boolean).join('\n\n');
+  if (!body) return title;
+  const combined = [title, body].filter(Boolean).join('\n\n');
+  return combined.length <= MAX_TEXT ? combined : body;
+}
+
+function optionalExplanation(title: string | undefined, body: string): string {
+  const heading = title?.trim() ?? '';
+  const text = body.trim();
+  const combined = [heading, text].filter(Boolean).join('\n\n');
+  if (combined.length <= MAX_TEXT) return combined;
+  return text.length <= MAX_TEXT ? text : '';
 }
 
 function answerForSide(card: Card, side: CardSide): string {
@@ -95,9 +105,8 @@ function convertFlashCard(card: Card, mapping: IndexCardImportMapping): Question
 function convertFillBlankCard(card: Card): Question | null {
   if (!parseFillBlankTemplate(card.front).answers.length) return null;
   const question = createQuestion('fill-in-the-blanks');
-  const title = card.title?.trim() ?? '';
-  question.prompt = [title, card.front].filter(Boolean).join('\n\n');
-  question.explanation = [card.backTitle?.trim(), card.back.trim()].filter(Boolean).join('\n\n');
+  question.prompt = card.front.trim();
+  question.explanation = optionalExplanation(card.backTitle, card.back);
   return question;
 }
 

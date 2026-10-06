@@ -51,7 +51,9 @@ export const ImportKnowledgeSet = defineComponent({
     const cardSetOptions = computed(() => indexCardSetOptions(props.indexCards));
 
     function sourceReady(item: ImportPlanItem): boolean {
-      return item.sourceFeatureId === 'index-cards' && Boolean(findIndexCardSet(props.indexCards.items, item.sourceItemId));
+      if (item.sourceFeatureId !== 'index-cards') return false;
+      const set = findIndexCardSet(props.indexCards.items, item.sourceItemId);
+      return Boolean(set && importIndexCardSet(set, item.mappingId as IndexCardImportMapping).length);
     }
 
     function questionsFor(item: ImportPlanItem): Question[] {
