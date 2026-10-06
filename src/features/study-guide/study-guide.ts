@@ -1,4 +1,4 @@
-import { computed,defineComponent,h,nextTick,onBeforeUnmount,ref,type PropType } from 'vue';
+import { computed,defineComponent,h,nextTick,onBeforeUnmount,onDeactivated,ref,type PropType } from 'vue';
 import { inputValue } from '../../core/dom.ts';
 import { Icon } from '../../components/icon.ts';
 import { LibraryEmptyState } from '../../components/library-empty-state.ts';
@@ -9,6 +9,7 @@ import { canMove,findItem,firstEntry,groupOptions,insertGuide,moveItem,type Guid
 import { StudyGuideModePicker } from './mode-picker.ts';
 import { StudyGuideListEditor } from './list-editor.ts';
 import { StudyGuideMapEditor } from './map-editor.ts';
+import { StudyGuideMapStudy } from './map-study.ts';
 const MIN_LIBRARY_WIDTH=248, LIBRARY_WIDTH_KEY='dynamic-learner.ui.study-guide.library-width';
 export const StudyGuide=defineComponent({
   name:'StudyGuide',
@@ -18,15 +19,15 @@ export const StudyGuide=defineComponent({
     const selectedId=useLibrarySelection({firstId:()=>firstEntry(props.model.items)?.id??null,hasItem:id=>findItem(props.model.items,id)!==null,enabled:()=>creationTarget.value===null,onAutoSelect:id=>library.value?.reveal(id)});
     const selection=computed(()=>findItem(props.model.items,selectedId.value));
     const query=window.matchMedia('(max-width: 700px), (max-width: 1100px) and (pointer: coarse)');
-    const overlay=ref(query.matches),collapsed=ref(query.matches&&selectedId.value!==null),layout=ref<HTMLElement|null>(null),library=ref<StudyGuideLibraryHandle|null>(null),showLibrary=ref<HTMLButtonElement|null>(null),message=ref('');
+    const overlay=ref(query.matches),collapsed=ref(query.matches&&selectedId.value!==null),layout=ref<HTMLElement|null>(null),library=ref<StudyGuideLibraryHandle|null>(null),showLibrary=ref<HTMLButtonElement|null>(null),message=ref(''),studyingMapId=ref<string|null>(null);
     const panel=usePersistedPanelResize({preferenceKey:LIBRARY_WIDTH_KEY,container:layout,panelSelector:'.directory-panel',minWidth:MIN_LIBRARY_WIDTH,maxWidth:640,minRemainingWidth:320,fallbackWidth:280,disabled:()=>overlay.value||collapsed.value});
-    function media(e:MediaQueryListEvent){overlay.value=e.matches;panel.resizing.value=false;if(e.matches&&selectedId.value)collapsed.value=true;}query.addEventListener('change',media);onBeforeUnmount(()=>query.removeEventListener('change',media));
+    function media(e:MediaQueryListEvent){overlay.value=e.matches;panel.resizing.value=false;if(e.matches&&selectedId.value)collapsed.value=true;}query.addEventListener('change',media);onBeforeUnmount(()=>query.removeEventListener('change',media));onDeactivated(()=>{studyingMapId.value=null;});
     async function setCollapsed(v:boolean){collapsed.value=v;await nextTick();if(v)showLibrary.value?.focus();else library.value?.focusToggle();}
     function target():GuideTarget{const s=selection.value;if(s?.item.kind==='group')return{parentId:s.item.id,parentName:s.item.name,selectedId:s.item.id};if(s)return{parentId:s.parentId,parentName:s.parentId?findItem(props.model.items,s.parentId)?.item.name??'Selected group':'Top level',selectedId:s.item.id};return{parentId:null,parentName:'Top level',selectedId:null};}
     function begin(){creationTarget.value=target();message.value='';if(overlay.value)collapsed.value=true;}
     async function cancel(){creationTarget.value=null;await nextTick();if(collapsed.value)showLibrary.value?.focus();else library.value?.focusNewGuide();}
     function create(mode:StudyGuideMode){if(!creationTarget.value)return;try{const item=insertGuide(props.model.items,creationTarget.value,mode);selectedId.value=item.id;creationTarget.value=null;library.value?.reveal(item.id);message.value='Created '+item.name+'.';nextTick(()=>library.value?.beginRename(item.id));}catch(error){message.value=error instanceof Error?error.message:String(error);}}
-    function select(id:string|null){selectedId.value=id;creationTarget.value=null;message.value='';}
+    function select(id:string|null){selectedId.value=id;creationTarget.value=null;studyingMapId.value=null;message.value='';}
     function moveGroup(e:Event){if(!selectedId.value||!selection.value)return;const id=inputValue(e)||null;if(moveItem(props.model.items,selectedId.value,id,'inside')){library.value?.reveal(selectedId.value);message.value='Moved '+selection.value.item.name+'.';}}
     function reorder(offset:number){if(!selection.value)return;const s=selection.value,n=s.siblings[s.index+offset];if(n&&moveItem(props.model.items,s.item.id,n.id,offset<0?'before':'after'))message.value='Moved '+s.item.name+(offset<0?' up.':' down.');}
     function organization(item:LibraryItem){if(!selection.value)return null;return h('details',{class:['item-organization',{'library-group-organization':item.kind==='group'}],open:item.kind==='group'},[
@@ -49,8 +50,12 @@ export const StudyGuide=defineComponent({
       ]);
       return h('section',{class:'study-guide-detail is-guide',inert:overlay.value&&!collapsed.value,'aria-label':'Selected study guide'},[
         h('header',{class:'item-heading study-guide-item-heading'},[h('h2',item.name),h('p',{class:'item-summary'},item.mode==='list'?'List mode':'Map mode')]),
-        item.mode==='list'?h('div',{class:'study-guide-list-workspace'},[h(StudyGuideListEditor,{data:item.data})]):h(StudyGuideMapEditor,{data:item.data}),
-        organization(item),h('p',{class:'visually-hidden',role:'status'},message.value)
+        item.mode==='list'
+          ? h('div',{class:'study-guide-list-workspace'},[h(StudyGuideListEditor,{data:item.data})])
+          : studyingMapId.value===item.id
+            ? h(StudyGuideMapStudy,{key:'study-'+item.id,data:item.data,guideName:item.name,onEnd:()=>{studyingMapId.value=null;}})
+            : h(StudyGuideMapEditor,{data:item.data,onStudy:()=>{studyingMapId.value=item.id;}}),
+        studyingMapId.value===item.id?null:organization(item),h('p',{class:'visually-hidden',role:'status'},message.value)
       ]);
     }
     return ()=>h('section',{class:'study-guide-page','aria-label':props.title,onKeydown:(e:KeyboardEvent)=>{if(e.key==='Escape'&&overlay.value&&!collapsed.value&&!(e.target instanceof Element&&e.target.closest('dialog'))){e.preventDefault();void setCollapsed(true);}}},[
