@@ -323,17 +323,17 @@ export const ImportKnowledgeSet = defineComponent({
         ]),
       ]),
       h('p', { class: 'knowledge-muted' }, `Saved in ${props.destination}.`),
-      h('label', { class: 'knowledge-field' }, [
-        'Set name',
-        h('input', { value: name.value, maxlength: MAX_NAME_LENGTH,
-          onInput: (event: Event) => { name.value = inputValue(event); } }),
-      ]),
       h('aside', { class: 'knowledge-import-sync-note', role: 'note' }, [
         h(Icon, { name: 'duplicate' }),
         h('div', [
           h('strong', 'Importing is not synchronization.'),
           h('p', 'Review creates an independent copy. Later edits in Index Cards will not update this knowledge set, and edits here will not update the cards. Import the source again when you want a fresh copy.'),
         ]),
+      ]),
+      h('label', { class: 'knowledge-field' }, [
+        'Set name',
+        h('input', { value: name.value, maxlength: MAX_NAME_LENGTH,
+          onInput: (event: Event) => { name.value = inputValue(event); } }),
       ]),
       pickerItemId.value !== undefined
         ? h(IndexCardsImportPicker, {
