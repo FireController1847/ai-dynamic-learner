@@ -161,14 +161,15 @@ export const StudyGuideMapStudy = defineComponent({
     function backtrack() {
       const plan = backtrackPlan();
       if (!plan || travelling.value) return;
+      const { route, ancestorId } = plan;
       const duration = reducedMotion.matches ? 0 : 520;
       travelling.value = true;
 
       function step(index: number) {
-        const targetId = plan.route[index];
+        const targetId = route[index];
         if (!targetId) {
-          currentId.value = plan.ancestorId;
-          path.value = path.value.slice(0, path.value.indexOf(plan.ancestorId) + 1);
+          currentId.value = ancestorId;
+          path.value = path.value.slice(0, path.value.indexOf(ancestorId) + 1);
           travelTargetId.value = null;
           travelling.value = false;
           return;
