@@ -1,46 +1,23 @@
 # GitHub Pages
 
-The app deploys as static HTML, CSS, images, and webpack JavaScript bundles. Vue, Marked, and DOMPurify ship in the bundles; visitors do not need a runtime CDN connection. Node.js is used for development and builds, not to run the published application.
+Dynamic Learner publishes the normal webpack production build; there is no deployment branch and `dist/` is not committed.
 
-## Source and deployment strategy
+## Build
 
-Commit source, `package.json`, and `package-lock.json`. Keep `dist/` ignored. No built-output commit or dedicated deployment branch is needed: the manually dispatched `.github/workflows/deploy-pages.yml` installs locked dependencies with `npm ci`, type-checks TypeScript, runs the webpack production build, and uploads `dist/` to GitHub Pages. Each deployment builds the selected source commit, so there is no requirement to build locally before every commit. A failed install, type check, or build prevents the deployment job from running.
+`webpack.config.mts` creates Home, feature-route HTML, `404.html`, copied assets/licenses, and hashed JS/CSS bundles. `build/site-config.mts` owns base-path/site URL validation; `build/page-metadata.mts` owns canonical/social/structured metadata.
 
-Pushes and pull requests do not publish automatically. `npm start` handles local development serving, rebuilds, and live reload automatically.
+The HTML `<base>` and webpack `publicPath` must resolve to the same Pages root. Navigation uses `document.baseURI`, so direct route loads and in-app navigation work under the repository subpath.
 
-## First publication
+## Deployment
 
-1. Push the source project and lockfile, including `.github`, to the repository's default branch. The workflow must exist on that branch for its manual trigger to appear.
-2. In **Settings → Pages → Build and deployment**, choose **GitHub Actions** as the source.
-3. Open **Actions → Deploy to GitHub Pages → Run workflow**, select the source branch to publish, and run it. When deploying this migration before merging, select `migration/webpack`; the selected branch must contain the updated workflow and lockfile. The `github-pages` environment's deployment rules must permit that branch; approve the deployment if your environment requires it.
-4. Open the URL shown by the deployment job. Subsequent publications use the same manual action.
+`.github/workflows/deploy-pages.yml` is manually dispatched. It installs with `npm ci`, resolves the Pages URL/base path, runs `npm run pages:prepare`, and uploads `dist/`.
 
-The workflow uses Node.js 24, npm's lockfile cache, GitHub's built-in token, Pages artifact upload, and Pages deployment actions. No personal token or `gh-pages` branch is required. Its prepare job has read-only permissions; the deployment job has Pages and identity-token write permissions. See GitHub's [custom Pages workflow documentation](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
+Do not hand-edit generated Pages output or maintain a separate publishing branch.
 
-## Build output and paths
+## Local development
 
-`npm run pages:prepare` is an alias for `npm run build`. Webpack cleans and recreates `dist/` with hashed JavaScript/CSS bundles, images in `assets/`, third-party licenses, the project `LICENSE`, generated HTML route entry points, a 404 page, and `.nojekyll`. Repository metadata, documentation, source trees, the preview server, and workspace backups are not copied into the site artifact. Production source maps are disabled; development serves source maps in memory.
+`npm start` serves the canonical routes with live reload. Known routes missing their trailing slash redirect to the slash form; unknown routes/assets should remain 404s.
 
-The workflow reads `PAGES_BASE_PATH` and `PAGES_BASE_URL` from `actions/configure-pages`. Project sites use `/repository-name/`; user/organization sites and custom domains usually use `/`. `build/site-config.mts` validates these values and requires their paths to agree. Webpack uses that path for bundle URLs and the HTML base element. Browser navigation reads the same root from `document.baseURI`, so ordinary links, modified-click/new-tab links, images, and browser history stay under the deployed root.
+## When changing deployment
 
-Every route in `src/features/feature-definitions.ts` gets an actual `index.html`, including Notebook, Index Cards, and Word Search. `build/page-metadata.mts` supplies route-specific titles/descriptions, canonical URLs, Open Graph and Twitter metadata, and JSON-LD. The generated 404 page is marked `noindex, nofollow`. Direct links and refreshes work without a rewrite or hash router. Configure custom domains in GitHub's Pages settings before dispatching deployment.
-
-## Local use
-
-Install dependencies once with `npm ci` using Node.js 24 or newer. Run `npm start` for development at `http://127.0.0.1:3000`. Set `HOST` and `PORT` to override the address. Restart the development server after changing build configuration or feature route definitions.
-
-To inspect a production build locally, run `npm run build` and inspect the generated `dist/` contents. The normal interactive local workflow is `npm start`, which serves webpack's in-memory development build with live reload.
-
-GitHub Pages base-path behavior is supplied by the deployment workflow through `PAGES_BASE_PATH` and `PAGES_BASE_URL`; Actions provides the real values during publication.
-
-Browser storage is scoped to the origin. The default development address is unchanged, so existing local data remains accessible. A published site has separate storage from localhost; use a downloaded workspace backup to transfer data. Projects on the same Pages origin currently share the app's storage key.
-
-## Manual checklist
-
-- Start development and confirm source edits rebuild and reload the page.
-- Open Home, Notebook, Index Cards, and Word Search directly through the development server and refresh each; check Back/Forward and open-in-new-tab links.
-- Inspect icons, styles, canonical/social metadata, and the generated social image URL. Check that an unknown route returns 404 with a working Home link.
-- Try Markdown rendering, Settings, card flipping, and workspace download/upload; inspect the console and asset requests.
-- After a manual deployment, repeat the direct-route checks at the real Pages URL. Confirm ordinary pushes do not deploy and no generated files need committing.
-
-Follow the workspace's manual-verification policy unless automated builds/checks have been explicitly requested.
+Manually check Home and at least one feature by direct URL and refresh, relative assets, navigation/back-forward, the repository base path, `404.html`, metadata image URLs, and the manual Pages workflow configuration. Run build/deployment checks only when explicitly requested.

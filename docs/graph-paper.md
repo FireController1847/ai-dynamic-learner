@@ -1,79 +1,38 @@
 # Graph Paper
 
-Choose **Notebook → New document → Graph Paper** to create a blank sheet. The page title is independent of the library filename. Notes, expressions, visual drawings, measurement label choices, and the graph's center, units, and magnification save through the existing workspace watcher and travel in JSON backups.
+This file records Graph Paper invariants that are easy to break across refactors. General UI rules live in `design.md`.
 
-## Paper and coordinates
+## Model and rendering
 
-The default is portrait US Letter (8.5 × 11 inches) with white paper and quarter-inch squares, following common [commercial 4-squares-per-inch graph paper](https://rspaperproducts.com/product/loose-leaf-filler-paper-4x4-graph-ruled-80-sheets/). The page reserves a title area and white margins. Screen dimensions scale proportionally; an uncalibrated monitor does not promise literal physical inches.
+Graph Paper combines expression plots and user-drawn geometry on one saved sheet. `graph-model.ts` owns persisted data/settings; `graph-scene.ts` renders the grid, axes, curves, marks, and measurement labels; `graph-paper.ts` composes the sheet.
 
-Notebook Settings has an independent Graph Paper tab and live preview. Choose Letter or A4, white or cream paper, ¼-inch, ⅕-inch, or 5 mm squares, uniform or emphasized fifth lines, axes, and coordinate labels. Preferences apply across Graph Paper documents without changing content. Older Notebook display objects without Graph Paper preferences use defaults.
+Supported paper/ruling choices include Letter/A4 and common grid spacings. Zoom magnifies the graph inside the fixed paper viewport; it is not the same as browser zoom or units-per-square.
 
-One main square initially represents one mathematical unit. **Units / square** sets that mathematical value independently of zoom. Its up/down buttons and keyboard arrows step by 0.1, with Shift+arrow stepping by 1. Decimal addition and normalization avoid accumulating floating-point artifacts. Valid units range from 0.0001 to 10,000.
+Expressions are parsed by the bounded parser in `graph-expression.ts`; do not use `eval` or arbitrary JavaScript execution.
 
-**Zoom** magnifies the graph inside the sheet. At 200%, main squares and the distances between points are twice their 100% size; points, plots, and connections also enlarge. The sheet's margins and proportions remain fixed. Zoom never changes units per square, point coordinates, expressions, or snapping precision. The top bar displays the magnification percentage; click it to return to 100% around the current center. Reset view restores the origin and 100% magnification while preserving units per square. Ruling dimensions describe the sheet at 100% zoom. Pointer coordinates are temporary; center, units, and zoom are saved per document.
+## Tools and interaction
 
-## Expressions and drawing tools
+`graph-tools.ts` owns the tool rail/options. `graph-interaction.ts` handles pointer/keyboard drawing and contextual interaction; `graph-gestures.ts` handles pinch/two-finger pan; `graph-camera.ts` owns camera/zoom transforms; `graph-visual.ts` owns hit testing and drawing operations.
 
-Expressions and visual drawing work together on the same graph. Edit formulas in the left-side Expressions panel and use the right-side tools to add, move, or connect drawn points. Both kinds of content remain visible while editing either one and share the same coordinate view. On narrow workspaces the expression panel stacks above the sheet. Notes are below the sheet.
-
-The vertical right-side rail begins with the selected arrow tool, shown as an outlined circle on mobile/touch layouts. It is selected when the editor opens. The next tools are an arrow cross for panning and a magnifying glass for zooming, followed by point placement, connection, and erasing tools. All tools are always available. The gear opens options and measurements on the right, including snap-to-grid, snap spacing, grid subdivisions, scrubby zoom, ink, and the selected point's label/coordinates or selected connection's ink. Buttons expose accessible labels and selected states.
-
-- **Select:** click a drawn point or segment. Drag a drawn point to move it and its connected segments. Right-click a point or segment to select it and open its options and measurements; a selected item also supports the context-menu key or Shift+F10. Long-press a point with Select active for the same options on touch screens. Keyboard arrows nudge a selected point by the chosen snap spacing; Shift moves five increments. Delete/Backspace removes the selection. Blank-space touches can scroll with Select active; enlarged point targets support dragging on touch screens. Expression-generated plots are edited through their formulas in the Expressions panel.
-- **Point:** click to add a point, or drag to place it. Drag an existing point to move it.
-- **Connect:** click points in sequence to make a chain, or drag from one point to another. Clicking or dragging into empty space creates a point. A dashed line previews the next connection. Enter or Escape ends the chain. Duplicate links and self-connections are ignored.
-- **Erase:** click a point or connection to delete it. Removing a point also removes its attached segments.
-- **Pan:** drag the graph, or focus the paper and use arrows/Shift+arrows.
-- **Zoom:** click to zoom in and right-click empty grid space to zoom out through familiar percentages (25, 33, 50, 67, 75, 100, 125, 150, 200, 300, 400%). With Scrubby zoom enabled (the default), drag horizontally: right zooms in, left zooms out, using whole percentage increments. Zoom stays anchored at the initial pointer location and is bounded to 25–400%. Disable Scrubby zoom in the options to use click zoom only. Focused-paper Up/Down arrows zoom in/out around the center. Pan and point gestures use the current magnification for accurate pointer tracking. Right-clicking an existing point or segment opens its options even with Zoom active.
-
-Snap to grid is on by default. **Snap spacing** chooses whole, half, quarter, fifth, or tenth squares; disabling snapping permits free placement. For example, with one unit per square, quarter-square snapping places points at 0.25-unit increments. With two units per square, the same setting gives 0.5-unit increments. Zoom does not change that spacing in mathematical coordinates. Changing precision does not move existing points until they are edited.
-
-**Grid subdivisions** independently chooses no subdivisions, or 2, 4, 5, or 10 divisions per main square. Faint lines distinguish subdivisions from the main ruling; coordinate labels continue to mark main-square multiples with readable spacing. Fine lines hide when less than two screen pixels apart and return as you zoom in. This affects visibility only; snapping retains the precision selected. Snap spacing and subdivision choices are temporary editor preferences, initially whole-square snapping and no subdivisions.
-
-Points get editable labels and one of six ink colors. Coordinates can be edited precisely in the right-side options. The drawing supports 200 points and 500 connections. **Undo/Redo** in the top bar holds up to 50 visual edit states for the mounted document, treating each drag as one edit. Undo does not change expressions, notes, or the view. Gestures are frame-throttled; cancelled point/connection gestures restore their starting drawing.
+Key invariants:
+- Select is the default tool.
+- Pan/zoom navigation must not accidentally create/erase geometry.
+- Adding a second touch cancels an in-progress single-touch drawing gesture.
+- Pinch zoom anchors to the gesture position; two-finger pan works regardless of drawing tool.
+- Blank-grid single-touch interaction with Select should permit normal surrounding-page/sheet scrolling where designed.
+- Snap spacing and visible subdivisions are separate settings.
+- Undo/redo applies to drawing mutations, not camera navigation.
 
 ## Measurements and labels
 
-Right-click a drawn point or segment, or open the right-side gear, to read measurements. Point options show its position, distance to the origin, and lengths of attached segments. Segment options show endpoint positions, Euclidean length, signed Δx/Δy, slope, angle in degrees from the positive x-axis, and midpoint. The angle follows the stored connection direction; a vertical segment has an undefined slope, and coincident endpoints have an undefined angle. Drawing length is the sum of all stored segments, counting each connection once.
+`graph-measurements.ts` owns derived lengths, slopes, angles, midpoints, area, and perimeter. Derived measurements are not duplicated as authoritative saved data.
 
-Connect at least three points into a closed outline to read its area and perimeter. Areas use the shoelace formula in mathematical coordinates; perimeters sum the boundary lengths. Connected internal diagonals split an outline into separate regions. The panel shows regions touching the selected point or segment, or all regions when nothing is selected. Open branches and zero-length edges do not contribute an area. Crossed or overlapping closed boundaries require explicit shared intersection points; unsupported boundaries are omitted from area results. Separate or nested disconnected outlines are measured independently, without subtracting holes or calculating their union. These measurements apply to visual point-and-segment drawings; expression curves do not yet provide enclosed-area integration.
-
-Measurements update as points move or their coordinates change. Magnification and panning leave values unchanged, and changing units per square changes the view's scale without modifying existing point coordinates. Lengths use graph units and areas use square graph units, independently of the paper's inch/mm ruling. Measurement readouts use up to six significant digits; `≈` marks rounded results.
-
-**Show on the graph** separately controls point names, point positions, segment lengths, and enclosed-area labels. Area labels also give their region a light ink tint. Names show initially; position, length, and area labels start hidden. A point's **This point’s position label** can inherit the sheet choice, always show, or always hide. Sheet annotation choices and per-point overrides save with the document and survive backups. Calculated measurements themselves are derived from the drawing and are not saved.
-
-## Touch and trackpad navigation
-
-Pinch over the grid to magnify around the gesture's midpoint, and move two fingers together to pan. Both gestures work with any tool selected and can happen together. Adding a second finger cancels a pending point move/placement/connection before navigation starts; touch erasing waits for release so it cannot delete something before a two-finger gesture. After lifting one finger, the other remains inactive until both lift, avoiding accidental drawing. With Select active, a single finger on blank grid scrolls the surrounding sheet/page. Touches on the title and paper margins keep normal page behavior.
-
-Trackpad pinch is handled over the grid without magnifying the whole page; Ctrl+wheel also zooms around the pointer. Ordinary wheel/trackpad scrolling retains page/sheet scrolling unless Pan is selected, when it pans the graph. The implementation uses [Pointer Events for touch pinch](https://developer.mozilla.org/en-US/docs/Web/API/Pointer_events/Pinch_zoom_gestures), [Ctrl-marked wheel events](https://developer.mozilla.org/en-US/docs/Web/API/Element/wheel_event), and a [WebKit gesture-event fallback](https://developer.mozilla.org/en-US/docs/Web/API/Element/gesturestart_event) for Safari trackpads. Device behavior remains part of manual review.
-
-## Expressions
-
-- Functions: `y = x^2`, `y = 2x + 1`, or simply `sin(x)`.
-- Vertical lines: `x = 3` or `x = pi`.
-- Points: `(2, 3)` or `(pi, sqrt(2))`.
-- Operators: `+`, `-`, `*`, `/`, `^`, parentheses, and implicit multiplication such as `2x` or `2(x + 1)`. Powers associate right to left; `-x^2` means `-(x^2)`.
-- Constants: `pi`/`π` and `e`. Scientific notation such as `1e-3` is accepted.
-- Functions: `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `sqrt`, `abs`, `exp`, `ln`, `log` (base 10), `floor`, `ceil`, `round`, and `sign`. Angles use radians.
-
-Expressions have color and show/hide controls. Try examples adds a sine curve, parabola, and point to an empty expression list. Invalid/incomplete formulas stay editable with feedback and are excluded from plotting without blocking saving. Valid formulas with no real values in the view may show no trace. There are at most 20 expressions of up to 240 characters. Formula parsing bounds tokens/nesting and never evaluates JavaScript. Curves use bounded numerical sampling and discontinuity checks. Implicit equations, inequalities, sliders, tables, and freehand drawing are not implemented.
+Point/segment contextual controls may expose coordinates/measurements; sheet settings control which labels are visible. Closed-region area labels may tint their region. Keep labels readable under zoom and theme changes.
 
 ## Compatibility
 
-Graph documents retain the version-1 backup format. Older plotted documents without visual data open with their formulas intact and an empty drawing. Missing annotation settings use the initial label choices, and points without a position-label override inherit their sheet. A view without `zoom` uses 100% magnification and retains its saved units. The former `mode` field is accepted for compatibility but no longer changes rendering or tool availability; sheets saved with either value show expressions and drawings together. New sheets omit that field. Empty `graph` records and the earlier empty `grid` alias normalize to a blank editable sheet. Unknown fields, invalid IDs/colors, dangling/duplicate connections, invalid annotation booleans, exceeded limits, noninteger/out-of-range magnification, and nonfinite/out-of-range coordinates or units reject a backup before replacement.
+Persisted Graph Paper data is validated through Notebook document validators. Treat older saved records as compatibility inputs: normalize supported omissions/defaults, reject invalid shapes, and never discard expressions/drawings merely because presentation settings changed.
 
-A document is empty only when title/notes/expression sources are blank and there are no visual points. Populated documents require deletion confirmation. View or tool changes alone do not make a blank page populated. Per-sheet downloads are removed pending unified Notebook downloads; the existing workspace JSON backup still includes all graph content.
+## Focused manual checks
 
-## Manual review
-
-Create a sheet in a nested group and rename its page title independently. Try examples, `y = -x^2`, `y = 1/x`, `tan(x)`, `sqrt(x)`, `x = 3`, and `(pi, 2)`; inspect asymptotes, domain boundaries, colors, hidden plots, and incomplete formulas. Confirm the arrow/circle is initially selected and all drawing tools are available alongside the expression panel. Add and drag points with/without snapping, connect by clicking and dragging (including new endpoints and duplicate links), move a connected point, edit labels/coordinates/ink, erase points/segments, cancel gestures, and exercise Undo/Redo. Expressions must remain visible throughout drawing; editing or hiding an expression must leave drawn points and connections visible. Check keyboard selection movement and deletion, plus chain completion with Enter/Escape.
-
-Inspect the right rail on desktop and phone, including the outlined-circle selection icon, touch targets, tool options, focus recovery, blank-space scrolling, and point dragging. Use the magnifier at an off-center point: click/right-click through familiar percentages, scrub both directions, toggle scrubby zoom, and check anchor stability and limits. At 200%, graph squares/distances must double while units and saved point coordinates stay unchanged. Pan and drag points at several magnifications. The percentage button returns to 100%; Reset view also centers the origin without changing units.
-
-Connect `(0, 0)` to `(3, 4)` and read length 5, midpoint `(1.5, 2)`, and slope approximately 1.33333. Connect `(0, 0)`, `(4, 0)`, `(4, 3)`, `(0, 3)`, and back to the first point: read area 12 and perimeter 14. Add a diagonal and check two regions of area 6 each. Move a vertex and inspect updated lengths/areas; zoom and pan without changing any values. Review vertical and coincident-endpoint segments, open outlines/branches, concave outlines, and unsupported crossed/overlapping boundaries. Enable each grid label independently and exercise all three per-point coordinate overrides. Right-click points and lines from every tool, including Zoom; inspect options, focus, and measurements. Check long-press and keyboard context-menu access.
-
-On a phone/tablet, pinch and pan with two fingers from every tool, beginning on both blank grid and existing points. Check simultaneous scaling/translation, zoom bounds, and the transition from one finger to two: cancelled drawing must leave no extra points/connections or undo state, and Erase must not delete anything. Lift one finger, move the other, then lift both; no accidental edits should occur. Confirm normal one-finger blank scrolling in Select, point dragging, and page scrolling from margins. On Chromium and Safari with a trackpad, pinch at an off-center point, test Ctrl+wheel, and verify that page magnification stays unchanged. Check ordinary scrolling and Pan-tool wheel panning.
-
-Try every snap spacing, including new/dragged points, connection endpoints, keyboard nudges, and disabled snapping. Choose each subdivision count independently of snap spacing, inspect faint lines against main ruling, and zoom out/in through their visibility threshold. With two units per square and quarter-square snapping, verify 0.5-unit point increments at every zoom. Repeatedly increment/decrement units with its buttons and keyboard, including starting at 0.1 or 1.1; inspect the value for rounding artifacts. Confirm there are no old pan/zoom buttons or sheet download controls in the top bar.
-
-Reload, switch documents/features, and round-trip a backup. Expressions, drawn points/connections, notes/title, colors, center, units, magnification, sheet label choices, and point label overrides must survive and render together. Measurements must recompute from restored coordinates. Restore earlier Graph Paper records with each former mode value, without zoom/visual/mode/annotation data, and pre-editor empty graph/grid records. Try malformed point/connection data, duplicate IDs or endpoint pairs, missing endpoints, unsupported colors, invalid annotation booleans, and invalid coordinates/units/zoom; replacement must fail without changing live data. Resize the library/window and check square ruling, readable label/subdivision spacing, and Letter/A4 proportions; exercise display settings without changing Lined Paper or Markdown.
+When Graph Paper changes, exercise drawing/select/erase, pan, click/scrubby/pinch zoom, two-finger gestures, snapping/subdivisions, undo/redo, expression plotting/errors, measurements/labels, reload/backup round-trip, Light/Dark, narrow layouts, and reduced motion only as relevant to the change.
