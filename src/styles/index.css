@@ -22,6 +22,7 @@
   --tips-text-secondary: var(--text-secondary);
   --tips-control-border: var(--control-border);
   --tips-hover: var(--surface-hover);
+  --tips-pressed: var(--surface-pressed);
   --tips-fast: var(--motion-fast);
 }
 @import './home.css';
