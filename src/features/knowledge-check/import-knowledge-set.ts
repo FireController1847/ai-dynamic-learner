@@ -1,15 +1,15 @@
 import { featureDefinitions, type FeatureId } from '../feature-definitions.ts';
 import type { IndexCards } from '../index-cards/tree-model.ts';
 import { Icon } from '../../components/icon.ts';
+import { SetModeIcon } from '../index-cards/set-mode-icon.ts';
+import { IndexCardsImportPicker } from './index-cards-import-picker.ts';
 import { createId } from '../../core/ids.ts';
-import { inputValue } from '../../core/dom.ts';
 import { MAX_NAME_LENGTH } from './library-model.ts';
 import {
   findIndexCardSet,
   importIndexCardSet,
   importQuestionLimitProblem,
   indexCardMappings,
-  indexCardSetOptions,
   intermixQuestionGroups,
   shuffleQuestions,
   type IndexCardImportMapping,
@@ -47,8 +47,8 @@ export const ImportKnowledgeSet = defineComponent({
     const shuffle = ref(false);
     const draggedId = ref<string | null>(null);
     const dropIndex = ref<number | null>(null);
+    const pickerItemId = ref<string | null | undefined>(undefined);
     const message = ref('');
-    const cardSetOptions = computed(() => indexCardSetOptions(props.indexCards));
 
     function sourceReady(item: ImportPlanItem): boolean {
       if (item.sourceFeatureId !== 'index-cards') return false;
@@ -71,13 +71,35 @@ export const ImportKnowledgeSet = defineComponent({
 
     function addSource(sourceFeatureId: FeatureId) {
       if (sourceFeatureId !== 'index-cards') return;
-      items.value.push({
-        id: createId(),
-        sourceFeatureId,
-        sourceItemId: '',
-        mappingId: 'front-to-back',
-      });
+      pickerItemId.value = null;
       message.value = '';
+    }
+
+    function changeSource(item: ImportPlanItem) {
+      if (item.sourceFeatureId !== 'index-cards') return;
+      pickerItemId.value = item.id;
+      message.value = '';
+    }
+
+    function selectIndexCardSource(sourceItemId: string) {
+      const set = findIndexCardSet(props.indexCards.items, sourceItemId);
+      if (!set) return;
+      const mappingId = indexCardMappings(set)[0]!.id;
+      if (pickerItemId.value) {
+        const item = items.value.find((entry) => entry.id === pickerItemId.value);
+        if (item) {
+          item.sourceItemId = sourceItemId;
+          item.mappingId = mappingId;
+        }
+      } else {
+        items.value.push({
+          id: createId(),
+          sourceFeatureId: 'index-cards',
+          sourceItemId,
+          mappingId,
+        });
+      }
+      pickerItemId.value = undefined;
     }
 
     function removeSource(id: string) {
@@ -157,30 +179,24 @@ export const ImportKnowledgeSet = defineComponent({
           h('span', String(index + 1)),
         ]),
         h('div', { class: 'knowledge-import-item-app' }, [
-          h(Icon, { name: feature.icon }),
+          set
+            ? h(SetModeIcon, { mode: set.mode ?? 'flash-cards', compact: true })
+            : h(Icon, { name: feature.icon }),
           h('div', [
-            h('strong', feature.label),
+            h('strong', set?.name ?? feature.label),
             h('span', set
-              ? `${(set.mode ?? 'flash-cards') === 'fill-in-the-blanks' ? 'Fill in the Blanks' : 'Flash Cards'} · ${set.cards.length} saved · ${importedCount} importable`
+              ? `Index Cards · ${(set.mode ?? 'flash-cards') === 'fill-in-the-blanks' ? 'Fill in the Blanks' : 'Flash Cards'} · ${set.cards.length} saved · ${importedCount} importable`
               : 'Choose a library set to import.'),
           ]),
         ]),
         h('div', { class: 'knowledge-import-item-options' }, [
-          h('label', [
-            h('span', 'Library set'),
-            h('select', {
-              value: item.sourceItemId,
-              onChange: (event: Event) => {
-                item.sourceItemId = inputValue(event);
-                const nextSet = findIndexCardSet(props.indexCards.items, item.sourceItemId);
-                item.mappingId = indexCardMappings(nextSet)[0]!.id;
-                message.value = '';
-              },
-            }, [
-              h('option', { value: '', disabled: true }, cardSetOptions.value.length ? 'Choose a set' : 'No Index Card sets available'),
-              ...cardSetOptions.value.map((option) => h('option', { value: option.id },
-                `${option.label} · ${option.mode === 'fill-in-the-blanks' ? 'Fill in the Blanks' : 'Flash Cards'} · ${option.count}`)),
-            ]),
+          h('div', { class: 'knowledge-import-source-choice' }, [
+            h('span', 'Source'),
+            h('button', {
+              type: 'button',
+              class: 'quiet-button',
+              onClick: () => changeSource(item),
+            }, set ? 'Change set' : 'Choose set'),
           ]),
           h('label', [
             h('span', 'Import as'),
@@ -318,15 +334,26 @@ export const ImportKnowledgeSet = defineComponent({
           h('p', 'Review creates an independent copy. Later edits in Index Cards will not update this knowledge set, and edits here will not update the cards. Import the source again when you want a fresh copy.'),
         ]),
       ]),
-      h('div', { class: 'knowledge-builder-tabs', role: 'group', 'aria-label': 'Import builder pages' }, [
-        h('button', { type: 'button', class: 'quiet-button', 'aria-pressed': tab.value === 'sources',
-          onClick: () => { tab.value = 'sources'; } }, 'Sources'),
-        h('button', { type: 'button', class: 'quiet-button', 'aria-pressed': tab.value === 'options',
-          onClick: () => { tab.value = 'options'; } }, 'Import options'),
-      ]),
-      limitProblem.value ? h('p', { class: 'knowledge-message', role: 'alert' }, limitProblem.value) : null,
-      message.value ? h('p', { class: 'knowledge-message', role: 'alert' }, message.value) : null,
-      tab.value === 'options' ? renderOptions() : renderSources(),
+      pickerItemId.value !== undefined
+        ? h(IndexCardsImportPicker, {
+          items: props.indexCards.items,
+          selectedId: pickerItemId.value
+            ? items.value.find((entry) => entry.id === pickerItemId.value)?.sourceItemId ?? null
+            : null,
+          onSelect: selectIndexCardSource,
+          onCancel: () => { pickerItemId.value = undefined; },
+        })
+        : [
+          h('div', { class: 'knowledge-builder-tabs', role: 'group', 'aria-label': 'Import builder pages' }, [
+            h('button', { type: 'button', class: 'quiet-button', 'aria-pressed': tab.value === 'sources',
+              onClick: () => { tab.value = 'sources'; } }, 'Sources'),
+            h('button', { type: 'button', class: 'quiet-button', 'aria-pressed': tab.value === 'options',
+              onClick: () => { tab.value = 'options'; } }, 'Import options'),
+          ]),
+          limitProblem.value ? h('p', { class: 'knowledge-message', role: 'alert' }, limitProblem.value) : null,
+          message.value ? h('p', { class: 'knowledge-message', role: 'alert' }, message.value) : null,
+          tab.value === 'options' ? renderOptions() : renderSources(),
+        ],
       items.value.length && !questionCount.value
         ? h('p', { class: 'knowledge-muted knowledge-import-future-note' }, 'The selected sources do not currently contain any complete cards that can become Review questions.')
         : null,
