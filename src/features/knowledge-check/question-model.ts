@@ -1,7 +1,8 @@
+import { isFillBlankAnswerCorrect, maskFillBlankAnswers, parseFillBlankTemplate } from '../../core/fill-blank.ts';
 import { createId, isValidId } from '../../core/ids.ts';
 import { isRecord } from '../../core/validation.ts';
 
-export type QuestionType = 'multiple-choice' | 'true-false' | 'short-answer';
+export type QuestionType = 'multiple-choice' | 'true-false' | 'short-answer' | 'fill-in-the-blanks';
 export interface Question {
   id: string;
   type: QuestionType;
@@ -10,10 +11,13 @@ export interface Question {
   explanation: string;
   choices: string[];
 }
+export type QuestionResponse = string | string[];
+
 export const QUESTION_TYPES: readonly { id: QuestionType; label: string }[] = [
   { id: 'multiple-choice', label: 'Multiple Choice' },
   { id: 'true-false', label: 'True or False' },
   { id: 'short-answer', label: 'Short Answer' },
+  { id: 'fill-in-the-blanks', label: 'Fill in the Blanks' },
 ];
 export const MAX_QUESTIONS = 200;
 export const MAX_TEXT = 2000;
@@ -24,7 +28,9 @@ export function createQuestion(type: QuestionType = 'multiple-choice'): Question
 }
 
 export function questionReady(question: Question): boolean {
-  if (!question.prompt.trim() || !question.answer.trim()) return false;
+  if (!question.prompt.trim()) return false;
+  if (question.type === 'fill-in-the-blanks') return parseFillBlankTemplate(question.prompt).answers.length > 0;
+  if (!question.answer.trim()) return false;
   if (question.type !== 'multiple-choice') return true;
   const choices = question.choices.map((choice) => choice.trim()).filter(Boolean);
   return choices.length >= 2 && choices.every(Boolean) && new Set(choices).size === choices.length &&
@@ -35,12 +41,17 @@ export function questionHasContent(question: Question): boolean {
   return Boolean(question.prompt.trim() || question.explanation.trim() || question.choices.some(choice => choice.trim()) ||
     question.answer.trim());
 }
+
 export function questionProblem(question: Question): string {
   if (!question.prompt.trim()) return 'Enter the question.';
+  if (question.type === 'fill-in-the-blanks') {
+    return parseFillBlankTemplate(question.prompt).answers.length ? '' : 'Create at least one blank in the question.';
+  }
   if (!question.answer.trim()) return question.type === 'multiple-choice' ? 'Select a correct answer.' : 'Enter the correct answer.';
   if (!questionReady(question)) return 'Add at least two distinct answer choices and select one as correct.';
   return '';
 }
+
 export function questionsForSave(questions: Question[]): Question[] {
   const entered = questions.filter(questionHasContent);
   for (const [index, question] of entered.entries()) {
@@ -50,7 +61,32 @@ export function questionsForSave(questions: Question[]): Question[] {
   return entered.map(question => ({ ...question, choices: question.choices.filter(choice => choice.trim()) }));
 }
 
-export function answerCorrect(question: Question, response: string): boolean {
+export function questionDisplayPrompt(question: Question): string {
+  return question.type === 'fill-in-the-blanks' ? maskFillBlankAnswers(question.prompt) : question.prompt;
+}
+
+export function questionResponseAnswered(question: Question, response: QuestionResponse | undefined): boolean {
+  if (question.type === 'fill-in-the-blanks') {
+    const answers = parseFillBlankTemplate(question.prompt).answers;
+    return answers.length > 0 && Array.isArray(response) && answers.every((_answer, index) => Boolean(response[index]?.trim()));
+  }
+  return typeof response === 'string' && Boolean(response.trim());
+}
+
+export function fillBlankCorrectCount(question: Question, response: QuestionResponse | undefined): number {
+  if (question.type !== 'fill-in-the-blanks') return 0;
+  const answers = parseFillBlankTemplate(question.prompt).answers;
+  const responses = Array.isArray(response) ? response : [];
+  return answers.filter((answer, index) => isFillBlankAnswerCorrect(answer, responses[index] ?? '')).length;
+}
+
+export function answerCorrect(question: Question, response: QuestionResponse): boolean {
+  if (question.type === 'fill-in-the-blanks') {
+    const answers = parseFillBlankTemplate(question.prompt).answers;
+    if (!answers.length || !Array.isArray(response)) return false;
+    return answers.every((answer, index) => isFillBlankAnswerCorrect(answer, response[index] ?? ''));
+  }
+  if (typeof response !== 'string') return false;
   if (question.type !== 'short-answer') return question.answer.trim() === response.trim();
   const normalize = (text: string) => text.trim().replace(/\s+/g, ' ').toLocaleLowerCase();
   return normalize(question.answer) === normalize(response);
@@ -67,7 +103,8 @@ export function validateQuestions(value: unknown): asserts value is Question[] {
         !Array.isArray(question.choices) || question.choices.length > 8 ||
         question.choices.some((choice) => typeof choice !== 'string' || choice.length > MAX_TEXT) ||
         (question.type !== 'multiple-choice' && question.choices.length !== 0) ||
-        (question.type === 'true-false' && !['', 'True', 'False'].includes(String(question.answer)))) {
+        (question.type === 'true-false' && !['', 'True', 'False'].includes(String(question.answer))) ||
+        (question.type === 'fill-in-the-blanks' && question.answer !== '')) {
       throw new Error('A knowledge set contains invalid question data.');
     }
     ids.add(question.id);
