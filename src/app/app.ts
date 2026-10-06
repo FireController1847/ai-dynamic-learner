@@ -47,7 +47,7 @@ const App = defineComponent({
     const activeFeature = computed(() => features.find((feature) => feature.path === currentPath.value));
     const tipsFeature = computed(() => {
       const feature = activeFeature.value ?? (currentPath.value === '/' ? homeTipsFeature : null);
-      return feature && tipsCatalog[feature.id].sections.length ? feature : null;
+      return feature && tipsCatalog[feature.id]?.sections.length ? feature : null;
     });
     const activeLogoSrc = computed(() => featureImageSrc(activeFeature.value));
 

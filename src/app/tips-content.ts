@@ -592,4 +592,70 @@ export const tipsCatalog: TipsCatalog = {
     ],
   },
 
+
+  'study-guide': {
+    version: 1,
+    sections: [
+      {
+        id: 'library',
+        title: 'Study Guide library',
+        description: 'Create and organize your study guides.',
+        when: '#study-guide-library',
+        steps: [
+          {
+            title: 'Your study guides live here',
+            body: 'Use the Library to open a guide, make a new one, or organize related guides into groups.',
+            target: '#study-guide-library',
+            targetLabel: 'Study Guide library',
+            placement: 'right',
+          },
+          {
+            title: 'Make a study guide',
+            body: 'Press the new study guide button, then choose a simple List or a connected Map.',
+            target: '#study-guide-library [aria-label="New study guide"]',
+            targetLabel: 'New study guide button',
+            placement: 'right',
+          },
+        ],
+      },
+      {
+        id: 'map-editor',
+        title: 'Building a map',
+        description: 'Place topics and connect the route.',
+        when: '.study-guide-map-editor',
+        steps: [
+          {
+            title: 'Build the route',
+            body: 'Add topics, drag them into place, and use Connect to make branching paths. Connections that would create a loop are rejected.',
+            target: '.study-guide-map-canvas',
+            targetLabel: 'Map editor',
+            placement: 'top',
+          },
+          {
+            title: 'Choose where studying begins',
+            body: 'Select a topic and use Start here. Once every topic is connected, Start studying opens the study view.',
+            target: '.study-guide-topic-panel',
+            targetLabel: 'Selected topic',
+            placement: 'left',
+          },
+        ],
+      },
+      {
+        id: 'map-study',
+        title: 'Studying a map',
+        description: 'Move through the route one topic at a time.',
+        when: '.study-guide-study-intro, .study-guide-study-session',
+        steps: [
+          {
+            title: 'Follow the map',
+            body: 'Start studying, reveal each topic one point at a time, and finish every stop. At a branch, choose which path to take next.',
+            target: ['.study-guide-study-intro', '.study-guide-study-session'],
+            targetLabel: 'Map study',
+            placement: 'top',
+          },
+        ],
+      },
+    ],
+  },
+
 };
