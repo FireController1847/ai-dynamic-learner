@@ -3,6 +3,7 @@ import type { CheckItem } from './library-model.ts';
 import type { CheckModeId } from './check-types.ts';
 import { answerCorrect, fillBlankCorrectCount, questionResponseAnswered, type Question, type QuestionResponse } from './question-model.ts';
 import { inputValue } from '../../core/dom.ts';
+import { Icon } from '../../components/icon.ts';
 import { SessionIntro } from './session-intro.ts';
 import { useKnowledgeSession } from './session-state.ts';
 import { defineComponent, h, ref, type PropType } from 'vue';
@@ -65,7 +66,7 @@ export const KnowledgeSession = defineComponent({
           props.mode === 'study' ? 'Not quite. Give it another try.' :
             props.mode === 'test' ? 'Incorrect' :
               quizRetry ? `Not quite — ${attemptsRemaining} ${attemptsRemaining === 1 ? 'attempt' : 'attempts'} remaining.` :
-                'Not quite — here’s the answer.'),
+                question.type === 'multiple-choice' ? 'Not quite.' : 'Not quite — here’s the answer.'),
       ];
 
       if (question.type === 'fill-in-the-blanks') {
@@ -84,7 +85,7 @@ export const KnowledgeSession = defineComponent({
             ]) : null,
           ]);
         })));
-      } else if (showAnswer) {
+      } else if (showAnswer && question.type !== 'multiple-choice') {
         content.push(h('p', `Correct answer: ${question.answer}`));
       }
 
@@ -253,7 +254,11 @@ export const KnowledgeSession = defineComponent({
               disabled: props.mode === 'quiz' && checked.value.size !== questions.value.length,
               onClick: props.mode === 'test' ? submitTest : () => submit(),
             }, props.mode === 'test' ? 'Submit test' : 'See results') :
-              h('button', { type: 'button', class: 'quiet-button', onClick: () => { position.value = 0; } }, 'Back to first question'),
+              h('button', {
+                type: 'button',
+                class: 'quiet-button knowledge-keep-studying',
+                onClick: () => { position.value = 0; },
+              }, ['Keep studying', h(Icon, { name: 'chevron' })]),
         ]),
       ]);
     };

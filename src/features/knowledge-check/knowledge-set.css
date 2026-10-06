@@ -200,3 +200,22 @@
   color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
 }
+
+
+.knowledge-keep-studying {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.knowledge-keep-studying > .ui-icon {
+  width: 16px;
+  height: 16px;
+  animation: knowledge-keep-studying-nudge 1.8s ease-in-out infinite;
+}
+@keyframes knowledge-keep-studying-nudge {
+  0%, 70%, 100% { transform: translateX(0); }
+  85% { transform: translateX(3px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .knowledge-keep-studying > .ui-icon { animation: none; }
+}
