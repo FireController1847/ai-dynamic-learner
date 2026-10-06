@@ -85,7 +85,6 @@ export const StudyGuideMapEditor = defineComponent({
       if (from && from !== topic.id) {
         if (connectionWouldCreateCycle(props.data, from, topic.id)) {
           flashInvalidConnection(from, topic.id);
-          selectedId.value = topic.id;
           return;
         }
         connectTopics(props.data, from, topic.id);
