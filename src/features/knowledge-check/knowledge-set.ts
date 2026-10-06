@@ -8,6 +8,9 @@ import { inputValue } from '../../core/dom.ts';
 import { CheckBuilder } from './check-builder.ts';
 import { ModePicker } from './mode-picker.ts';
 import { KnowledgeSession } from './knowledge-session.ts';
+import { SessionSetup } from './session-setup.ts';
+import { settingsForMode, type SessionSettings } from './session-settings.ts';
+import { questionReady } from './question-model.ts';
 import { defineComponent, h, onDeactivated, ref, type PropType } from 'vue';
 
 export const KnowledgeSet = defineComponent({
@@ -17,12 +20,15 @@ export const KnowledgeSet = defineComponent({
   setup(props) {
     const mode = ref<CheckModeId | null>(props.initialMode);
     const building = ref(props.initialBuilder);
+    const sessionSettings = ref<SessionSettings | null>(
+      props.initialMode === 'test' ? settingsForMode(props.item.options, 'test') : null);
     const revision = ref(0);
     const message = ref('');
-    onDeactivated(() => { mode.value = null; });
+    onDeactivated(() => { mode.value = null; sessionSettings.value = null; });
     function chooseMode(next: CheckModeId) {
       if (mode.value !== next && !requestLeave()) return;
       mode.value = next;
+      sessionSettings.value = next === 'test' ? settingsForMode(props.item.options, 'test') : null;
     }
     function openBuilder() { if (requestLeave()) building.value = true; }
     function save(name: string, questions: Question[], options: SetOptions) {
@@ -31,6 +37,7 @@ export const KnowledgeSet = defineComponent({
         const ready = questionsForSave(questions);
         if (!name.trim() || name.length > MAX_NAME_LENGTH) throw new Error('Enter a name of 1–120 characters.');
         props.item.name = name.trim(); props.item.questions = ready; props.item.options = { ...options };
+        sessionSettings.value = mode.value === 'test' ? settingsForMode(props.item.options, 'test') : null;
         building.value = false; revision.value += 1; message.value = '';
       } catch (error) { message.value = error instanceof Error ? error.message : String(error); }
     }
@@ -49,9 +56,21 @@ export const KnowledgeSet = defineComponent({
         onCancel: () => { building.value = false; message.value = ''; } }) : null,
       !building.value && !mode.value ? h(ModePicker, { setName: props.item.name,
         onChoose: chooseMode, onBuild: openBuilder }) : null,
-      !building.value && mode.value ? h(KnowledgeSession, {
-        key: `${revision.value}-${mode.value}`, item: props.item, mode: mode.value,
-        onBack: () => { mode.value = null; }, onBuild: openBuilder,
+      !building.value && mode.value && !sessionSettings.value ? h(SessionSetup, {
+        key: `setup-${revision.value}-${mode.value}`,
+        item: props.item,
+        mode: mode.value,
+        questionCount: props.item.questions.filter(questionReady).length,
+        onBack: () => { mode.value = null; },
+        onContinue: (settings: SessionSettings) => { sessionSettings.value = settings; },
+      }) : null,
+      !building.value && mode.value && sessionSettings.value ? h(KnowledgeSession, {
+        key: `${revision.value}-${mode.value}`, item: props.item, mode: mode.value, settings: sessionSettings.value,
+        onBack: () => {
+          if (mode.value === 'test') mode.value = null;
+          else sessionSettings.value = null;
+        },
+        onBuild: openBuilder,
       }) : null,
       message.value ? h('p', { class: 'knowledge-message', role: 'alert' }, message.value) : null,
     ]);

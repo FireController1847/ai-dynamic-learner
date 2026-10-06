@@ -63,3 +63,8 @@ Browser-local presentation state that is not part of user content (for example t
 Webpack emits hashed JS/CSS bundles and copies `src/assets/` recursively to `dist/assets/` with stable asset paths. Full-resolution per-app PNGs live directly under `src/assets/app-icons/`; lightweight visible variants live in `app-icons/webp`, `app-icons/png`, and `app-icons/gif`.
 
 `build/site-config.mts` and `build/page-metadata.mts` create route HTML and metadata. GitHub Pages uses the same production build; see `github-pages.md`.
+
+
+## Review session configuration
+
+Review keeps saved assessment defaults in the knowledge set but transient per-session choices outside persistence. `session-settings.ts` converts saved options into mode-specific runtime settings and prepares a stable question/choice order when a session starts. `session-setup.ts` owns pre-session choices: Study always chooses an order, Quiz chooses saved defaults or temporary customization, and Test bypasses customization and uses saved builder settings exactly.

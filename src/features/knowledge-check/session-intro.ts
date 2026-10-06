@@ -3,18 +3,22 @@ import { Icon } from '../../components/icon.ts';
 import { CHECK_MODES, type CheckModeId } from './check-types.ts';
 import type { CheckItem } from './library-model.ts';
 import { defaultSetOptions } from './set-options.ts';
+import { QUESTION_ORDER_LABELS, type SessionSettings } from './session-settings.ts';
 
 export const SessionIntro = defineComponent({
   name: 'KnowledgeSessionIntro',
   props: { item: { type: Object as PropType<CheckItem>, required: true },
-    mode: { type: String as PropType<CheckModeId>, required: true }, count: { type: Number, required: true }, ended: Boolean },
+    mode: { type: String as PropType<CheckModeId>, required: true },
+    settings: { type: Object as PropType<SessionSettings>, required: true },
+    count: { type: Number, required: true }, ended: Boolean },
   emits: { back: () => true, start: () => true },
   setup(props, { emit }) {
     return () => {
       const test = props.mode === 'test';
       const study = props.mode === 'study';
       const mode = CHECK_MODES.find(entry => entry.id === props.mode)!;
-      const options = props.item.options ?? defaultSetOptions();
+      const options = { ...defaultSetOptions(), ...props.item.options };
+      const settings = props.settings;
       const pill = (icon: string, label: string) => h('span', { class: 'knowledge-info-pill' }, [h(Icon, { name: icon }), label]);
       return h('section', { class: ['knowledge-session knowledge-session-intro', `is-${props.mode}`],
         'data-mode': props.mode, 'aria-label': `${mode.label} information` }, [
@@ -30,19 +34,25 @@ export const SessionIntro = defineComponent({
         ]),
         h('div', { class: 'knowledge-intro-pills', 'aria-label': 'Session details' }, [
           pill('cards', `${props.count} ${props.count === 1 ? 'question' : 'questions'}`),
-          pill('clock', test && options.timeLimitMinutes !== null ?
-            `${options.timeLimitMinutes} ${options.timeLimitMinutes === 1 ? 'minute' : 'minutes'}` : 'No time limit'),
-          pill(test ? 'verified' : 'check', study ? 'Hints and retries' : test ? 'Feedback at the end' :
-            `${options.quizAttempts} ${options.quizAttempts === 1 ? 'attempt' : 'attempts'} per question`),
+          pill('shuffle', QUESTION_ORDER_LABELS[settings.order]),
+          pill(test ? 'clock' : study ? 'lightbulb' : 'check',
+            test
+              ? settings.timeLimitMinutes !== null
+                ? `${settings.timeLimitMinutes} ${settings.timeLimitMinutes === 1 ? 'minute' : 'minutes'}`
+                : 'No time limit'
+              : study
+                ? 'Hints and retries'
+                : `${settings.quizAttempts} ${settings.quizAttempts === 1 ? 'attempt' : 'attempts'} per question`),
         ]),
         options.description ? h('p', { class: 'knowledge-description' }, options.description) : null,
         h('div', { class: 'knowledge-intro-details' }, [
           h('h4', 'What to expect'),
-          h('p', study ? 'Try an answer before checking. Use explanations as hints, reveal an answer when stuck, and retry as often as you like. The optional Study score is only a running practice statistic.' :
+          h('p', study ? 'Try an answer before checking. Use explanations as hints, reveal an answer when stuck, and retry as often as you like. The Study score is only a running practice statistic.' :
             test ? 'Answer independently. Revisit and change responses before submitting; feedback stays hidden during the Test.' :
-              `Check each answer for immediate feedback. You have up to ${options.quizAttempts} ${options.quizAttempts === 1 ? 'attempt' : 'attempts'} per question; a correct answer or the final allowed attempt locks it before you move on.`),
-          test ? h('p', options.timeLimitMinutes !== null ? 'The clock starts only when you press Start test. When time runs out, your current answers are submitted.' : 'There is no clock. Submit when you are ready.') : null,
-          test ? h('p', options.showTestAnswers ? 'Results include your score and a review of correct/wrong answers.' : 'This Test shows your score only; answers and explanations remain hidden.') : null,
+              `Check each answer for immediate feedback. You have up to ${settings.quizAttempts} ${settings.quizAttempts === 1 ? 'attempt' : 'attempts'} per question; a correct answer or the final allowed attempt locks it before you move on.`),
+          settings.shuffleChoices && !study ? h('p', 'Multiple-choice answer choices will be shuffled for this session.') : null,
+          test ? h('p', settings.timeLimitMinutes !== null ? 'The clock starts only when you press Start test. When time runs out, your current answers are submitted.' : 'There is no clock. Submit when you are ready.') : null,
+          test ? h('p', settings.showTestAnswers ? 'Results include your score and a review of correct/wrong answers.' : 'This Test shows your score only; answers and explanations remain hidden.') : null,
         ]),
         props.ended ? h('p', { role: 'status' }, study ? 'Your study session ended. Start again when ready.' : 'Your previous session ended. Start again when ready.') : null,
         h('div', { class: 'knowledge-intro-actions' }, [

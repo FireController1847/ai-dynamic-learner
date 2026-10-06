@@ -10,11 +10,15 @@ import { defineComponent, h, ref, type PropType } from 'vue';
 
 export const KnowledgeSession = defineComponent({
   name: 'KnowledgeSession',
-  props: { item: { type: Object as PropType<CheckItem>, required: true }, mode: { type: String as PropType<CheckModeId>, required: true } },
+  props: {
+    item: { type: Object as PropType<CheckItem>, required: true },
+    mode: { type: String as PropType<CheckModeId>, required: true },
+    settings: { type: Object as PropType<import('./session-settings.ts').SessionSettings>, required: true },
+  },
   emits: { back: () => true, build: () => true },
   setup(props, { emit }) {
-    const state = useKnowledgeSession(props.item, props.mode);
-    const { questions, options, position, responses, checked, revealed, hints, submitted, started, expired, ended,
+    const state = useKnowledgeSession(props.item, props.mode, props.settings);
+    const { questions, questionCount, options, position, responses, checked, revealed, hints, submitted, started, expired, ended,
       answered, score, remaining, celebrating, attempts, studyChecks, studyCorrectChecks,
       start, end, check, submit, tick } = state;
     const fillBlankPrimaryButton = ref<HTMLButtonElement | null>(null);
@@ -164,8 +168,8 @@ export const KnowledgeSession = defineComponent({
         h('h3', 'Add questions to get started'), h('p', 'Complete a question and its correct answer in the builder.'),
         h('button', { type: 'button', class: 'card-primary-button', onClick: () => emit('build') }, 'Build questions'),
       ]);
-      if (!started.value) return h(SessionIntro, { item: props.item, mode: props.mode, count: questions.value.length,
-        ended: ended.value, onBack: () => emit('back'), onStart: start });
+      if (!started.value) return h(SessionIntro, { item: props.item, mode: props.mode, settings: props.settings,
+        count: questionCount.value, ended: ended.value, onBack: () => emit('back'), onStart: start });
       if (submitted.value) {
         const showAnswers = props.mode !== 'test' || options.value.showTestAnswers;
         return h('section', { class: 'knowledge-session', 'aria-label': 'Results' }, [
@@ -196,7 +200,7 @@ export const KnowledgeSession = defineComponent({
         h('div', { class: 'knowledge-session-progress' }, [h('p', `Question ${position.value + 1} of ${questions.value.length}`),
           study ? h('p', 'Practice freely — hints and retries welcome') : h('p', `${answered.value} answered`),
           study ? h('p', { class: 'knowledge-study-score' },
-            `${studyCorrectChecks.value} / ${studyChecks.value} checks correct`) : null,
+            `${studyCorrectChecks.value} / ${studyChecks.value} checks correct · ${studyChecks.value ? Math.round(studyCorrectChecks.value / studyChecks.value * 100) : 0}%`) : null,
           remaining.value !== null ? h('p', { class: ['knowledge-timer', { 'is-low': remaining.value <= 60 }], role: 'timer', 'aria-live': 'off' },
             `Time left: ${Math.floor(remaining.value / 60)}:${String(remaining.value % 60).padStart(2, '0')}`) : null,
           study ? h('button', { type: 'button', class: 'quiet-button', onClick: end }, 'End studying') :

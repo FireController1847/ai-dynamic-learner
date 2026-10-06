@@ -95,7 +95,7 @@ export const CheckBuilder = defineComponent({
         invalid.value >= 0 ? h('p', { class: 'knowledge-message', role: 'status' }, `Question ${invalid.value + 1}: ${questionProblem(questions.value[invalid.value]!)}`) : null,
         message.value ? h('p', { class: 'knowledge-message', role: 'alert' }, message.value) : null,
         optionsProblem.value ? h('p', { class: 'knowledge-message', role: 'alert' }, optionsProblem.value) : null,
-        tab.value === 'options' ? h(SetOptionsEditor, { options: options.value }) : h('div', { class: 'knowledge-builder-layout' }, [
+        tab.value === 'options' ? h(SetOptionsEditor, { options: options.value, questionCount: questions.value.length }) : h('div', { class: 'knowledge-builder-layout' }, [
           h('aside', { class: 'knowledge-question-list', 'aria-label': 'Questions' }, [
             h('div', { class: 'knowledge-builder-header' }, [h('h3', `Questions (${questions.value.length})`),
               h('button', { type: 'button', class: 'icon-button', title: 'Add question', 'aria-label': 'Add question',

@@ -1,13 +1,15 @@
 import { computed, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref } from 'vue';
 import { registerLeaveGuard } from '../../core/leave-guards.ts';
-import { defaultSetOptions } from './set-options.ts';
 import { answerCorrect, questionReady, questionResponseAnswered, type QuestionResponse } from './question-model.ts';
 import type { CheckItem } from './library-model.ts';
 import type { CheckModeId } from './check-types.ts';
+import { prepareSessionQuestions, sessionQuestionCount, type SessionSettings } from './session-settings.ts';
 
-export function useKnowledgeSession(item: CheckItem, mode: CheckModeId) {
-  const questions = computed(() => item.questions.filter(questionReady));
-  const options = computed(() => item.options ?? defaultSetOptions());
+export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings: SessionSettings) {
+  const availableQuestions = computed(() => item.questions.filter(questionReady));
+  const questions = ref<ReturnType<typeof prepareSessionQuestions>>([]);
+  const questionCount = computed(() => sessionQuestionCount(availableQuestions.value.length, settings));
+  const options = computed(() => settings);
   const position = ref(0);
   const responses = ref<Record<string, QuestionResponse>>({});
   const checked = ref(new Set<string>());
@@ -47,6 +49,7 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId) {
   function start() {
     responses.value = {}; checked.value = new Set(); revealed.value = new Set(); hints.value = new Set(); attempts.value = {};
     studyChecks.value = 0; studyCorrectChecks.value = 0;
+    questions.value = prepareSessionQuestions(availableQuestions.value, settings);
     position.value = 0; submitted.value = false; expired.value = false; ended.value = false; clearCelebration();
     now.value = Date.now(); started.value = true;
     deadline.value = mode === 'test' && options.value.timeLimitMinutes !== null ? now.value + options.value.timeLimitMinutes * 60_000 : null;
@@ -54,7 +57,7 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId) {
   function end() {
     started.value = false; submitted.value = false; deadline.value = null; ended.value = true; clearCelebration();
     responses.value = {}; checked.value = new Set(); revealed.value = new Set(); hints.value = new Set(); attempts.value = {};
-    studyChecks.value = 0; studyCorrectChecks.value = 0; position.value = 0;
+    studyChecks.value = 0; studyCorrectChecks.value = 0; questions.value = []; position.value = 0;
   }
   function leave(): boolean {
     tick();
@@ -113,7 +116,7 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId) {
   onMounted(attach); onActivated(attach);
   onDeactivated(() => { if (active.value || (mode === 'study' && started.value)) end(); detach(); });
   onBeforeUnmount(detach);
-  return { questions, options, position, responses, checked, revealed, hints, submitted, started, expired, ended,
+  return { questions, questionCount, options, position, responses, checked, revealed, hints, submitted, started, expired, ended,
     active, answered, score, remaining, celebrating, attempts, studyChecks, studyCorrectChecks,
     start, end, check, submit, leave, tick };
 }

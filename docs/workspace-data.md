@@ -38,7 +38,7 @@ Each feature owns its saved model and runtime validation:
 - Word Search: `src/features/word-search/library-model.ts` plus puzzle/game/display models.
 - Crossword: `src/features/crossword/library-model.ts` plus puzzle/game/display models.
 - Study Guide: `src/features/study-guide/library-model.ts`.
-- Review: `src/features/knowledge-check/library-model.ts`, question/options models. Review set options persist Quiz attempts per question; older saved sets that omit this field normalize to the default of 3 attempts.
+- Review: `src/features/knowledge-check/library-model.ts`, question/options models. Review set options persist shared Quiz/Test assessment defaults (question order, optional question limit, and multiple-choice choice shuffling), Quiz attempts per question, and Test-only time/result settings. Older saved sets normalize missing fields to compatible defaults.
 
 Do not duplicate feature schemas in `workspace-format.ts`; it coordinates them.
 

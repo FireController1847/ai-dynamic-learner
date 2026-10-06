@@ -56,7 +56,10 @@ For UI changes, inspect the changed surface in Light/Dark, keyboard-only use, na
 
 Review Quiz settings include a saved allowed-attempts-per-question value, defaulting to 3. During Quiz, an incorrect check below that limit gives retry feedback without revealing the answer or unlocking navigation; a correct answer or the final allowed attempt finalizes and locks the question. The Quiz overview surfaces the configured attempt count.
 
-Study shows a low-emphasis inline correct-checks / total-checks statistic alongside the other small session progress text. It is informational only: retries, hints, answer reveals, navigation, and session completion are unaffected, and the statistic resets with the transient Study session.
+Study shows a low-emphasis inline correct-checks / total-checks statistic plus percentage alongside the other small session progress text. It is informational only: retries, hints, answer reveals, navigation, and session completion are unaffected, and the statistic resets with the transient Study session.
 
 
 Review Study loops from the final question with a quiet **Keep studying** action and right chevron; the chevron uses only a subtle periodic nudge and disables motion when reduced motion is requested. Multiple-choice feedback does not restate the correct answer beneath the choices; final incorrect feedback remains concise while explanations may still appear when authored.
+
+
+Review pre-session setup follows the same choice-card language as Index Cards review. Study always asks for In order, Reverse order, or Shuffle before its overview. Quiz first offers Default Settings versus Customize Settings; customization is transient and may change question order, question count, multiple-choice answer shuffling, and allowed attempts. Test has no pre-session customization: its saved builder configuration is authoritative. Saved Quiz & Test defaults include order, optional question limit, and answer-choice shuffling; Quiz-specific attempts and Test-specific time/result visibility remain separate.
