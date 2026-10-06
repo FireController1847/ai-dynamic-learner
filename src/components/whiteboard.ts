@@ -443,7 +443,7 @@ export const Whiteboard = defineComponent({
           h('p', { id: 'whiteboard-clear-description' }, 'This removes every mark from the board and cannot be undone.'),
           h('div', { class: 'whiteboard-confirm-actions' }, [
             h('button', { ref: clearCancel, type: 'button', class: 'quiet-button', onClick: cancelClearBoard }, 'Cancel'),
-            h('button', { type: 'button', class: 'danger-button', onClick: clearBoard }, 'Clear board'),
+            h('button', { type: 'button', class: 'whiteboard-confirm-danger', onClick: clearBoard }, 'Clear board'),
           ]),
         ]),
       ]) : null,
