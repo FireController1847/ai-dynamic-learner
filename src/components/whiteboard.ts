@@ -95,7 +95,9 @@ export const Whiteboard = defineComponent({
     const size = ref<number>(stored?.size ?? 4);
     const strokes = ref<DrawStroke[]>(stored?.strokes ?? []);
     const clearConfirm = ref(false);
+    const clearTrigger = ref<HTMLButtonElement | null>(null);
     const clearCancel = ref<HTMLButtonElement | null>(null);
+    const clearAccept = ref<HTMLButtonElement | null>(null);
     let trigger: HTMLElement | null = null;
     let activePointer: number | null = null;
     let activeStroke: DrawStroke | null = null;
@@ -255,15 +257,19 @@ export const Whiteboard = defineComponent({
       clearCancel.value?.focus();
     }
 
-    function cancelClearBoard() {
+    async function cancelClearBoard() {
       clearConfirm.value = false;
+      await nextTick();
+      clearTrigger.value?.focus();
     }
 
-    function clearBoard() {
+    async function clearBoard() {
       strokes.value = [];
       clearConfirm.value = false;
       redraw();
       persist();
+      await nextTick();
+      frame.value?.focus();
     }
 
     function dragStart(event: PointerEvent) {
@@ -328,6 +334,7 @@ export const Whiteboard = defineComponent({
 
     async function close() {
       if (!openState.value) return;
+      clearConfirm.value = false;
       openState.value = false;
       persist();
       await nextTick();
@@ -362,13 +369,25 @@ export const Whiteboard = defineComponent({
       style: { left: `${x.value}px`, top: `${y.value}px`, width: `${width.value}px`, height: `${height.value}px` },
       'aria-label': 'Whiteboard',
       onKeydown: (event: KeyboardEvent) => {
+        if (clearConfirm.value && event.key === 'Tab') {
+          const controls = [clearCancel.value, clearAccept.value].filter((control): control is HTMLButtonElement => Boolean(control));
+          const currentIndex = controls.indexOf(document.activeElement as HTMLButtonElement);
+          const nextIndex = event.shiftKey
+            ? currentIndex <= 0 ? controls.length - 1 : currentIndex - 1
+            : currentIndex < 0 || currentIndex >= controls.length - 1 ? 0 : currentIndex + 1;
+          if (controls[nextIndex]) {
+            event.preventDefault();
+            controls[nextIndex].focus();
+          }
+          return;
+        }
         if (event.key !== 'Escape') return;
         event.preventDefault();
-        if (clearConfirm.value) cancelClearBoard();
+        if (clearConfirm.value) void cancelClearBoard();
         else void close();
       },
     }, [
-      h('header', { class: 'whiteboard-titlebar', onPointerdown: dragStart }, [
+      h('header', { class: 'whiteboard-titlebar', inert: clearConfirm.value, onPointerdown: dragStart }, [
         h('div', { class: 'whiteboard-title' }, [
           h(Icon, { name: 'whiteboard' }),
           h('strong', 'Whiteboard'),
@@ -376,7 +395,7 @@ export const Whiteboard = defineComponent({
         ]),
         h('button', { type: 'button', class: 'whiteboard-close', 'aria-label': 'Close whiteboard', onClick: close }, 'Close'),
       ]),
-      h('div', { class: 'whiteboard-toolbar' }, [
+      h('div', { class: 'whiteboard-toolbar', inert: clearConfirm.value }, [
         h('button', { type: 'button', class: ['whiteboard-tool-button', { 'is-active': tool.value === 'marker' }],
           'aria-pressed': tool.value === 'marker', onClick: () => { tool.value = 'marker'; persist(); } }, [
           h(Icon, { name: 'pencil' }),
@@ -412,13 +431,14 @@ export const Whiteboard = defineComponent({
         ])]),
         h('span', { class: 'whiteboard-input-hint' }, 'Mouse, touch, or pen'),
         h('button', {
+          ref: clearTrigger,
           type: 'button',
           class: 'whiteboard-clear',
           disabled: !strokes.value.length,
           onClick: requestClearBoard,
         }, 'Clear board'),
       ]),
-      h('div', { ref: surface, class: 'whiteboard-surface' }, [
+      h('div', { ref: surface, class: 'whiteboard-surface', inert: clearConfirm.value }, [
         h('canvas', {
           ref: canvas,
           class: 'whiteboard-canvas',
@@ -443,11 +463,11 @@ export const Whiteboard = defineComponent({
           h('p', { id: 'whiteboard-clear-description' }, 'This removes every mark from the board and cannot be undone.'),
           h('div', { class: 'whiteboard-confirm-actions' }, [
             h('button', { ref: clearCancel, type: 'button', class: 'quiet-button', onClick: cancelClearBoard }, 'Cancel'),
-            h('button', { type: 'button', class: 'whiteboard-confirm-danger', onClick: clearBoard }, 'Clear board'),
+            h('button', { ref: clearAccept, type: 'button', class: 'whiteboard-confirm-danger', onClick: clearBoard }, 'Clear board'),
           ]),
         ]),
       ]) : null,
-      h('div', { class: 'whiteboard-resize-handle', role: 'separator', 'aria-label': 'Resize whiteboard', onPointerdown: resizeStart }),
+      h('div', { class: 'whiteboard-resize-handle', inert: clearConfirm.value, role: 'separator', 'aria-label': 'Resize whiteboard', onPointerdown: resizeStart }),
     ]);
   },
 });
