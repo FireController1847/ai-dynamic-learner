@@ -5,7 +5,7 @@ import { answerCorrect, fillBlankCorrectCount, questionResponseAnswered, type Qu
 import { inputValue } from '../../core/dom.ts';
 import { SessionIntro } from './session-intro.ts';
 import { useKnowledgeSession } from './session-state.ts';
-import { defineComponent, h, type PropType } from 'vue';
+import { defineComponent, h, ref, type PropType } from 'vue';
 
 export const KnowledgeSession = defineComponent({
   name: 'KnowledgeSession',
@@ -15,6 +15,7 @@ export const KnowledgeSession = defineComponent({
     const state = useKnowledgeSession(props.item, props.mode);
     const { questions, options, position, responses, checked, revealed, hints, submitted, started, expired, ended,
       answered, score, remaining, celebrating, start, end, check, submit, tick } = state;
+    const fillBlankPrimaryButton = ref<HTMLButtonElement | null>(null);
 
     function currentResponse(question: Question): QuestionResponse {
       return responses.value[question.id] ?? (question.type === 'fill-in-the-blanks' ? [] : '');
@@ -88,6 +89,21 @@ export const KnowledgeSession = defineComponent({
         { 'is-celebrating': celebrating.value === question.id }], role: 'status' }, content);
     }
 
+    function handleFillBlankEnter(event: KeyboardEvent, blankIndex: number, blankCount: number, locked: boolean) {
+      if (locked || event.isComposing || event.altKey || event.ctrlKey || event.metaKey || event.key !== 'Enter') return;
+      event.preventDefault();
+
+      const prompt = (event.currentTarget as HTMLElement).closest('.knowledge-fill-blank-prompt');
+      const inputs = prompt ? [...prompt.querySelectorAll<HTMLInputElement>('input.knowledge-fill-blank-input')] : [];
+      if (event.shiftKey) {
+        inputs[Math.max(0, blankIndex - 1)]?.focus();
+      } else if (blankIndex < blankCount - 1) {
+        inputs[blankIndex + 1]?.focus();
+      } else {
+        fillBlankPrimaryButton.value?.click();
+      }
+    }
+
     function fillBlankPrompt(question: Question, locked: boolean) {
       const template = parseFillBlankTemplate(question.prompt);
       const values = blankResponses(question);
@@ -100,6 +116,7 @@ export const KnowledgeSession = defineComponent({
         return h('span', { class: 'knowledge-fill-blank-response', key: `blank-${segment.index}` }, [
           h('sub', { class: 'knowledge-fill-blank-number', 'aria-hidden': 'true' }, String(segment.index + 1)),
           h('input', {
+            class: 'knowledge-fill-blank-input',
             type: 'text',
             value,
             readonly: locked,
@@ -109,6 +126,8 @@ export const KnowledgeSession = defineComponent({
             style: { '--blank-width': `${Math.max(6, Math.min(28, value.length + 1))}ch` },
             'aria-label': `Blank ${segment.index + 1} of ${template.answers.length}`,
             onInput: (event: Event) => blankResponse(question, segment.index, inputValue(event)),
+            onKeydown: (event: KeyboardEvent) =>
+              handleFillBlankEnter(event, segment.index, template.answers.length, locked),
           }),
         ]);
       }));
@@ -185,8 +204,11 @@ export const KnowledgeSession = defineComponent({
               ]))]),
           props.mode !== 'test' ? h('div', {}, [
             wasChecked ? feedback(question, !study || correct) : null,
-            !locked ? h('button', { type: 'button', class: 'card-primary-button',
-              disabled: !canCheck, onClick: check }, 'Check answer') : null,
+            !locked ? h('button', {
+              ref: question.type === 'fill-in-the-blanks' ? fillBlankPrimaryButton : undefined,
+              type: 'button', class: 'card-primary-button',
+              disabled: !canCheck, onClick: check,
+            }, 'Check answer') : null,
           ]) : h('p', { class: 'knowledge-muted' }, 'Feedback is held until submission. You can change your answers.'),
           study ? h('div', { class: 'knowledge-study-tools' }, [
             question.explanation ? h('button', { type: 'button', class: 'quiet-button', onClick: () => {
@@ -203,12 +225,18 @@ export const KnowledgeSession = defineComponent({
         h('div', { class: 'knowledge-session-navigation' }, [
           h('button', { type: 'button', class: 'quiet-button', disabled: position.value === 0,
             onClick: () => { tick(); if (!submitted.value) position.value -= 1; } }, 'Previous'),
-          position.value < questions.value.length - 1 ? h('button', { type: 'button', class: 'card-primary-button',
+          position.value < questions.value.length - 1 ? h('button', {
+            ref: question.type === 'fill-in-the-blanks' && props.mode === 'test' ? fillBlankPrimaryButton : undefined,
+            type: 'button', class: 'card-primary-button',
             disabled: props.mode === 'quiz' && !wasChecked,
-            onClick: () => { tick(); if (!submitted.value) position.value += 1; } }, 'Next question') :
-            !study ? h('button', { type: 'button', class: 'card-primary-button',
+            onClick: () => { tick(); if (!submitted.value) position.value += 1; },
+          }, 'Next question') :
+            !study ? h('button', {
+              ref: question.type === 'fill-in-the-blanks' && props.mode === 'test' ? fillBlankPrimaryButton : undefined,
+              type: 'button', class: 'card-primary-button',
               disabled: props.mode === 'quiz' && checked.value.size !== questions.value.length,
-              onClick: props.mode === 'test' ? submitTest : () => submit() }, props.mode === 'test' ? 'Submit test' : 'See results') :
+              onClick: props.mode === 'test' ? submitTest : () => submit(),
+            }, props.mode === 'test' ? 'Submit test' : 'See results') :
               h('button', { type: 'button', class: 'quiet-button', onClick: () => { position.value = 0; } }, 'Back to first question'),
         ]),
       ]);
