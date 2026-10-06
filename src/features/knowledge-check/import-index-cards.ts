@@ -1,36 +1,10 @@
 import type { Card, CardSide } from '../index-cards/card-model.ts';
-import type { CardSet, IndexCards, LibraryItem as IndexCardLibraryItem } from '../index-cards/tree-model.ts';
+import type { CardSet, LibraryItem as IndexCardLibraryItem } from '../index-cards/tree-model.ts';
 import { DEFAULT_SET_MODE, type SetModeId } from '../index-cards/set-modes.ts';
 import { parseFillBlankTemplate } from '../../core/fill-blank.ts';
 import { createQuestion, MAX_QUESTIONS, MAX_TEXT, type Question } from './question-model.ts';
 
 export type IndexCardImportMapping = 'front-to-back' | 'back-to-front' | 'preserve-blanks';
-
-export interface IndexCardSetOption {
-  id: string;
-  label: string;
-  name: string;
-  mode: SetModeId;
-  count: number;
-}
-
-export function indexCardSetOptions(model: IndexCards): IndexCardSetOption[] {
-  const result: IndexCardSetOption[] = [];
-  function visit(items: IndexCardLibraryItem[], path: string[]) {
-    for (const item of items) {
-      if (item.kind === 'group') visit(item.children, [...path, item.name]);
-      else result.push({
-        id: item.id,
-        name: item.name,
-        label: [...path, item.name].join(' / '),
-        mode: item.mode ?? DEFAULT_SET_MODE,
-        count: item.cards.length,
-      });
-    }
-  }
-  visit(model.items, []);
-  return result;
-}
 
 export function findIndexCardSet(items: IndexCardLibraryItem[], id: string): CardSet | null {
   for (const item of items) {

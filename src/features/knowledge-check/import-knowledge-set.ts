@@ -4,6 +4,7 @@ import { Icon } from '../../components/icon.ts';
 import { SetModeIcon } from '../index-cards/set-mode-icon.ts';
 import { IndexCardsImportPicker } from './index-cards-import-picker.ts';
 import { createId } from '../../core/ids.ts';
+import { inputValue } from '../../core/dom.ts';
 import { MAX_NAME_LENGTH } from './library-model.ts';
 import {
   findIndexCardSet,
