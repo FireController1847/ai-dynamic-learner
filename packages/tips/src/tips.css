@@ -397,6 +397,13 @@
   font: inherit;
   font-size: 12px;
   cursor: pointer;
+  transition: background-color var(--tips-fast, 160ms ease);
+}
+.tips-menu-close:hover {
+  background: var(--tips-hover, #f3f2f1);
+}
+.tips-menu-close:active {
+  background: var(--tips-pressed, #e1dfdd);
 }
 
 .tips-menu-reset {
