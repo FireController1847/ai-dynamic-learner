@@ -56,7 +56,7 @@ For UI changes, inspect the changed surface in Light/Dark, keyboard-only use, na
 
 Review Quiz settings include a saved allowed-attempts-per-question value, defaulting to 3. During Quiz, an incorrect check below that limit gives retry feedback without revealing the answer or unlocking navigation; a correct answer or the final allowed attempt finalizes and locks the question. The Quiz overview surfaces the configured attempt count.
 
-Study exposes a low-emphasis collapsible Study score showing correct checks / total checks for the current session. It is informational only: retries, hints, answer reveals, navigation, and session completion are unaffected, and the statistic resets with the transient Study session.
+Study shows a low-emphasis inline correct-checks / total-checks statistic alongside the other small session progress text. It is informational only: retries, hints, answer reveals, navigation, and session completion are unaffected, and the statistic resets with the transient Study session.
 
 
 Review Study loops from the final question with a quiet **Keep studying** action and right chevron; the chevron uses only a subtle periodic nudge and disables motion when reduced motion is requested. Multiple-choice feedback does not restate the correct answer beneath the choices; final incorrect feedback remains concise while explanations may still appear when authored.

@@ -180,26 +180,7 @@
 }
 
 
-.knowledge-study-score {
-  position: relative;
-}
-.knowledge-study-score summary {
-  cursor: pointer;
-  color: var(--text-secondary);
-  font-weight: 600;
-}
-.knowledge-study-score[open] {
-  padding: 4px 8px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius);
-  background: var(--surface-subtle);
-}
-.knowledge-study-score[open] summary { margin-bottom: 4px; }
-.knowledge-study-score span {
-  display: block;
-  color: var(--text-secondary);
-  font-variant-numeric: tabular-nums;
-}
+.knowledge-study-score { font-variant-numeric: tabular-nums; }
 
 
 .knowledge-keep-studying {

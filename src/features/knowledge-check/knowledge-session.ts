@@ -195,12 +195,8 @@ export const KnowledgeSession = defineComponent({
       return h('section', { class: 'knowledge-session', 'data-mode': props.mode, 'aria-label': `${props.mode} questions` }, [
         h('div', { class: 'knowledge-session-progress' }, [h('p', `Question ${position.value + 1} of ${questions.value.length}`),
           study ? h('p', 'Practice freely — hints and retries welcome') : h('p', `${answered.value} answered`),
-          study ? h('details', { class: 'knowledge-study-score' }, [
-            h('summary', 'Study score'),
-            h('span', studyChecks.value
-              ? `${studyCorrectChecks.value} / ${studyChecks.value} checks correct · ${Math.round(studyCorrectChecks.value / studyChecks.value * 100)}%`
-              : 'No answers checked yet.'),
-          ]) : null,
+          study ? h('p', { class: 'knowledge-study-score' },
+            `${studyCorrectChecks.value} / ${studyChecks.value} checks correct`) : null,
           remaining.value !== null ? h('p', { class: ['knowledge-timer', { 'is-low': remaining.value <= 60 }], role: 'timer', 'aria-live': 'off' },
             `Time left: ${Math.floor(remaining.value / 60)}:${String(remaining.value % 60).padStart(2, '0')}`) : null,
           study ? h('button', { type: 'button', class: 'quiet-button', onClick: end }, 'End studying') :
