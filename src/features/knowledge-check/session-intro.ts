@@ -8,7 +8,7 @@ export const SessionIntro = defineComponent({
   name: 'KnowledgeSessionIntro',
   props: { item: { type: Object as PropType<CheckItem>, required: true },
     mode: { type: String as PropType<CheckModeId>, required: true }, count: { type: Number, required: true }, ended: Boolean },
-  emits: { start: () => true },
+  emits: { back: () => true, start: () => true },
   setup(props, { emit }) {
     return () => {
       const test = props.mode === 'test';
@@ -45,6 +45,8 @@ export const SessionIntro = defineComponent({
         ]),
         props.ended ? h('p', { role: 'status' }, study ? 'Your study session ended. Start again when ready.' : 'Your previous session ended. Start again when ready.') : null,
         h('div', { class: 'knowledge-intro-actions' }, [
+          h('button', { type: 'button', class: 'quiet-button',
+            onClick: () => emit('back') }, 'Back'),
           h('button', { type: 'button', class: 'card-primary-button', disabled: !props.count,
             onClick: () => emit('start') }, [
             study ? 'Start studying' : `Start ${mode.label.toLowerCase()}`,

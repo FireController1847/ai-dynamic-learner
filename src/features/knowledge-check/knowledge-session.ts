@@ -10,7 +10,7 @@ import { defineComponent, h, type PropType } from 'vue';
 export const KnowledgeSession = defineComponent({
   name: 'KnowledgeSession',
   props: { item: { type: Object as PropType<CheckItem>, required: true }, mode: { type: String as PropType<CheckModeId>, required: true } },
-  emits: { build: () => true },
+  emits: { back: () => true, build: () => true },
   setup(props, { emit }) {
     const state = useKnowledgeSession(props.item, props.mode);
     const { questions, options, position, responses, checked, revealed, hints, submitted, started, expired, ended,
@@ -138,7 +138,7 @@ export const KnowledgeSession = defineComponent({
         h('button', { type: 'button', class: 'card-primary-button', onClick: () => emit('build') }, 'Build questions'),
       ]);
       if (!started.value) return h(SessionIntro, { item: props.item, mode: props.mode, count: questions.value.length,
-        ended: ended.value, onStart: start });
+        ended: ended.value, onBack: () => emit('back'), onStart: start });
       if (submitted.value) {
         const showAnswers = props.mode !== 'test' || options.value.showTestAnswers;
         return h('section', { class: 'knowledge-session', 'aria-label': 'Results' }, [

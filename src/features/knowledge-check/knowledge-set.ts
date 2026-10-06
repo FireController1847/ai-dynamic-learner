@@ -50,7 +50,8 @@ export const KnowledgeSet = defineComponent({
       !building.value && !mode.value ? h(ModePicker, { setName: props.item.name,
         onChoose: chooseMode, onBuild: openBuilder }) : null,
       !building.value && mode.value ? h(KnowledgeSession, {
-        key: `${revision.value}-${mode.value}`, item: props.item, mode: mode.value, onBuild: openBuilder,
+        key: `${revision.value}-${mode.value}`, item: props.item, mode: mode.value,
+        onBack: () => { mode.value = null; }, onBuild: openBuilder,
       }) : null,
       message.value ? h('p', { class: 'knowledge-message', role: 'alert' }, message.value) : null,
     ]);
