@@ -1,6 +1,6 @@
 import { computed, defineComponent, h, nextTick, onBeforeUnmount, onDeactivated, ref, type PropType } from 'vue';
 import { GuideTypeIcon } from './guide-type-icon.ts';
-import { connectedTopicIds, startTopic, topicById } from './map-graph.ts';
+import { connectedTopicIds, mapStudyProblem, startTopic, topicById } from './map-graph.ts';
 import {
   MAP_HEIGHT, MAP_TOPIC_HEIGHT, MAP_TOPIC_WIDTH, MAP_WIDTH, type GuideSection,
   type MapGuideData, type MapTopic,
@@ -31,6 +31,7 @@ export const StudyGuideMapStudy = defineComponent({
     const timers = new Set<number>();
 
     const current = computed(() => topicById(props.data, currentId.value));
+    const studyProblem = computed(() => mapStudyProblem(props.data));
     const visitedCount = computed(() => visited.value.size);
     const complete = computed(() => props.data.topics.length > 0 && visited.value.size === props.data.topics.length);
 
@@ -98,6 +99,7 @@ export const StudyGuideMapStudy = defineComponent({
 
     function start() {
       clearTimers();
+      if (studyProblem.value) return;
       const first = startTopic(props.data);
       if (!first) return;
       visited.value = new Set();
@@ -290,8 +292,11 @@ export const StudyGuideMapStudy = defineComponent({
             h('h4', 'What to expect'),
             h('p', 'Reveal the current topic’s bullet points one at a time. Finishing a topic marks that stop visited. At forks, choose which branch to take; dead ends send you back along visited paths until there is somewhere new to go.'),
           ]),
+          studyProblem.value ? h('p', { class: 'study-guide-map-status', role: 'status' }, studyProblem.value) : null,
           h('div', { class: 'study-guide-study-actions' }, [
-            h('button', { type: 'button', class: 'card-primary-button', onClick: start }, 'Start studying'),
+            h('button', {
+              type: 'button', class: 'card-primary-button', disabled: studyProblem.value !== null, onClick: start,
+            }, 'Start studying'),
             h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('end') }, 'Back to editor'),
           ]),
         ]);
