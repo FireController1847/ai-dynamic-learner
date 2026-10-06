@@ -7,8 +7,9 @@ import { createCard, MAX_CARDS, MAX_CARD_TEXT_LENGTH, shuffledCardIds } from './
 import { CardList, type CardListHandle } from './card-list.ts';
 import { CardPaper } from './card-paper.ts';
 import { ReviewSetup } from './review-setup.ts';
+import { ReviewResult } from './review-result.ts';
 
-import { defineComponent, type PropType, computed, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue';
+import { defineComponent, type PropType, computed, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, reactive, ref, watch } from 'vue';
 
 const MIN_CARD_LIST_WIDTH = 160;
 const MAX_CARD_LIST_WIDTH = 480;
@@ -34,6 +35,8 @@ export const CardSet = defineComponent({
     const reviewSetupOpen = ref(false);
     const reviewActive = ref(false);
     const reviewNotice = ref('');
+    const reviewGrades = reactive(new Map<string, boolean>());
+    const reviewResult = ref<{ correct: number; total: number } | null>(null);
     const reviewButton = ref<HTMLButtonElement | null>(null);
     const stack = ref<HTMLElement | null>(null);
     const shuffleOrder = ref<string[] | null>(null);
@@ -55,7 +58,7 @@ export const CardSet = defineComponent({
     const atLimit = computed(() => props.totalCards >= MAX_CARDS);
 
     watch(() => props.set.cards.length, (length) => {
-      if (!length && reviewActive.value) endReview(false);
+      if (!length && reviewActive.value) endReview();
     });
 
     onDeactivated(() => {
@@ -132,6 +135,7 @@ export const CardSet = defineComponent({
       const sourceIndex = props.set.cards.findIndex((item) => item.id === current.value?.id);
       props.set.cards.splice(sourceIndex + 1, 0, card);
       if (shuffleOrder.value) shuffleOrder.value.splice(index.value + 1, 0, card.id);
+      reviewResult.value = null;
       currentId.value = card.id;
       side.value = reviewSide.value;
       message.value = duplicate ? 'Card duplicated.' : 'New card added.';
@@ -146,6 +150,7 @@ export const CardSet = defineComponent({
     }
 
     function selectCard(id: string) {
+      if (reviewResult.value) reviewResult.value = null;
       currentId.value = id;
       side.value = reviewSide.value;
       message.value = '';
@@ -156,6 +161,8 @@ export const CardSet = defineComponent({
     }
 
     async function startReview(settings: ReviewSettings) {
+      reviewGrades.clear();
+      reviewResult.value = null;
       reviewActive.value = true;
       reviewNotice.value = '';
       reviewSide.value = settings.side;
@@ -169,17 +176,54 @@ export const CardSet = defineComponent({
       stack.value?.focus();
     }
 
-    async function endReview(finished = false) {
+    function resetReviewView() {
       reviewActive.value = false;
       reviewOrder.value = 'forward';
       reviewSide.value = 'front';
       shuffleOrder.value = null;
       side.value = 'front';
-      reviewNotice.value = finished
-        ? 'Review finished. Keep editing, or start another review.'
-        : 'Review ended. You are back to browsing in saved order.';
+    }
+
+    async function finishReview() {
+      const cards = [...orderedCards.value];
+      reviewResult.value = {
+        correct: cards.filter((card) => reviewGrades.get(card.id) === true).length,
+        total: cards.length,
+      };
+      resetReviewView();
+      reviewNotice.value = '';
+      await nextTick();
+    }
+
+    async function endReview() {
+      reviewGrades.clear();
+      reviewResult.value = null;
+      resetReviewView();
+      reviewNotice.value = 'Review ended. You are back to browsing in saved order.';
       await nextTick();
       reviewButton.value?.focus();
+    }
+
+    async function dismissReviewResult() {
+      reviewGrades.clear();
+      reviewResult.value = null;
+      reviewNotice.value = 'Review finished. Keep editing, or start another review.';
+      await nextTick();
+      reviewButton.value?.focus();
+    }
+
+    async function reviewAgain() {
+      reviewResult.value = null;
+      reviewSetupOpen.value = true;
+      await nextTick();
+    }
+
+    function gradeCurrent(correct: boolean) {
+      const card = current.value;
+      if (!reviewActive.value || !card) return;
+      reviewGrades.set(card.id, correct);
+      if (index.value === orderedCards.value.length - 1) void finishReview();
+      else go(1);
     }
 
     async function cancelReview() {
@@ -195,6 +239,7 @@ export const CardSet = defineComponent({
       const next = orderedCards.value[position + 1] ?? orderedCards.value[position - 1];
       const savedIndex = props.set.cards.findIndex((card) => card.id === id);
       if (savedIndex >= 0) props.set.cards.splice(savedIndex, 1);
+      reviewGrades.delete(id);
       if (shuffleOrder.value) shuffleOrder.value = shuffleOrder.value.filter((cardId) => cardId !== id);
       currentId.value = next?.id ?? null;
       side.value = reviewSide.value;
@@ -208,7 +253,11 @@ export const CardSet = defineComponent({
       if ((event.target instanceof Element && event.target.closest('textarea, input, select, button, a, dialog, summary')) ||
           event.isComposing || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
       if (event.key === 'ArrowLeft') { event.preventDefault(); go(-1); }
-      if (event.key === 'ArrowRight') { event.preventDefault(); go(1); }
+      if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        if (reviewActive.value && index.value === orderedCards.value.length - 1) void finishReview();
+        else go(1);
+      }
       if (event.key === ' ') { event.preventDefault(); flip(); }
     }
 
@@ -225,7 +274,7 @@ export const CardSet = defineComponent({
         onKeydown: shortcuts,
       }, [
         h('div', { class: 'card-set' }, [
-        card ? h('section', { class: 'card-review-session', 'aria-label': 'Review status' }, [
+        !reviewResult.value && card ? h('section', { class: 'card-review-session', 'aria-label': 'Review status' }, [
           h('div', { class: 'card-review-session-copy' }, [
             h('strong', reviewActive.value ? 'Review in progress' : 'Browse & edit'),
             h('p', { role: 'status' }, reviewActive.value
@@ -239,11 +288,17 @@ export const CardSet = defineComponent({
             }, reviewActive.value ? 'Change setup' : 'Review'),
             reviewActive.value ? h('button', {
               type: 'button', class: 'quiet-button', 'aria-label': 'End review',
-              onClick: () => endReview(false),
+              onClick: endReview,
             }, 'End review') : null,
           ]),
         ]) : null,
-        card ? h('div', {
+        reviewResult.value ? h(ReviewResult, {
+          correct: reviewResult.value.correct,
+          total: reviewResult.value.total,
+          summary: `${reviewResult.value.correct} of ${reviewResult.value.total} cards marked Got it. Ungraded cards count as missed.`,
+          onDone: dismissReviewResult,
+          onReviewAgain: reviewAgain,
+        }) : card ? h('div', {
           ref: stack,
           class: ['ruled-card-stack', { 'has-second-card': props.set.cards.length > 1, 'has-third-card': props.set.cards.length > 2 }],
           tabindex: 0,
@@ -260,7 +315,7 @@ export const CardSet = defineComponent({
             disabled: atLimit.value, onClick: () => addCard(),
           }, [h(Icon, { name: 'plus' }), 'Add first card']),
         ]),
-        card ? h('div', { class: 'card-controls' }, [
+        !reviewResult.value && card ? h('div', { class: 'card-controls' }, [
           h('div', { class: 'card-review-controls', 'aria-label': 'Review cards' }, [
             h('button', {
               type: 'button', class: 'quiet-button card-previous', title: 'Previous card',
@@ -273,11 +328,21 @@ export const CardSet = defineComponent({
             h('button', {
               type: 'button', class: 'quiet-button',
               disabled: lastCard && !reviewActive.value,
-              onClick: () => lastCard && reviewActive.value ? endReview(true) : go(1),
+              onClick: () => lastCard && reviewActive.value ? finishReview() : go(1),
             }, lastCard && reviewActive.value ? 'Finish review' : ['Next card', h(Icon, { name: 'chevron' })]),
           ]),
+          reviewActive.value ? h('div', { class: 'card-review-grade-actions', 'aria-label': 'Score this card' }, [
+            h('button', {
+              type: 'button', class: 'quiet-button card-review-grade-button is-missed',
+              onClick: () => gradeCurrent(false),
+            }, 'Missed it'),
+            h('button', {
+              type: 'button', class: 'quiet-button card-review-grade-button is-got',
+              onClick: () => gradeCurrent(true),
+            }, 'Got it'),
+          ]) : null,
           reviewActive.value ? h('p', { class: 'card-review-instruction' },
-            `Look at the ${reviewSide.value}, reveal the other side, then ${lastCard ? 'finish the review' : 'choose Next card'}. You can edit at any time.`) : null,
+            `Check yourself, then choose Got it or Missed it to score and continue. ${lastCard ? 'Finish review' : 'Next card'} without grading counts as missed.`) : null,
           h('div', { class: 'card-edit-controls', 'aria-label': 'Card actions' }, [
             h('button', {
               ref: addButton, type: 'button', class: 'quiet-button', disabled: atLimit.value,
