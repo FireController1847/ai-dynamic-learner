@@ -49,7 +49,7 @@ export const StudyGuide=defineComponent({
         item?organization(item):null
       ]);
       return h('section',{class:'study-guide-detail is-guide',inert:overlay.value&&!collapsed.value,'aria-label':'Selected study guide'},[
-        h('header',{class:'item-heading study-guide-item-heading'},[h('h2',item.name),h('p',{class:'item-summary'},item.mode==='list'?'List mode':'Map mode')]),
+        h('header',{class:'item-heading study-guide-item-heading'},[h('h2',item.name),h('p',{class:'item-summary'},item.mode==='list'?'List mode':studyingMapId.value===item.id?'Map study':'Map editor')]),
         item.mode==='list'
           ? h('div',{class:'study-guide-list-workspace'},[h(StudyGuideListEditor,{data:item.data})])
           : studyingMapId.value===item.id

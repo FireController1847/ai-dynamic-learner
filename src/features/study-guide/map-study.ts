@@ -8,7 +8,6 @@ import {
 
 interface StudyPoint {
   sectionId: string;
-  sectionTitle: string;
   bullet: string;
 }
 
@@ -41,7 +40,7 @@ export const StudyGuideMapStudy = defineComponent({
       for (const section of topic.guide.sections) {
         for (const bullet of section.bullets) {
           if (!bullet.trim()) continue;
-          result.push({ sectionId: section.id, sectionTitle: section.title, bullet });
+          result.push({ sectionId: section.id, bullet });
         }
       }
       return result;
@@ -162,7 +161,7 @@ export const StudyGuideMapStudy = defineComponent({
     function backtrack() {
       const plan = backtrackPlan();
       if (!plan || travelling.value) return;
-      const duration = reducedMotion.matches ? 0 : 460;
+      const duration = reducedMotion.matches ? 0 : 520;
       travelling.value = true;
 
       function step(index: number) {
