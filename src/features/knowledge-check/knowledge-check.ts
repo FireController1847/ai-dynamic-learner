@@ -1,4 +1,5 @@
 import type { KnowledgeCheck as FeatureModel, CheckTarget, LibraryItem } from './library-model.ts';
+import type { IndexCards as IndexCardsModel } from '../index-cards/tree-model.ts';
 import type { KnowledgeCheckLibraryHandle } from './library.ts';
 import { requestLeave } from '../../core/leave-guards.ts';
 import { validateSetOptions, type SetOptions } from './set-options.ts';
@@ -31,6 +32,7 @@ export const KnowledgeCheck = defineComponent({
   props: {
     title: { type: String, required: true },
     model: { type: Object as PropType<FeatureModel>, required: true },
+    indexCards: { type: Object as PropType<IndexCardsModel>, required: true },
   },
   setup(props) {
     const setupTarget = ref<SetupTarget | null>(null);
@@ -217,6 +219,20 @@ export const KnowledgeCheck = defineComponent({
       else library.value?.focusImportKnowledgeCheck();
     }
 
+    function completeImport(name: string, questions: Question[]) {
+      if (!importTarget.value) return;
+      try {
+        const item = insertCheck(props.model.items, importTarget.value, name, questions);
+        selectedId.value = item.id;
+        importTarget.value = null;
+        library.value?.reveal(item.id);
+        message.value = `Imported ${item.name} with ${item.questions.length} ${item.questions.length === 1 ? 'question' : 'questions'}.`;
+        nextTick(() => workspaceHeading.value?.focus());
+      } catch (error) {
+        message.value = error instanceof Error ? error.message : String(error);
+      }
+    }
+
     function completeSetup(name: string, questions: Question[], options: SetOptions) {
       if (!setupTarget.value) return;
       try {
@@ -304,7 +320,9 @@ export const KnowledgeCheck = defineComponent({
         }, [
           h(ImportKnowledgeSet, {
             destination: importTarget.value.parentName,
+            indexCards: props.indexCards,
             onBack: cancelImport,
+            onCreate: completeImport,
           }),
         ]);
       }

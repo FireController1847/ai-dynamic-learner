@@ -512,3 +512,32 @@
   .knowledge-import-item,
   .knowledge-import-source-card { transition: none; }
 }
+
+
+.knowledge-import-source-card.is-coming-soon {
+  cursor: default;
+  opacity: .58;
+  border-color: var(--border-color);
+  background: var(--surface-subtle);
+}
+.knowledge-import-source-card.is-coming-soon:hover {
+  border-color: var(--border-color);
+  background: var(--surface-subtle);
+}
+.knowledge-import-coming-soon {
+  padding: 3px 8px;
+  border: 1px solid var(--control-border);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  background: var(--page-background);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.knowledge-import-item-options { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px 12px; }
+.knowledge-import-item-options > p { grid-column: 1 / -1; }
+@media (max-width: 620px) {
+  .knowledge-import-item-options { grid-template-columns: 1fr; }
+  .knowledge-import-item-options > p { grid-column: auto; }
+  .knowledge-import-coming-soon { grid-column: 2; justify-self: start; }
+}
