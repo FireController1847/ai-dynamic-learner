@@ -40,6 +40,7 @@ const SIZES = [2, 4, 7] as const;
 const MIN_WIDTH = 320;
 const MIN_HEIGHT = 240;
 const VIEWPORT_GAP = 8;
+const ERASER_SIZE = 34;
 
 function finite(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
@@ -93,6 +94,8 @@ export const Whiteboard = defineComponent({
     const color = ref<MarkerColor>(stored?.color ?? COLORS[0]);
     const size = ref<number>(stored?.size ?? 4);
     const strokes = ref<DrawStroke[]>(stored?.strokes ?? []);
+    const clearConfirm = ref(false);
+    const clearCancel = ref<HTMLButtonElement | null>(null);
     let trigger: HTMLElement | null = null;
     let activePointer: number | null = null;
     let activeStroke: DrawStroke | null = null;
@@ -128,24 +131,29 @@ export const Whiteboard = defineComponent({
     }
 
     function drawDot(ctx: CanvasRenderingContext2D, stroke: DrawStroke, point: DrawPoint, rect: DOMRect) {
-      const pressure = stroke.tool === 'eraser' ? 1 : Math.max(0.35, point.pressure);
-      const radius = stroke.size * (stroke.tool === 'eraser' ? 2 : 0.5) * pressure;
+      const pressure = Math.max(0.35, point.pressure);
+      const centerX = point.x * rect.width;
+      const centerY = point.y * rect.height;
       ctx.save();
       ctx.globalCompositeOperation = stroke.tool === 'eraser' ? 'destination-out' : 'source-over';
       ctx.fillStyle = stroke.color;
-      ctx.beginPath();
-      ctx.arc(point.x * rect.width, point.y * rect.height, radius, 0, Math.PI * 2);
-      ctx.fill();
+      if (stroke.tool === 'eraser') {
+        ctx.fillRect(centerX - ERASER_SIZE / 2, centerY - ERASER_SIZE / 2, ERASER_SIZE, ERASER_SIZE);
+      } else {
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, stroke.size * 0.5 * pressure, 0, Math.PI * 2);
+        ctx.fill();
+      }
       ctx.restore();
     }
 
     function drawSegment(ctx: CanvasRenderingContext2D, stroke: DrawStroke, from: DrawPoint, to: DrawPoint, rect: DOMRect) {
-      const pressure = stroke.tool === 'eraser' ? 1 : Math.max(0.35, (from.pressure + to.pressure) / 2);
+      const pressure = Math.max(0.35, (from.pressure + to.pressure) / 2);
       ctx.save();
       ctx.globalCompositeOperation = stroke.tool === 'eraser' ? 'destination-out' : 'source-over';
       ctx.strokeStyle = stroke.color;
-      ctx.lineWidth = stroke.size * (stroke.tool === 'eraser' ? 4 : 1) * pressure;
-      ctx.lineCap = 'round';
+      ctx.lineWidth = stroke.tool === 'eraser' ? ERASER_SIZE : stroke.size * pressure;
+      ctx.lineCap = stroke.tool === 'eraser' ? 'square' : 'round';
       ctx.lineJoin = 'round';
       ctx.beginPath();
       ctx.moveTo(from.x * rect.width, from.y * rect.height);
@@ -240,9 +248,20 @@ export const Whiteboard = defineComponent({
       persist();
     }
 
+    async function requestClearBoard() {
+      if (!strokes.value.length) return;
+      clearConfirm.value = true;
+      await nextTick();
+      clearCancel.value?.focus();
+    }
+
+    function cancelClearBoard() {
+      clearConfirm.value = false;
+    }
+
     function clearBoard() {
-      if (!strokes.value.length || !window.confirm('Clear the whiteboard? This cannot be undone.')) return;
       strokes.value = [];
+      clearConfirm.value = false;
       redraw();
       persist();
     }
@@ -342,20 +361,32 @@ export const Whiteboard = defineComponent({
       tabindex: -1,
       style: { left: `${x.value}px`, top: `${y.value}px`, width: `${width.value}px`, height: `${height.value}px` },
       'aria-label': 'Whiteboard',
-      onKeydown: (event: KeyboardEvent) => { if (event.key === 'Escape') void close(); },
+      onKeydown: (event: KeyboardEvent) => {
+        if (event.key !== 'Escape') return;
+        event.preventDefault();
+        if (clearConfirm.value) cancelClearBoard();
+        else void close();
+      },
     }, [
       h('header', { class: 'whiteboard-titlebar', onPointerdown: dragStart }, [
-        h('div', { class: 'whiteboard-title' }, [h(Icon, { name: 'whiteboard' }), h('strong', 'Whiteboard')]),
-        h('div', { class: 'whiteboard-actions' }, [
-          h('button', { type: 'button', class: ['whiteboard-tool-button', { 'is-active': tool.value === 'marker' }],
-            'aria-pressed': tool.value === 'marker', onClick: () => { tool.value = 'marker'; persist(); } }, 'Marker'),
-          h('button', { type: 'button', class: ['whiteboard-tool-button', { 'is-active': tool.value === 'eraser' }],
-            'aria-pressed': tool.value === 'eraser', onClick: () => { tool.value = 'eraser'; persist(); } }, 'Eraser'),
-          h('button', { type: 'button', class: 'whiteboard-tool-button whiteboard-clear', disabled: !strokes.value.length, onClick: clearBoard }, 'Clear'),
-          h('button', { type: 'button', class: 'whiteboard-close', 'aria-label': 'Close whiteboard', onClick: close }, '×'),
+        h('div', { class: 'whiteboard-title' }, [
+          h(Icon, { name: 'whiteboard' }),
+          h('strong', 'Whiteboard'),
+          h('span', { class: 'whiteboard-drag-handle', 'aria-hidden': 'true' }, '···'),
         ]),
+        h('button', { type: 'button', class: 'whiteboard-close', 'aria-label': 'Close whiteboard', onClick: close }, 'Close'),
       ]),
-      h('div', { class: 'whiteboard-options' }, [
+      h('div', { class: 'whiteboard-toolbar' }, [
+        h('button', { type: 'button', class: ['whiteboard-tool-button', { 'is-active': tool.value === 'marker' }],
+          'aria-pressed': tool.value === 'marker', onClick: () => { tool.value = 'marker'; persist(); } }, [
+          h(Icon, { name: 'pencil' }),
+          h('span', 'Marker'),
+        ]),
+        h('button', { type: 'button', class: ['whiteboard-tool-button whiteboard-eraser-tool', { 'is-active': tool.value === 'eraser' }],
+          'aria-pressed': tool.value === 'eraser', onClick: () => { tool.value = 'eraser'; persist(); } }, [
+          h('span', { class: 'whiteboard-eraser-block', 'aria-hidden': 'true' }, [h(Icon, { name: 'eraser' })]),
+          h('span', 'Eraser'),
+        ]),
         h('div', { class: 'whiteboard-colors', role: 'group', 'aria-label': 'Marker color' },
           COLORS.map((entry, index) => h('button', {
             type: 'button',
@@ -368,6 +399,7 @@ export const Whiteboard = defineComponent({
           }))),
         h('label', { class: 'whiteboard-size' }, ['Size', h('select', {
           value: size.value,
+          disabled: tool.value === 'eraser',
           onChange: (event: Event) => {
             const value = Number((event.target as HTMLSelectElement).value);
             if (SIZES.includes(value as (typeof SIZES)[number])) size.value = value;
@@ -379,6 +411,12 @@ export const Whiteboard = defineComponent({
           h('option', { value: 7 }, 'Bold'),
         ])]),
         h('span', { class: 'whiteboard-input-hint' }, 'Mouse, touch, or pen'),
+        h('button', {
+          type: 'button',
+          class: 'whiteboard-clear',
+          disabled: !strokes.value.length,
+          onClick: requestClearBoard,
+        }, 'Clear board'),
       ]),
       h('div', { ref: surface, class: 'whiteboard-surface' }, [
         h('canvas', {
@@ -391,6 +429,24 @@ export const Whiteboard = defineComponent({
           onPointercancel: finishStroke,
         }),
       ]),
+      clearConfirm.value ? h('div', { class: 'whiteboard-confirm-layer' }, [
+        h('section', {
+          class: 'whiteboard-confirm-card',
+          role: 'alertdialog',
+          'aria-modal': 'true',
+          'aria-labelledby': 'whiteboard-clear-title',
+          'aria-describedby': 'whiteboard-clear-description',
+          onPointerdown: (event: PointerEvent) => event.stopPropagation(),
+        }, [
+          h('div', { class: 'whiteboard-confirm-icon' }, [h(Icon, { name: 'eraser' })]),
+          h('h2', { id: 'whiteboard-clear-title' }, 'Clear whiteboard?'),
+          h('p', { id: 'whiteboard-clear-description' }, 'This removes every mark from the board and cannot be undone.'),
+          h('div', { class: 'whiteboard-confirm-actions' }, [
+            h('button', { ref: clearCancel, type: 'button', class: 'quiet-button', onClick: cancelClearBoard }, 'Cancel'),
+            h('button', { type: 'button', class: 'danger-button', onClick: clearBoard }, 'Clear board'),
+          ]),
+        ]),
+      ]) : null,
       h('div', { class: 'whiteboard-resize-handle', role: 'separator', 'aria-label': 'Resize whiteboard', onPointerdown: resizeStart }),
     ]);
   },
