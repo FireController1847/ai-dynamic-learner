@@ -24,16 +24,9 @@ export const CardSet = defineComponent({
     cardListCollapsed: Boolean,
   },
   emits: { 'resize-card-list': (_width: number) => true, 'reset-card-list': () => true, 'toggle-card-list': () => true },
-  setup(props, { emit }) {
+  setup(props, { emit, expose }) {
     const cardList = ref<CardListHandle | null>(null);
-    const showCardsButton = ref<HTMLButtonElement | null>(null);
-    async function toggleCardList() {
-      const hiding = !props.cardListCollapsed;
-      cardListResizing.value = false;
-      emit('toggle-card-list');
-      await nextTick();
-      if (hiding) showCardsButton.value?.focus(); else cardList.value?.focusHide();
-    }
+    expose({ focusCardListToggle: () => cardList.value?.focusHide() });
     const currentId = ref(props.set.cards[0]?.id ?? null);
     const side = ref<CardSide>('front');
     const reviewSide = ref<CardSide>('front');
@@ -232,9 +225,6 @@ export const CardSet = defineComponent({
         onKeydown: shortcuts,
       }, [
         h('div', { class: 'card-set' }, [
-          props.cardListCollapsed ? h('button', { ref: showCardsButton, type: 'button', class: 'quiet-button card-list-show',
-            'aria-controls': 'index-cards-card-list', 'aria-expanded': false, onClick: toggleCardList,
-          }, [h(Icon, { name: 'panel-close' }), 'Show cards']) : null,
         card ? h('section', { class: 'card-review-session', 'aria-label': 'Review status' }, [
           h('div', { class: 'card-review-session-copy' }, [
             h('strong', reviewActive.value ? 'Review in progress' : 'Browse & edit'),
@@ -330,7 +320,8 @@ export const CardSet = defineComponent({
           onDblclick: () => emit('reset-card-list'),
         }) : null,
         h(CardList, {
-          ref: cardList, hidden: props.cardListCollapsed, onHide: toggleCardList,
+          ref: cardList, hidden: props.cardListCollapsed,
+          onHide: () => { cardListResizing.value = false; emit('toggle-card-list'); },
           cards: orderedCards.value, selectedId: card?.id ?? null,
           atLimit: atLimit.value, previewSide: reviewSide.value,
           orderLabel: reviewActive.value ? `${orderDescription} · ${reviewSide.value} first` : 'Saved order',

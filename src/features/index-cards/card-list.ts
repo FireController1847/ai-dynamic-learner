@@ -57,7 +57,13 @@ export const CardList = defineComponent({
       rows.get(card.id)?.querySelector('button')?.focus({ preventScroll: true });
     }
 
-    return () => h('aside', { id: 'index-cards-card-list', class: 'card-list-panel', hidden: props.hidden, inert: props.hidden, 'aria-label': 'Cards in this set' }, [
+    return () => h('aside', {
+      id: 'index-cards-card-list',
+      class: 'card-list-panel',
+      inert: props.hidden,
+      'aria-hidden': props.hidden ? 'true' : undefined,
+      'aria-label': 'Cards in this set',
+    }, [
       h('div', { class: 'card-list-toolbar' }, [
         h('h3', ['Cards ', h('span', { class: 'card-list-count' }, String(props.cards.length))]),
         h('div', { class: 'card-list-actions' }, [

@@ -20,7 +20,7 @@ Review (formerly Knowledge Check) is at `1.2.2`. `1.2.2` resets mode selection w
 
 Todo List `1.5.0` adds independent list cloning, with an optional action to skip remaining tasks on the original after copying.
 
-Index Cards `1.10.2` keeps untitled cards’ title area blank during Flash Cards and Fill in the Blanks review; editable placeholders and numbered card-list labels remain.
+Index Cards `1.11.1` polishes the collapsible Cards panel added in `1.11.0`: the restore control mirrors the Library control in the top-right corner, focus moves cleanly between hide/show controls, and the panel animates out to the right or downward on narrow layouts.
 
 ## History-derived starting versions
 
