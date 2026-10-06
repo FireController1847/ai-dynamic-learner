@@ -16,7 +16,8 @@ export interface AnswerMatchResult {
 export { answerSimilarity, normalizeAnswer };
 
 export function answersMatchMorphology(answer: string, response: string): boolean {
-  return evaluatePackageAnswer(answer, response, { strictness: 3 }).reason === 'linguistic';
+  const reason = evaluatePackageAnswer(answer, response, { strictness: 3 }).reason;
+  return reason === 'exact' || reason === 'linguistic';
 }
 
 export function evaluateAnswer(answer: string, response: string): AnswerMatchResult {
