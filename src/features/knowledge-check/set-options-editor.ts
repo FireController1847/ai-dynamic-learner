@@ -14,6 +14,12 @@ export const SetOptionsEditor = defineComponent({
         onInput: (event: Event) => { props.options.description = inputValue(event); },
       })]),
       h('p', { class: 'knowledge-muted' }, 'Shown before starting a Quiz or Test. Explain the topic or what to expect.'),
+      h('h3', 'Quiz settings'),
+      h('label', { class: 'knowledge-field' }, ['Allowed attempts per question', h('input', {
+        type: 'number', min: 1, step: 1, required: true, value: props.options.quizAttempts,
+        onInput: (event: Event) => { props.options.quizAttempts = Number(inputValue(event)); },
+      })]),
+      h('p', { class: 'knowledge-muted' }, 'A correct answer finishes the question immediately. Incorrect answers can be retried until this many attempts have been used.'),
       h('h3', 'Test settings'),
       h('label', { class: 'knowledge-option-toggle' }, [h('input', {
         type: 'checkbox', checked: props.options.timeLimitMinutes !== null,

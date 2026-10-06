@@ -14,7 +14,8 @@ export const KnowledgeSession = defineComponent({
   setup(props, { emit }) {
     const state = useKnowledgeSession(props.item, props.mode);
     const { questions, options, position, responses, checked, revealed, hints, submitted, started, expired, ended,
-      answered, score, remaining, celebrating, start, end, check, submit, tick } = state;
+      answered, score, remaining, celebrating, attempts, studyChecks, studyCorrectChecks,
+      start, end, check, submit, tick } = state;
     const fillBlankPrimaryButton = ref<HTMLButtonElement | null>(null);
 
     function currentResponse(question: Question): QuestionResponse {
@@ -56,9 +57,15 @@ export const KnowledgeSession = defineComponent({
     function feedback(question: Question, showAnswer = true) {
       const submittedResponse = currentResponse(question);
       const correct = answerCorrect(question, submittedResponse);
+      const attemptCount = attempts.value[question.id] ?? 0;
+      const quizRetry = props.mode === 'quiz' && !correct && !checked.value.has(question.id) && attemptCount > 0;
+      const attemptsRemaining = Math.max(0, options.value.quizAttempts - attemptCount);
       const content = [
         h('strong', correct ? props.mode === 'test' ? 'Correct' : 'Correct — well done!' :
-          props.mode === 'study' ? 'Not quite. Give it another try.' : props.mode === 'test' ? 'Incorrect' : 'Not quite — here’s the answer.'),
+          props.mode === 'study' ? 'Not quite. Give it another try.' :
+            props.mode === 'test' ? 'Incorrect' :
+              quizRetry ? `Not quite — ${attemptsRemaining} ${attemptsRemaining === 1 ? 'attempt' : 'attempts'} remaining.` :
+                'Not quite — here’s the answer.'),
       ];
 
       if (question.type === 'fill-in-the-blanks') {
@@ -176,6 +183,9 @@ export const KnowledgeSession = defineComponent({
       if (!question) return null;
       const study = props.mode === 'study';
       const wasChecked = checked.value.has(question.id);
+      const attemptCount = attempts.value[question.id] ?? 0;
+      const quizRetrying = props.mode === 'quiz' && attemptCount > 0 && !wasChecked;
+      const showFeedback = wasChecked || quizRetrying;
       const locked = props.mode === 'quiz' && wasChecked;
       const correct = answerCorrect(question, currentResponse(question));
       const choices = question.type === 'true-false' ? ['True', 'False'] : question.choices.filter(choice => choice.trim());
@@ -184,6 +194,12 @@ export const KnowledgeSession = defineComponent({
       return h('section', { class: 'knowledge-session', 'data-mode': props.mode, 'aria-label': `${props.mode} questions` }, [
         h('div', { class: 'knowledge-session-progress' }, [h('p', `Question ${position.value + 1} of ${questions.value.length}`),
           study ? h('p', 'Practice freely — hints and retries welcome') : h('p', `${answered.value} answered`),
+          study ? h('details', { class: 'knowledge-study-score' }, [
+            h('summary', 'Study score'),
+            h('span', studyChecks.value
+              ? `${studyCorrectChecks.value} / ${studyChecks.value} checks correct · ${Math.round(studyCorrectChecks.value / studyChecks.value * 100)}%`
+              : 'No answers checked yet.'),
+          ]) : null,
           remaining.value !== null ? h('p', { class: ['knowledge-timer', { 'is-low': remaining.value <= 60 }], role: 'timer', 'aria-live': 'off' },
             `Time left: ${Math.floor(remaining.value / 60)}:${String(remaining.value % 60).padStart(2, '0')}`) : null,
           study ? h('button', { type: 'button', class: 'quiet-button', onClick: end }, 'End studying') :
@@ -203,7 +219,7 @@ export const KnowledgeSession = defineComponent({
                   onChange: () => response(question, choice) }), h('span', choice),
               ]))]),
           props.mode !== 'test' ? h('div', {}, [
-            wasChecked ? feedback(question, !study || correct) : null,
+            showFeedback ? feedback(question, study ? correct : !quizRetrying) : null,
             !locked ? h('button', {
               ref: question.type === 'fill-in-the-blanks' ? fillBlankPrimaryButton : undefined,
               type: 'button', class: 'card-primary-button',

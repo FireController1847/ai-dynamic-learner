@@ -21,6 +21,8 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId) {
   const deadline = ref<number | null>(null);
   const celebrating = ref<string | null>(null);
   const attempts = ref<Record<string, number>>({});
+  const studyChecks = ref(0);
+  const studyCorrectChecks = ref(0);
   const active = computed(() => mode !== 'study' && started.value && !submitted.value);
   const answered = computed(() => questions.value.filter(question =>
     questionResponseAnswered(question, responses.value[question.id])).length);
@@ -44,13 +46,15 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId) {
   }
   function start() {
     responses.value = {}; checked.value = new Set(); revealed.value = new Set(); hints.value = new Set(); attempts.value = {};
+    studyChecks.value = 0; studyCorrectChecks.value = 0;
     position.value = 0; submitted.value = false; expired.value = false; ended.value = false; clearCelebration();
     now.value = Date.now(); started.value = true;
     deadline.value = mode === 'test' && options.value.timeLimitMinutes !== null ? now.value + options.value.timeLimitMinutes * 60_000 : null;
   }
   function end() {
     started.value = false; submitted.value = false; deadline.value = null; ended.value = true; clearCelebration();
-    responses.value = {}; checked.value = new Set(); revealed.value = new Set(); hints.value = new Set(); attempts.value = {}; position.value = 0;
+    responses.value = {}; checked.value = new Set(); revealed.value = new Set(); hints.value = new Set(); attempts.value = {};
+    studyChecks.value = 0; studyCorrectChecks.value = 0; position.value = 0;
   }
   function leave(): boolean {
     tick();
@@ -65,12 +69,27 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId) {
     if (!question) return;
     const response = responses.value[question.id];
     if (question.type !== 'fill-in-the-blanks' && !questionResponseAnswered(question, response)) return;
-    checked.value.add(question.id);
-    attempts.value[question.id] = (attempts.value[question.id] ?? 0) + 1;
-    if (mode === 'quiz' && answerCorrect(question, response ?? (question.type === 'fill-in-the-blanks' ? [] : ''))) {
-      clearCelebration(); celebrating.value = question.id;
-      celebrationTimer = window.setTimeout(clearCelebration, 900);
+    const nextAttempt = (attempts.value[question.id] ?? 0) + 1;
+    attempts.value[question.id] = nextAttempt;
+    const correct = answerCorrect(question, response ?? (question.type === 'fill-in-the-blanks' ? [] : ''));
+
+    if (mode === 'study') {
+      checked.value.add(question.id);
+      studyChecks.value += 1;
+      if (correct) studyCorrectChecks.value += 1;
+      return;
     }
+
+    if (mode === 'quiz') {
+      if (correct || nextAttempt >= options.value.quizAttempts) checked.value.add(question.id);
+      if (correct) {
+        clearCelebration(); celebrating.value = question.id;
+        celebrationTimer = window.setTimeout(clearCelebration, 900);
+      }
+      return;
+    }
+
+    checked.value.add(question.id);
   }
   function beforeUnload(event: BeforeUnloadEvent) {
     if (!active.value) return;
@@ -95,5 +114,6 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId) {
   onDeactivated(() => { if (active.value || (mode === 'study' && started.value)) end(); detach(); });
   onBeforeUnmount(detach);
   return { questions, options, position, responses, checked, revealed, hints, submitted, started, expired, ended,
-    active, answered, score, remaining, celebrating, attempts, start, end, check, submit, leave, tick };
+    active, answered, score, remaining, celebrating, attempts, studyChecks, studyCorrectChecks,
+    start, end, check, submit, leave, tick };
 }

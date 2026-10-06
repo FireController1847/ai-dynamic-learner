@@ -32,14 +32,15 @@ export const SessionIntro = defineComponent({
           pill('cards', `${props.count} ${props.count === 1 ? 'question' : 'questions'}`),
           pill('clock', test && options.timeLimitMinutes !== null ?
             `${options.timeLimitMinutes} ${options.timeLimitMinutes === 1 ? 'minute' : 'minutes'}` : 'No time limit'),
-          pill(test ? 'verified' : 'check', study ? 'Hints and retries' : test ? 'Feedback at the end' : 'Instant feedback'),
+          pill(test ? 'verified' : 'check', study ? 'Hints and retries' : test ? 'Feedback at the end' :
+            `${options.quizAttempts} ${options.quizAttempts === 1 ? 'attempt' : 'attempts'} per question`),
         ]),
         options.description ? h('p', { class: 'knowledge-description' }, options.description) : null,
         h('div', { class: 'knowledge-intro-details' }, [
           h('h4', 'What to expect'),
-          h('p', study ? 'Try an answer before checking. Use explanations as hints, reveal an answer when stuck, and retry as often as you like. No score or pressure.' :
+          h('p', study ? 'Try an answer before checking. Use explanations as hints, reveal an answer when stuck, and retry as often as you like. The optional Study score is only a running practice statistic.' :
             test ? 'Answer independently. Revisit and change responses before submitting; feedback stays hidden during the Test.' :
-              'Check each answer for immediate feedback and an explanation. Checked responses are locked, so you can focus on what to learn before moving on.'),
+              `Check each answer for immediate feedback. You have up to ${options.quizAttempts} ${options.quizAttempts === 1 ? 'attempt' : 'attempts'} per question; a correct answer or the final allowed attempt locks it before you move on.`),
           test ? h('p', options.timeLimitMinutes !== null ? 'The clock starts only when you press Start test. When time runs out, your current answers are submitted.' : 'There is no clock. Submit when you are ready.') : null,
           test ? h('p', options.showTestAnswers ? 'Results include your score and a review of correct/wrong answers.' : 'This Test shows your score only; answers and explanations remain hidden.') : null,
         ]),

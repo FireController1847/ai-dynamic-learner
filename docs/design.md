@@ -50,3 +50,10 @@ Review/navigation controls should keep stable placement and sizing when labels/s
 ## Focused manual checks
 
 For UI changes, inspect the changed surface in Light/Dark, keyboard-only use, narrow/short layouts, reduced motion, and touch-sized controls when relevant. Add feature-specific checks only for behavior actually changed.
+
+
+## Review Quiz attempts and Study scoring
+
+Review Quiz settings include a saved allowed-attempts-per-question value, defaulting to 3. During Quiz, an incorrect check below that limit gives retry feedback without revealing the answer or unlocking navigation; a correct answer or the final allowed attempt finalizes and locks the question. The Quiz overview surfaces the configured attempt count.
+
+Study exposes a low-emphasis collapsible Study score showing correct checks / total checks for the current session. It is informational only: retries, hints, answer reveals, navigation, and session completion are unaffected, and the statistic resets with the transient Study session.

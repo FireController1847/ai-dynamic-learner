@@ -22,7 +22,7 @@ export const CheckBuilder = defineComponent({
     const questions = ref<Question[]>(props.item?.questions.map((question) => ({ ...question, choices: [...question.choices] })) ?? []);
     const selected = ref(0);
     const tab = ref<'questions' | 'options'>('questions');
-    const options = ref<SetOptions>({ ...(props.item?.options ?? defaultSetOptions()) });
+    const options = ref<SetOptions>({ ...defaultSetOptions(), ...props.item?.options });
     const message = ref('');
     const invalid = computed(() => questions.value.findIndex(question => questionHasContent(question) && Boolean(questionProblem(question))));
     const optionsProblem = computed(() => {
