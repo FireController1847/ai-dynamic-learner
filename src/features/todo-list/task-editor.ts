@@ -127,8 +127,15 @@ export const TodoTaskEditor = defineComponent({
     }
     function centerPriorities() {
       for (const [id, section] of sectionElements) {
-        const last = section.querySelector<HTMLElement>('.todo-task-row:last-child');
-        const blankHeight = last && (last.classList.contains('is-draft') || last.classList.contains('is-empty')) ? last.offsetHeight : 0;
+        const rows = Array.from(section.querySelectorAll<HTMLElement>('.todo-task-row, .todo-section-spacer'));
+        let blankHeight = 0;
+        for (let index = rows.length - 1; index >= 0; index -= 1) {
+          const row = rows[index]!;
+          if (!row.classList.contains('todo-section-spacer') &&
+              !row.classList.contains('is-draft') &&
+              !row.classList.contains('is-empty')) break;
+          blankHeight += row.offsetHeight;
+        }
         priorityHeights.set(id, Math.max(props.display.rowSpacing, section.offsetHeight - blankHeight));
       }
     }
@@ -349,14 +356,18 @@ export const TodoTaskEditor = defineComponent({
         ]) : null,
       ]);
     }
-    function sectionRows(section: TodoSection) {
+    function sectionRows(section: TodoSection, hasFollowingSection: boolean) {
       const ordered = orderedTasks(section);
       const last = ordered.at(-1);
+      const hasDraft = !!(last?.text.trim() || last?.done || last?.skipped || !ordered.length);
       return [
         ...ordered.map((task, index) => taskRow(section, task, index, ordered)),
-        // An empty writing row stays below both the skipped and regular tasks.
-        last?.text.trim() || last?.done || last?.skipped || !ordered.length
-          ? taskRow(section, draftFor(section), ordered.length, ordered, true) : null,
+        // The draft row normally supplies the ruled-line separation between sections.
+        hasDraft ? taskRow(section, draftFor(section), ordered.length, ordered, true) : null,
+        // Enter creates a stored blank task before it has text. Keep the separator line
+        // in that transient state so the following section never jumps upward.
+        !hasDraft && hasFollowingSection
+          ? h('li', { class: 'todo-section-spacer', 'aria-hidden': 'true' }) : null,
       ];
     }
     return () => h('div', { ref: root, class: 'todo-task-editor', style: todoDisplayStyles(props.display) }, [
@@ -399,7 +410,7 @@ export const TodoTaskEditor = defineComponent({
             }),
           ]),
         ]),
-        h('ul', { class: 'todo-task-rows' }, sectionRows(section)),
+        h('ul', { class: 'todo-task-rows' }, sectionRows(section, sectionIndex < displaySections.value.length - 1)),
       ])),
       ]),
       h('p', { class: 'todo-editor-hint' }, 'Click a section name to rename it. Enter adds a task; Enter on an empty task starts a section. Shift+Enter adds a line. × skips or restores a task. Priority applies to the section.'),

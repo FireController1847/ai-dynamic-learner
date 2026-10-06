@@ -51,7 +51,7 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'todo-list', label: 'Todo List', path: '/todo-list/', icon: 'checklist',
     group: 'helpers',
-    version: '1.5.0',
+    version: '1.5.1',
     image: 'assets/todo-list.png',
     description: 'Write, organize, and prioritize tasks in simple lists that archive automatically.',
     metadata: {
@@ -99,7 +99,7 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'study-guide', label: 'Study Guide', path: '/study-guide/', icon: 'document',
     group: 'mastery',
-    version: '0.3.0',
+    version: '0.3.1',
     image: 'assets/study-guide.png',
     description: 'Build simple bullet lists or connected topic maps, then study a map one stop at a time.',
     metadata: {

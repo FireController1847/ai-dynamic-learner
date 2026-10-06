@@ -143,7 +143,7 @@ function mapData(value: unknown, ids: Set<string>): asserts value is MapGuideDat
     // v0.3.0 briefly allowed arbitrary undirected graphs. Keep those maps loadable
     // by preserving saved connection order and dropping only edges that close a loop.
     if (alreadyConnected(connection.from, connection.to)) continue;
-    acceptedConnections.push(connection as unknown as MapConnection);
+    acceptedConnections.push({ id: connection.id, from: connection.from, to: connection.to });
     adjacency.get(connection.from)?.add(connection.to);
     adjacency.get(connection.to)?.add(connection.from);
   }
