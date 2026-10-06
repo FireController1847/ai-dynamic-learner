@@ -9,7 +9,7 @@ import type { Card } from './card-model.ts';
 import type { DisplayOptions } from './display-options.ts';
 import { DEFAULT_SET_MODE, isSetMode, type SetModeId } from './set-modes.ts';
 
-export interface FillBlankSetOptions {
+export interface IndexCardSettings {
   answerStrictness: AnswerStrictness;
 }
 
@@ -19,12 +19,16 @@ export interface CardSet {
   name: string;
   mode?: SetModeId;
   cards: Card[];
-  fillBlank?: FillBlankSetOptions;
 }
 
 export interface Group { id: string; kind: 'group'; name: string; children: LibraryItem[] }
 export type LibraryItem = Group | CardSet;
-export interface IndexCards { items: LibraryItem[]; display?: DisplayOptions; lastSelectedSetId?: string | null }
+export interface IndexCards {
+  items: LibraryItem[];
+  display?: DisplayOptions;
+  settings?: IndexCardSettings;
+  lastSelectedSetId?: string | null;
+}
 export interface SetTarget { selectedId?: string | null }
 export type ItemLocation = TreeItemLocation<LibraryItem>;
 export type MovePosition = TreeMovePosition;
@@ -46,12 +50,16 @@ export const canMove = libraryTree.canMove;
 export const moveItem = libraryTree.moveItem;
 export const groupOptions = libraryTree.groupOptions;
 
-export function getFillBlankAnswerStrictness(set: Pick<CardSet, 'fillBlank'>): AnswerStrictness {
-  return set.fillBlank?.answerStrictness ?? DEFAULT_ANSWER_STRICTNESS;
+export function resolvedIndexCardSettings(settings?: IndexCardSettings): IndexCardSettings {
+  return settings ?? { answerStrictness: DEFAULT_ANSWER_STRICTNESS };
 }
 
-export function setFillBlankAnswerStrictness(set: CardSet, answerStrictness: AnswerStrictness): void {
-  set.fillBlank = { answerStrictness };
+function validateIndexCardSettings(value: unknown): asserts value is IndexCardSettings {
+  if (!isRecord(value) ||
+      Object.keys(value).some((key) => key !== 'answerStrictness') ||
+      !isAnswerStrictness(value.answerStrictness)) {
+    throw new Error('Index Cards answer strictness must be a level from 1 through 4.');
+  }
 }
 
 export function createItem(kind: 'group', mode?: SetModeId): Group;
@@ -61,11 +69,7 @@ export function createItem(kind: 'group' | 'set', mode: SetModeId = DEFAULT_SET_
   const id = createId();
   if (kind === 'group') return { id, kind, name: 'New group', children: [] };
 
-  const set: CardSet = { id, kind: 'set', name: 'New set', mode, cards: [] };
-  if (mode === 'fill-in-the-blanks') {
-    set.fillBlank = { answerStrictness: DEFAULT_ANSWER_STRICTNESS };
-  }
-  return set;
+  return { id, kind: 'set', name: 'New set', mode, cards: [] };
 }
 
 export function insertSet(items: LibraryItem[], target: SetTarget | null, mode: SetModeId): CardSet {
@@ -93,10 +97,11 @@ export function countCards(items: LibraryItem[]): number {
 
 export function validateIndexCards(value: unknown): asserts value is IndexCards {
   if (!isRecord(value) || !Array.isArray(value.items) ||
-      Object.keys(value).some((key) => !['items', 'display', 'lastSelectedSetId'].includes(key))) {
+      Object.keys(value).some((key) => !['items', 'display', 'settings', 'lastSelectedSetId'].includes(key))) {
     throw new Error('The Index Cards directory is invalid.');
   }
   if (Object.hasOwn(value, 'display')) validateDisplayOptions(value.display);
+  if (Object.hasOwn(value, 'settings')) validateIndexCardSettings(value.settings);
   if (Object.hasOwn(value, 'lastSelectedSetId') && value.lastSelectedSetId !== null &&
       !isValidId(value.lastSelectedSetId)) {
     throw new Error('The remembered Index Cards set ID is invalid.');
@@ -119,7 +124,7 @@ export function validateIndexCards(value: unknown): asserts value is IndexCards 
       if (item.kind === 'set' && !Object.hasOwn(item, 'mode')) item.mode = DEFAULT_SET_MODE;
       const supportedKeys = item.kind === 'group'
         ? ['id', 'kind', 'name', 'children']
-        : ['id', 'kind', 'name', 'mode', 'cards', 'fillBlank'];
+        : ['id', 'kind', 'name', 'mode', 'cards'];
       if (Object.keys(item).some((key) => !supportedKeys.includes(key)) ||
           !Array.isArray(item[collectionKey])) {
         throw new Error('A group or set contains unsupported data.');
@@ -128,19 +133,6 @@ export function validateIndexCards(value: unknown): asserts value is IndexCards 
         visit(item.children as unknown[], depth + 1);
       } else {
         if (!isSetMode(item.mode)) throw new Error('An Index Cards set has an unsupported study mode.');
-
-        if (item.mode === 'fill-in-the-blanks') {
-          if (!Object.hasOwn(item, 'fillBlank')) {
-            item.fillBlank = { answerStrictness: DEFAULT_ANSWER_STRICTNESS };
-          }
-          if (!isRecord(item.fillBlank) ||
-              Object.keys(item.fillBlank).some((key) => key !== 'answerStrictness') ||
-              !isAnswerStrictness(item.fillBlank.answerStrictness)) {
-            throw new Error('Fill-in-the-Blanks answer strictness must be a level from 1 through 4.');
-          }
-        } else if (Object.hasOwn(item, 'fillBlank')) {
-          throw new Error('Fill-in-the-Blanks settings can only be stored on Fill-in-the-Blanks sets.');
-        }
 
         validateCards(item.cards, ids);
         cardCount += item.cards.length;
