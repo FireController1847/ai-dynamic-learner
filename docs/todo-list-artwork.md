@@ -1,8 +1,8 @@
 # Todo List artwork
 
-`src/assets/todo-list.png` is the transparent 1254 × 1254 PNG used by Home, navigation, and the page header. Todo List's empty-library screen uses the sidebar's New todo list plus icon. The feature definition also supplies the generated image and its dimensions, media type, and alternative description to the existing Open Graph, Twitter, and JSON-LD metadata generator. The canonical URL, title, description, and other shared metadata come from the existing route generation.
+`src/assets/app-icons/todo-list.png` is the transparent 1254 × 1254 source used for Todo List route/social metadata. Home, navigation, and the page header use the 256 × 256 variants under `src/assets/app-icons/{webp,png,gif}/`; the empty-library screen uses the sidebar's New todo list plus icon. The feature definition supplies the full-resolution image path, dimensions, media type, and alternative description to the existing Open Graph, Twitter, and JSON-LD metadata generator.
 
-Generated with the built-in image generation tool, using `src/assets/notebook.png` and `src/assets/index-cards.png` as style references.
+Generated with the built-in image generation tool, using `src/assets/app-icons/notebook.png` and `src/assets/app-icons/index-cards.png` as style references.
 
 ## Generation prompt
 

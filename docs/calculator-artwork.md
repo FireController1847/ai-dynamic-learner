@@ -1,8 +1,8 @@
 # Calculator artwork
 
-`src/assets/calculator.png` is the transparent 1254 × 1254 PNG used by Home, navigation, and the Calculator page header. The shared feature definition supplies this image and its dimensions, media type, and alternative description to the existing Open Graph, Twitter, and JSON-LD metadata generator. The existing webpack asset-copying configuration includes it in production output.
+`src/assets/app-icons/calculator.png` is the transparent 1254 × 1254 source used for Calculator route/social metadata. Home, navigation, and the page header use the 256 × 256 variants under `src/assets/app-icons/{webp,png,gif}/`. The shared feature definition supplies the full-resolution image path, dimensions, media type, and alternative description to the existing Open Graph, Twitter, and JSON-LD metadata generator.
 
-Generated with the built-in image generation tool, using `src/assets/notebook.png`, `src/assets/word-search.png`, and `src/assets/index-cards.png` as style references. The icon preserves their glossy blue-and-white finish, cyan highlights, rounded bevels, and slight counterclockwise tilt.
+Generated with the built-in image generation tool, using `src/assets/app-icons/notebook.png`, `src/assets/app-icons/word-search.png`, and `src/assets/app-icons/index-cards.png` as style references. The icon preserves their glossy blue-and-white finish, cyan highlights, rounded bevels, and slight counterclockwise tilt.
 
 ## Generation prompt
 

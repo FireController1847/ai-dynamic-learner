@@ -27,12 +27,12 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
     id: 'calculator', label: 'Calculator', path: '/calculator/', icon: 'calculator',
     group: 'helpers',
     version: '1.3.0',
-    image: 'assets/calculator.png',
+    image: 'assets/app-icons/calculator.png',
     description: 'A scientific calculator for expressions and functions.',
     metadata: {
       keywords: ['calculator', 'scientific calculator', 'arithmetic', 'trigonometry', 'logarithms'],
       socialImage: {
-        path: 'assets/calculator.png',
+        path: 'assets/app-icons/calculator.png',
         type: 'image/png',
         width: 1254,
         height: 1254,
@@ -44,19 +44,19 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
     id: 'notebook', label: 'Notebook', path: '/notebook/', icon: 'document',
     group: 'helpers',
     version: '1.4.3',
-    image: 'assets/notebook.png',
+    image: 'assets/app-icons/notebook.png',
     description: 'Organize notes into groups and keep your documents together in one notebook.',
   },
   {
     id: 'todo-list', label: 'Todo List', path: '/todo-list/', icon: 'checklist',
     group: 'helpers',
     version: '1.5.1',
-    image: 'assets/todo-list.png',
+    image: 'assets/app-icons/todo-list.png',
     description: 'Write, organize, and prioritize tasks in simple lists that archive automatically.',
     metadata: {
       keywords: ['todo list', 'tasks', 'checklist', 'task planning'],
       socialImage: {
-        path: 'assets/todo-list.png',
+        path: 'assets/app-icons/todo-list.png',
         type: 'image/png',
         width: 1254,
         height: 1254,
@@ -68,26 +68,26 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
     id: 'index-cards', label: 'Index Cards', path: '/index-cards/', icon: 'cards',
     group: 'applications',
     version: '1.13.0',
-    image: 'assets/index-cards.png',
+    image: 'assets/app-icons/index-cards.png',
     description: 'Create flash cards or fill-in-the-blanks sets and review them at your own pace.',
   },
   {
     id: 'word-search', label: 'Word Search', path: '/word-search/', icon: 'word-search',
     group: 'applications',
     version: '1.5.11',
-    image: 'assets/word-search.png',
+    image: 'assets/app-icons/word-search.png',
     description: 'Create your own word searches, find every word, and pick up where you left off.'
   },
   {
     id: 'crossword', label: 'Crossword', path: '/crossword/', icon: 'crossword',
     group: 'applications',
     version: '1.1.6',
-    image: 'assets/crossword.png',
+    image: 'assets/app-icons/crossword.png',
     description: 'Create your own crosswords, solve the clues, and pick up where you left off.',
     metadata: {
       keywords: ['crossword', 'crossword puzzle', 'crossword maker', 'clues'],
       socialImage: {
-        path: 'assets/crossword.png',
+        path: 'assets/app-icons/crossword.png',
         type: 'image/png',
         width: 1254,
         height: 1254,
@@ -99,12 +99,12 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
     id: 'study-guide', label: 'Study Guide', path: '/study-guide/', icon: 'document',
     group: 'mastery',
     version: '1.0.0',
-    image: 'assets/study-guide.png',
+    image: 'assets/app-icons/study-guide.png',
     description: 'Build simple bullet lists or connected topic maps, then study a map one stop at a time.',
     metadata: {
       keywords: ['study guide', 'study notes', 'learning', 'revision'],
       socialImage: {
-        path: 'assets/study-guide.png',
+        path: 'assets/app-icons/study-guide.png',
         type: 'image/png',
         width: 1254,
         height: 1254,
@@ -116,12 +116,12 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
     id: 'knowledge-check', label: 'Review', path: '/knowledge-check/', icon: 'checklist',
     group: 'mastery',
     version: '1.3.0',
-    image: 'assets/knowledge-check.png',
+    image: 'assets/app-icons/knowledge-check.png',
     description: 'Make knowledge sets to study, quiz yourself, or take a test.',
     metadata: {
       keywords: ['review', 'study', 'quiz', 'self assessment', 'learning'],
       socialImage: {
-        path: 'assets/knowledge-check.png',
+        path: 'assets/app-icons/knowledge-check.png',
         type: 'image/png',
         width: 1254,
         height: 1254,

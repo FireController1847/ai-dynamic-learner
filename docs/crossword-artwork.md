@@ -1,8 +1,8 @@
 # Crossword artwork
 
-`src/assets/crossword.png` is the transparent 1254 × 1254 PNG used by Home, navigation, and the page header. The empty-library and selected-group creation screens use the sidebar's Crossword SVG icon. The feature definition supplies the generated image and its dimensions, media type, and alternative description to the existing Open Graph, Twitter, and JSON-LD metadata generator. Canonical URLs, titles, descriptions, and other shared metadata use the existing route generation.
+`src/assets/app-icons/crossword.png` is the transparent 1254 × 1254 source used for Crossword route/social metadata. Home, navigation, and the page header use the 256 × 256 variants under `src/assets/app-icons/{webp,png,gif}/`; the empty-library and selected-group creation screens use the sidebar's Crossword SVG icon. The feature definition supplies the full-resolution image path, dimensions, media type, and alternative description to the existing Open Graph, Twitter, and JSON-LD metadata generator.
 
-Generated with the built-in image generation tool, using `src/assets/notebook.png`, `src/assets/word-search.png`, and `src/assets/index-cards.png` as style references.
+Generated with the built-in image generation tool, using `src/assets/app-icons/notebook.png`, `src/assets/app-icons/word-search.png`, and `src/assets/app-icons/index-cards.png` as style references.
 
 ## Generation prompt
 

@@ -1,6 +1,6 @@
 # Study Guide artwork
 
-`src/assets/study-guide.png` is a transparent 1254 × 1254 PNG supplying the Study Guide artwork on Home, in navigation, in the page header, and in route social metadata. Study Guide is grouped under Mastery immediately before Review. Its feature definition owns the shared asset reference and image metadata.
+`src/assets/app-icons/study-guide.png` is the transparent 1254 × 1254 source used for Study Guide route/social metadata. Home, navigation, and the page header use the 256 × 256 variants under `src/assets/app-icons/{webp,png,gif}/`. Study Guide is grouped under Mastery immediately before Review, and its feature definition owns the full-resolution metadata reference.
 
 Generated with the built-in image generation tool. The existing Notebook and Review assets were inspected for the glossy blue-and-white style. The open book, ribbon bookmark, note strokes, and highlighted key idea distinguish this icon from the closed Notebook and Review quiz sheet. The generated PNG is copied into the workspace without changing its transparency.
 
