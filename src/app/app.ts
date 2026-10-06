@@ -47,7 +47,7 @@ const App = defineComponent({
     const activeFeature = computed(() => features.find((feature) => feature.path === currentPath.value));
     const tipsFeature = computed(() => {
       const feature = activeFeature.value ?? (currentPath.value === '/' ? homeTipsFeature : null);
-      return feature && tipsCatalog[feature.id].sections.length ? feature : null;
+      return feature && tipsCatalog[feature.id]?.sections.length ? feature : null;
     });
     const activeLogoSrc = computed(() => featureImageSrc(activeFeature.value));
 
@@ -153,7 +153,7 @@ const App = defineComponent({
           ref: main,
           class: ['app-content', {
             'app-content--home': currentPath.value === '/',
-            'app-content--workspace': ['notebook', 'todo-list', 'index-cards', 'word-search', 'crossword', 'knowledge-check'].includes(activeFeature.value?.id ?? ''),
+            'app-content--workspace': ['notebook', 'todo-list', 'index-cards', 'word-search', 'crossword', 'study-guide', 'knowledge-check'].includes(activeFeature.value?.id ?? ''),
           }],
           tabindex: -1,
         }, [

@@ -1,7 +1,7 @@
 // Shared by the browser registry and webpack build; keep this data browser-neutral.
 import type { PageMetadataOverrides } from '../core/metadata.ts';
 
-export type FeatureId = 'calculator' | 'notebook' | 'todo-list' | 'index-cards' | 'word-search' | 'crossword' | 'knowledge-check';
+export type FeatureId = 'calculator' | 'notebook' | 'todo-list' | 'index-cards' | 'word-search' | 'crossword' | 'study-guide' | 'knowledge-check';
 export type FeatureGroup = 'helpers' | 'applications' | 'mastery';
 export const featureGroups: readonly { id: FeatureGroup; label: string }[] = [
   { id: 'helpers', label: 'Utilities' },
@@ -93,6 +93,23 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
         width: 1254,
         height: 1254,
         alt: 'Crossword — Glossy blue-and-white puzzle grid with letters, clue numbers, and blue blocked squares.',
+      },
+    },
+  },
+  {
+    id: 'study-guide', label: 'Study Guide', path: '/study-guide/', icon: 'document',
+    group: 'mastery',
+    version: '1.0.0',
+    image: 'assets/study-guide.png',
+    description: 'Build simple bullet lists or connected topic maps, then study a map one stop at a time.',
+    metadata: {
+      keywords: ['study guide', 'study notes', 'learning', 'revision'],
+      socialImage: {
+        path: 'assets/study-guide.png',
+        type: 'image/png',
+        width: 1254,
+        height: 1254,
+        alt: 'Study Guide — Glossy blue-and-white open book with a ribbon bookmark, note lines, and a highlighted star.',
       },
     },
   },
