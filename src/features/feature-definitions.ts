@@ -51,7 +51,7 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'todo-list', label: 'Todo List', path: '/todo-list/', icon: 'checklist',
     group: 'helpers',
-    version: '1.5.0',
+    version: '1.5.1',
     image: 'assets/todo-list.png',
     description: 'Write, organize, and prioritize tasks in simple lists that archive automatically.',
     metadata: {
