@@ -21,3 +21,11 @@
   .library-group-organization { width: calc(100% - 24px); margin-block: 24px; padding: 20px; }
   .library-group-organization { margin-top: 0; }
 }
+
+
+.library-empty-state-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.library-empty-state-secondary {
+  color: var(--text-secondary);
+  background: transparent;
+  border-color: var(--control-border);
+}
