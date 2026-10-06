@@ -11,7 +11,6 @@ export const featureGroups: readonly { id: FeatureGroup; label: string }[] = [
 
 export interface FeatureDefinition {
   hidden?: boolean;
-  imageSrc?: string;
   id: FeatureId;
   group: FeatureGroup;
   label: string;

@@ -1,5 +1,6 @@
 import type { FeatureDefinition } from '../features/feature-definitions.ts';
-export interface NavigationItem extends FeatureDefinition { href: string; imageSrc: string }
+import { AppIcon, type AppIconName } from './app-icon.ts';
+export interface NavigationItem extends FeatureDefinition { href: string }
 import { Icon } from '../components/icon.ts';
 
 import { defineComponent, type PropType, h, Transition } from 'vue';
@@ -9,7 +10,7 @@ export const NavigationDrawer = defineComponent({
   props: {
     open: Boolean,
     title: { type: String, required: true },
-    logoSrc: { type: String, default: '' },
+    logoName: { type: String as PropType<AppIconName>, default: 'dynamic-learner' },
     homeHref: { type: String, required: true },
     items: { type: Array as PropType<NavigationItem[]>, required: true },
     activePath: { type: String, required: true },
@@ -40,7 +41,7 @@ export const NavigationDrawer = defineComponent({
             'aria-label': `Go to ${props.title} home`,
             onClick: (event: MouseEvent) => emit('navigate', event, '/'),
           }, [
-            props.logoSrc ? h('img', { class: 'app-logo drawer-logo', src: props.logoSrc, alt: '', 'aria-hidden': 'true' }) : null,
+            h(AppIcon, { name: props.logoName, imageClass: 'app-logo drawer-logo' }),
             h('span', { class: 'drawer-title' }, props.title),
           ]),
           h('button', {
@@ -59,12 +60,9 @@ export const NavigationDrawer = defineComponent({
               'aria-current': props.activePath === item.path ? 'page' : undefined,
               onClick: (event: MouseEvent) => emit('navigate', event, item.path),
             }, [
-              item.imageSrc ? h('img', {
-                class: 'navigation-link-icon',
-                src: item.imageSrc,
-                alt: '',
-                'aria-hidden': 'true',
-              }) : item.icon ? h(Icon, { name: item.icon }) : null,
+              item.image
+                ? h(AppIcon, { name: item.id, imageClass: 'navigation-link-icon' })
+                : item.icon ? h(Icon, { name: item.icon }) : null,
               h('span', item.label),
             ]),
           ]))),

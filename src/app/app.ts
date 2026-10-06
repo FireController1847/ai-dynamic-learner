@@ -1,4 +1,3 @@
-import type { FeatureDefinition } from '../features/feature-definitions.ts';
 import type { TipsHandle } from '../../packages/tips/src/index.ts';
 import '../styles/index.css';
 import { appConfig } from './app-config.ts';
@@ -13,22 +12,17 @@ import { HomePage } from './home-page.ts';
 import { TipsExperience } from '../../packages/tips/src/index.ts';
 import { tipsCatalog } from './tips-content.ts';
 import { Icon } from '../components/icon.ts';
+import { AppIcon } from './app-icon.ts';
 
 import { defineComponent, type PropType, computed, createApp, h, KeepAlive, nextTick, ref } from 'vue';
 
 initializeTheme();
 
-const appLogoSrc = new URL('assets/dynamic-learner.png', document.baseURI).href;
 const homeTipsFeature = Object.freeze({ id: 'home', label: appConfig.name });
-
-const featureImageSrc = (feature?: FeatureDefinition) => feature?.image
-  ? new URL(feature.image, document.baseURI).href
-  : '';
 
 const navigationItems = features.filter((feature) => !feature.hidden).map((item) => ({
   ...item,
   href: pageHref(item.path),
-  imageSrc: item.imageSrc ?? featureImageSrc(item),
 }));
 
 if (!document.title) document.title = appConfig.name;
@@ -49,8 +43,6 @@ const App = defineComponent({
       const feature = activeFeature.value ?? (currentPath.value === '/' ? homeTipsFeature : null);
       return feature && tipsCatalog[feature.id]?.sections.length ? feature : null;
     });
-    const activeLogoSrc = computed(() => featureImageSrc(activeFeature.value));
-
     function closeSidebar() {
       focusContentOnClose = false;
       sidebarOpen.value = false;
@@ -96,11 +88,11 @@ const App = defineComponent({
           h('rect', { x: 0, y: 6, width: 18, height: 2, rx: 1 }),
           h('rect', { x: 0, y: 12, width: 18, height: 2, rx: 1 }),
         ])]),
-        activeLogoSrc.value
-          ? h('img', { class: 'app-logo app-header-logo', src: activeLogoSrc.value, alt: '', 'aria-hidden': 'true' })
-          : activeFeature.value?.icon
-            ? h(Icon, { name: activeFeature.value.icon })
-            : h('img', { class: 'app-logo app-header-logo', src: appLogoSrc, alt: '', 'aria-hidden': 'true' }),
+        activeFeature.value
+          ? h(AppIcon, { name: activeFeature.value.id, imageClass: 'app-logo app-header-logo' })
+          : currentPath.value === '/'
+            ? h(AppIcon, { name: 'dynamic-learner', imageClass: 'app-logo app-header-logo' })
+            : h(Icon, { name: 'document' }),
         h('h1', activeFeature.value?.label ?? (currentPath.value === '/' ? appConfig.name : 'Page not found')),
         h('div', { class: 'app-header-actions' }, [
           h('button', {
@@ -128,7 +120,7 @@ const App = defineComponent({
       h(NavigationDrawer, {
         open: sidebarOpen.value,
         title: appConfig.name,
-        logoSrc: appLogoSrc,
+        logoName: 'dynamic-learner',
         homeHref: pageHref('/'),
         items: navigationItems,
         activePath: currentPath.value,

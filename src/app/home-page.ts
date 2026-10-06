@@ -3,6 +3,7 @@ import { pageHref } from './navigation.ts';
 import { featureDefinitions, featureGroups } from '../features/feature-definitions.ts';
 import { Icon } from '../components/icon.ts';
 import { inputValue } from '../core/dom.ts';
+import { AppIcon } from './app-icon.ts';
 
 import { computed, defineComponent, h, TransitionGroup, onMounted, onBeforeUnmount, ref } from 'vue';
 
@@ -75,12 +76,7 @@ export const HomePage = defineComponent({
                 onClick: (event: MouseEvent) => emit('navigate', event, feature.path),
               }, [
                 feature.image
-                  ? h('img', {
-                    class: 'home-app-icon',
-                    src: new URL(feature.image, document.baseURI).href,
-                    alt: '',
-                    'aria-hidden': 'true',
-                  })
+                  ? h(AppIcon, { name: feature.id, imageClass: 'home-app-icon' })
                   : feature.icon ? h(Icon, { name: feature.icon }) : null,
                 h('h4', feature.label),
                 h('p', feature.description),
