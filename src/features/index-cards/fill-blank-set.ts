@@ -38,6 +38,7 @@ export const FillBlankSet = defineComponent({
     const reviewActive = ref(false);
     const reviewNotice = ref('');
     const reviewButton = ref<HTMLButtonElement | null>(null);
+    const verifyButton = ref<HTMLButtonElement | null>(null);
     const stack = ref<HTMLElement | null>(null);
     const shuffleOrder = ref<string[] | null>(null);
     const responses = ref<string[]>([]);
@@ -185,12 +186,6 @@ export const FillBlankSet = defineComponent({
       return current.value ? parseFillBlankTemplate(current.value.front) : { segments: [], answers: [] };
     }
 
-    function allCurrentBlanksFilled() {
-      const template = currentTemplate();
-      return template.answers.length > 0 &&
-        template.answers.every((_answer, blankIndex) => Boolean((responses.value[blankIndex] ?? '').trim()));
-    }
-
     async function focusReviewBlank(index = activeBlankIndex.value) {
       const count = currentTemplate().answers.length;
       if (!reviewActive.value || reviewSide.value !== 'front' || count === 0) return;
@@ -219,23 +214,26 @@ export const FillBlankSet = defineComponent({
       activeBlankIndex.value = blankIndex;
       if (direction < 0) {
         await focusReviewBlank(Math.max(0, blankIndex - 1));
-        return;
-      }
-
-      if (blankIndex < count - 1) {
+      } else if (blankIndex < count - 1) {
         await focusReviewBlank(blankIndex + 1);
-        return;
-      }
-
-      if (allCurrentBlanksFilled()) {
+      } else {
         verify();
-        return;
       }
+    }
 
-      const firstEmpty = currentTemplate().answers.findIndex(
-        (_answer, index) => !(responses.value[index] ?? '').trim());
-      message.value = 'Fill the remaining blanks before verifying.';
-      await focusReviewBlank(firstEmpty >= 0 ? firstEmpty : blankIndex);
+    async function handleBlankTab(blankIndex: number, direction: 1 | -1) {
+      const count = currentTemplate().answers.length;
+      if (!count || verified.value) return;
+
+      activeBlankIndex.value = blankIndex;
+      if (direction < 0) {
+        await focusReviewBlank(Math.max(0, blankIndex - 1));
+      } else if (blankIndex < count - 1) {
+        await focusReviewBlank(blankIndex + 1);
+      } else {
+        await nextTick();
+        verifyButton.value?.focus();
+      }
     }
 
     function resetEditSide() {
@@ -307,8 +305,7 @@ export const FillBlankSet = defineComponent({
       const card = current.value;
       if (!card || reviewSide.value !== 'front') return;
       const template = parseFillBlankTemplate(card.front);
-      if (!template.answers.length ||
-          template.answers.some((_answer, blankIndex) => !(responses.value[blankIndex] ?? '').trim())) return;
+      if (!template.answers.length) return;
       stopResultReview();
       verified.value = true;
       reviewSide.value = 'back';
@@ -365,8 +362,8 @@ export const FillBlankSet = defineComponent({
         } else {
           void toggleReviewSide();
         }
-      } else if (event.key === 'Enter' && reviewActive.value && !verified.value && reviewSide.value === 'front' &&
-          allCurrentBlanksFilled()) {
+      } else if (event.key === 'Enter' && reviewActive.value && !verified.value &&
+          reviewSide.value === 'front' && currentTemplate().answers.length) {
         event.preventDefault();
         verify();
       }
@@ -376,8 +373,6 @@ export const FillBlankSet = defineComponent({
       const card = current.value;
       const template = card ? parseFillBlankTemplate(card.front) : { segments: [], answers: [] };
       const blankCount = template.answers.length;
-      const allFilled = blankCount > 0 &&
-        template.answers.every((_answer, blankIndex) => Boolean((responses.value[blankIndex] ?? '').trim()));
       const correctCount = verified.value
         ? template.answers.filter((answer, blankIndex) =>
           isFillBlankAnswerCorrect(answer, responses.value[blankIndex] ?? '')).length
@@ -422,7 +417,7 @@ export const FillBlankSet = defineComponent({
             tabindex: reviewActive.value ? 0 : -1,
             role: 'group',
             'aria-label': reviewActive.value
-              ? `Card ${index.value + 1} of ${orderedCards.value.length}. Fill every blank, then verify.`
+              ? `Card ${index.value + 1} of ${orderedCards.value.length}. Answer what you can, then verify.`
               : `Card ${index.value + 1} of ${orderedCards.value.length}. Select text and use the blank controls below the card.`,
           }, [
             reviewActive.value
@@ -438,6 +433,7 @@ export const FillBlankSet = defineComponent({
                 onUpdateResponse: updateResponse,
                 onBlankFocus: (blankIndex: number) => { activeBlankIndex.value = blankIndex; },
                 onBlankEnter: handleBlankEnter,
+                onBlankTab: handleBlankTab,
               })
               : h(FillBlankEditor, {
                 key: `edit-${card.id}`,
@@ -486,10 +482,16 @@ export const FillBlankSet = defineComponent({
                         onClick: toggleReviewSide,
                       }, [h(Icon, { name: 'flip' }), reviewSide.value === 'front' ? 'Show back' : 'Show front']),
                       h('button', {
+                        ref: verifyButton,
                         type: 'button',
                         class: 'card-primary-button fill-blank-verify-button',
-                        disabled: !allFilled || reviewSide.value === 'back',
+                        disabled: blankCount === 0 || reviewSide.value === 'back',
                         title: reviewSide.value === 'back' ? 'Return to the prompt to verify' : undefined,
+                        onKeydown: (event: KeyboardEvent) => {
+                          if (event.key !== 'Tab' || !event.shiftKey || reviewSide.value !== 'front') return;
+                          event.preventDefault();
+                          void focusReviewBlank(blankCount - 1);
+                        },
                         onClick: verify,
                       }, [h(Icon, { name: 'checklist' }), 'Verify']),
                     ],
@@ -539,7 +541,7 @@ export const FillBlankSet = defineComponent({
                       ? `${correctCount} of ${blankCount} correct. Correct answers are green; missed answers appear below them in red.`
                       : reviewSide.value === 'back'
                         ? 'Answer key shown. Flip back to continue answering; your responses are preserved.'
-                        : 'Enter moves to the next blank. Enter on the last filled blank verifies. Space flips when the card has focus.'
+                        : 'Enter moves through blanks and verifies on the last. Tab moves through blanks, then to Verify. Unanswered blanks count as missed.'
                   : message.value)
               : null,
             !reviewActive.value ? h('div', { class: 'card-edit-controls', 'aria-label': 'Card actions' }, [

@@ -22,6 +22,7 @@ export const FillBlankPaper = defineComponent({
     'update-response': (_index: number, _value: string) => true,
     'blank-focus': (_index: number) => true,
     'blank-enter': (_index: number, _direction: 1 | -1) => true,
+    'blank-tab': (_index: number, _direction: 1 | -1) => true,
   },
   setup(props, { emit, expose }) {
     const inputs: Array<HTMLInputElement | null> = [];
@@ -91,7 +92,15 @@ export const FillBlankPaper = defineComponent({
                   if (!props.verified) emit('update-response', segment.index, inputValue(event));
                 },
                 onKeydown: (event: KeyboardEvent) => {
-                  if (props.verified || event.key !== 'Enter') return;
+                  if (props.verified) return;
+                  if (event.key === 'Tab') {
+                    // Let Shift+Tab on the first blank leave the card normally.
+                    if (event.shiftKey && segment.index === 0) return;
+                    event.preventDefault();
+                    emit('blank-tab', segment.index, event.shiftKey ? -1 : 1);
+                    return;
+                  }
+                  if (event.key !== 'Enter') return;
                   event.preventDefault();
                   emit('blank-enter', segment.index, event.shiftKey ? -1 : 1);
                 },
@@ -122,7 +131,7 @@ export const FillBlankPaper = defineComponent({
             blankNumber(segment.index),
             h('span', { class: 'fill-blank-result-copy' }, [
               h('span', { class: 'fill-blank-correct-answer' }, segment.answer),
-              !correct ? h('span', { class: 'fill-blank-wrong-answer' }, response) : null,
+              !correct ? h('span', { class: 'fill-blank-wrong-answer' }, response || 'No answer') : null,
               reviewing && correct ? h('span', { class: 'fill-blank-correct-effect', 'aria-hidden': 'true' },
                 Array.from({ length: 8 }, (_, spark) => h('span', {
                   class: `fill-blank-correct-spark fill-blank-correct-spark-${spark + 1}`,

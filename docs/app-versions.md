@@ -18,7 +18,7 @@ Review (formerly Knowledge Check) is at `1.2.2`. `1.2.2` resets mode selection w
 
 Todo List `1.5.1` preserves the ruled-line gap between adjacent sections immediately when Enter creates a blank task at the end of the preceding section. `1.5.0` added independent list cloning, with an optional action to skip remaining tasks on the original after copying.
 
-Index Cards `1.11.1` polishes the collapsible Cards panel added in `1.11.0`: the restore control mirrors the Library control in the top-right corner, focus moves cleanly between hide/show controls, and the panel animates out to the right or downward on narrow layouts.
+Index Cards `1.12.0` improves Fill in the Blanks review: Tab moves between answer blanks and then to Verify instead of falling into Previous, and learners can verify with unanswered blanks, which count as missed and display as “No answer.” `1.11.1` polished the collapsible Cards panel added in `1.11.0`.
 
 ## History-derived starting versions
 
@@ -86,6 +86,7 @@ The repository had no release tags or established app version fields. These are 
 | `1.9.0`: configurable Short/Medium/Long blank lengths with Short defaults and shared card positioning across study modes | Blank-length appearance settings and removal of the Fill in the Blanks positioning wrapper. |
 | `1.10.0`: Tiny blanks and tighter Tiny/Short spacing | Two-character-width blanks and mode-aware horizontal margins, number spacing, and authoring padding. |
 | `1.10.1`: expand review blanks as responses are typed | Selected blank lengths are minimum review widths; response text determines additional space. |
+| `1.12.0`: safer Fill in the Blanks keyboard flow and optional unanswered verification | Tab advances through blanks to Verify, Shift+Tab returns from Verify to the final blank, and unanswered blanks can be submitted as missed answers. |
 
 ### Word Search
 
