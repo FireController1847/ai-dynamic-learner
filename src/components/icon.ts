@@ -28,6 +28,7 @@ const paths: Record<string, string> = {
   upload: 'M12 16V4m-5 5 5-5 5 5M4 16v5h16v-5',
   lightbulb: 'M9 18h6M10 22h4M8.5 15.2A7 7 0 1 1 15.5 15.2C14.5 16.1 14 16.9 14 18h-4c0-1.1-.5-1.9-1.5-2.8Z',
   whiteboard: 'M3 4h18v14H3ZM7 21h10M12 18v3M6.5 8.5h11M7.5 13c2-2 4 2 6 0 1-.7 2-.7 3 0',
+  eraser: 'M5 6h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2ZM3 14h18',
 };
 
 export const Icon = defineComponent({
