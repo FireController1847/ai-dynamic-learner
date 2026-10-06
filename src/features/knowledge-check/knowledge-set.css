@@ -123,3 +123,58 @@
   .knowledge-intro-badge > .ui-icon { width: 16px; height: 16px; }
   .knowledge-intro-actions > button { width: 100%; }
 }
+
+
+/* Review Fill in the Blanks authoring and sessions. */
+.knowledge-fill-blank-editor { margin-bottom: 16px; }
+.knowledge-fill-blank-editor > .knowledge-muted { margin: 0 0 8px; }
+.knowledge-fill-blank-author {
+  min-height: 136px; padding: 12px; border: 1px solid var(--control-border); border-radius: var(--radius);
+  outline: 0; color: var(--text-color); background: var(--page-background); line-height: 1.9;
+  overflow-wrap: anywhere; white-space: pre-wrap;
+}
+.knowledge-fill-blank-author:focus-visible { border-color: var(--brand); box-shadow: 0 0 0 1px var(--brand); }
+.knowledge-fill-blank-author:empty::before { content: attr(data-placeholder); color: var(--text-secondary); pointer-events: none; }
+.knowledge-fill-blank-author-blank,
+.knowledge-fill-blank-response { display: inline-flex; align-items: baseline; gap: .18em; margin-inline: .14em; vertical-align: baseline; }
+.knowledge-fill-blank-author-blank { padding: .05em .12em; border-radius: 4px; cursor: pointer; user-select: all; }
+.knowledge-fill-blank-author-blank:hover,
+.knowledge-fill-blank-author-blank.is-selected { background: var(--brand-tint); }
+.knowledge-fill-blank-author-blank.is-selected { box-shadow: 0 0 0 1px var(--brand); }
+.knowledge-fill-blank-number {
+  position: relative; top: .18em; flex: 0 0 auto; color: var(--text-secondary);
+  font-size: .58em; font-weight: 600; line-height: 1; vertical-align: sub;
+}
+.knowledge-fill-blank-author-line {
+  display: inline-block; width: var(--blank-width, 4ch); height: .95em; overflow: hidden;
+  border-bottom: 2px solid currentColor; color: transparent; font: inherit; white-space: pre;
+}
+.knowledge-fill-blank-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 12px; }
+.knowledge-fill-blank-actions .ui-icon { width: 16px; height: 16px; }
+.knowledge-fill-blank-answer-key,
+.knowledge-fill-blank-feedback-list { margin: 8px 0 16px; padding-left: 24px; }
+.knowledge-fill-blank-answer-key li { margin-block: 4px; }
+.knowledge-fill-blank-answer-number { display: inline-block; min-width: 2ch; margin-right: 6px; color: var(--text-secondary); font-weight: 600; }
+
+.knowledge-fill-blank-prompt {
+  margin: 12px 0 24px; color: var(--text-color); font-size: clamp(20px, 3vw, 28px);
+  line-height: 1.9; white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.knowledge-fill-blank-response input {
+  width: var(--blank-width, 6ch); min-width: 4ch; max-width: 28ch; padding: 0 .2em .08em;
+  border: 0; border-bottom: 2px solid var(--brand); border-radius: 0; outline: 0;
+  color: var(--text-color); background: color-mix(in srgb, var(--brand-tint) 42%, transparent);
+  font: inherit; line-height: 1.2; text-align: center;
+}
+.knowledge-fill-blank-response input:focus { border-bottom-color: var(--brand-hover); background: var(--brand-tint); box-shadow: 0 2px 0 color-mix(in srgb, var(--brand) 28%, transparent); }
+.knowledge-fill-blank-response input[readonly] { cursor: default; }
+.knowledge-fill-blank-feedback-list li { margin-block: 8px; }
+.knowledge-fill-blank-feedback-list li.is-correct > strong { color: var(--success); }
+.knowledge-fill-blank-feedback-list li.is-incorrect > strong { color: var(--danger); }
+.knowledge-fill-blank-feedback-answer,
+.knowledge-fill-blank-feedback-response { display: block; margin-top: 2px; }
+.knowledge-fill-blank-feedback-response { color: var(--text-secondary); }
+.knowledge-fill-blank-result-responses ol { margin-top: 6px; }
+@media (pointer: coarse) {
+  .knowledge-fill-blank-author, .knowledge-fill-blank-response input { font-size: 16px; }
+}
