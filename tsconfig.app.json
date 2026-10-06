@@ -11,6 +11,7 @@
   },
   "include": [
     "src/**/*.ts",
-    "packages/tips/**/*.ts"
+    "packages/tips/**/*.ts",
+    "packages/@dynamic-learner/answer-matching/**/*.ts"
   ]
 }
