@@ -62,6 +62,7 @@
 }
 
 .whiteboard-close:hover { background: var(--surface-hover); }
+.whiteboard-close:active { background: var(--surface-pressed); }
 
 .whiteboard-toolbar {
   display: flex;
