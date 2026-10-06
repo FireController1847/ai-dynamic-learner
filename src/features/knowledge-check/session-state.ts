@@ -1,7 +1,7 @@
 import { computed, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref } from 'vue';
 import { registerLeaveGuard } from '../../core/leave-guards.ts';
 import { defaultSetOptions } from './set-options.ts';
-import { answerCorrect, questionReady } from './question-model.ts';
+import { answerCorrect, questionReady, questionResponseAnswered, type QuestionResponse } from './question-model.ts';
 import type { CheckItem } from './library-model.ts';
 import type { CheckModeId } from './check-types.ts';
 
@@ -9,7 +9,7 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId) {
   const questions = computed(() => item.questions.filter(questionReady));
   const options = computed(() => item.options ?? defaultSetOptions());
   const position = ref(0);
-  const responses = ref<Record<string, string>>({});
+  const responses = ref<Record<string, QuestionResponse>>({});
   const checked = ref(new Set<string>());
   const revealed = ref(new Set<string>());
   const hints = ref(new Set<string>());
@@ -22,8 +22,10 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId) {
   const celebrating = ref<string | null>(null);
   const attempts = ref<Record<string, number>>({});
   const active = computed(() => mode !== 'study' && started.value && !submitted.value);
-  const answered = computed(() => questions.value.filter(question => responses.value[question.id]?.trim()).length);
-  const score = computed(() => questions.value.filter(question => answerCorrect(question, responses.value[question.id] ?? '')).length);
+  const answered = computed(() => questions.value.filter(question =>
+    questionResponseAnswered(question, responses.value[question.id])).length);
+  const score = computed(() => questions.value.filter(question =>
+    answerCorrect(question, responses.value[question.id] ?? (question.type === 'fill-in-the-blanks' ? [] : ''))).length);
   const remaining = computed(() => deadline.value === null ? null : Math.max(0, Math.ceil((deadline.value - now.value) / 1000)));
   let timer: number | null = null;
   let celebrationTimer: number | null = null;
@@ -60,10 +62,12 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId) {
     tick();
     if (submitted.value) return;
     const question = questions.value[position.value];
-    if (!question || !responses.value[question.id]?.trim()) return;
+    if (!question) return;
+    const response = responses.value[question.id];
+    if (question.type !== 'fill-in-the-blanks' && !questionResponseAnswered(question, response)) return;
     checked.value.add(question.id);
     attempts.value[question.id] = (attempts.value[question.id] ?? 0) + 1;
-    if (mode === 'quiz' && answerCorrect(question, responses.value[question.id]!)) {
+    if (mode === 'quiz' && answerCorrect(question, response ?? (question.type === 'fill-in-the-blanks' ? [] : ''))) {
       clearCelebration(); celebrating.value = question.id;
       celebrationTimer = window.setTimeout(clearCelebration, 900);
     }

@@ -2,7 +2,9 @@ import { defaultSetOptions, validateSetOptions, type SetOptions } from './set-op
 import { SetOptionsEditor } from './set-options-editor.ts';
 import type { CheckItem } from './library-model.ts';
 import { MAX_NAME_LENGTH } from './library-model.ts';
-import { createQuestion, questionHasContent, questionProblem, questionsForSave, MAX_QUESTIONS, MAX_TEXT, QUESTION_TYPES, type Question, type QuestionType } from './question-model.ts';
+import { createQuestion, questionDisplayPrompt, questionHasContent, questionProblem, questionsForSave, MAX_QUESTIONS, MAX_TEXT, QUESTION_TYPES, type Question, type QuestionType } from './question-model.ts';
+import { ReviewFillBlankEditor } from './fill-blank-editor.ts';
+import { restoreFillBlankAnswers } from '../../core/fill-blank.ts';
 import { inputValue } from '../../core/dom.ts';
 import { Icon } from '../../components/icon.ts';
 import { DeleteConfirmation } from '../../components/delete-confirmation.ts';
@@ -56,8 +58,12 @@ export const CheckBuilder = defineComponent({
     function changeType(question: Question, event: Event) {
       const type = inputValue(event);
       if (!QUESTION_TYPES.some((entry) => entry.id === type)) return;
+      if (question.type === 'fill-in-the-blanks' && type !== 'fill-in-the-blanks') {
+        question.prompt = restoreFillBlankAnswers(question.prompt);
+      }
       const replacement = createQuestion(type as QuestionType);
       Object.assign(question, { type: replacement.type, answer: replacement.answer, choices: replacement.choices });
+      message.value = '';
     }
     function textField(label: string, key: 'prompt' | 'answer' | 'explanation', question: Question) {
       return h('label', { class: 'knowledge-field' }, [label, h('textarea', {
@@ -97,7 +103,7 @@ export const CheckBuilder = defineComponent({
             ...questions.value.map((entry, index) => h('button', { key: entry.id, type: 'button',
               class: ['knowledge-question-row', { 'is-selected': index === selected.value }],
               'aria-pressed': index === selected.value, onClick: () => { if (index === selected.value || canLeaveQuestion()) selected.value = index; } },
-            `${index + 1}. ${entry.prompt.trim() || 'Untitled question'}`)),
+            `${index + 1}. ${questionDisplayPrompt(entry).trim() || 'Untitled question'}`)),
             !questions.value.length ? h('p', { class: 'knowledge-muted' }, 'Add your first question.') : null,
           ]),
           question ? h('div', { class: 'knowledge-question-editor', key: question.id }, [
@@ -115,7 +121,9 @@ export const CheckBuilder = defineComponent({
             h('label', { class: 'knowledge-field' }, ['Question type', h('select', {
               value: question.type, onChange: (event: Event) => changeType(question, event),
             }, QUESTION_TYPES.map((type) => h('option', { value: type.id }, type.label)))]),
-            textField('Question', 'prompt', question),
+            question.type === 'fill-in-the-blanks'
+              ? h(ReviewFillBlankEditor, { question, onMessage: (value: string) => { message.value = value; } })
+              : textField('Question', 'prompt', question),
             question.type === 'multiple-choice' ? h('fieldset', { class: 'knowledge-choice-editor' }, [
               h('legend', 'Answer choices'),
               h('p', { class: 'knowledge-muted' }, 'Choose the correct answer.'),
@@ -134,12 +142,13 @@ export const CheckBuilder = defineComponent({
                 onClick: () => question.choices.push('') }, 'Add choice'),
             ]) : question.type === 'true-false' ? h('label', { class: 'knowledge-field' }, ['Correct answer', h('select', {
               value: question.answer, onChange: (event: Event) => { question.answer = inputValue(event); },
-            }, [h('option', { value: '', disabled: true }, 'Select the correct answer'), ...['True', 'False'].map((answer) => h('option', { value: answer }, answer))])]) : textField('Expected answer', 'answer', question),
+            }, [h('option', { value: '', disabled: true }, 'Select the correct answer'), ...['True', 'False'].map((answer) => h('option', { value: answer }, answer))])])
+              : question.type === 'fill-in-the-blanks' ? null : textField('Expected answer', 'answer', question),
             textField('Explanation (optional)', 'explanation', question),
           ]) : h('div', { class: 'knowledge-question-editor knowledge-builder-empty' }, [h(Icon, { name: 'cards' }),
             h('h3', 'Add a question.'), h('button', { type: 'button', class: 'card-primary-button', onClick: addQuestion }, 'Add question')]),
         ]),
-        pendingDelete.value ? h(DeleteConfirmation, { itemName: pendingDelete.value.prompt.trim() || 'Untitled question', itemLabel: 'question',
+        pendingDelete.value ? h(DeleteConfirmation, { itemName: questionDisplayPrompt(pendingDelete.value).trim() || 'Untitled question', itemLabel: 'question',
           detail: 'The question and its answer will be removed from this set.', confirmLabel: 'Delete question',
           onCancel: () => { pendingDelete.value = null; }, onConfirm: () => { if (pendingDelete.value) removeQuestion(pendingDelete.value); } }) : null,
       ]);

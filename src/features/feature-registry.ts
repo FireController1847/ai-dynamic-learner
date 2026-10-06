@@ -35,7 +35,12 @@ const renderers: Record<FeatureId, (definition: FeatureDefinition, models: Featu
   'word-search': (definition, models) => h(WordSearch, { key: definition.id, title: definition.label, model: models['word-search'] }),
   crossword: (definition, models) => h(Crossword, { key: definition.id, title: definition.label, model: models.crossword }),
   'study-guide': (definition, models) => h(StudyGuide, { key: definition.id, title: definition.label, model: models['study-guide'] }),
-  'knowledge-check': (definition, models) => h(KnowledgeCheck, { key: definition.id, title: definition.label, model: models['knowledge-check'] }),
+  'knowledge-check': (definition, models) => h(KnowledgeCheck, {
+    key: definition.id,
+    title: definition.label,
+    model: models['knowledge-check'],
+    indexCards: models['index-cards'],
+  }),
 };
 
 export const features = featureDefinitions.map((definition) => ({

@@ -1,4 +1,5 @@
 import type { KnowledgeCheck as FeatureModel, CheckTarget, LibraryItem } from './library-model.ts';
+import type { IndexCards as IndexCardsModel } from '../index-cards/tree-model.ts';
 import type { KnowledgeCheckLibraryHandle } from './library.ts';
 import { requestLeave } from '../../core/leave-guards.ts';
 import { validateSetOptions, type SetOptions } from './set-options.ts';
@@ -10,6 +11,7 @@ import { useLibrarySelection } from '../../components/use-library-selection.ts';
 import { usePersistedPanelResize } from '../../components/use-persisted-panel-resize.ts';
 import { KnowledgeCheckLibrary } from './library.ts';
 import { CheckBuilder } from './check-builder.ts';
+import { ImportKnowledgeSet } from './import-knowledge-set.ts';
 import { createQuestion, type Question } from './question-model.ts';
 import { KnowledgeSet } from './knowledge-set.ts';
 import { canMove, deleteItem, findItem, firstEntry, groupOptions, moveItem, insertCheck } from './library-model.ts';
@@ -30,13 +32,15 @@ export const KnowledgeCheck = defineComponent({
   props: {
     title: { type: String, required: true },
     model: { type: Object as PropType<FeatureModel>, required: true },
+    indexCards: { type: Object as PropType<IndexCardsModel>, required: true },
   },
   setup(props) {
     const setupTarget = ref<SetupTarget | null>(null);
+    const importTarget = ref<SetupTarget | null>(null);
     const selectedId = useLibrarySelection({
       firstId: () => firstEntry(props.model.items)?.id ?? null,
       hasItem: (id) => findItem(props.model.items, id) !== null,
-      enabled: () => setupTarget.value === null,
+      enabled: () => setupTarget.value === null && importTarget.value === null,
       onAutoSelect: (id) => {
         library.value?.reveal(id);
       },
@@ -98,6 +102,7 @@ export const KnowledgeCheck = defineComponent({
       tutorialBuilderId.value = action === 'builder' ? item.id : null;
 
       setupTarget.value = null;
+      importTarget.value = null;
       selectedId.value = item.id;
       library.value?.reveal(item.id);
       if (libraryOverlay.value) libraryCollapsed.value = true;
@@ -177,13 +182,23 @@ export const KnowledgeCheck = defineComponent({
       if (id !== selectedId.value && !requestLeave()) return;
       selectedId.value = id;
       setupTarget.value = null;
+      importTarget.value = null;
       message.value = '';
     }
 
     function openNewKnowledgeCheck(target: SetupTarget) {
       if (!requestLeave()) return;
+      importTarget.value = null;
       setupTarget.value = target;
       setupVersion.value += 1;
+      message.value = '';
+      if (libraryOverlay.value) libraryCollapsed.value = true;
+    }
+
+    function openImportKnowledgeCheck(target: SetupTarget) {
+      if (!requestLeave()) return;
+      setupTarget.value = null;
+      importTarget.value = target;
       message.value = '';
       if (libraryOverlay.value) libraryCollapsed.value = true;
     }
@@ -194,6 +209,28 @@ export const KnowledgeCheck = defineComponent({
       if (workspaceHeading.value) workspaceHeading.value.focus();
       else if (libraryCollapsed.value) showLibraryButton.value?.focus();
       else library.value?.focusNewKnowledgeCheck();
+    }
+
+    async function cancelImport() {
+      importTarget.value = null;
+      await nextTick();
+      if (workspaceHeading.value) workspaceHeading.value.focus();
+      else if (libraryCollapsed.value) showLibraryButton.value?.focus();
+      else library.value?.focusImportKnowledgeCheck();
+    }
+
+    function completeImport(name: string, questions: Question[]) {
+      if (!importTarget.value) return;
+      try {
+        const item = insertCheck(props.model.items, importTarget.value, name, questions);
+        selectedId.value = item.id;
+        importTarget.value = null;
+        library.value?.reveal(item.id);
+        message.value = `Imported ${item.name} with ${item.questions.length} ${item.questions.length === 1 ? 'question' : 'questions'}.`;
+        nextTick(() => workspaceHeading.value?.focus());
+      } catch (error) {
+        message.value = error instanceof Error ? error.message : String(error);
+      }
     }
 
     function completeSetup(name: string, questions: Question[], options: SetOptions) {
@@ -275,6 +312,21 @@ export const KnowledgeCheck = defineComponent({
     }
 
     function detail() {
+      if (importTarget.value) {
+        return h('section', {
+          class: 'knowledge-check-detail',
+          'aria-label': 'Import knowledge set',
+          inert: libraryOverlay.value && !libraryCollapsed.value,
+        }, [
+          h(ImportKnowledgeSet, {
+            destination: importTarget.value.parentName,
+            indexCards: props.indexCards,
+            onBack: cancelImport,
+            onCreate: completeImport,
+          }),
+        ]);
+      }
+
       if (setupTarget.value) {
         return h('section', {
           class: 'knowledge-check-detail',
@@ -304,7 +356,9 @@ export const KnowledgeCheck = defineComponent({
             title: item?.name ?? 'Build your question library',
             description: item ? 'Create a knowledge set in this group, or select one from the Library.' : 'Make knowledge sets and keep them organized.',
             actionLabel: 'New knowledge set',
+            secondaryActionLabel: 'Import knowledge set',
             onCreate: () => openNewKnowledgeCheck({ parentId: item?.id ?? null, parentName: item?.name ?? 'Top level' }),
+            onSecondary: () => openImportKnowledgeCheck({ parentId: item?.id ?? null, parentName: item?.name ?? 'Top level' }),
           }),
           item ? organizationControls(item) : null,
           h('p', { class: 'visually-hidden', role: 'status' }, message.value),
@@ -374,6 +428,7 @@ export const KnowledgeCheck = defineComponent({
           onSelect: selectItem,
           onOpenItem: () => { if (libraryOverlay.value) setLibraryCollapsed(true); },
           onNewCheck: openNewKnowledgeCheck,
+          onImportCheck: openImportKnowledgeCheck,
         }),
         !libraryOverlay.value && !libraryCollapsed.value ? h('div', {
           class: 'knowledge-check-library-resizer',
