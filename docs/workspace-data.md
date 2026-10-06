@@ -127,7 +127,7 @@ Card text updates the canonical workspace on input and uses the existing local-s
 
 The right-hand list displays every card in the selected set in the current review order. Titles and previews of the selected starting side update directly from canonical card data; blank titles use a display-only numbered fallback. List selection reveals the configured starting side, updates the active highlight, and does not change the saved order.
 
-Review activity and its progress display are temporary UI state. Finish review and End review restore front-first, saved-order browsing while keeping the current card selected. Editing remains enabled throughout, and ending a review never rolls back edits or changes the saved card order.
+Review activity, grades, scores, and result summaries are temporary UI state. Flash Cards self-grades each card as Missed it or Got it; cards finished without an explicit grade count as missed. Fill in the Blanks scores expected blanks with normalized, morphology-aware, fuzzy answer matching; unanswered or unverified blanks count as missed. Completing either mode shows a final percentage/result summary before returning to browsing. End review cancels without saving a result. Editing remains enabled during active review, and review scoring never changes saved card data or order.
 
 Manually edit different front/back titles, flip repeatedly, duplicate, reload, and download/restore a backup. Check an older backup with only `title`: its front title should remain and its back title should be blank. Test back-first review: the list uses back titles, falling back to card numbers for blank titles without exposing front titles. Invalid or oversized back titles must reject uploads without replacing the workspace.
 

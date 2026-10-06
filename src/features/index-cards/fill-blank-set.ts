@@ -8,9 +8,10 @@ import { CardList, type CardListHandle } from './card-list.ts';
 import { FillBlankEditor } from './fill-blank-editor.ts';
 import { FillBlankPaper, type FillBlankPaperHandle } from './fill-blank-paper.ts';
 import { FillBlankReviewSetup } from './fill-blank-review-setup.ts';
+import { ReviewResult } from './review-result.ts';
 import { isFillBlankAnswerCorrect, parseFillBlankTemplate } from './fill-blank-model.ts';
 
-import { defineComponent, type PropType, computed, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue';
+import { defineComponent, type PropType, computed, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, reactive, ref, watch } from 'vue';
 
 const MIN_CARD_LIST_WIDTH = 160;
 const MAX_CARD_LIST_WIDTH = 480;
@@ -37,6 +38,8 @@ export const FillBlankSet = defineComponent({
     const reviewSetupOpen = ref(false);
     const reviewActive = ref(false);
     const reviewNotice = ref('');
+    const reviewScores = reactive(new Map<string, { correct: number; total: number }>());
+    const reviewResult = ref<{ correct: number; total: number } | null>(null);
     const reviewButton = ref<HTMLButtonElement | null>(null);
     const verifyButton = ref<HTMLButtonElement | null>(null);
     const stack = ref<HTMLElement | null>(null);
@@ -70,7 +73,7 @@ export const FillBlankSet = defineComponent({
     const atLimit = computed(() => props.totalCards >= MAX_CARDS);
 
     watch(() => props.set.cards.length, (length) => {
-      if (!length && reviewActive.value) endReview(false);
+      if (!length && reviewActive.value) endReview();
     });
     onDeactivated(() => {
       reviewSetupOpen.value = false;
@@ -245,6 +248,7 @@ export const FillBlankSet = defineComponent({
       const sourceIndex = props.set.cards.findIndex((item) => item.id === current.value?.id);
       props.set.cards.splice(sourceIndex + 1, 0, card);
       if (shuffleOrder.value) shuffleOrder.value.splice(index.value + 1, 0, card.id);
+      reviewResult.value = null;
       currentId.value = card.id;
       resetAttempt();
       resetEditSide();
@@ -253,6 +257,7 @@ export const FillBlankSet = defineComponent({
       if (!reviewActive.value) editor.value?.focus();
     }
     async function selectCard(id: string) {
+      if (reviewResult.value) reviewResult.value = null;
       currentId.value = id;
       resetAttempt();
       resetEditSide();
@@ -265,6 +270,8 @@ export const FillBlankSet = defineComponent({
     }
 
     async function startReview(order: ReviewOrder) {
+      reviewScores.clear();
+      reviewResult.value = null;
       reviewActive.value = true;
       reviewNotice.value = '';
       editSide.value = 'front';
@@ -278,17 +285,45 @@ export const FillBlankSet = defineComponent({
       if (currentTemplate().answers.length) await focusReviewBlank(0);
       else stack.value?.focus();
     }
-    async function endReview(finished = false) {
+    function resetReviewView() {
       reviewActive.value = false;
       reviewOrder.value = 'forward';
       shuffleOrder.value = null;
       resetAttempt();
       editSide.value = 'front';
-      reviewNotice.value = finished
-        ? 'Review finished. Keep editing, or start another review.'
-        : 'Review ended. You are back to browsing in saved order.';
+    }
+
+    async function finishReview() {
+      const cards = [...orderedCards.value];
+      const total = cards.reduce((sum, card) => sum + parseFillBlankTemplate(card.front).answers.length, 0);
+      const correct = cards.reduce((sum, card) => sum + (reviewScores.get(card.id)?.correct ?? 0), 0);
+      reviewResult.value = { correct, total };
+      resetReviewView();
+      reviewNotice.value = '';
+      await nextTick();
+    }
+
+    async function endReview() {
+      reviewScores.clear();
+      reviewResult.value = null;
+      resetReviewView();
+      reviewNotice.value = 'Review ended. You are back to browsing in saved order.';
       await nextTick();
       reviewButton.value?.focus();
+    }
+
+    async function dismissReviewResult() {
+      reviewScores.clear();
+      reviewResult.value = null;
+      reviewNotice.value = 'Review finished. Keep editing, or start another review.';
+      await nextTick();
+      reviewButton.value?.focus();
+    }
+
+    async function reviewAgain() {
+      reviewResult.value = null;
+      reviewSetupOpen.value = true;
+      await nextTick();
     }
     async function cancelReview() {
       reviewSetupOpen.value = false;
@@ -309,11 +344,12 @@ export const FillBlankSet = defineComponent({
       stopResultReview();
       verified.value = true;
       reviewSide.value = 'back';
+      const correct = template.answers.filter((answer, blankIndex) =>
+        isFillBlankAnswerCorrect(answer, responses.value[blankIndex] ?? '')).length;
+      reviewScores.set(card.id, { correct, total: template.answers.length });
       resultReviewNextIndex = 0;
       resultReviewComplete = false;
       scheduleResultReview();
-      const correct = template.answers.filter((answer, blankIndex) =>
-        isFillBlankAnswerCorrect(answer, responses.value[blankIndex] ?? '')).length;
       message.value = `${correct} of ${template.answers.length} ${template.answers.length === 1 ? 'blank' : 'blanks'} correct.`;
     }
 
@@ -324,6 +360,7 @@ export const FillBlankSet = defineComponent({
       const next = orderedCards.value[position + 1] ?? orderedCards.value[position - 1];
       const savedIndex = props.set.cards.findIndex((card) => card.id === id);
       if (savedIndex >= 0) props.set.cards.splice(savedIndex, 1);
+      reviewScores.delete(id);
       if (shuffleOrder.value) shuffleOrder.value = shuffleOrder.value.filter((cardId) => cardId !== id);
       currentId.value = next?.id ?? null;
       resetAttempt();
@@ -390,7 +427,7 @@ export const FillBlankSet = defineComponent({
         onKeydown: shortcuts,
       }, [
         h('div', { class: 'card-set fill-blank-set' }, [
-          card ? h('section', { class: 'card-review-session', 'aria-label': 'Review status' }, [
+          !reviewResult.value && card ? h('section', { class: 'card-review-session', 'aria-label': 'Review status' }, [
             h('div', { class: 'card-review-session-copy' }, [
               h('strong', reviewActive.value ? 'Fill-in review' : 'Browse & edit'),
               h('p', { role: 'status' }, reviewActive.value
@@ -404,11 +441,19 @@ export const FillBlankSet = defineComponent({
               }, reviewActive.value ? 'Change setup' : 'Review'),
               reviewActive.value ? h('button', {
                 type: 'button', class: 'quiet-button', 'aria-label': 'End review',
-                onClick: () => endReview(false),
+                onClick: endReview,
               }, 'End review') : null,
             ]),
           ]) : null,
-          card ? h('div', {
+          reviewResult.value ? h(ReviewResult, {
+            correct: reviewResult.value.correct,
+            total: reviewResult.value.total,
+            summary: reviewResult.value.total
+              ? `${reviewResult.value.correct} of ${reviewResult.value.total} blanks correct. Unverified or unanswered blanks count as missed.`
+              : 'No scored blanks were available in this review.',
+            onDone: dismissReviewResult,
+            onReviewAgain: reviewAgain,
+          }) : card ? h('div', {
             ref: stack,
             class: ['ruled-card-stack', {
               'has-second-card': props.set.cards.length > 1,
@@ -452,7 +497,7 @@ export const FillBlankSet = defineComponent({
               disabled: atLimit.value, onClick: () => addCard(),
             }, [h(Icon, { name: 'plus' }), 'Add first card']),
           ]),
-          card ? h('div', { class: 'card-controls' }, [
+          !reviewResult.value && card ? h('div', { class: 'card-controls' }, [
             h('div', {
               class: ['card-review-controls', {
                 'fill-blank-edit-controls': !reviewActive.value,
@@ -525,7 +570,7 @@ export const FillBlankSet = defineComponent({
               h('button', {
                 type: 'button', class: 'quiet-button',
                 disabled: reviewActive.value ? !canAdvance : lastCard,
-                onClick: () => reviewActive.value && lastCard ? endReview(true) : go(1),
+                onClick: () => reviewActive.value && lastCard ? finishReview() : go(1),
               }, reviewActive.value && lastCard && canAdvance
                 ? 'Finish review'
                 : reviewActive.value && blankCount === 0
@@ -541,7 +586,7 @@ export const FillBlankSet = defineComponent({
                       ? `${correctCount} of ${blankCount} correct. Correct answers are green; missed answers appear below them in red.`
                       : reviewSide.value === 'back'
                         ? 'Answer key shown. Flip back to continue answering; your responses are preserved.'
-                        : 'Enter moves through blanks and verifies on the last. Tab moves through blanks, then to Verify. Unanswered blanks count as missed.'
+                        : 'Enter moves through blanks and verifies on the last. Tab moves through blanks, then to Verify. Unanswered or unverified blanks count as missed in your final score.'
                   : message.value)
               : null,
             !reviewActive.value ? h('div', { class: 'card-edit-controls', 'aria-label': 'Card actions' }, [

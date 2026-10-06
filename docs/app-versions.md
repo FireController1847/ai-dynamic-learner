@@ -18,7 +18,7 @@ Review (formerly Knowledge Check) is at `1.2.2`. `1.2.2` resets mode selection w
 
 Todo List `1.5.1` preserves the ruled-line gap between adjacent sections immediately when Enter creates a blank task at the end of the preceding section. `1.5.0` added independent list cloning, with an optional action to skip remaining tasks on the original after copying.
 
-Index Cards `1.12.0` improves Fill in the Blanks review: Tab moves between answer blanks and then to Verify instead of falling into Previous, and learners can verify with unanswered blanks, which count as missed and display as “No answer.” `1.11.1` polished the collapsible Cards panel added in `1.11.0`.
+Index Cards `1.13.0` adds end-of-review scoring to Flash Cards and Fill in the Blanks. Flash Cards use explicit Missed it / Got it self-grading while ungraded cards count as missed; Fill in the Blanks scores every expected blank, including unanswered or unverified blanks as misses, and accepts common English inflections before fuzzy spelling comparison. `1.12.0` improved Fill in the Blanks keyboard flow and unanswered verification.
 
 ## History-derived starting versions
 
@@ -87,6 +87,7 @@ The repository had no release tags or established app version fields. These are 
 | `1.10.0`: Tiny blanks and tighter Tiny/Short spacing | Two-character-width blanks and mode-aware horizontal margins, number spacing, and authoring padding. |
 | `1.10.1`: expand review blanks as responses are typed | Selected blank lengths are minimum review widths; response text determines additional space. |
 | `1.12.0`: safer Fill in the Blanks keyboard flow and optional unanswered verification | Tab advances through blanks to Verify, Shift+Tab returns from Verify to the final blank, and unanswered blanks can be submitted as missed answers. |
+| `1.13.0`: scored Index Cards reviews and morphology-aware fill answers | Flash Cards add Missed it / Got it grading with ungraded cards treated as misses; both modes show a final percentage/result summary; Fill in the Blanks accepts common English inflections before fuzzy matching and scores unanswered/unverified blanks as misses. |
 
 ### Word Search
 

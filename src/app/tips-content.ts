@@ -341,10 +341,10 @@ export const tipsCatalog: TipsCatalog = {
             back: false,
           },
           {
-            title: 'Keep going',
-            body: 'Flip the card, then press Next card. Finish the review on the last card.',
-            target: '.card-review-controls',
-            targetLabel: 'Review controls',
+            title: 'Score yourself',
+            body: 'After checking the answer, choose Missed it or Got it to score the card and continue. Next without a grade counts as missed.',
+            target: '.card-review-grade-actions',
+            targetLabel: 'Review scoring buttons',
             placement: 'bottom',
             back: false,
           },
@@ -398,7 +398,7 @@ export const tipsCatalog: TipsCatalog = {
           },
           {
             title: 'Fill the blanks',
-            body: 'Type each missing word, then press Verify.',
+            body: 'Type what you remember, then press Verify. You can leave a blank empty if you do not know it.',
             target: '.fill-blank-review-card',
             targetLabel: 'Fill-in-the-blank card',
             placement: 'left',

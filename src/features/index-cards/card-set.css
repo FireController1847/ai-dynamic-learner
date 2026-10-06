@@ -183,6 +183,73 @@
 .card-review-controls > button { min-width: 0; min-height: 36px; padding: 7px 8px; }
 .card-previous .ui-icon { transform: rotate(180deg); }
 .card-review-instruction { margin: 0 0 12px; color: var(--text-secondary); font-size: 12px; line-height: 16px; text-align: center; }
+.card-review-grade-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  width: min(100%, 360px);
+  margin: 0 auto 8px;
+}
+.card-review-grade-button { font-weight: 600; }
+.card-review-grade-button.is-missed {
+  border-color: color-mix(in srgb, var(--danger) 42%, var(--control-border));
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 8%, var(--page-background));
+}
+.card-review-grade-button.is-missed:hover {
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 14%, var(--page-background));
+}
+.card-review-grade-button.is-got {
+  border-color: color-mix(in srgb, var(--success) 42%, var(--control-border));
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 8%, var(--page-background));
+}
+.card-review-grade-button.is-got:hover {
+  border-color: var(--success);
+  background: color-mix(in srgb, var(--success) 14%, var(--page-background));
+}
+.card-review-result {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 8px;
+  width: min(100%, 480px);
+  min-height: 240px;
+  margin: auto 0;
+  padding: 32px 16px;
+  text-align: center;
+}
+.card-review-result-eyebrow {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.card-review-result-score {
+  margin: 0;
+  color: var(--brand-text);
+  font-size: 36px;
+  line-height: 44px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.card-review-result-summary {
+  max-width: 420px;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 20px;
+}
+.card-review-result-actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
 .card-edit-controls { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 8px; }
 .card-edit-controls .quiet-button { background: transparent; border-color: transparent; font-weight: 400; }
 .card-edit-controls .quiet-button:hover:not(:disabled) { background: var(--surface-hover); }
