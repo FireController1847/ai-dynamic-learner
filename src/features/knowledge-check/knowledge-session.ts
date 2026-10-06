@@ -163,13 +163,13 @@ export const KnowledgeSession = defineComponent({
     }
 
     return () => {
-      const question = questions.value[position.value];
-      if (!questions.value.length) return h('section', { class: 'knowledge-session knowledge-builder-empty' }, [
+      if (!questionCount.value) return h('section', { class: 'knowledge-session knowledge-builder-empty' }, [
         h('h3', 'Add questions to get started'), h('p', 'Complete a question and its correct answer in the builder.'),
         h('button', { type: 'button', class: 'card-primary-button', onClick: () => emit('build') }, 'Build questions'),
       ]);
       if (!started.value) return h(SessionIntro, { item: props.item, mode: props.mode, settings: props.settings,
         count: questionCount.value, ended: ended.value, onBack: () => emit('back'), onStart: start });
+      const question = questions.value[position.value];
       if (submitted.value) {
         const showAnswers = props.mode !== 'test' || options.value.showTestAnswers;
         return h('section', { class: 'knowledge-session', 'aria-label': 'Results' }, [

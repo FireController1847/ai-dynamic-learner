@@ -129,7 +129,7 @@ export const SessionSetup = defineComponent({
         h('p', { class: 'knowledge-session-setup-description' }, 'These changes apply only to this Quiz and do not change the saved knowledge set.'),
         h('fieldset', { class: 'knowledge-session-choices' }, [
           h('legend', 'Question order'),
-          orderChoice('forward', 'In order', 'Use the saved question order.', custom.value.order, () => { custom.value.order = 'forward'; }, 'quiz-question-order'),
+          orderChoice('forward', 'In order', 'Use the original question order.', custom.value.order, () => { custom.value.order = 'forward'; }, 'quiz-question-order'),
           orderChoice('backward', 'Reverse order', 'Run the saved question order backward.', custom.value.order, () => { custom.value.order = 'backward'; }, 'quiz-question-order'),
           orderChoice('shuffle', 'Shuffle', 'Use a new random question order.', custom.value.order, () => { custom.value.order = 'shuffle'; }, 'quiz-question-order'),
         ]),
