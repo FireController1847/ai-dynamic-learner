@@ -6,7 +6,8 @@ export type StudyGuideMode = 'list' | 'map';
 export interface GuideSection { id: string; title: string; bullets: string[] }
 export interface ListGuideData { sections: GuideSection[] }
 export interface MapTopic { id: string; title: string; x: number; y: number; guide: ListGuideData }
-export interface MapGuideData { topics: MapTopic[] }
+export interface MapConnection { id: string; from: string; to: string }
+export interface MapGuideData { topics: MapTopic[]; connections: MapConnection[]; startTopicId: string | null }
 export type GuideItem =
   | { id: string; kind: 'guide'; name: string; mode: 'list'; data: ListGuideData }
   | { id: string; kind: 'guide'; name: string; mode: 'map'; data: MapGuideData };
@@ -36,7 +37,7 @@ export const { findItem, firstEntry, countItems, deleteItem, canMove, moveItem, 
 
 export function createSection(): GuideSection { return { id: createId(), title: '', bullets: [] }; }
 export function createListGuideData(): ListGuideData { return { sections: [] }; }
-export function createMapGuideData(): MapGuideData { return { topics: [] }; }
+export function createMapGuideData(): MapGuideData { return { topics: [], connections: [], startTopicId: null }; }
 export function createGroup(): Group { return { id: createId(), kind: 'group', name: 'New group', children: [] }; }
 
 export function insertGuide(items: LibraryItem[], target: GuideTarget, mode: StudyGuideMode): GuideItem {
@@ -79,15 +80,44 @@ function listData(value: unknown, ids: Set<string>): asserts value is ListGuideD
   }
 }
 function mapData(value: unknown, ids: Set<string>): asserts value is MapGuideData {
-  if (!isRecord(value) || !Array.isArray(value.topics) || Object.keys(value).some(key => key !== 'topics') || value.topics.length > MAX_TOPICS)
-    throw new Error('A Study Guide map has invalid topics.');
+  if (!isRecord(value) || !Array.isArray(value.topics)) throw new Error('A Study Guide map has invalid topics.');
+
+  if (!Object.hasOwn(value, 'connections')) value.connections = [];
+  if (!Object.hasOwn(value, 'startTopicId')) {
+    const first = value.topics[0];
+    value.startTopicId = isRecord(first) && isValidId(first.id) ? first.id : null;
+  }
+
+  if (!Array.isArray(value.connections) ||
+      Object.keys(value).some(key => !['topics','connections','startTopicId'].includes(key)) ||
+      value.topics.length > MAX_TOPICS) throw new Error('A Study Guide map is invalid.');
+
+  const topicIds = new Set<string>();
   for (const topic of value.topics) {
     if (!isRecord(topic) || !isValidId(topic.id) || ids.has(topic.id) ||
         Object.keys(topic).some(key => !['id','title','x','y','guide'].includes(key)) ||
         typeof topic.x !== 'number' || !Number.isInteger(topic.x) || topic.x < 0 || topic.x > MAP_MAX_X || topic.x % MAP_GRID !== 0 ||
         typeof topic.y !== 'number' || !Number.isInteger(topic.y) || topic.y < 0 || topic.y > MAP_MAX_Y || topic.y % MAP_GRID !== 0)
       throw new Error('A Study Guide map topic is invalid.');
-    ids.add(topic.id); text(topic.title, 'Topic title'); listData(topic.guide, ids);
+    ids.add(topic.id); topicIds.add(topic.id); text(topic.title, 'Topic title'); listData(topic.guide, ids);
+  }
+
+  if (value.startTopicId !== null && (!isValidId(value.startTopicId) || !topicIds.has(value.startTopicId))) {
+    throw new Error('The Study Guide map starting topic is invalid.');
+  }
+  if (value.topics.length && value.startTopicId === null) value.startTopicId = value.topics[0].id;
+
+  const pairs = new Set<string>();
+  for (const connection of value.connections) {
+    if (!isRecord(connection) || !isValidId(connection.id) || ids.has(connection.id) ||
+        Object.keys(connection).some(key => !['id','from','to'].includes(key)) ||
+        !isValidId(connection.from) || !isValidId(connection.to) ||
+        connection.from === connection.to || !topicIds.has(connection.from) || !topicIds.has(connection.to)) {
+      throw new Error('A Study Guide map connection is invalid.');
+    }
+    const pair = [connection.from, connection.to].sort().join(':');
+    if (pairs.has(pair)) throw new Error('A Study Guide map contains a duplicate connection.');
+    pairs.add(pair); ids.add(connection.id);
   }
 }
 
