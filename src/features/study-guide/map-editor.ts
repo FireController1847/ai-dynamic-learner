@@ -1,8 +1,8 @@
-import { computed, defineComponent, h, ref, type PropType } from 'vue';
+import { computed, defineComponent, h, onBeforeUnmount, ref, type PropType } from 'vue';
 import { createId } from '../../core/ids.ts';
 import { inputValue } from '../../core/dom.ts';
 import {
-  connectedTopicIds, connectTopics, mapStudyProblem, removeConnection,
+  connectedTopicIds, connectTopics, connectionWouldCreateCycle, mapStudyProblem, removeConnection,
   removeTopicGraphData, setStartTopic, topicById,
 } from './map-graph.ts';
 import {
@@ -21,9 +21,32 @@ export const StudyGuideMapEditor = defineComponent({
   setup(props, { emit }) {
     const selectedId = ref<string | null>(props.data.topics[0]?.id ?? null);
     const connectingFromId = ref<string | null>(null);
+    const invalidConnection = ref<{ from: string; to: string } | null>(null);
+    const connectionMessage = ref('Choose another topic to connect it to this one.');
     const drag = ref<{ id: string; clientX: number; clientY: number; x: number; y: number } | null>(null);
+    let invalidConnectionTimer: number | null = null;
     const selected = computed(() => topicById(props.data, selectedId.value));
     const studyProblem = computed(() => mapStudyProblem(props.data));
+
+    function clearInvalidConnection() {
+      if (invalidConnectionTimer !== null) window.clearTimeout(invalidConnectionTimer);
+      invalidConnectionTimer = null;
+      invalidConnection.value = null;
+      connectionMessage.value = 'Choose another topic to connect it to this one.';
+    }
+
+    function flashInvalidConnection(from: string, to: string) {
+      clearInvalidConnection();
+      invalidConnection.value = { from, to };
+      connectionMessage.value = 'That connection would create a loop. Choose a different topic.';
+      invalidConnectionTimer = window.setTimeout(() => {
+        invalidConnectionTimer = null;
+        invalidConnection.value = null;
+        connectionMessage.value = 'Choose another topic to connect it to this one.';
+      }, 650);
+    }
+
+    onBeforeUnmount(clearInvalidConnection);
 
     function addTopic() {
       if (props.data.topics.length >= MAX_TOPICS) return;
@@ -39,6 +62,7 @@ export const StudyGuideMapEditor = defineComponent({
       if (props.data.startTopicId === null) props.data.startTopicId = topic.id;
       selectedId.value = topic.id;
       connectingFromId.value = null;
+      clearInvalidConnection();
     }
 
     function removeTopic(id: string) {
@@ -47,6 +71,7 @@ export const StudyGuideMapEditor = defineComponent({
       removeTopicGraphData(props.data, id);
       props.data.topics.splice(index, 1);
       if (connectingFromId.value === id) connectingFromId.value = null;
+      if (invalidConnection.value?.from === id || invalidConnection.value?.to === id) clearInvalidConnection();
       selectedId.value = props.data.topics[Math.min(index, props.data.topics.length - 1)]?.id ?? null;
     }
 
@@ -58,8 +83,14 @@ export const StudyGuideMapEditor = defineComponent({
     function selectTopic(topic: MapTopic) {
       const from = connectingFromId.value;
       if (from && from !== topic.id) {
+        if (connectionWouldCreateCycle(props.data, from, topic.id)) {
+          flashInvalidConnection(from, topic.id);
+          selectedId.value = topic.id;
+          return;
+        }
         connectTopics(props.data, from, topic.id);
         connectingFromId.value = null;
+        clearInvalidConnection();
       }
       selectedId.value = topic.id;
     }
@@ -98,6 +129,22 @@ export const StudyGuideMapEditor = defineComponent({
       });
     }
 
+    function invalidConnectionLine() {
+      const invalid = invalidConnection.value;
+      if (!invalid) return null;
+      const from = topicById(props.data, invalid.from);
+      const to = topicById(props.data, invalid.to);
+      if (!from || !to) return null;
+      return h('line', {
+        key: 'invalid-' + invalid.from + '-' + invalid.to,
+        x1: from.x + MAP_TOPIC_WIDTH / 2,
+        y1: from.y + MAP_TOPIC_HEIGHT / 2,
+        x2: to.x + MAP_TOPIC_WIDTH / 2,
+        y2: to.y + MAP_TOPIC_HEIGHT / 2,
+        class: 'is-invalid',
+      });
+    }
+
     return () => {
       const selectedTopic = selected.value;
       const connected = selectedTopic
@@ -119,6 +166,7 @@ export const StudyGuideMapEditor = defineComponent({
               disabled: !selectedTopic || props.data.topics.length < 2,
               'aria-pressed': connectingFromId.value !== null,
               onClick: () => {
+                clearInvalidConnection();
                 connectingFromId.value = connectingFromId.value ? null : selectedTopic?.id ?? null;
               },
             }, connectingFromId.value ? 'Cancel connection' : 'Connect'),
@@ -132,8 +180,14 @@ export const StudyGuideMapEditor = defineComponent({
             }, 'Start studying'),
           ]),
         ]),
-        connectingFromId.value ? h('p', { class: 'study-guide-connection-prompt', role: 'status' },
-          'Choose another topic to connect it to this one.') : null,
+        h('p', {
+          class: ['study-guide-connection-prompt', {
+            'is-visible': connectingFromId.value !== null,
+            'is-invalid': invalidConnection.value !== null,
+          }],
+          role: 'status',
+          'aria-hidden': connectingFromId.value === null ? 'true' : undefined,
+        }, connectionMessage.value),
         h('div', { class: 'study-guide-map-layout' }, [
           h('div', { class: 'study-guide-map-scroll' }, [
             h('div', {
@@ -145,7 +199,7 @@ export const StudyGuideMapEditor = defineComponent({
                 class: 'study-guide-route',
                 viewBox: '0 0 ' + MAP_WIDTH + ' ' + MAP_HEIGHT,
                 width: MAP_WIDTH, height: MAP_HEIGHT, 'aria-hidden': 'true',
-              }, props.data.connections.map(connectionLine)),
+              }, [...props.data.connections.map(connectionLine), invalidConnectionLine()]),
               ...props.data.topics.map((topic, index) => h('button', {
                 key: topic.id,
                 type: 'button',
@@ -218,7 +272,7 @@ export const StudyGuideMapEditor = defineComponent({
                 return h('li', { key: topic.id }, [
                   h('button', {
                     type: 'button', class: 'study-guide-connection-name',
-                    onClick: () => { selectedId.value = topic.id; connectingFromId.value = null; },
+                    onClick: () => { selectedId.value = topic.id; connectingFromId.value = null; clearInvalidConnection(); },
                   }, topic.title || 'Untitled topic'),
                   h('button', {
                     type: 'button', class: 'icon-button',
