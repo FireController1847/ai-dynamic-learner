@@ -21,4 +21,5 @@
 - Make focused edits without unrelated formatting/refactors. Update `docs/change-routing.md` only when ownership changes.
 - UI changes follow `docs/design.md`: reuse shared controls/tokens/patterns and preserve keyboard, touch, reduced-motion, and theme behavior.
 - GitHub Pages builds from source with `.github/workflows/deploy-pages.yml`; never commit `dist/` or maintain a deployment branch.
-- Verification is manual unless the user explicitly requests automated checks. Do not run tests, builds, browser automation, or typechecks unless asked. Give a focused manual-check list at handoff.
+- `.github/workflows/verify-build.yml` automatically runs `npm ci`, strict type checking, and a production build on every pushed commit. Prefer checking that CI result over creating ad hoc build workflows or manually rebuilding solely for compile verification.
+- Behavioral verification remains manual unless the user explicitly requests additional automated checks. Do not run tests or browser automation unless asked. Give a focused manual-check list at handoff.

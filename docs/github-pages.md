@@ -8,9 +8,15 @@ Dynamic Learner publishes the normal webpack production build; there is no deplo
 
 The HTML `<base>` and webpack `publicPath` must resolve to the same Pages root. Navigation uses `document.baseURI`, so direct route loads and in-app navigation work under the repository subpath.
 
+## Automatic verification
+
+`.github/workflows/verify-build.yml` runs on every pushed commit. It installs with `npm ci`, runs `npm run typecheck`, and runs the production build so each commit gets a visible compile/build status in GitHub Actions.
+
 ## Deployment
 
 `.github/workflows/deploy-pages.yml` is manually dispatched. It installs with `npm ci`, resolves the Pages URL/base path, runs `npm run pages:prepare`, and uploads `dist/`.
+
+The `deploy` job depends on the `prepare` job. Because `pages:prepare` runs the production build (which includes strict type checking), a type or build failure stops the workflow before GitHub Pages deployment.
 
 Do not hand-edit generated Pages output or maintain a separate publishing branch.
 
@@ -20,4 +26,4 @@ Do not hand-edit generated Pages output or maintain a separate publishing branch
 
 ## When changing deployment
 
-Manually check Home and at least one feature by direct URL and refresh, relative assets, navigation/back-forward, the repository base path, `404.html`, metadata image URLs, and the manual Pages workflow configuration. Run build/deployment checks only when explicitly requested.
+Manually check Home and at least one feature by direct URL and refresh, relative assets, navigation/back-forward, the repository base path, `404.html`, metadata image URLs, and the manual Pages workflow configuration. Prefer the automatic Verify Build status for routine compile verification; run additional build/deployment checks only when explicitly requested.
