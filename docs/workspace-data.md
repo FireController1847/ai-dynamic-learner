@@ -34,7 +34,7 @@ Each feature owns its saved model and runtime validation:
 
 - Notebook: `src/features/notebook/library-model.ts` and document-type validators.
 - Todo List: `src/features/todo-list/library-model.ts` / task model.
-- Index Cards: `src/features/index-cards/tree-model.ts` / card and display models. The optional app-level `settings.answerStrictness` applies to every Fill-in-the-Blanks set; older workspaces without it behave as level 4.
+- Index Cards: `src/features/index-cards/tree-model.ts` / card and display models. The optional app-level `settings.answerStrictness` applies to every Fill-in-the-Blanks set. Older workspaces without it behave as level 4. Workspaces saved during the short-lived per-set strictness implementation are migrated on load: one consistent legacy value is promoted to the app setting; conflicting legacy values fall back to level 4, and the obsolete per-set fields are removed.
 - Word Search: `src/features/word-search/library-model.ts` plus puzzle/game/display models.
 - Crossword: `src/features/crossword/library-model.ts` plus puzzle/game/display models.
 - Study Guide: `src/features/study-guide/library-model.ts`.

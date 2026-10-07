@@ -107,6 +107,7 @@ export function validateIndexCards(value: unknown): asserts value is IndexCards 
     throw new Error('The remembered Index Cards set ID is invalid.');
   }
   const ids = new Set<string>();
+  const legacyAnswerStrictness = new Set<AnswerStrictness>();
   let itemCount = 0;
   let cardCount = 0;
   function visit(items: unknown[], depth: number): void {
@@ -124,7 +125,7 @@ export function validateIndexCards(value: unknown): asserts value is IndexCards 
       if (item.kind === 'set' && !Object.hasOwn(item, 'mode')) item.mode = DEFAULT_SET_MODE;
       const supportedKeys = item.kind === 'group'
         ? ['id', 'kind', 'name', 'children']
-        : ['id', 'kind', 'name', 'mode', 'cards'];
+        : ['id', 'kind', 'name', 'mode', 'cards', 'fillBlank'];
       if (Object.keys(item).some((key) => !supportedKeys.includes(key)) ||
           !Array.isArray(item[collectionKey])) {
         throw new Error('A group or set contains unsupported data.');
@@ -134,6 +135,17 @@ export function validateIndexCards(value: unknown): asserts value is IndexCards 
       } else {
         if (!isSetMode(item.mode)) throw new Error('An Index Cards set has an unsupported study mode.');
 
+        if (Object.hasOwn(item, 'fillBlank')) {
+          if (item.mode !== 'fill-in-the-blanks' ||
+              !isRecord(item.fillBlank) ||
+              Object.keys(item.fillBlank).some((key) => key !== 'answerStrictness') ||
+              !isAnswerStrictness(item.fillBlank.answerStrictness)) {
+            throw new Error('Legacy Fill-in-the-Blanks settings are invalid.');
+          }
+          legacyAnswerStrictness.add(item.fillBlank.answerStrictness);
+          delete item.fillBlank;
+        }
+
         validateCards(item.cards, ids);
         cardCount += item.cards.length;
         if (cardCount > MAX_CARDS) throw new Error(`A workspace supports up to ${MAX_CARDS} cards.`);
@@ -141,6 +153,13 @@ export function validateIndexCards(value: unknown): asserts value is IndexCards 
     }
   }
   visit(value.items, 1);
+
+  if (!Object.hasOwn(value, 'settings')) {
+    const migratedStrictness = legacyAnswerStrictness.size === 1
+      ? [...legacyAnswerStrictness][0]!
+      : DEFAULT_ANSWER_STRICTNESS;
+    value.settings = { answerStrictness: migratedStrictness };
+  }
 }
 import { createId, isValidId } from '../../core/ids.ts';
 import { MAX_CARDS, validateCards } from './card-model.ts';
