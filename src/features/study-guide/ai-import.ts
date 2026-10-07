@@ -191,7 +191,7 @@ export const StudyGuideAiImportDialog = defineComponent({
         tab.value === 'prompt'
           ? h('section', { role: 'tabpanel', style: { display: 'grid', gap: '12px' } }, [
             h('p', { style: { margin: '0', color: 'var(--text-secondary)' } },
-              'First give the AI the source material you want to study. Then paste this prompt after the material. Paste the returned JSON into the JSON Import tab.'),
+              'Give the AI the source material first. After the source material, paste this generated prompt. Then paste the AI\'s returned JSON into the JSON Import tab.'),
             h('div', {
               style: {
                 display: 'grid',
