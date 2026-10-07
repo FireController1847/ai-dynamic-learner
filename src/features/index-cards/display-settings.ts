@@ -5,6 +5,7 @@ import {
 } from './fill-blank-model.ts';
 import type { SetModeId } from './set-modes.ts';
 import { inputValue } from '../../core/dom.ts';
+import { AnswerStrictnessField } from '../../components/answer-strictness-field.ts';
 import { useDialog } from '../../components/use-dialog.ts';
 import {
   DISPLAY_FIELDS, defaultCardDisplayOptions, displayForMode, displayStyles, resolvedDisplayOptions,
@@ -82,26 +83,6 @@ export const DisplaySettings = defineComponent({
             }),
             h('output', { for: id }, `${value}${field.unit}`),
           ]),
-      ]);
-    }
-
-    function strictnessControl() {
-      const id = 'index-cards-answer-strictness';
-      return h('div', { class: 'display-setting' }, [
-        h('label', { for: id }, 'Answer strictness'),
-        h('select', {
-          id,
-          value: props.answerStrictness,
-          onChange: (event: Event) => {
-            const value = Number(inputValue(event));
-            if (value >= 1 && value <= 4) emit('update-answer-strictness', value as AnswerStrictness);
-          },
-        }, [
-          h('option', { value: 1 }, '1 — Strict'),
-          h('option', { value: 2 }, '2 — Flexible'),
-          h('option', { value: 3 }, '3 — Linguistic'),
-          h('option', { value: 4 }, '4 — Semantic'),
-        ]),
       ]);
     }
 
@@ -205,7 +186,12 @@ export const DisplaySettings = defineComponent({
           h('div', { class: 'display-settings-fields' }, [
             ...DISPLAY_FIELDS.filter((field) =>
               field.key !== 'blankLength' || mode.id === 'fill-in-the-blanks').map(control),
-            mode.id === 'fill-in-the-blanks' ? strictnessControl() : null,
+            mode.id === 'fill-in-the-blanks' ? h(AnswerStrictnessField, {
+              id: 'index-cards-answer-strictness',
+              value: props.answerStrictness,
+              fieldClass: 'display-setting',
+              onChange: (value: AnswerStrictness) => emit('update-answer-strictness', value),
+            }) : null,
           ]),
           h('p', { class: 'display-settings-description' },
             'Text size changes the letters, not the line spacing. Positive vertical offsets move text down. Card size keeps the 5:3 shape and fits the available space.'),
