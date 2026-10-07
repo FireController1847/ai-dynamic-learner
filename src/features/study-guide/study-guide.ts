@@ -1,26 +1,51 @@
 import { computed,defineComponent,h,nextTick,onBeforeUnmount,onDeactivated,ref,type PropType } from 'vue';
 import { inputValue } from '../../core/dom.ts';
+import { createId } from '../../core/ids.ts';
 import { Icon } from '../../components/icon.ts';
 import { LibraryEmptyState } from '../../components/library-empty-state.ts';
 import { useLibrarySelection } from '../../components/use-library-selection.ts';
 import { usePersistedPanelResize } from '../../components/use-persisted-panel-resize.ts';
-import { StudyGuideAiImportWorkspace,type SimpleStudyGuideImport } from './ai-import.ts';
+import { StudyGuideAiImportWorkspace,type SimpleMapStudyGuideImport,type SimpleStudyGuideImport } from './ai-import.ts';
 import { StudyGuideLibrary,type StudyGuideLibraryHandle } from './library.ts';
-import { canMove,createSection,findItem,firstEntry,groupOptions,insertGuide,moveItem,type GuideTarget,type LibraryItem,type StudyGuideMode,type StudyGuideModel } from './library-model.ts';
+import { canMove,createSection,findItem,firstEntry,groupOptions,insertGuide,moveItem,type GuideTarget,type LibraryItem,type MapGuideData,type StudyGuideMode,type StudyGuideModel } from './library-model.ts';
 import { StudyGuideModePicker } from './mode-picker.ts';
 import { StudyGuideListEditor } from './list-editor.ts';
 import { StudyGuideMapEditor } from './map-editor.ts';
-import { mapStudyProblem } from './map-graph.ts';
+import { layoutMapTopics,mapStudyProblem } from './map-graph.ts';
 import { StudyGuideMapStudy } from './map-study.ts';
 
 const MIN_LIBRARY_WIDTH=248, LIBRARY_WIDTH_KEY='dynamic-learner.ui.study-guide.library-width';
+
+function importedMapData(value:SimpleMapStudyGuideImport):MapGuideData{
+  const ids=new Map(value.topics.map(topic=>[topic.key,createId()]));
+  const startTopicId=ids.get(value.startTopic);
+  if(!startTopicId)throw new Error('The imported Study Guide has an invalid starting topic.');
+  const connections=value.connections.map(connection=>{
+    const from=ids.get(connection.from),to=ids.get(connection.to);
+    if(!from||!to)throw new Error('The imported Study Guide has an invalid topic connection.');
+    return{id:createId(),from,to};
+  });
+  const positions=layoutMapTopics([...ids.values()],connections,startTopicId);
+  const topics=value.topics.map(source=>{
+    const id=ids.get(source.key);
+    if(!id)throw new Error('The imported Study Guide has an invalid topic.');
+    const position=positions.get(id)??{x:0,y:0};
+    return{
+      id,title:source.title,x:position.x,y:position.y,
+      guide:{sections:source.sections.map(section=>{
+        const result=createSection();result.title=section.title;result.bullets=[...section.bullets];return result;
+      })}
+    };
+  });
+  return{topics,connections,startTopicId};
+}
 
 export const StudyGuide=defineComponent({
   name:'StudyGuide',
   props:{title:{type:String,required:true},model:{type:Object as PropType<StudyGuideModel>,required:true}},
   setup(props){
     const creationTarget=ref<GuideTarget|null>(null);
-    const aiTarget=ref<GuideTarget|null>(null),aiStage=ref<'choose'|'import'|null>(null);
+    const aiTarget=ref<GuideTarget|null>(null),aiStage=ref<'choose'|'import'|null>(null),aiMode=ref<StudyGuideMode|null>(null);
     const selectedId=useLibrarySelection({
       firstId:()=>firstEntry(props.model.items)?.id??null,
       hasItem:id=>findItem(props.model.items,id)!==null,
@@ -40,7 +65,7 @@ export const StudyGuide=defineComponent({
     query.addEventListener('change',media);
     onBeforeUnmount(()=>query.removeEventListener('change',media));
     onDeactivated(()=>{
-      aiTarget.value=null;aiStage.value=null;
+      aiTarget.value=null;aiStage.value=null;aiMode.value=null;
       const item=selection.value?.item;
       editingMapId.value=item?.kind==='guide'&&item.mode==='map'&&mapStudyProblem(item.data)!==null ? item.id : null;
     });
@@ -48,27 +73,31 @@ export const StudyGuide=defineComponent({
     async function setCollapsed(v:boolean){collapsed.value=v;await nextTick();if(v)showLibrary.value?.focus();else library.value?.focusToggle();}
     function target():GuideTarget{const s=selection.value;if(s?.item.kind==='group')return{parentId:s.item.id,parentName:s.item.name,selectedId:s.item.id};if(s)return{parentId:s.parentId,parentName:s.parentId?findItem(props.model.items,s.parentId)?.item.name??'Selected group':'Top level',selectedId:s.item.id};return{parentId:null,parentName:'Top level',selectedId:null};}
 
-    function begin(){aiTarget.value=null;aiStage.value=null;creationTarget.value=target();message.value='';if(overlay.value)collapsed.value=true;}
+    function begin(){aiTarget.value=null;aiStage.value=null;aiMode.value=null;creationTarget.value=target();message.value='';if(overlay.value)collapsed.value=true;}
     async function cancel(){creationTarget.value=null;await nextTick();if(collapsed.value)showLibrary.value?.focus();else library.value?.focusNewGuide();}
     function create(mode:StudyGuideMode){if(!creationTarget.value)return;try{const item=insertGuide(props.model.items,creationTarget.value,mode);selectedId.value=item.id;editingMapId.value=item.mode==='map'?item.id:null;creationTarget.value=null;library.value?.reveal(item.id);message.value='Created '+item.name+'.';nextTick(()=>library.value?.beginRename(item.id));}catch(error){message.value=error instanceof Error?error.message:String(error);}}
 
-    function beginAi(){creationTarget.value=null;aiTarget.value=target();aiStage.value='choose';message.value='';if(overlay.value)collapsed.value=true;}
-    function cancelAi(){aiTarget.value=null;aiStage.value=null;message.value='';}
-    function chooseAiMode(mode:StudyGuideMode){if(!aiTarget.value||mode!=='list')return;aiStage.value='import';}
+    function beginAi(){creationTarget.value=null;aiTarget.value=target();aiStage.value='choose';aiMode.value=null;message.value='';if(overlay.value)collapsed.value=true;}
+    function cancelAi(){aiTarget.value=null;aiStage.value=null;aiMode.value=null;message.value='';}
+    function chooseAiMode(mode:StudyGuideMode){if(!aiTarget.value)return;aiMode.value=mode;aiStage.value='import';}
     function importAi(value:SimpleStudyGuideImport){
       if(!aiTarget.value)return;
       try{
-        const item=insertGuide(props.model.items,aiTarget.value,'list');
-        if(item.mode!=='list')throw new Error('The imported Study Guide could not be created in list mode.');
+        const mapData=value.mode==='map'?importedMapData(value):null;
+        const item=insertGuide(props.model.items,aiTarget.value,value.mode);
         item.name=value.title;
-        item.data.sections=value.sections.map(source=>{
-          const section=createSection();section.title=source.title;section.bullets=[...source.bullets];return section;
-        });
-        selectedId.value=item.id;editingMapId.value=null;creationTarget.value=null;aiTarget.value=null;aiStage.value=null;library.value?.reveal(item.id);message.value='Imported '+item.name+'.';if(overlay.value)collapsed.value=true;
+        if(value.mode==='list'&&item.mode==='list'){
+          item.data.sections=value.sections.map(source=>{
+            const section=createSection();section.title=source.title;section.bullets=[...source.bullets];return section;
+          });
+        }else if(value.mode==='map'&&item.mode==='map'&&mapData){
+          item.data=mapData;
+        }else throw new Error('The imported Study Guide could not be created in the selected mode.');
+        selectedId.value=item.id;editingMapId.value=item.mode==='map'?item.id:null;creationTarget.value=null;aiTarget.value=null;aiStage.value=null;aiMode.value=null;library.value?.reveal(item.id);message.value='Imported '+item.name+'.';if(overlay.value)collapsed.value=true;
       }catch(error){message.value=error instanceof Error?error.message:String(error);}
     }
 
-    function select(id:string|null){selectedId.value=id;creationTarget.value=null;aiTarget.value=null;aiStage.value=null;const item=id?findItem(props.model.items,id)?.item:null;editingMapId.value=item?.kind==='guide'&&item.mode==='map'&&mapStudyProblem(item.data)!==null?item.id:null;message.value='';}
+    function select(id:string|null){selectedId.value=id;creationTarget.value=null;aiTarget.value=null;aiStage.value=null;aiMode.value=null;const item=id?findItem(props.model.items,id)?.item:null;editingMapId.value=item?.kind==='guide'&&item.mode==='map'&&mapStudyProblem(item.data)!==null?item.id:null;message.value='';}
     function moveGroup(e:Event){if(!selectedId.value||!selection.value)return;const id=inputValue(e)||null;if(moveItem(props.model.items,selectedId.value,id,'inside')){library.value?.reveal(selectedId.value);message.value='Moved '+selection.value.item.name+'.';}}
     function reorder(offset:number){if(!selection.value)return;const s=selection.value,n=s.siblings[s.index+offset];if(n&&moveItem(props.model.items,s.item.id,n.id,offset<0?'before':'after'))message.value='Moved '+s.item.name+(offset<0?' up.':' down.');}
     function organization(item:LibraryItem){if(!selection.value)return null;return h('details',{class:['item-organization',{'library-group-organization':item.kind==='group'}],open:item.kind==='group'},[
@@ -82,11 +111,11 @@ export const StudyGuide=defineComponent({
 
     function detail(){
       if(aiTarget.value&&aiStage.value==='choose')return h('section',{class:'study-guide-detail study-guide-builder-detail',inert:overlay.value&&!collapsed.value},[
-        h(StudyGuideModePicker,{destination:aiTarget.value.parentName,disabledModes:['map'],comingSoonModes:['map'],onCreate:chooseAiMode,onCancel:cancelAi}),
+        h(StudyGuideModePicker,{destination:aiTarget.value.parentName,onCreate:chooseAiMode,onCancel:cancelAi}),
         h('p',{class:'visually-hidden',role:'status'},message.value)
       ]);
-      if(aiTarget.value&&aiStage.value==='import')return h('section',{class:'study-guide-detail study-guide-builder-detail',inert:overlay.value&&!collapsed.value},[
-        h(StudyGuideAiImportWorkspace,{destination:aiTarget.value.parentName,onBack:()=>{aiStage.value='choose';},onCancel:cancelAi,onImport:importAi}),
+      if(aiTarget.value&&aiStage.value==='import'&&aiMode.value)return h('section',{class:'study-guide-detail study-guide-builder-detail',inert:overlay.value&&!collapsed.value},[
+        h(StudyGuideAiImportWorkspace,{destination:aiTarget.value.parentName,mode:aiMode.value,onBack:()=>{aiMode.value=null;aiStage.value='choose';},onCancel:cancelAi,onImport:importAi}),
         h('p',{class:'visually-hidden',role:'status'},message.value)
       ]);
       if(creationTarget.value)return h('section',{class:'study-guide-detail study-guide-builder-detail',inert:overlay.value&&!collapsed.value},[
