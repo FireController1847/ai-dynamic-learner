@@ -42,7 +42,7 @@ Important shared modules include:
 
 - `src/core/tree.ts`: generic grouped-tree lookup, movement, deletion, counting, and options.
 - `src/core/ids.ts`: IDs and validation.
-- `packages/@dynamic-learner/answer-matching/`: reusable strict-to-semantic answer equivalency; `src/core/answer-matching.ts` is a compatibility adapter that preserves the existing level-3 behavior for current non-Index-Cards callers.
+- `packages/@dynamic-learner/answer-matching/`: reusable strict-to-semantic answer equivalency; `src/core/answer-matching.ts` is a compatibility adapter that preserves the existing level-3 behavior for remaining legacy callers.
 - `src/core/fill-blank.ts`: shared blank parsing/masking/restoration/matching.
 - `src/core/leave-guards.ts`: feature-provided navigation guards.
 - `src/components/use-dialog.ts`: native dialog lifecycle.
@@ -50,7 +50,7 @@ Important shared modules include:
 - `src/components/use-persisted-panel-resize.ts`: shared persisted panel resizing.
 - `src/app/app-icon.ts`: visible 256px app artwork selection (WebP, then PNG, GIF fallback).
 
-Reusable packages live under `packages/`. Tips owns guided-tutorial UI; `@dynamic-learner/answer-matching` owns generic answer equivalency. Feature-specific settings and persistence remain in their owning apps.
+Reusable packages live under `packages/`. Tips owns guided-tutorial UI; `@dynamic-learner/answer-matching` owns generic answer equivalency. `src/components/answer-strictness-field.ts` provides the shared 1–4 UI control. Index Cards persists one app-wide Fill-in-the-Blanks strictness value; Review persists separate Short Answer and Fill-in-the-Blanks strictness values per knowledge set.
 
 ## Persistence
 
