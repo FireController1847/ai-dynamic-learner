@@ -13,6 +13,7 @@ import { CardSet } from './card-set.ts';
 import { FillBlankSet } from './fill-blank-set.ts';
 import { DisplaySettings } from './display-settings.ts';
 import { displayForMode, displayStyles, resolvedDisplayOptions } from './display-options.ts';
+import type { AnswerStrictness } from './fill-blank-model.ts';
 import { Icon } from '../../components/icon.ts';
 import { LibraryEmptyState } from '../../components/library-empty-state.ts';
 import { useLibrarySelection } from '../../components/use-library-selection.ts';
@@ -450,7 +451,7 @@ export const IndexCards = defineComponent({
         answerStrictness: indexCardSettings.value.answerStrictness,
         initialTab: selectedMode.value,
         onUpdate: (options) => { props.model.display = options; },
-        onUpdateAnswerStrictness: (answerStrictness) => {
+        onUpdateAnswerStrictness: (answerStrictness: AnswerStrictness) => {
           props.model.settings = { ...indexCardSettings.value, answerStrictness };
         },
         onClose: closeSettings,

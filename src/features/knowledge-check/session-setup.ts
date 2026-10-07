@@ -1,3 +1,4 @@
+import type { AnswerStrictness } from '../../../packages/@dynamic-learner/answer-matching/src/index.ts';
 import { defineComponent, h, ref, type PropType } from 'vue';
 import { AnswerStrictnessField } from '../../components/answer-strictness-field.ts';
 import type { CheckItem } from './library-model.ts';
@@ -162,13 +163,13 @@ export const SessionSetup = defineComponent({
           id: 'quiz-short-answer-strictness',
           label: 'Short Answer strictness',
           value: custom.value.shortAnswerStrictness,
-          onChange: (value) => { custom.value.shortAnswerStrictness = value; },
+          onChange: (value: AnswerStrictness) => { custom.value.shortAnswerStrictness = value; },
         }),
         h(AnswerStrictnessField, {
           id: 'quiz-fill-blank-strictness',
           label: 'Fill in the Blanks strictness',
           value: custom.value.fillBlankAnswerStrictness,
-          onChange: (value) => { custom.value.fillBlankAnswerStrictness = value; },
+          onChange: (value: AnswerStrictness) => { custom.value.fillBlankAnswerStrictness = value; },
         }),
         h('label', { class: 'knowledge-field' }, [
           'Allowed attempts per question',

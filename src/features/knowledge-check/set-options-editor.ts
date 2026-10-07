@@ -1,3 +1,4 @@
+import type { AnswerStrictness } from '../../../packages/@dynamic-learner/answer-matching/src/index.ts';
 import { defineComponent, h, type PropType } from 'vue';
 import { AnswerStrictnessField } from '../../components/answer-strictness-field.ts';
 import { inputValue } from '../../core/dom.ts';
@@ -24,13 +25,13 @@ export const SetOptionsEditor = defineComponent({
         id: 'knowledge-short-answer-strictness',
         label: 'Short Answer strictness',
         value: props.options.shortAnswerStrictness,
-        onChange: (value) => { props.options.shortAnswerStrictness = value; },
+        onChange: (value: AnswerStrictness) => { props.options.shortAnswerStrictness = value; },
       }),
       h(AnswerStrictnessField, {
         id: 'knowledge-fill-blank-strictness',
         label: 'Fill in the Blanks strictness',
         value: props.options.fillBlankAnswerStrictness,
-        onChange: (value) => { props.options.fillBlankAnswerStrictness = value; },
+        onChange: (value: AnswerStrictness) => { props.options.fillBlankAnswerStrictness = value; },
       }),
       h('p', { class: 'knowledge-muted' },
         'These are independent. Level 1 requires normalized exact answers; higher levels add spelling tolerance, linguistic equivalents, and then conservative semantic equivalents.'),
