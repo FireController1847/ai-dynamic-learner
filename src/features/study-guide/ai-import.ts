@@ -1,6 +1,5 @@
 import { computed, defineComponent, h, ref } from 'vue';
 import { Icon } from '../../components/icon.ts';
-import { PopupDialog } from '../../components/popup-dialog.ts';
 import { inputValue } from '../../core/dom.ts';
 import { isRecord } from '../../core/validation.ts';
 import { MAX_BULLETS, MAX_NAME_LENGTH, MAX_SECTIONS, MAX_TEXT_LENGTH } from './library-model.ts';
@@ -182,13 +181,17 @@ function importBulletCount(value: SimpleStudyGuideImport): number {
   return value.sections.reduce((count, section) => count + section.bullets.length, 0);
 }
 
-export const StudyGuideAiImportDialog = defineComponent({
-  name: 'StudyGuideAiImportDialog',
+export const StudyGuideAiImportWorkspace = defineComponent({
+  name: 'StudyGuideAiImportWorkspace',
+  props: {
+    destination: { type: String, required: true },
+  },
   emits: {
-    close: () => true,
+    back: () => true,
+    cancel: () => true,
     import: (_value: SimpleStudyGuideImport) => true,
   },
-  setup(_props, { emit }) {
+  setup(props, { emit }) {
     const tab = ref<'prompt' | 'import'>('prompt');
     const detail = ref<PromptDetail>(DEFAULT_PROMPT_OPTIONS.detail);
     const coverage = ref<PromptCoverage>(DEFAULT_PROMPT_OPTIONS.coverage);
@@ -234,7 +237,6 @@ export const StudyGuideAiImportDialog = defineComponent({
       class: 'quiet-button',
       role: 'tab',
       'aria-selected': tab.value === id,
-      style: tab.value === id ? { borderColor: 'var(--brand)', background: 'var(--brand-tint)', color: 'var(--brand-text)' } : null,
       onClick: () => selectTab(id),
     }, label);
 
@@ -245,8 +247,8 @@ export const StudyGuideAiImportDialog = defineComponent({
       options: readonly { value: T; label: string }[],
       change: (value: T) => void,
     ) {
-      return h('label', { for: id, style: { display: 'grid', gap: '4px' } }, [
-        h('span', { style: { fontSize: '12px', color: 'var(--text-secondary)' } }, label),
+      return h('label', { for: id, class: 'study-guide-ai-option' }, [
+        h('span', label),
         h('select', {
           id,
           value,
@@ -258,34 +260,31 @@ export const StudyGuideAiImportDialog = defineComponent({
       ]);
     }
 
-    return () => h(PopupDialog, {
-      title: 'AI / JSON import',
-      headingId: 'study-guide-ai-import-title',
-      width: 680,
-      onClose: () => emit('close'),
-    }, {
-      default: () => h('div', {
-        style: { display: 'grid', gap: '14px', minHeight: '540px', alignContent: 'start' },
-      }, [
-        h('div', { role: 'tablist', 'aria-label': 'Study Guide import method', style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } }, [
+    return () => h('section', {
+      class: 'study-guide-ai-workspace',
+      'aria-labelledby': 'study-guide-ai-title',
+    }, [
+      h('header', { class: 'study-guide-ai-header' }, [
+        h('div', { class: 'study-guide-ai-heading' }, [
+          h('span', { class: 'study-guide-ai-kicker' }, 'List mode · Saved in ' + props.destination),
+          h('h2', { id: 'study-guide-ai-title' }, 'Create with AI'),
+          h('p', 'Generate a prompt for your AI, then paste its JSON response back here to create the guide.'),
+        ]),
+        h('div', { class: 'study-guide-ai-actions' }, [
+          h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('back') }, 'Back'),
+          h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel') }, 'Cancel'),
+        ]),
+      ]),
+      h('div', { class: 'study-guide-ai-content' }, [
+        h('div', { role: 'tablist', 'aria-label': 'Study Guide import method', class: 'study-guide-ai-tabs' }, [
           tabButton('prompt', 'AI Prompt'),
           tabButton('import', 'JSON Import'),
         ]),
         tab.value === 'prompt'
-          ? h('section', { role: 'tabpanel', style: { display: 'grid', gap: '12px', alignContent: 'start' } }, [
-            h('p', { style: { margin: '0', color: 'var(--text-secondary)' } },
-              'Give the AI the source material first. After the source material, paste this generated prompt. Then paste the AI\'s returned JSON into the JSON Import tab.'),
-            h('div', {
-              style: {
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-                gap: '10px',
-                padding: '12px',
-                border: '1px solid var(--border-color)',
-                borderRadius: 'var(--radius)',
-                background: 'var(--surface-subtle)',
-              },
-            }, [
+          ? h('section', { role: 'tabpanel', class: 'study-guide-ai-panel' }, [
+            h('p', { class: 'study-guide-ai-help' },
+              'Give the AI the source material first. Then paste this generated prompt after it. Paste the returned JSON into the JSON Import tab.'),
+            h('div', { class: 'study-guide-ai-options' }, [
               optionField('study-guide-ai-detail', 'Detail', detail.value, [
                 { value: 'concise', label: 'Concise' },
                 { value: 'balanced', label: 'Balanced' },
@@ -301,21 +300,20 @@ export const StudyGuideAiImportDialog = defineComponent({
                 { value: 'thoughts', label: 'Complete thoughts' },
               ], (value) => { bulletStyle.value = value; }),
             ]),
-            h('div', { style: { display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' } }, [
-              h('div', { style: { display: 'inline-flex', alignItems: 'stretch', gap: '4px' } }, [
+            h('div', { class: 'study-guide-ai-copy-row' }, [
+              h('div', { class: 'study-guide-ai-copy-actions' }, [
                 h('button', { type: 'button', class: 'card-primary-button', onClick: copyPrompt }, 'Copy prompt'),
                 h('button', {
                   type: 'button',
-                  class: 'quiet-button',
+                  class: 'quiet-button study-guide-ai-prompt-toggle',
                   title: showPrompt.value ? 'Hide prompt' : 'Show prompt',
                   'aria-label': showPrompt.value ? 'Hide generated prompt' : 'Show generated prompt',
                   'aria-expanded': showPrompt.value,
                   'aria-controls': 'study-guide-ai-prompt-preview',
-                  style: { minWidth: '36px', paddingInline: '7px' },
                   onClick: () => { showPrompt.value = !showPrompt.value; },
                 }, [h(Icon, { name: showPrompt.value ? 'chevron-up' : 'chevron-down' })]),
               ]),
-              copyStatus.value ? h('span', { role: 'status', style: { color: 'var(--text-secondary)', fontSize: '12px' } }, copyStatus.value) : null,
+              copyStatus.value ? h('span', { role: 'status', class: 'study-guide-ai-status' }, copyStatus.value) : null,
             ]),
             showPrompt.value ? h('textarea', {
               id: 'study-guide-ai-prompt-preview',
@@ -323,39 +321,34 @@ export const StudyGuideAiImportDialog = defineComponent({
               readonly: true,
               rows: 17,
               'aria-label': 'AI Study Guide prompt',
-              style: { width: '100%', minHeight: '290px', resize: 'vertical', padding: '10px' },
+              class: 'study-guide-ai-prompt-preview',
             }) : null,
           ])
-          : h('section', {
-            role: 'tabpanel',
-            style: { display: 'grid', gap: '10px', minHeight: '480px', alignContent: 'start' },
-          }, [
-            h('p', { style: { margin: '0', color: 'var(--text-secondary)' } },
+          : h('section', { role: 'tabpanel', class: 'study-guide-ai-panel' }, [
+            h('p', { class: 'study-guide-ai-help' },
               'Paste the JSON code block returned by the AI. Dynamic Learner removes the code fence if present and validates the JSON before creating anything.'),
             h('textarea', {
               value: json.value,
               rows: 12,
               placeholder: '{\n  "format": "dynamic-learner-study-guide",\n  "sections": [\n    ...\n  ]\n}',
               'aria-label': 'Study Guide JSON import',
-              style: { width: '100%', height: '220px', minHeight: '220px', resize: 'vertical', padding: '10px', fontFamily: 'monospace' },
+              class: 'study-guide-ai-json',
               onInput: (event: Event) => {
                 json.value = inputValue(event);
                 candidate.value = null;
                 problem.value = '';
               },
             }),
-            h('div', { style: { display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '10px', minHeight: '32px' } }, [
+            h('div', { class: 'study-guide-ai-validate-row' }, [
               h('button', { type: 'button', class: 'quiet-button', disabled: !json.value.trim(), onClick: preview }, 'Validate JSON'),
-              problem.value ? h('span', { role: 'alert', style: { color: 'var(--danger)' } }, problem.value) : null,
+              problem.value ? h('span', { role: 'alert', class: 'study-guide-ai-error' }, problem.value) : null,
             ]),
-            h('div', { style: { minHeight: '154px' } }, [
-              candidate.value ? h('div', {
-                style: { display: 'grid', gap: '8px', padding: '12px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius)', background: 'var(--surface-subtle)' },
-              }, [
+            h('div', { class: 'study-guide-ai-preview-slot' }, [
+              candidate.value ? h('div', { class: 'study-guide-ai-preview' }, [
                 h('strong', candidate.value.title),
-                h('span', { style: { color: 'var(--text-secondary)', fontSize: '12px' } },
+                h('span', { class: 'study-guide-ai-status' },
                   `${candidate.value.sections.length} section${candidate.value.sections.length === 1 ? '' : 's'} · ${importBulletCount(candidate.value)} bullets and sub-bullets`),
-                h('ul', { style: { margin: '0', paddingLeft: '20px' } }, [
+                h('ul', [
                   ...candidate.value.sections.slice(0, 5).map((section) =>
                     h('li', `${section.title} — ${section.bullets.length} item${section.bullets.length === 1 ? '' : 's'}`)),
                   candidate.value.sections.length > 5
@@ -363,13 +356,14 @@ export const StudyGuideAiImportDialog = defineComponent({
                     : null,
                 ]),
                 h('button', {
-                  type: 'button', class: 'card-primary-button', style: { justifySelf: 'start' },
+                  type: 'button',
+                  class: 'card-primary-button',
                   onClick: () => { if (candidate.value) emit('import', candidate.value); },
                 }, 'Import study guide'),
               ]) : null,
             ]),
           ]),
       ]),
-    });
+    ]);
   },
 });
