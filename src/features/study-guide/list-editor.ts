@@ -1,4 +1,4 @@
-import { defineComponent, h, nextTick, type PropType } from 'vue';
+import { defineComponent, h, nextTick, ref, type PropType } from 'vue';
 import { inputValue } from '../../core/dom.ts';
 import { createSection, MAX_BULLETS, MAX_SECTIONS, MAX_TEXT_LENGTH, type GuideSection, type ListGuideData } from './library-model.ts';
 
@@ -66,8 +66,20 @@ export const StudyGuideListEditor = defineComponent({
   setup(props) {
     const bulletFields = new Map<string, HTMLInputElement>();
     const titleFields = new Map<string, HTMLInputElement>();
+    const addSectionButton = ref<HTMLButtonElement | null>(null);
+    const message = ref('');
     const bulletCount = () => props.data.sections.reduce((count, section) => count + section.bullets.length, 0);
     const bulletKey = (section: GuideSection, index: number) => `${section.id}:${index}`;
+    const sectionLabel = (section: GuideSection) => {
+      const index = props.data.sections.indexOf(section);
+      const number = index >= 0 ? index + 1 : 1;
+      const title = section.title.trim();
+      return title ? `Section ${number}, ${title}` : `Section ${number}`;
+    };
+    function announce(value: string) {
+      message.value = '';
+      void nextTick(() => { message.value = value; });
+    }
 
     async function focusBullet(section: GuideSection, index: number, cursor?: number) {
       await nextTick();
@@ -86,16 +98,33 @@ export const StudyGuideListEditor = defineComponent({
     async function addBullet(section: GuideSection, index = section.bullets.length) {
       if (bulletCount() >= MAX_BULLETS) return;
       section.bullets.splice(index, 0, '');
+      announce(`Bullet ${index + 1} added to ${sectionLabel(section)}.`);
       await focusBullet(section, index, 0);
     }
 
     async function removeBullet(section: GuideSection, index: number) {
+      const label = sectionLabel(section);
       section.bullets.splice(index, 1);
+      announce(`Bullet ${index + 1} removed from ${label}.`);
       const previous = index - 1;
       if (previous >= 0) {
         await focusBullet(section, previous, bulletText(section.bullets[previous] ?? '').length);
       } else {
         await focusSection(section);
+      }
+    }
+
+    async function removeSection(section: GuideSection) {
+      const index = props.data.sections.indexOf(section);
+      if (index < 0) return;
+      const label = sectionLabel(section);
+      props.data.sections.splice(index, 1);
+      announce(`${label} removed.`);
+      const target = props.data.sections[index] ?? props.data.sections[index - 1];
+      if (target) await focusSection(target);
+      else {
+        await nextTick();
+        addSectionButton.value?.focus();
       }
     }
 
@@ -117,11 +146,14 @@ export const StudyGuideListEditor = defineComponent({
       const start = event.target.selectionStart ?? text.length;
       const end = event.target.selectionEnd ?? start;
 
-      if (event.key === 'Tab') {
-        if (event.shiftKey) {
+      const indent = event.ctrlKey && !event.altKey && !event.metaKey && event.key === ']';
+      const outdent = event.ctrlKey && !event.altKey && !event.metaKey && event.key === '[';
+      if (indent || outdent) {
+        if (outdent) {
           if (depth === 0) return;
           event.preventDefault();
           section.bullets[index] = withBulletDepth(text, depth - 1);
+          announce(`Bullet ${index + 1}, level ${depth}.`);
           void focusBullet(section, index, start);
           return;
         }
@@ -131,6 +163,7 @@ export const StudyGuideListEditor = defineComponent({
         if (depth >= maxDepth) return;
         event.preventDefault();
         section.bullets[index] = withBulletDepth(text, depth + 1);
+        announce(`Bullet ${index + 1}, level ${depth + 2}.`);
         void focusBullet(section, index, start);
         return;
       }
@@ -181,62 +214,76 @@ export const StudyGuideListEditor = defineComponent({
     }
 
     return () => h('div', { class: ['study-guide-list-editor', { 'is-compact': props.compact }] }, [
-      props.data.sections.length ? h('div', { class: 'study-guide-sections' }, props.data.sections.map((section, si) => h('section', { key: section.id, class: 'study-guide-section' }, [
-        h('div', { class: 'study-guide-section-heading' }, [
-          h('input', {
-            ref: (element) => {
-              if (element instanceof HTMLInputElement) titleFields.set(section.id, element);
-              else titleFields.delete(section.id);
-            },
-            class: 'study-guide-section-title', value: section.title, maxlength: MAX_TEXT_LENGTH,
-            placeholder: 'Title', 'aria-label': 'Section title',
-            onInput: (event: Event) => { section.title = inputValue(event); },
-            onKeydown: (event: KeyboardEvent) => handleTitleKeydown(event, section),
-          }),
-          h('button', {
-            type: 'button', class: 'icon-button study-guide-remove', title: 'Remove title', 'aria-label': 'Remove title',
-            onClick: () => props.data.sections.splice(si, 1),
-          }, '×'),
-        ]),
-        h('div', { class: 'study-guide-bullets' }, section.bullets.map((bullet, bi) => {
-          const depth = bulletDepth(bullet);
-          const text = bulletText(bullet);
-          return h('div', {
-            key: `${section.id}-${bi}`,
-            class: 'study-guide-bullet-row',
-            style: { paddingLeft: `${depth * 20}px` },
-          }, [
-            bulletMarker(depth),
+      h('p', { class: 'visually-hidden' },
+        'List editor keyboard help. Tab moves between controls. Enter splits or adds a bullet. Control right bracket indents a bullet. Control left bracket outdents a bullet. Backspace on an empty bullet removes it.'),
+      props.data.sections.length ? h('div', { class: 'study-guide-sections' }, props.data.sections.map((section, si) => {
+        const headingId = `study-guide-section-${section.id}-heading`;
+        const sectionName = section.title.trim() || `Section ${si + 1}`;
+        return h('section', { key: section.id, class: 'study-guide-section' }, [
+          h('h3', { id: headingId, class: 'visually-hidden' }, `Section ${si + 1}: ${section.title.trim() || 'Untitled'}`),
+          h('div', { class: 'study-guide-section-heading' }, [
             h('input', {
               ref: (element) => {
-                const key = bulletKey(section, bi);
-                if (element instanceof HTMLInputElement) bulletFields.set(key, element);
-                else bulletFields.delete(key);
+                if (element instanceof HTMLInputElement) titleFields.set(section.id, element);
+                else titleFields.delete(section.id);
               },
-              value: text,
-              maxlength: Math.max(0, MAX_TEXT_LENGTH - depth),
-              placeholder: 'Bullet point',
-              'aria-label': `Bullet ${bi + 1}, level ${depth + 1}`,
-              onInput: (event: Event) => { section.bullets[bi] = withBulletDepth(inputValue(event), depth); },
-              onKeydown: (event: KeyboardEvent) => handleBulletKeydown(event, section, bi),
+              class: 'study-guide-section-title', value: section.title, maxlength: MAX_TEXT_LENGTH,
+              placeholder: 'Title', 'aria-label': `Section ${si + 1} title`,
+              onInput: (event: Event) => { section.title = inputValue(event); },
+              onKeydown: (event: KeyboardEvent) => handleTitleKeydown(event, section),
             }),
             h('button', {
-              type: 'button', class: 'icon-button study-guide-remove', title: 'Remove bullet', 'aria-label': 'Remove bullet',
-              onClick: () => { void removeBullet(section, bi); },
+              type: 'button', class: 'icon-button study-guide-remove', title: 'Remove section',
+              'aria-label': `Remove ${sectionLabel(section)}`,
+              onClick: () => { void removeSection(section); },
             }, '×'),
-          ]);
-        })),
-        h('button', {
-          type: 'button', class: 'quiet-button study-guide-add-bullet', disabled: bulletCount() >= MAX_BULLETS,
-          onClick: () => { void addBullet(section); },
-        }, '+ Bullet'),
-      ]))) : h('div', { class: 'study-guide-list-empty' }, [
+          ]),
+          h('ul', { class: 'study-guide-bullets', 'aria-label': `Bullets for ${sectionName}` }, section.bullets.map((bullet, bi) => {
+            const depth = bulletDepth(bullet);
+            const text = bulletText(bullet);
+            return h('li', {
+              key: `${section.id}-${bi}`,
+              class: 'study-guide-bullet-row',
+              'aria-level': depth + 1,
+              style: { paddingLeft: `${depth * 20}px` },
+            }, [
+              bulletMarker(depth),
+              h('input', {
+                ref: (element) => {
+                  const key = bulletKey(section, bi);
+                  if (element instanceof HTMLInputElement) bulletFields.set(key, element);
+                  else bulletFields.delete(key);
+                },
+                value: text,
+                maxlength: Math.max(0, MAX_TEXT_LENGTH - depth),
+                placeholder: 'Bullet point',
+                'aria-label': `Bullet ${bi + 1} in ${sectionName}, level ${depth + 1}`,
+                'aria-keyshortcuts': 'Control+] Control+[',
+                onInput: (event: Event) => { section.bullets[bi] = withBulletDepth(inputValue(event), depth); },
+                onKeydown: (event: KeyboardEvent) => handleBulletKeydown(event, section, bi),
+              }),
+              h('button', {
+                type: 'button', class: 'icon-button study-guide-remove', title: 'Remove bullet',
+                'aria-label': `Remove bullet ${bi + 1} from ${sectionName}`,
+                onClick: () => { void removeBullet(section, bi); },
+              }, '×'),
+            ]);
+          })),
+          h('button', {
+            type: 'button', class: 'quiet-button study-guide-add-bullet', disabled: bulletCount() >= MAX_BULLETS,
+            'aria-label': `Add bullet to ${sectionName}`,
+            onClick: () => { void addBullet(section); },
+          }, '+ Bullet'),
+        ]);
+      })) : h('div', { class: 'study-guide-list-empty' }, [
         h('p', 'Add a title, then put the things you need to remember underneath it.'),
       ]),
       h('button', {
+        ref: addSectionButton,
         type: 'button', class: 'quiet-button study-guide-add-section', disabled: props.data.sections.length >= MAX_SECTIONS,
         onClick: () => { void addSection(); },
       }, '+ Title'),
+      h('p', { class: 'visually-hidden', role: 'status', 'aria-live': 'polite', 'aria-atomic': 'true' }, message.value),
     ]);
   },
 });
