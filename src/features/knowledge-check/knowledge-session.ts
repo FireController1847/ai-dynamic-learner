@@ -1,8 +1,7 @@
-import { isAnswerCorrect } from '../../../packages/@dynamic-learner/answer-matching/src/index.ts';
 import { maskFillBlankAnswers, parseFillBlankTemplate } from '../../core/fill-blank.ts';
 import type { CheckItem } from './library-model.ts';
 import type { CheckModeId } from './check-types.ts';
-import { answerCorrect, fillBlankCorrectCount, questionResponseAnswered, type Question, type QuestionResponse } from './question-model.ts';
+import { answerCorrect, fillBlankCorrectness, questionResponseAnswered, type Question, type QuestionResponse } from './question-model.ts';
 import { inputValue } from '../../core/dom.ts';
 import { Icon } from '../../components/icon.ts';
 import { SessionIntro } from './session-intro.ts';
@@ -82,17 +81,16 @@ export const KnowledgeSession = defineComponent({
       if (question.type === 'fill-in-the-blanks') {
         const template = parseFillBlankTemplate(question.prompt);
         const values = blankResponses(question);
-        const correctCount = fillBlankCorrectCount(
+        const correctness = fillBlankCorrectness(
           question,
           values,
           props.settings.fillBlankAnswerStrictness,
         );
+        const correctCount = correctness.filter(Boolean).length;
         content.push(h('p', `${correctCount} of ${template.answers.length} ${template.answers.length === 1 ? 'blank' : 'blanks'} correct.`));
         content.push(h('ol', { class: 'knowledge-fill-blank-feedback-list' }, template.answers.map((answer, index) => {
           const value = values[index] ?? '';
-          const blankCorrect = isAnswerCorrect(answer, value, {
-            strictness: props.settings.fillBlankAnswerStrictness,
-          });
+          const blankCorrect = correctness[index] ?? false;
           return h('li', { key: `${index}-${answer}`, class: blankCorrect ? 'is-correct' : 'is-incorrect' }, [
             h('strong', `Blank ${index + 1}: ${blankCorrect ? 'Correct' : 'Incorrect'}`),
             showAnswer ? h('span', {}, [

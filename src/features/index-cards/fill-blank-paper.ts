@@ -1,6 +1,6 @@
 import type { Card } from './card-model.ts';
 import { inputValue } from '../../core/dom.ts';
-import { DEFAULT_ANSWER_STRICTNESS, isFillBlankAnswerCorrect, parseFillBlankTemplate, type AnswerStrictness } from './fill-blank-model.ts';
+import { DEFAULT_ANSWER_STRICTNESS, fillBlankResponseCorrectness, parseFillBlankTemplate, type AnswerStrictness } from './fill-blank-model.ts';
 
 import { defineComponent, type PropType, h } from 'vue';
 
@@ -54,6 +54,11 @@ export const FillBlankPaper = defineComponent({
 
     return () => {
       const template = parseFillBlankTemplate(props.card.front);
+      const correctness = fillBlankResponseCorrectness(
+        template,
+        props.responses,
+        props.answerStrictness,
+      );
 
       const prompt = h('div', {
         class: 'card-face card-face--front fill-blank-face fill-blank-review-card',
@@ -119,7 +124,7 @@ export const FillBlankPaper = defineComponent({
           if (segment.type === 'text') return h('span', { class: 'fill-blank-text' }, segment.text);
 
           const response = props.responses[segment.index] ?? '';
-          const correct = isFillBlankAnswerCorrect(segment.answer, response, props.answerStrictness);
+          const correct = correctness[segment.index] ?? false;
           const reviewing = props.resultReviewIndex === segment.index;
           return h('span', {
             key: `result-${segment.index}`,

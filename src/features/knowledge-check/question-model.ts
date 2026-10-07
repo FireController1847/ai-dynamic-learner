@@ -3,7 +3,7 @@ import {
   isAnswerCorrect,
   type AnswerStrictness,
 } from '../../../packages/@dynamic-learner/answer-matching/src/index.ts';
-import { maskFillBlankAnswers, parseFillBlankTemplate } from '../../core/fill-blank.ts';
+import { fillBlankCorrectness as evaluateFillBlankTemplate, maskFillBlankAnswers, parseFillBlankTemplate } from '../../core/fill-blank.ts';
 import { createId, isValidId } from '../../core/ids.ts';
 import { isRecord } from '../../core/validation.ts';
 
@@ -78,16 +78,24 @@ export function questionResponseAnswered(question: Question, response: QuestionR
   return typeof response === 'string' && Boolean(response.trim());
 }
 
+export function fillBlankCorrectness(
+  question: Question,
+  response: QuestionResponse | undefined,
+  strictness: AnswerStrictness = DEFAULT_ANSWER_STRICTNESS,
+): boolean[] {
+  if (question.type !== 'fill-in-the-blanks') return [];
+  const template = parseFillBlankTemplate(question.prompt);
+  const responses = Array.isArray(response) ? response : [];
+  return evaluateFillBlankTemplate(template, responses,
+    (answer, submitted) => isAnswerCorrect(answer, submitted, { strictness }));
+}
+
 export function fillBlankCorrectCount(
   question: Question,
   response: QuestionResponse | undefined,
   strictness: AnswerStrictness = DEFAULT_ANSWER_STRICTNESS,
 ): number {
-  if (question.type !== 'fill-in-the-blanks') return 0;
-  const answers = parseFillBlankTemplate(question.prompt).answers;
-  const responses = Array.isArray(response) ? response : [];
-  return answers.filter((answer, index) =>
-    isAnswerCorrect(answer, responses[index] ?? '', { strictness })).length;
+  return fillBlankCorrectness(question, response, strictness).filter(Boolean).length;
 }
 
 export function answerCorrect(
@@ -96,10 +104,9 @@ export function answerCorrect(
   strictness: AnswerStrictness = DEFAULT_ANSWER_STRICTNESS,
 ): boolean {
   if (question.type === 'fill-in-the-blanks') {
-    const answers = parseFillBlankTemplate(question.prompt).answers;
-    if (!answers.length || !Array.isArray(response)) return false;
-    return answers.every((answer, index) =>
-      isAnswerCorrect(answer, response[index] ?? '', { strictness }));
+    const template = parseFillBlankTemplate(question.prompt);
+    if (!template.answers.length || !Array.isArray(response)) return false;
+    return fillBlankCorrectness(question, response, strictness).every(Boolean);
   }
   if (typeof response !== 'string') return false;
   if (question.type !== 'short-answer') return question.answer.trim() === response.trim();
