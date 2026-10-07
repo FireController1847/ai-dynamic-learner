@@ -41,8 +41,11 @@ export const StudyGuide=defineComponent({
       try{
         const item=insertGuide(props.model.items,target(),'list');
         if(item.mode!=='list')throw new Error('The imported Study Guide could not be created in list mode.');
-        const section=createSection();section.title=value.title;section.bullets=[...value.bullets];
-        item.name=value.title;item.data.sections=[section];selectedId.value=item.id;editingMapId.value=null;creationTarget.value=null;aiImportOpen.value=false;library.value?.reveal(item.id);message.value='Imported '+item.name+'.';if(overlay.value)collapsed.value=true;
+        item.name=value.title;
+        item.data.sections=value.sections.map(source=>{
+          const section=createSection();section.title=source.title;section.bullets=[...source.bullets];return section;
+        });
+        selectedId.value=item.id;editingMapId.value=null;creationTarget.value=null;aiImportOpen.value=false;library.value?.reveal(item.id);message.value='Imported '+item.name+'.';if(overlay.value)collapsed.value=true;
       }catch(error){message.value=error instanceof Error?error.message:String(error);}
     }
     function select(id:string|null){selectedId.value=id;creationTarget.value=null;const item=id?findItem(props.model.items,id)?.item:null;editingMapId.value=item?.kind==='guide'&&item.mode==='map'&&mapStudyProblem(item.data)!==null?item.id:null;message.value='';}
