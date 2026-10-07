@@ -60,12 +60,7 @@ export const ImportKnowledgeSet = defineComponent({
 
     function sourceReady(item: ImportPlanItem): boolean {
       if (item.sourceFeatureId !== 'index-cards') return false;
-      const set = findIndexCardSet(props.indexCards.items, item.sourceItemId);
-      return Boolean(set && indexCardPotentialImportCount(
-        set,
-        item.mappingId as IndexCardImportMapping,
-        item.blanklessActions,
-      ));
+      return Boolean(findIndexCardSet(props.indexCards.items, item.sourceItemId));
     }
 
     function questionsFor(item: ImportPlanItem): Question[] {
@@ -167,14 +162,14 @@ export const ImportKnowledgeSet = defineComponent({
     }
 
     function createImportedSet() {
-      if (!canCreate.value) return;
+      if (!name.value.trim() || !items.value.length || !items.value.every(sourceReady)) return;
       const unresolved = items.value.find((item) => unresolvedBlanklessCount(item) > 0);
       if (unresolved) {
         openResolution(unresolved, true);
         return;
       }
       if (!questionCount.value) {
-        message.value = 'Choose at least one card to import.';
+        message.value = 'The current decisions discard every importable card. Keep at least one card or remove this source.';
         return;
       }
       const problem = importQuestionLimitProblem(questionCount.value);
