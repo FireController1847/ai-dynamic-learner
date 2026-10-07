@@ -27,6 +27,6 @@ evaluateAnswer(answer: string, response: string, options?: AnswerMatchOptions): 
 isAnswerCorrect(answer: string, response: string, options?: AnswerMatchOptions): boolean;
 ```
 
-Strictness is cumulative: level 1 is normalized exact matching; level 2 adds bounded character similarity; level 3 adds grammatical/morphological equivalence plus order-insensitive two-part `and`/`or` coordination; level 4 adds conservative high-confidence synonym and phrase equivalence. Coordination keeps the connector significant: reversing `A and B` is allowed, but changing `and` to `or` is not.
+Strictness is cumulative: level 1 is normalized exact matching; level 2 adds bounded character similarity; level 3 adds grammatical/morphological equivalence; level 4 adds conservative high-confidence synonym and phrase equivalence. Structural rules such as interchangeable Fill-in-the-Blanks positions are intentionally outside this package.
 
 The semantic layer intentionally uses a small high-confidence equivalence lexicon rather than distributional word embeddings. This keeps the browser package small and avoids treating merely related or opposing domain terms as equivalent.
