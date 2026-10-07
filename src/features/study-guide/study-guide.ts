@@ -4,8 +4,9 @@ import { Icon } from '../../components/icon.ts';
 import { LibraryEmptyState } from '../../components/library-empty-state.ts';
 import { useLibrarySelection } from '../../components/use-library-selection.ts';
 import { usePersistedPanelResize } from '../../components/use-persisted-panel-resize.ts';
+import { StudyGuideAiImportDialog,type SimpleStudyGuideImport } from './ai-import.ts';
 import { StudyGuideLibrary,type StudyGuideLibraryHandle } from './library.ts';
-import { canMove,findItem,firstEntry,groupOptions,insertGuide,moveItem,type GuideTarget,type LibraryItem,type StudyGuideMode,type StudyGuideModel } from './library-model.ts';
+import { canMove,createSection,findItem,firstEntry,groupOptions,insertGuide,moveItem,type GuideTarget,type LibraryItem,type StudyGuideMode,type StudyGuideModel } from './library-model.ts';
 import { StudyGuideModePicker } from './mode-picker.ts';
 import { StudyGuideListEditor } from './list-editor.ts';
 import { StudyGuideMapEditor } from './map-editor.ts';
@@ -16,7 +17,7 @@ export const StudyGuide=defineComponent({
   name:'StudyGuide',
   props:{title:{type:String,required:true},model:{type:Object as PropType<StudyGuideModel>,required:true}},
   setup(props){
-    const creationTarget=ref<GuideTarget|null>(null);
+    const creationTarget=ref<GuideTarget|null>(null),aiImportOpen=ref(false);
     const selectedId=useLibrarySelection({firstId:()=>firstEntry(props.model.items)?.id??null,hasItem:id=>findItem(props.model.items,id)!==null,enabled:()=>creationTarget.value===null,onAutoSelect:id=>library.value?.reveal(id)});
     const selection=computed(()=>findItem(props.model.items,selectedId.value));
     const query=window.matchMedia('(max-width: 700px), (max-width: 1100px) and (pointer: coarse)');
@@ -27,6 +28,7 @@ export const StudyGuide=defineComponent({
     );
     const panel=usePersistedPanelResize({preferenceKey:LIBRARY_WIDTH_KEY,container:layout,panelSelector:'.directory-panel',minWidth:MIN_LIBRARY_WIDTH,maxWidth:640,minRemainingWidth:320,fallbackWidth:280,disabled:()=>overlay.value||collapsed.value});
     function media(e:MediaQueryListEvent){overlay.value=e.matches;panel.resizing.value=false;if(e.matches&&selectedId.value)collapsed.value=true;}query.addEventListener('change',media);onBeforeUnmount(()=>query.removeEventListener('change',media));onDeactivated(()=>{
+      aiImportOpen.value=false;
       const item=selection.value?.item;
       editingMapId.value=item?.kind==='guide'&&item.mode==='map'&&mapStudyProblem(item.data)!==null ? item.id : null;
     });
@@ -35,6 +37,14 @@ export const StudyGuide=defineComponent({
     function begin(){creationTarget.value=target();message.value='';if(overlay.value)collapsed.value=true;}
     async function cancel(){creationTarget.value=null;await nextTick();if(collapsed.value)showLibrary.value?.focus();else library.value?.focusNewGuide();}
     function create(mode:StudyGuideMode){if(!creationTarget.value)return;try{const item=insertGuide(props.model.items,creationTarget.value,mode);selectedId.value=item.id;editingMapId.value=item.mode==='map'?item.id:null;creationTarget.value=null;library.value?.reveal(item.id);message.value='Created '+item.name+'.';nextTick(()=>library.value?.beginRename(item.id));}catch(error){message.value=error instanceof Error?error.message:String(error);}}
+    function importAi(value:SimpleStudyGuideImport){
+      try{
+        const item=insertGuide(props.model.items,target(),'list');
+        if(item.mode!=='list')throw new Error('The imported Study Guide could not be created in list mode.');
+        const section=createSection();section.title=value.title;section.bullets=[...value.bullets];
+        item.name=value.title;item.data.sections=[section];selectedId.value=item.id;editingMapId.value=null;creationTarget.value=null;aiImportOpen.value=false;library.value?.reveal(item.id);message.value='Imported '+item.name+'.';if(overlay.value)collapsed.value=true;
+      }catch(error){message.value=error instanceof Error?error.message:String(error);}
+    }
     function select(id:string|null){selectedId.value=id;creationTarget.value=null;const item=id?findItem(props.model.items,id)?.item:null;editingMapId.value=item?.kind==='guide'&&item.mode==='map'&&mapStudyProblem(item.data)!==null?item.id:null;message.value='';}
     function moveGroup(e:Event){if(!selectedId.value||!selection.value)return;const id=inputValue(e)||null;if(moveItem(props.model.items,selectedId.value,id,'inside')){library.value?.reveal(selectedId.value);message.value='Moved '+selection.value.item.name+'.';}}
     function reorder(offset:number){if(!selection.value)return;const s=selection.value,n=s.siblings[s.index+offset];if(n&&moveItem(props.model.items,s.item.id,n.id,offset<0?'before':'after'))message.value='Moved '+s.item.name+(offset<0?' up.':' down.');}
@@ -70,10 +80,11 @@ export const StudyGuide=defineComponent({
       h('div',{ref:layout,class:['study-guide-layout',{'library-collapsed':collapsed.value,'library-resizing':panel.resizing.value}],style:panel.width.value===null?null:{'--library-width':panel.width.value+'px'}},[
         collapsed.value?h('button',{ref:showLibrary,type:'button',class:'icon-button library-floating-toggle',title:'Show library','aria-label':'Show library','aria-expanded':false,'aria-controls':'study-guide-library',onClick:()=>setCollapsed(false)},[h(Icon,{name:'panel-open'})]):null,
         overlay.value&&!collapsed.value?h('button',{type:'button',class:'library-scrim','aria-label':'Close library',onClick:()=>setCollapsed(true)}):null,
-        h(StudyGuideLibrary,{ref:library,items:props.model.items,selectedId:selectedId.value,collapsed:collapsed.value,onSelect:select,onOpenItem:()=>{if(overlay.value)void setCollapsed(true);},onToggleLibrary:()=>setCollapsed(true),onNewGuide:begin}),
+        h(StudyGuideLibrary,{ref:library,items:props.model.items,selectedId:selectedId.value,collapsed:collapsed.value,onSelect:select,onOpenItem:()=>{if(overlay.value)void setCollapsed(true);},onToggleLibrary:()=>setCollapsed(true),onNewGuide:begin,onOpenAiImport:()=>{aiImportOpen.value=true;message.value='';}}),
         !overlay.value&&!collapsed.value?h('div',{class:'library-resizer',role:'separator',tabindex:0,'aria-label':'Resize library','aria-orientation':'vertical','aria-valuemin':MIN_LIBRARY_WIDTH,'aria-valuemax':panel.maxWidth(),'aria-valuenow':Math.round(panel.currentWidth()),onPointerdown:panel.beginResize,onPointermove:panel.resizeFromPointer,onPointerup:panel.endResize,onPointercancel:panel.endResize,onKeydown:panel.resizeFromKeyboard,onDblclick:panel.resetWidth}):null,
         detail()
-      ])
+      ]),
+      aiImportOpen.value?h(StudyGuideAiImportDialog,{onClose:()=>{aiImportOpen.value=false;},onImport:importAi}):null
     ]);
   }
 });
