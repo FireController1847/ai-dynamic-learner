@@ -68,3 +68,8 @@ Webpack emits hashed JS/CSS bundles and copies `src/assets/` recursively to `dis
 ## Review session configuration
 
 Review keeps saved assessment defaults in the knowledge set but transient per-session choices outside persistence. `session-settings.ts` converts saved options into mode-specific runtime settings and prepares a stable question/choice order when a session starts. `session-setup.ts` owns pre-session choices: Study always chooses an order, Quiz chooses saved defaults or temporary customization, and Test bypasses customization and uses saved builder settings exactly.
+
+
+## Review Statements and Fill-in-the-Blanks import resolution
+
+Review `statement` items use the normal question model/order pipeline but are intentionally non-scorable and require no response. They count toward session length, ordering, limits, and navigation while remaining outside answered/scored denominators. Fill-in-the-Blanks Index Card imports preserve cards with authored blanks normally; visible cards without blanks require an explicit per-card transient decision to convert to Statement or discard before the import is created.

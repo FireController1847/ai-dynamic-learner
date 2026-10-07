@@ -48,5 +48,5 @@ Use this as a starting-file index, not a feature specification. Follow imports o
 | Review library/model | `src/features/knowledge-check/knowledge-check.ts`, `library.ts`, `library-model.ts` |
 | Review authoring | `check-builder.ts`, `question-model.ts`, `fill-blank-editor.ts`, `set-options*.ts` |
 | Review Study/Quiz/Test | `knowledge-set.ts`, `session-setup.ts`, `session-settings.ts`, `session-intro.ts`, `session-state.ts`, `knowledge-session.ts` |
-| Review imports | `import-knowledge-set.ts`, `index-cards-import-picker.ts`, `import-index-cards.ts` |
+| Review imports | `import-knowledge-set.ts`, `index-cards-import-picker.ts`, `fill-blank-import-resolution.ts`, `import-index-cards.ts` |
 | Responsive/touch overrides | `src/styles/mobile.css` plus the owning feature stylesheet |

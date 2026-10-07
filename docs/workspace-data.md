@@ -38,7 +38,7 @@ Each feature owns its saved model and runtime validation:
 - Word Search: `src/features/word-search/library-model.ts` plus puzzle/game/display models.
 - Crossword: `src/features/crossword/library-model.ts` plus puzzle/game/display models.
 - Study Guide: `src/features/study-guide/library-model.ts`.
-- Review: `src/features/knowledge-check/library-model.ts`, question/options models. Review set options persist independent Short Answer and Fill-in-the-Blanks strictness levels, shared Quiz/Test assessment defaults (question order, optional question limit, and multiple-choice choice shuffling), Quiz attempts per question, and Test-only time/result settings. Older saved sets normalize missing strictness fields to level 4 and other missing fields to compatible defaults.
+- Review: `src/features/knowledge-check/library-model.ts`, question/options models. Statement items persist in the same ordered question array but carry only display text and are non-scorable. Review set options persist independent Short Answer and Fill-in-the-Blanks strictness levels, shared Quiz/Test assessment defaults (question order, optional question limit, and multiple-choice choice shuffling), Quiz attempts per question, and Test-only time/result settings. Older saved sets normalize missing strictness fields to level 4 and other missing fields to compatible defaults.
 
 Do not duplicate feature schemas in `workspace-format.ts`; it coordinates them.
 

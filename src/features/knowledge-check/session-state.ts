@@ -1,6 +1,6 @@
 import { computed, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref } from 'vue';
 import { registerLeaveGuard } from '../../core/leave-guards.ts';
-import { answerCorrect, questionReady, questionResponseAnswered, type QuestionResponse } from './question-model.ts';
+import { answerCorrect, questionReady, questionResponseAnswered, questionScored, type QuestionResponse } from './question-model.ts';
 import type { CheckItem } from './library-model.ts';
 import type { CheckModeId } from './check-types.ts';
 import { answerStrictnessForQuestion, prepareSessionQuestions, sessionQuestionCount, type SessionSettings } from './session-settings.ts';
@@ -26,10 +26,13 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
   const studyChecks = ref(0);
   const studyCorrectChecks = ref(0);
   const active = computed(() => mode !== 'study' && started.value && !submitted.value);
+  const scoredCount = computed(() => questions.value.filter(questionScored).length);
   const answered = computed(() => questions.value.filter(question =>
-    questionResponseAnswered(question, responses.value[question.id])).length);
+    questionScored(question) && questionResponseAnswered(question, responses.value[question.id])).length);
+  const resolved = computed(() => questions.value.filter(question =>
+    !questionScored(question) || checked.value.has(question.id)).length);
   const score = computed(() => questions.value.filter(question =>
-    answerCorrect(
+    questionScored(question) && answerCorrect(
       question,
       responses.value[question.id] ?? (question.type === 'fill-in-the-blanks' ? [] : ''),
       answerStrictnessForQuestion(settings, question.type),
@@ -74,6 +77,7 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
     if (submitted.value) return;
     const question = questions.value[position.value];
     if (!question) return;
+    if (!questionScored(question)) return;
     const response = responses.value[question.id];
     if (question.type !== 'fill-in-the-blanks' && !questionResponseAnswered(question, response)) return;
     const nextAttempt = (attempts.value[question.id] ?? 0) + 1;
@@ -125,6 +129,6 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
   onDeactivated(() => { if (active.value || (mode === 'study' && started.value)) end(); detach(); });
   onBeforeUnmount(detach);
   return { questions, questionCount, options, position, responses, checked, revealed, hints, submitted, started, expired, ended,
-    active, answered, score, remaining, celebrating, attempts, studyChecks, studyCorrectChecks,
+    active, answered, resolved, score, scoredCount, remaining, celebrating, attempts, studyChecks, studyCorrectChecks,
     start, end, check, submit, leave, tick };
 }
