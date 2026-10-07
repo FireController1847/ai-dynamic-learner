@@ -72,12 +72,15 @@ const BULLET_STYLE_INSTRUCTIONS: Record<PromptBulletStyle, string> = {
   thoughts: 'Write every bullet and sub-bullet as a short, intelligible complete sentence. Keep each sentence brief, focused on one idea, and free of unnecessary clauses or explanation. End each sentence with a period.',
 };
 
-function promptIntro(options: StudyGuideAiPromptOptions): string {
+function promptIntro(options: StudyGuideAiPromptOptions, mode: StudyGuideMode): string {
+  const planning = mode === 'list'
+    ? 'Silently organize the source into a logical outline, then classify possible study points as high, moderate, or low priority. Use that planning only to decide the final sections, bullets, and sub-bullets; do not output the planning itself.'
+    : 'Silently organize the source into a logical topic structure, then classify possible study points as high, moderate, or low priority. Use that planning only to decide the final topics, paths, sections, and bullets; do not output the planning itself.';
   return `Using the source material I supplied immediately before this instruction, create a Dynamic Learner Study Guide.
 
 Write in the style of a capable student taking organized notes during class: compact, practical, and easy to scan. This is a study guide, not a rewritten textbook or transcript.
 
-Silently organize the source into a logical structure, then classify possible study points as high, moderate, or low priority. Use that planning only to decide the final content; do not output the planning itself.
+${planning}
 
 Selected preferences:
 - Detail: ${DETAIL_INSTRUCTIONS[options.detail]}
@@ -88,7 +91,7 @@ Condense freely when several facts can be represented by one useful note. Prefer
 }
 
 function listPrompt(options: StudyGuideAiPromptOptions): string {
-  return `${promptIntro(options)}
+  return `${promptIntro(options, 'list')}
 
 Return ONLY one fenced JSON code block, starting with ${JSON_FENCE}json and ending with ${JSON_FENCE}.
 
@@ -131,7 +134,7 @@ Limits:
 }
 
 function mapPrompt(options: StudyGuideAiPromptOptions): string {
-  return `${promptIntro(options)}
+  return `${promptIntro(options, 'map')}
 
 Create a connected topic map rather than one long outline. Each topic is a study stop with its own small list-style guide. Connect topics only when the relationship helps a learner move through the material. Choose one sensible starting topic.
 
