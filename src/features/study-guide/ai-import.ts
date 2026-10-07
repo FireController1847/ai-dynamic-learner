@@ -37,20 +37,20 @@ const DEFAULT_PROMPT_OPTIONS: StudyGuideAiPromptOptions = {
 };
 
 const DETAIL_INSTRUCTIONS: Record<PromptDetail, string> = {
-  concise: 'Include only high-priority study points. Omit moderate- and low-priority details, and condense aggressively so the guide preserves the core understanding with substantial information loss.',
-  balanced: 'Include high- and moderate-priority study points, but omit low-priority details. Not every small fact needs to be covered. Condense related information when possible so the guide remains noticeably shorter than the source.',
-  detailed: 'Include high-, moderate-, and low-priority study points that are genuinely useful for studying. Condense wording where possible, but preserve the source\'s meaningful detail and distinctions.',
+  concise: 'Keep only high-priority material. Aggressively condense and omit secondary detail.',
+  balanced: 'Keep high- and moderate-priority material. Be selective: simple points are preferred, and minor details, examples, and edge cases may be omitted.',
+  detailed: 'Keep all genuinely useful study material, including lower-priority supporting details, while still writing notes rather than textbook prose.',
 };
 
 const COVERAGE_INSTRUCTIONS: Record<PromptCoverage, string> = {
-  essentials: 'Focus the planning pass on the essential concepts, facts, definitions, and relationships needed to understand the source.',
-  balanced: 'Plan around the major ideas and meaningful supporting details. Do not try to preserve every minor fact or example.',
-  comprehensive: 'Plan across the source comprehensively, including important distinctions, terminology, relationships, and supporting details before the priority filter is applied.',
+  essentials: 'Cover only the core concepts needed to understand and remember the material.',
+  balanced: 'Cover the major ideas plus supporting details that directly help understanding or recall. Do not try to preserve every fact.',
+  comprehensive: 'Cover the material broadly, including useful distinctions and supporting details, but skip redundancy and trivia.',
 };
 
 const BULLET_STYLE_INSTRUCTIONS: Record<PromptBulletStyle, string> = {
-  phrases: 'Use compact key phrases of about 5–10 words per bullet or sub-bullet. Remove filler words and sentence framing whenever meaning remains clear.',
-  thoughts: 'Express each bullet or sub-bullet as one self-contained idea in as few words as practical.',
+  phrases: 'Prefer short note fragments, usually about 5–10 words.',
+  thoughts: 'Use compact self-contained thoughts with no unnecessary wording.',
 };
 
 function fullSentencesAllowed(options: StudyGuideAiPromptOptions): boolean {
@@ -61,28 +61,26 @@ function fullSentencesAllowed(options: StudyGuideAiPromptOptions): boolean {
 
 export function studyGuideAiPrompt(options: StudyGuideAiPromptOptions = DEFAULT_PROMPT_OPTIONS): string {
   const sentenceRule = fullSentencesAllowed(options)
-    ? 'Full sentences are allowed because Detailed + Comprehensive + Complete thoughts is selected, but still keep each bullet focused and economical.'
-    : 'Do NOT use full sentences. Use concise phrases or fragments; full sentences are reserved for Detailed + Comprehensive + Complete thoughts mode.';
+    ? 'Full sentences are allowed, but keep them brief and note-like.'
+    : 'Avoid full sentences when a short phrase or fragment communicates the point clearly.';
 
   return `Using the source material I supplied immediately before this instruction, create a Dynamic Learner Study Guide.
 
-Return ONLY one fenced JSON code block and nothing else. Start with ${JSON_FENCE}json and end with ${JSON_FENCE}. Do not add commentary before or after the code block, and do not add citations outside bullet text.
+Write in the style of a capable student taking organized notes during class: compact, practical, and easy to scan. This is a study guide, not a rewritten textbook or transcript.
 
-Before writing the JSON, silently do two planning passes:
-1. Make a mini table of contents for the source. Organize the material into a logical hierarchy of major sections, subsections, sub-subsections, and deeper levels when useful.
-2. Within that hierarchy, make a priority list of candidate study points and classify each as high, moderate, or low priority based on how important it is to understanding, remembering, or correctly using the material.
+Silently organize the source into a logical outline, then classify possible study points as high, moderate, or low priority. Use that planning only to decide the final sections, bullets, and sub-bullets; do not output the planning itself.
 
-Do not output either planning pass. Use them only to decide the final structure and what information to retain:
-- top-level topics become entries in "sections";
-- each section gets a short, meaningful title;
-- lower-level concepts become bullets and nested "children";
-- use sub-bullets when they clarify that information belongs under a broader idea;
-- prefer a logical study order over blindly copying the source's original order when reorganization improves understanding;
-- do not force nesting when ideas are genuinely peers;
-- it is acceptable, and encouraged, to condense related facts or wording to meet the selected length and conciseness goals;
-- apply the selected Detail level as the priority filter: Concise keeps only high-priority points; Balanced keeps high- and moderate-priority points; Detailed may keep all useful priorities.
+Selected preferences:
+- Detail: ${DETAIL_INSTRUCTIONS[options.detail]}
+- Coverage: ${COVERAGE_INSTRUCTIONS[options.coverage]}
+- Bullet style: ${BULLET_STYLE_INSTRUCTIONS[options.bulletStyle]}
+- ${sentenceRule}
 
-Use exactly this format:
+Condense freely when several facts can be represented by one useful note. Prefer losing low-value detail over making the guide long.
+
+Return ONLY one fenced JSON code block, starting with ${JSON_FENCE}json and ending with ${JSON_FENCE}.
+
+Use this structure:
 ${JSON_FENCE}json
 {
   "format": "${IMPORT_FORMAT}",
@@ -95,13 +93,8 @@ ${JSON_FENCE}json
         {
           "text": "Key idea",
           "children": [
-            {
-              "text": "Supporting detail"
-            }
+            { "text": "Supporting detail" }
           ]
-        },
-        {
-          "text": "Another key idea"
         }
       ]
     }
@@ -109,25 +102,20 @@ ${JSON_FENCE}json
 }
 ${JSON_FENCE}
 
-Study-guide preferences:
-- ${DETAIL_INSTRUCTIONS[options.detail]}
-- ${COVERAGE_INSTRUCTIONS[options.coverage]}
-- ${BULLET_STYLE_INSTRUCTIONS[options.bulletStyle]}
-- ${sentenceRule}
+Structure the guide naturally:
+- sections = major topics;
+- nested "children" = useful sub-points;
+- use deeper nesting only when it clarifies relationships;
+- preserve important terminology and factual accuracy;
+- do not invent unsupported information.
 
-Rules:
-- title must be non-empty and at most ${MAX_NAME_LENGTH} characters.
-- sections must contain at least one item and no more than ${MAX_SECTIONS} items.
-- every section title must be non-empty plain text and at most ${MAX_TEXT_LENGTH} characters.
-- the entire guide may contain no more than ${MAX_BULLETS} bullets and sub-bullets.
-- every bullet object must contain a non-empty "text" string and may contain a "children" array.
-- each bullet text must be plain text and at most ${MAX_TEXT_LENGTH} characters.
-- nested bullets may be at most ${MAX_IMPORT_BULLET_DEPTH + 1} levels deep.
-- preserve important terminology from the source.
-- keep each bullet focused on one useful study point.
-- do not invent facts not supported by the source.
-- do not generate IDs, layout information, groups, maps, or other Dynamic Learner fields.
-- base the study guide only on the source material supplied before this instruction.`;
+Limits:
+- title: 1–${MAX_NAME_LENGTH} characters;
+- 1–${MAX_SECTIONS} sections;
+- at most ${MAX_BULLETS} total bullets/sub-bullets;
+- section titles and bullet text: non-empty plain text, at most ${MAX_TEXT_LENGTH} characters;
+- at most ${MAX_IMPORT_BULLET_DEPTH + 1} bullet levels;
+- do not generate IDs, layout, groups, maps, or other Dynamic Learner fields.`;
 }
 
 function parseImportBullet(
