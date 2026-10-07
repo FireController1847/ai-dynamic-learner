@@ -228,7 +228,7 @@ function parseImportBullet(
 
   state.count += 1;
   if (state.count > MAX_BULLETS) {
-    throw new Error(`A Study Guide topic can contain up to ${MAX_BULLETS} bullets and sub-bullets.`);
+    throw new Error(`A Study Guide section set can contain up to ${MAX_BULLETS} bullets and sub-bullets.`);
   }
 
   const flattened = [`${'\t'.repeat(depth)}${value.text.trim()}`];
