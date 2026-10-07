@@ -1,4 +1,4 @@
-import { defineComponent, h, ref } from 'vue';
+import { computed, defineComponent, h, ref } from 'vue';
 import { PopupDialog } from '../../components/popup-dialog.ts';
 import { inputValue } from '../../core/dom.ts';
 import { isRecord } from '../../core/validation.ts';
@@ -7,13 +7,46 @@ import { MAX_BULLETS, MAX_NAME_LENGTH, MAX_TEXT_LENGTH } from './library-model.t
 const IMPORT_FORMAT = 'dynamic-learner-study-guide';
 const IMPORT_VERSION = 1;
 
+type PromptDetail = 'concise' | 'balanced' | 'detailed';
+type PromptCoverage = 'essentials' | 'balanced' | 'comprehensive';
+type PromptBulletStyle = 'phrases' | 'thoughts';
+
+export interface StudyGuideAiPromptOptions {
+  detail: PromptDetail;
+  coverage: PromptCoverage;
+  bulletStyle: PromptBulletStyle;
+}
+
 export interface SimpleStudyGuideImport {
   title: string;
   bullets: string[];
 }
 
-export function studyGuideAiPrompt(): string {
-  return `Create a simple Dynamic Learner Study Guide from source material I provide after this prompt.
+const DEFAULT_PROMPT_OPTIONS: StudyGuideAiPromptOptions = {
+  detail: 'balanced',
+  coverage: 'balanced',
+  bulletStyle: 'thoughts',
+};
+
+const DETAIL_INSTRUCTIONS: Record<PromptDetail, string> = {
+  concise: 'Keep bullets very concise. Prefer one short sentence or compact statement per bullet.',
+  balanced: 'Keep bullets concise but include enough context to make each point useful for studying.',
+  detailed: 'Include useful supporting detail in each bullet while keeping each bullet focused on one study point.',
+};
+
+const COVERAGE_INSTRUCTIONS: Record<PromptCoverage, string> = {
+  essentials: 'Include only the most important concepts, facts, definitions, or relationships needed to understand the source.',
+  balanced: 'Cover the major ideas and important supporting details without trying to reproduce every minor point.',
+  comprehensive: 'Cover the source comprehensively, including important supporting details, distinctions, and terminology when they are useful for studying.',
+};
+
+const BULLET_STYLE_INSTRUCTIONS: Record<PromptBulletStyle, string> = {
+  phrases: 'Prefer compact key phrases where they remain understandable on their own.',
+  thoughts: 'Write bullets as complete, self-contained thoughts that make sense without rereading the source.',
+};
+
+export function studyGuideAiPrompt(options: StudyGuideAiPromptOptions = DEFAULT_PROMPT_OPTIONS): string {
+  return `Using the source material I supplied immediately before this instruction, create a simple Dynamic Learner Study Guide.
 
 Return ONLY valid JSON. Do not use Markdown code fences, commentary, citations outside the bullet text, or extra fields.
 
@@ -28,6 +61,11 @@ Use exactly this format:
   ]
 }
 
+Study-guide preferences:
+- ${DETAIL_INSTRUCTIONS[options.detail]}
+- ${COVERAGE_INSTRUCTIONS[options.coverage]}
+- ${BULLET_STYLE_INSTRUCTIONS[options.bulletStyle]}
+
 Rules:
 - title must be non-empty and at most ${MAX_NAME_LENGTH} characters.
 - bullets must contain at least one item and no more than ${MAX_BULLETS} items.
@@ -36,8 +74,7 @@ Rules:
 - keep each bullet focused on one useful study point.
 - do not invent facts not supported by the source.
 - do not generate IDs, layout information, groups, maps, or other Dynamic Learner fields.
-
-After this prompt, I will provide a URL, pasted text, notes, or other source material.`;
+- base the study guide only on the source material supplied before this instruction.`;
 }
 
 export function parseStudyGuideAiImport(text: string): SimpleStudyGuideImport {
@@ -74,15 +111,22 @@ export const StudyGuideAiImportDialog = defineComponent({
   },
   setup(_props, { emit }) {
     const tab = ref<'prompt' | 'import'>('prompt');
+    const detail = ref<PromptDetail>(DEFAULT_PROMPT_OPTIONS.detail);
+    const coverage = ref<PromptCoverage>(DEFAULT_PROMPT_OPTIONS.coverage);
+    const bulletStyle = ref<PromptBulletStyle>(DEFAULT_PROMPT_OPTIONS.bulletStyle);
     const json = ref('');
     const problem = ref('');
     const copyStatus = ref('');
     const candidate = ref<SimpleStudyGuideImport | null>(null);
-    const prompt = studyGuideAiPrompt();
+    const prompt = computed(() => studyGuideAiPrompt({
+      detail: detail.value,
+      coverage: coverage.value,
+      bulletStyle: bulletStyle.value,
+    }));
 
     async function copyPrompt() {
       try {
-        await navigator.clipboard.writeText(prompt);
+        await navigator.clipboard.writeText(prompt.value);
         copyStatus.value = 'Prompt copied.';
       } catch {
         copyStatus.value = 'Copy failed. Select the prompt and copy it manually.';
@@ -113,6 +157,26 @@ export const StudyGuideAiImportDialog = defineComponent({
       onClick: () => selectTab(id),
     }, label);
 
+    function optionField<T extends string>(
+      id: string,
+      label: string,
+      value: T,
+      options: readonly { value: T; label: string }[],
+      change: (value: T) => void,
+    ) {
+      return h('label', { for: id, style: { display: 'grid', gap: '4px' } }, [
+        h('span', { style: { fontSize: '12px', color: 'var(--text-secondary)' } }, label),
+        h('select', {
+          id,
+          value,
+          onChange: (event: Event) => {
+            if (event.target instanceof HTMLSelectElement) change(event.target.value as T);
+            copyStatus.value = '';
+          },
+        }, options.map((option) => h('option', { value: option.value }, option.label))),
+      ]);
+    }
+
     return () => h(PopupDialog, {
       title: 'AI / JSON import',
       headingId: 'study-guide-ai-import-title',
@@ -125,15 +189,41 @@ export const StudyGuideAiImportDialog = defineComponent({
           tabButton('import', 'JSON Import'),
         ]),
         tab.value === 'prompt'
-          ? h('section', { role: 'tabpanel', style: { display: 'grid', gap: '10px' } }, [
+          ? h('section', { role: 'tabpanel', style: { display: 'grid', gap: '12px' } }, [
             h('p', { style: { margin: '0', color: 'var(--text-secondary)' } },
-              'Copy this prompt into the AI you want to use, then give it your source material. Paste the returned JSON into the JSON Import tab.'),
+              'First give the AI the source material you want to study. Then paste this prompt after the material. Paste the returned JSON into the JSON Import tab.'),
+            h('div', {
+              style: {
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+                gap: '10px',
+                padding: '12px',
+                border: '1px solid var(--border-color)',
+                borderRadius: 'var(--radius)',
+                background: 'var(--surface-subtle)',
+              },
+            }, [
+              optionField('study-guide-ai-detail', 'Detail', detail.value, [
+                { value: 'concise', label: 'Concise' },
+                { value: 'balanced', label: 'Balanced' },
+                { value: 'detailed', label: 'Detailed' },
+              ], (value) => { detail.value = value; }),
+              optionField('study-guide-ai-coverage', 'Coverage', coverage.value, [
+                { value: 'essentials', label: 'Essentials only' },
+                { value: 'balanced', label: 'Balanced' },
+                { value: 'comprehensive', label: 'Comprehensive' },
+              ], (value) => { coverage.value = value; }),
+              optionField('study-guide-ai-bullet-style', 'Bullet style', bulletStyle.value, [
+                { value: 'phrases', label: 'Key phrases' },
+                { value: 'thoughts', label: 'Complete thoughts' },
+              ], (value) => { bulletStyle.value = value; }),
+            ]),
             h('textarea', {
-              value: prompt,
+              value: prompt.value,
               readonly: true,
-              rows: 15,
+              rows: 17,
               'aria-label': 'AI Study Guide prompt',
-              style: { width: '100%', minHeight: '260px', resize: 'vertical', padding: '10px' },
+              style: { width: '100%', minHeight: '290px', resize: 'vertical', padding: '10px' },
             }),
             h('div', { style: { display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '10px' } }, [
               h('button', { type: 'button', class: 'card-primary-button', onClick: copyPrompt }, 'Copy prompt'),
