@@ -167,7 +167,7 @@ export const StudyGuideListEditor = defineComponent({
             class: 'study-guide-bullet-row',
             style: { paddingLeft: `${depth * 20}px` },
           }, [
-            h('span', { 'aria-hidden': 'true' }, bulletMarker(depth)),
+            h('span', { class: 'study-guide-bullet-marker', 'aria-hidden': 'true' }, bulletMarker(depth)),
             h('input', {
               ref: (element) => {
                 const key = bulletKey(section, bi);
