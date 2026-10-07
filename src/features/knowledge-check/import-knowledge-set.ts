@@ -434,6 +434,7 @@ export const ImportKnowledgeSet = defineComponent({
           const item = resolutionItem.value;
           if (!item) return;
           item.blanklessActions = { ...actions };
+          message.value = '';
           const resume = resumeCreateAfterResolution.value;
           resolutionItemId.value = null;
           resumeCreateAfterResolution.value = false;
