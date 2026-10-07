@@ -8,6 +8,7 @@ import { MAX_BULLETS, MAX_NAME_LENGTH, MAX_SECTIONS, MAX_TEXT_LENGTH } from './l
 const IMPORT_FORMAT = 'dynamic-learner-study-guide';
 const IMPORT_VERSION = 1;
 const MAX_IMPORT_BULLET_DEPTH = 7;
+const JSON_FENCE = '```';
 
 type PromptDetail = 'concise' | 'balanced' | 'detailed';
 type PromptCoverage = 'essentials' | 'balanced' | 'comprehensive';
@@ -32,19 +33,19 @@ export interface SimpleStudyGuideImport {
 const DEFAULT_PROMPT_OPTIONS: StudyGuideAiPromptOptions = {
   detail: 'balanced',
   coverage: 'balanced',
-  bulletStyle: 'thoughts',
+  bulletStyle: 'phrases',
 };
 
 const DETAIL_INSTRUCTIONS: Record<PromptDetail, string> = {
-  concise: 'Compress each point aggressively. Keep only the information needed to recognize and recall the concept.',
-  balanced: 'Keep each point compact while preserving enough context to make it useful for studying.',
-  detailed: 'Include useful supporting detail, distinctions, and context while keeping each individual point focused.',
+  concise: 'Include only high-priority study points. Omit moderate- and low-priority details, and condense aggressively so the guide preserves the core understanding with substantial information loss.',
+  balanced: 'Include high- and moderate-priority study points, but omit low-priority details. Not every small fact needs to be covered. Condense related information when possible so the guide remains noticeably shorter than the source.',
+  detailed: 'Include high-, moderate-, and low-priority study points that are genuinely useful for studying. Condense wording where possible, but preserve the source\'s meaningful detail and distinctions.',
 };
 
 const COVERAGE_INSTRUCTIONS: Record<PromptCoverage, string> = {
-  essentials: 'Include only the most important concepts, facts, definitions, and relationships needed to understand the source.',
-  balanced: 'Cover the major ideas and important supporting details without trying to reproduce every minor point.',
-  comprehensive: 'Cover the source comprehensively, including important supporting details, distinctions, terminology, and relationships that are useful for studying.',
+  essentials: 'Focus the planning pass on the essential concepts, facts, definitions, and relationships needed to understand the source.',
+  balanced: 'Plan around the major ideas and meaningful supporting details. Do not try to preserve every minor fact or example.',
+  comprehensive: 'Plan across the source comprehensively, including important distinctions, terminology, relationships, and supporting details before the priority filter is applied.',
 };
 
 const BULLET_STYLE_INSTRUCTIONS: Record<PromptBulletStyle, string> = {
@@ -65,17 +66,24 @@ export function studyGuideAiPrompt(options: StudyGuideAiPromptOptions = DEFAULT_
 
   return `Using the source material I supplied immediately before this instruction, create a Dynamic Learner Study Guide.
 
-Return ONLY valid JSON. Do not use Markdown code fences, commentary, citations outside the bullet text, or extra fields.
+Return ONLY one fenced JSON code block and nothing else. Start with ${JSON_FENCE}json and end with ${JSON_FENCE}. Do not add commentary before or after the code block, and do not add citations outside bullet text.
 
-Before writing the JSON, silently make a mini table of contents for the source. Organize the material into a logical hierarchy of major sections, subsections, sub-subsections, and deeper levels when useful. Do not output that planning outline separately. Use it to structure the JSON:
+Before writing the JSON, silently do two planning passes:
+1. Make a mini table of contents for the source. Organize the material into a logical hierarchy of major sections, subsections, sub-subsections, and deeper levels when useful.
+2. Within that hierarchy, make a priority list of candidate study points and classify each as high, moderate, or low priority based on how important it is to understanding, remembering, or correctly using the material.
+
+Do not output either planning pass. Use them only to decide the final structure and what information to retain:
 - top-level topics become entries in "sections";
 - each section gets a short, meaningful title;
 - lower-level concepts become bullets and nested "children";
 - use sub-bullets when they clarify that information belongs under a broader idea;
 - prefer a logical study order over blindly copying the source's original order when reorganization improves understanding;
-- do not force nesting when ideas are genuinely peers.
+- do not force nesting when ideas are genuinely peers;
+- it is acceptable, and encouraged, to condense related facts or wording to meet the selected length and conciseness goals;
+- apply the selected Detail level as the priority filter: Concise keeps only high-priority points; Balanced keeps high- and moderate-priority points; Detailed may keep all useful priorities.
 
 Use exactly this format:
+${JSON_FENCE}json
 {
   "format": "${IMPORT_FORMAT}",
   "version": ${IMPORT_VERSION},
@@ -152,10 +160,16 @@ function parseImportBullet(
   return flattened;
 }
 
+function stripJsonCodeFence(text: string): string {
+  const trimmed = text.trim();
+  const match = /^\`\`\`(?:json)?\s*([\s\S]*?)\s*\`\`\`$/i.exec(trimmed);
+  return match?.[1]?.trim() ?? trimmed;
+}
+
 export function parseStudyGuideAiImport(text: string): SimpleStudyGuideImport {
   let value: unknown;
   try {
-    value = JSON.parse(text);
+    value = JSON.parse(stripJsonCodeFence(text));
   } catch {
     throw new Error('The pasted content is not valid JSON.');
   }
