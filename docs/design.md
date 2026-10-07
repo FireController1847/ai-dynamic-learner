@@ -63,3 +63,6 @@ Review Study loops from the final question with a quiet **Keep studying** action
 
 
 Review pre-session setup follows the same choice-card language as Index Cards review. Study always asks for In order, Reverse order, or Shuffle before its overview. Quiz first offers Default Settings versus Customize Settings; customization is transient and may change question order, question count, multiple-choice answer shuffling, and allowed attempts. Test has no pre-session customization: its saved builder configuration is authoritative. Saved Quiz & Test defaults include order, optional question limit, and answer-choice shuffling; Quiz-specific attempts and Test-specific time/result visibility remain separate.
+
+
+Review Statements display authored text as a normal session item with no answer control, feedback, hint/reveal tools, or score effect; navigation simply continues to the next item. Fill-in-the-Blanks Index Card imports surface a modal resolver when selected sources contain visible cards without blanks. Every affected card independently chooses **Convert to Statement** or **Discard**, and those decisions remain reviewable from the source row before creation.

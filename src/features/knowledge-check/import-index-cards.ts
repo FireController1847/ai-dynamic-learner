@@ -5,6 +5,14 @@ import { parseFillBlankTemplate } from '../../core/fill-blank.ts';
 import { createQuestion, MAX_QUESTIONS, MAX_TEXT, type Question } from './question-model.ts';
 
 export type IndexCardImportMapping = 'front-to-back' | 'back-to-front' | 'preserve-blanks';
+export type BlanklessFillCardAction = 'statement' | 'discard';
+export type BlanklessFillCardActions = Record<string, BlanklessFillCardAction>;
+
+export interface BlanklessFillCard {
+  cardId: string;
+  label: string;
+  text: string;
+}
 
 export function findIndexCardSet(items: IndexCardLibraryItem[], id: string): CardSet | null {
   for (const item of items) {
@@ -84,14 +92,55 @@ function convertFillBlankCard(card: Card): Question | null {
   return question;
 }
 
-export function importIndexCardSet(set: CardSet, mapping: IndexCardImportMapping): Question[] {
+function convertStatementCard(card: Card): Question | null {
+  const prompt = sidePrompt(card, 'front');
+  if (!prompt) return null;
+  const question = createQuestion('statement');
+  question.prompt = prompt;
+  return question;
+}
+
+export function fillBlankCardsWithoutBlanks(set: CardSet): BlanklessFillCard[] {
+  if ((set.mode ?? DEFAULT_SET_MODE) !== 'fill-in-the-blanks') return [];
+  return set.cards.flatMap((card, index) => {
+    if (parseFillBlankTemplate(card.front).answers.length) return [];
+    const text = sidePrompt(card, 'front');
+    if (!text) return [];
+    return [{
+      cardId: card.id,
+      label: card.title?.trim() || `Card ${index + 1}`,
+      text,
+    }];
+  });
+}
+
+export function importIndexCardSet(
+  set: CardSet,
+  mapping: IndexCardImportMapping,
+  blanklessActions: BlanklessFillCardActions = {},
+): Question[] {
   const mode = set.mode ?? DEFAULT_SET_MODE;
   if (mode === 'fill-in-the-blanks') {
-    return set.cards.map(convertFillBlankCard).filter((question): question is Question => question !== null);
+    return set.cards.map((card) => {
+      const fillBlank = convertFillBlankCard(card);
+      if (fillBlank) return fillBlank;
+      return blanklessActions[card.id] === 'statement' ? convertStatementCard(card) : null;
+    }).filter((question): question is Question => question !== null);
   }
   return set.cards
     .map((card) => convertFlashCard(card, mapping))
     .filter((question): question is Question => question !== null);
+}
+
+export function indexCardPotentialImportCount(
+  set: CardSet,
+  mapping: IndexCardImportMapping,
+  blanklessActions: BlanklessFillCardActions = {},
+): number {
+  const imported = importIndexCardSet(set, mapping, blanklessActions).length;
+  const unresolved = fillBlankCardsWithoutBlanks(set)
+    .filter((card) => !blanklessActions[card.cardId]).length;
+  return imported + unresolved;
 }
 
 export function intermixQuestionGroups(groups: Question[][]): Question[] {

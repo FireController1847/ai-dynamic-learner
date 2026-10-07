@@ -688,3 +688,80 @@
   .knowledge-import-picker-header > button { width: 100%; }
   .knowledge-import-picker-library { max-height: 52vh; }
 }
+
+
+.knowledge-import-blankless-summary {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.knowledge-import-blankless-summary .quiet-button {
+  min-height: 28px;
+  padding-block: 2px;
+}
+.knowledge-import-resolution {
+  width: min(720px, calc(100% - 32px));
+  max-height: calc(100dvh - 32px);
+  padding: 24px;
+  overflow: auto;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-dialog);
+  color: var(--text-color);
+  background: var(--page-background);
+  box-shadow: var(--shadow-overlay);
+}
+.knowledge-import-resolution::backdrop { background: var(--scrim); }
+.knowledge-import-resolution header h2 { margin: 0 0 8px; }
+.knowledge-import-resolution header p { margin: 0; color: var(--text-secondary); }
+.knowledge-import-resolution-list {
+  display: grid;
+  gap: 12px;
+  margin: 20px 0 24px;
+}
+.knowledge-import-resolution-card {
+  margin: 0;
+  padding: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+}
+.knowledge-import-resolution-card legend { padding-inline: 4px; font-weight: 600; }
+.knowledge-import-resolution-preview {
+  margin: 0 0 12px;
+  color: var(--text-color);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.knowledge-import-resolution-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.knowledge-import-resolution-actions label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.knowledge-import-resolution-actions label:has(input:checked) {
+  border-color: var(--brand);
+  background: var(--brand-tint);
+}
+.knowledge-import-resolution-actions input { margin-top: 3px; accent-color: var(--brand); }
+.knowledge-import-resolution-actions span { display: grid; gap: 2px; }
+.knowledge-import-resolution-actions span span { color: var(--text-secondary); font-size: 12px; }
+.knowledge-import-resolution-footer {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+@media (max-width: 560px) {
+  .knowledge-import-resolution-actions { grid-template-columns: 1fr; }
+}

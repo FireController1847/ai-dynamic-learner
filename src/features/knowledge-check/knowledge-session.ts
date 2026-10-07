@@ -1,7 +1,7 @@
 import { maskFillBlankAnswers, parseFillBlankTemplate } from '../../core/fill-blank.ts';
 import type { CheckItem } from './library-model.ts';
 import type { CheckModeId } from './check-types.ts';
-import { answerCorrect, fillBlankCorrectness, questionResponseAnswered, type Question, type QuestionResponse } from './question-model.ts';
+import { answerCorrect, fillBlankCorrectness, questionResponseAnswered, questionScored, type Question, type QuestionResponse } from './question-model.ts';
 import { inputValue } from '../../core/dom.ts';
 import { Icon } from '../../components/icon.ts';
 import { SessionIntro } from './session-intro.ts';
@@ -20,7 +20,7 @@ export const KnowledgeSession = defineComponent({
   setup(props, { emit }) {
     const state = useKnowledgeSession(props.item, props.mode, props.settings);
     const { questions, questionCount, options, position, responses, checked, revealed, hints, submitted, started, expired, ended,
-      answered, score, remaining, celebrating, attempts, studyChecks, studyCorrectChecks,
+      answered, resolved, score, scoredCount, remaining, celebrating, attempts, studyChecks, studyCorrectChecks,
       start, end, check, submit, tick } = state;
     const fillBlankPrimaryButton = ref<HTMLButtonElement | null>(null);
 
@@ -156,6 +156,7 @@ export const KnowledgeSession = defineComponent({
     }
 
     function responseSummary(question: Question) {
+      if (!questionScored(question)) return null;
       const value = currentResponse(question);
       if (!Array.isArray(value)) return h('p', `Your answer: ${value || 'No answer'}`);
       const answers = parseFillBlankTemplate(question.prompt).answers;
@@ -167,7 +168,7 @@ export const KnowledgeSession = defineComponent({
 
     function submitTest() {
       tick(); if (submitted.value) return;
-      const unanswered = questions.value.length - answered.value;
+      const unanswered = scoredCount.value - answered.value;
       if (unanswered && !window.confirm(`Submit with ${unanswered} unanswered ${unanswered === 1 ? 'question' : 'questions'}? These will count as incorrect.`)) return;
       tick(); if (!submitted.value) submit();
     }
@@ -184,13 +185,15 @@ export const KnowledgeSession = defineComponent({
         const showAnswers = props.mode !== 'test' || options.value.showTestAnswers;
         return h('section', { class: 'knowledge-session', 'aria-label': 'Results' }, [
           h('header', { class: 'knowledge-results-heading' }, [h('h3', props.mode === 'test' ? 'Test complete' : 'Quiz complete'),
-            h('p', { class: 'knowledge-score' }, `${score.value} / ${questions.value.length}`),
-            h('p', `${Math.round(score.value / questions.value.length * 100)}% correct`),
+            scoredCount.value
+              ? h('p', { class: 'knowledge-score' }, `${score.value} / ${scoredCount.value}`)
+              : h('p', { class: 'knowledge-score' }, 'No scored questions'),
+            scoredCount.value ? h('p', `${Math.round(score.value / scoredCount.value * 100)}% correct`) : null,
             expired.value ? h('p', { role: 'status' }, 'Time ran out. Your entered answers were submitted automatically.') : null]),
           showAnswers ? questions.value.map((entry, index) => h('article', { class: 'knowledge-result', key: entry.id }, [
             h('h4', `${index + 1}. ${entry.type === 'fill-in-the-blanks' ? maskFillBlankAnswers(entry.prompt) : entry.prompt}`),
-            responseSummary(entry),
-            feedback(entry),
+            questionScored(entry) ? [responseSummary(entry), feedback(entry)] :
+              h('p', { class: 'knowledge-muted' }, 'Statement · Not scored'),
           ])) : h('p', 'This set is configured to show the score only.'),
           h('button', { type: 'button', class: 'card-primary-button', onClick: () => { started.value = false; } }, 'Back to overview'),
         ]);
@@ -202,13 +205,14 @@ export const KnowledgeSession = defineComponent({
       const quizRetrying = props.mode === 'quiz' && attemptCount > 0 && !wasChecked;
       const showFeedback = wasChecked || quizRetrying;
       const locked = props.mode === 'quiz' && wasChecked;
-      const correct = answerCorrect(
+      const scored = questionScored(question);
+      const correct = scored && answerCorrect(
         question,
         currentResponse(question),
         answerStrictnessForQuestion(props.settings, question.type),
       );
       const choices = question.type === 'true-false' ? ['True', 'False'] : question.choices.filter(choice => choice.trim());
-      const canCheck = question.type === 'fill-in-the-blanks' || questionResponseAnswered(question, currentResponse(question));
+      const canCheck = scored && (question.type === 'fill-in-the-blanks' || questionResponseAnswered(question, currentResponse(question)));
 
       return h('section', { class: 'knowledge-session', 'data-mode': props.mode, 'aria-label': `${props.mode} questions` }, [
         h('div', { class: 'knowledge-session-progress' }, [h('p', `Question ${position.value + 1} of ${questions.value.length}`),
@@ -224,7 +228,7 @@ export const KnowledgeSession = defineComponent({
           question.type === 'fill-in-the-blanks'
             ? fillBlankPrompt(question, locked)
             : h('h3', question.prompt),
-          question.type === 'fill-in-the-blanks' ? null
+          question.type === 'statement' ? null : question.type === 'fill-in-the-blanks' ? null
             : question.type === 'short-answer' ? h('label', { class: 'knowledge-field' }, ['Your answer', h('textarea', {
               rows: 3, value: textResponse(question), readonly: locked, maxlength: 2000,
               onInput: (event: Event) => response(question, inputValue(event)),
@@ -233,7 +237,7 @@ export const KnowledgeSession = defineComponent({
                 h('input', { type: 'radio', name: `response-${question.id}`, checked: textResponse(question) === choice,
                   onChange: () => response(question, choice) }), h('span', choice),
               ]))]),
-          props.mode !== 'test' ? h('div', {}, [
+          !scored ? null : props.mode !== 'test' ? h('div', {}, [
             showFeedback ? feedback(question, study ? correct : !quizRetrying) : null,
             !locked ? h('button', {
               ref: question.type === 'fill-in-the-blanks' ? fillBlankPrimaryButton : undefined,
@@ -241,7 +245,7 @@ export const KnowledgeSession = defineComponent({
               disabled: !canCheck, onClick: check,
             }, 'Check answer') : null,
           ]) : h('p', { class: 'knowledge-muted' }, 'Feedback is held until submission. You can change your answers.'),
-          study ? h('div', { class: 'knowledge-study-tools' }, [
+          study && scored ? h('div', { class: 'knowledge-study-tools' }, [
             question.explanation ? h('button', { type: 'button', class: 'quiet-button', onClick: () => {
               if (hints.value.has(question.id)) hints.value.delete(question.id); else hints.value.add(question.id);
             } }, hints.value.has(question.id) ? 'Hide explanation' : 'Use explanation as a hint') : null,
@@ -259,13 +263,13 @@ export const KnowledgeSession = defineComponent({
           position.value < questions.value.length - 1 ? h('button', {
             ref: question.type === 'fill-in-the-blanks' && props.mode === 'test' ? fillBlankPrimaryButton : undefined,
             type: 'button', class: 'card-primary-button',
-            disabled: props.mode === 'quiz' && !wasChecked,
+            disabled: props.mode === 'quiz' && scored && !wasChecked,
             onClick: () => { tick(); if (!submitted.value) position.value += 1; },
           }, 'Next question') :
             !study ? h('button', {
               ref: question.type === 'fill-in-the-blanks' && props.mode === 'test' ? fillBlankPrimaryButton : undefined,
               type: 'button', class: 'card-primary-button',
-              disabled: props.mode === 'quiz' && checked.value.size !== questions.value.length,
+              disabled: props.mode === 'quiz' && resolved.value !== questions.value.length,
               onClick: props.mode === 'test' ? submitTest : () => submit(),
             }, props.mode === 'test' ? 'Submit test' : 'See results') :
               h('button', {

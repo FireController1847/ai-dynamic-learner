@@ -63,6 +63,7 @@ export const CheckBuilder = defineComponent({
       }
       const replacement = createQuestion(type as QuestionType);
       Object.assign(question, { type: replacement.type, answer: replacement.answer, choices: replacement.choices });
+      if (replacement.type === 'statement') question.explanation = '';
       message.value = '';
     }
     function textField(label: string, key: 'prompt' | 'answer' | 'explanation', question: Question) {
@@ -123,8 +124,8 @@ export const CheckBuilder = defineComponent({
             }, QUESTION_TYPES.map((type) => h('option', { value: type.id }, type.label)))]),
             question.type === 'fill-in-the-blanks'
               ? h(ReviewFillBlankEditor, { question, onMessage: (value: string) => { message.value = value; } })
-              : textField('Question', 'prompt', question),
-            question.type === 'multiple-choice' ? h('fieldset', { class: 'knowledge-choice-editor' }, [
+              : textField(question.type === 'statement' ? 'Statement' : 'Question', 'prompt', question),
+            question.type === 'statement' ? null : question.type === 'multiple-choice' ? h('fieldset', { class: 'knowledge-choice-editor' }, [
               h('legend', 'Answer choices'),
               h('p', { class: 'knowledge-muted' }, 'Choose the correct answer.'),
               ...question.choices.map((choice, index) => h('div', { class: 'knowledge-choice-row', key: index }, [
@@ -144,7 +145,7 @@ export const CheckBuilder = defineComponent({
               value: question.answer, onChange: (event: Event) => { question.answer = inputValue(event); },
             }, [h('option', { value: '', disabled: true }, 'Select the correct answer'), ...['True', 'False'].map((answer) => h('option', { value: answer }, answer))])])
               : question.type === 'fill-in-the-blanks' ? null : textField('Expected answer', 'answer', question),
-            textField('Explanation (optional)', 'explanation', question),
+            question.type === 'statement' ? null : textField('Explanation (optional)', 'explanation', question),
           ]) : h('div', { class: 'knowledge-question-editor knowledge-builder-empty' }, [h(Icon, { name: 'cards' }),
             h('h3', 'Add a question.'), h('button', { type: 'button', class: 'card-primary-button', onClick: addQuestion }, 'Add question')]),
         ]),

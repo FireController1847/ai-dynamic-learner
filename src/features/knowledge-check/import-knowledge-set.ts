@@ -3,16 +3,20 @@ import type { IndexCards } from '../index-cards/tree-model.ts';
 import { Icon } from '../../components/icon.ts';
 import { SetModeIcon } from '../index-cards/set-mode-icon.ts';
 import { IndexCardsImportPicker } from './index-cards-import-picker.ts';
+import { FillBlankImportResolution } from './fill-blank-import-resolution.ts';
 import { createId } from '../../core/ids.ts';
 import { inputValue } from '../../core/dom.ts';
 import { MAX_NAME_LENGTH } from './library-model.ts';
 import {
+  fillBlankCardsWithoutBlanks,
   findIndexCardSet,
   importIndexCardSet,
   importQuestionLimitProblem,
   indexCardMappings,
+  indexCardPotentialImportCount,
   intermixQuestionGroups,
   shuffleQuestions,
+  type BlanklessFillCardActions,
   type IndexCardImportMapping,
 } from './import-index-cards.ts';
 import type { Question } from './question-model.ts';
@@ -23,6 +27,7 @@ interface ImportPlanItem {
   sourceFeatureId: FeatureId;
   sourceItemId: string;
   mappingId: string;
+  blanklessActions: BlanklessFillCardActions;
 }
 
 type ImportTab = 'sources' | 'options';
@@ -49,26 +54,49 @@ export const ImportKnowledgeSet = defineComponent({
     const draggedId = ref<string | null>(null);
     const dropIndex = ref<number | null>(null);
     const pickerItemId = ref<string | null | undefined>(undefined);
+    const resolutionItemId = ref<string | null>(null);
+    const resumeCreateAfterResolution = ref(false);
     const message = ref('');
 
     function sourceReady(item: ImportPlanItem): boolean {
       if (item.sourceFeatureId !== 'index-cards') return false;
-      const set = findIndexCardSet(props.indexCards.items, item.sourceItemId);
-      return Boolean(set && importIndexCardSet(set, item.mappingId as IndexCardImportMapping).length);
+      return Boolean(findIndexCardSet(props.indexCards.items, item.sourceItemId));
     }
 
     function questionsFor(item: ImportPlanItem): Question[] {
       if (item.sourceFeatureId !== 'index-cards') return [];
       const set = findIndexCardSet(props.indexCards.items, item.sourceItemId);
       if (!set) return [];
-      return importIndexCardSet(set, item.mappingId as IndexCardImportMapping);
+      return importIndexCardSet(set, item.mappingId as IndexCardImportMapping, item.blanklessActions);
+    }
+
+    function blanklessCardsFor(item: ImportPlanItem) {
+      if (item.sourceFeatureId !== 'index-cards') return [];
+      const set = findIndexCardSet(props.indexCards.items, item.sourceItemId);
+      return set ? fillBlankCardsWithoutBlanks(set) : [];
+    }
+
+    function unresolvedBlanklessCount(item: ImportPlanItem): number {
+      return blanklessCardsFor(item).filter((card) => !item.blanklessActions[card.cardId]).length;
     }
 
     const groups = computed(() => items.value.map(questionsFor));
     const questionCount = computed(() => groups.value.reduce((count, group) => count + group.length, 0));
-    const limitProblem = computed(() => importQuestionLimitProblem(questionCount.value));
+    const unresolvedCount = computed(() => items.value.reduce((count, item) => count + unresolvedBlanklessCount(item), 0));
+    const potentialCount = computed(() => items.value.reduce((count, item) => {
+      if (item.sourceFeatureId !== 'index-cards') return count;
+      const set = findIndexCardSet(props.indexCards.items, item.sourceItemId);
+      return set ? count + indexCardPotentialImportCount(
+        set,
+        item.mappingId as IndexCardImportMapping,
+        item.blanklessActions,
+      ) : count;
+    }, 0));
+    const limitProblem = computed(() => unresolvedCount.value ? '' : importQuestionLimitProblem(questionCount.value));
     const canCreate = computed(() => Boolean(name.value.trim()) && items.value.length > 0 &&
-      items.value.every(sourceReady) && questionCount.value > 0 && !limitProblem.value);
+      items.value.every(sourceReady) && potentialCount.value > 0 && !limitProblem.value);
+    const resolutionItem = computed(() =>
+      resolutionItemId.value ? items.value.find((item) => item.id === resolutionItemId.value) ?? null : null);
 
     function addSource(sourceFeatureId: FeatureId) {
       if (sourceFeatureId !== 'index-cards') return;
@@ -91,6 +119,7 @@ export const ImportKnowledgeSet = defineComponent({
         if (item) {
           item.sourceItemId = sourceItemId;
           item.mappingId = mappingId;
+          item.blanklessActions = {};
         }
       } else {
         items.value.push({
@@ -98,6 +127,7 @@ export const ImportKnowledgeSet = defineComponent({
           sourceFeatureId: 'index-cards',
           sourceItemId,
           mappingId,
+          blanklessActions: {},
         });
       }
       pickerItemId.value = undefined;
@@ -126,8 +156,27 @@ export const ImportKnowledgeSet = defineComponent({
       items.value.splice(toIndex, 0, item);
     }
 
+    function openResolution(item: ImportPlanItem, resumeCreate = false) {
+      resolutionItemId.value = item.id;
+      resumeCreateAfterResolution.value = resumeCreate;
+    }
+
     function createImportedSet() {
-      if (!canCreate.value) return;
+      if (!name.value.trim() || !items.value.length || !items.value.every(sourceReady)) return;
+      const unresolved = items.value.find((item) => unresolvedBlanklessCount(item) > 0);
+      if (unresolved) {
+        openResolution(unresolved, true);
+        return;
+      }
+      if (!questionCount.value) {
+        message.value = 'The current decisions discard every importable card. Keep at least one card or remove this source.';
+        return;
+      }
+      const problem = importQuestionLimitProblem(questionCount.value);
+      if (problem) {
+        message.value = problem;
+        return;
+      }
       const orderedGroups = groups.value;
       let questions = mixMode.value === 'intermixed'
         ? intermixQuestionGroups(orderedGroups)
@@ -144,6 +193,10 @@ export const ImportKnowledgeSet = defineComponent({
       const mappings = indexCardMappings(set);
       const mapping = mappings.find((entry) => entry.id === item.mappingId) ?? mappings[0]!;
       const importedCount = questionsFor(item).length;
+      const blankless = blanklessCardsFor(item);
+      const unresolvedBlankless = unresolvedBlanklessCount(item);
+      const statementCount = blankless.filter((card) => item.blanklessActions[card.cardId] === 'statement').length;
+      const discardCount = blankless.filter((card) => item.blanklessActions[card.cardId] === 'discard').length;
 
       return h('li', {
         key: item.id,
@@ -186,7 +239,7 @@ export const ImportKnowledgeSet = defineComponent({
           h('div', [
             h('strong', set?.name ?? feature.label),
             h('span', set
-              ? `Index Cards · ${(set.mode ?? 'flash-cards') === 'fill-in-the-blanks' ? 'Fill in the Blanks' : 'Flash Cards'} · ${set.cards.length} saved · ${importedCount} importable`
+              ? `Index Cards · ${(set.mode ?? 'flash-cards') === 'fill-in-the-blanks' ? 'Fill in the Blanks' : 'Flash Cards'} · ${set.cards.length} saved · ${importedCount} ready${unresolvedBlankless ? ` · ${unresolvedBlankless} need decisions` : ''}`
               : 'Choose a library set to import.'),
           ]),
         ]),
@@ -208,6 +261,16 @@ export const ImportKnowledgeSet = defineComponent({
             }, mappings.map((entry) => h('option', { value: entry.id }, entry.label))),
           ]),
           h('p', set ? mapping.description : 'Choose a library set first.'),
+          blankless.length ? h('div', { class: 'knowledge-import-blankless-summary' }, [
+            h('span', unresolvedBlankless
+              ? `${blankless.length} ${blankless.length === 1 ? 'card' : 'cards'} without blanks · ${unresolvedBlankless} need decisions`
+              : `${blankless.length} ${blankless.length === 1 ? 'card' : 'cards'} without blanks · ${statementCount} Statements · ${discardCount} discarded`),
+            h('button', {
+              type: 'button',
+              class: 'quiet-button',
+              onClick: () => openResolution(item),
+            }, unresolvedBlankless ? 'Resolve cards' : 'Review decisions'),
+          ]) : null,
         ]),
         h('div', { class: 'knowledge-import-item-actions' }, [
           h('button', {
@@ -236,7 +299,9 @@ export const ImportKnowledgeSet = defineComponent({
               h('h3', { id: 'knowledge-import-plan-title' }, 'Sources'),
               h('p', 'Each row imports one selected library set. Add the same set more than once if you want different mappings or repeated questions.'),
             ]),
-            h('span', { class: 'knowledge-info-pill' }, `${questionCount.value} ${questionCount.value === 1 ? 'question' : 'questions'}`),
+            h('span', { class: 'knowledge-info-pill' }, unresolvedCount.value
+              ? `${questionCount.value} ready · ${unresolvedCount.value} ${unresolvedCount.value === 1 ? 'decision' : 'decisions'}`
+              : `${questionCount.value} ${questionCount.value === 1 ? 'question' : 'questions'}`),
           ]),
           items.value.length
             ? h('ol', { class: 'knowledge-import-list' }, items.value.map(renderPlanItem))
@@ -355,9 +420,27 @@ export const ImportKnowledgeSet = defineComponent({
           message.value ? h('p', { class: 'knowledge-message', role: 'alert' }, message.value) : null,
           tab.value === 'options' ? renderOptions() : renderSources(),
         ],
-      items.value.length && !questionCount.value
+      items.value.length && !potentialCount.value
         ? h('p', { class: 'knowledge-muted knowledge-import-future-note' }, 'The selected sources do not currently contain any complete cards that can become Review questions.')
         : null,
+      resolutionItem.value ? h(FillBlankImportResolution, {
+        entries: blanklessCardsFor(resolutionItem.value),
+        initial: resolutionItem.value.blanklessActions,
+        onCancel: () => {
+          resolutionItemId.value = null;
+          resumeCreateAfterResolution.value = false;
+        },
+        onApply: (actions: BlanklessFillCardActions) => {
+          const item = resolutionItem.value;
+          if (!item) return;
+          item.blanklessActions = { ...actions };
+          message.value = '';
+          const resume = resumeCreateAfterResolution.value;
+          resolutionItemId.value = null;
+          resumeCreateAfterResolution.value = false;
+          if (resume) createImportedSet();
+        },
+      }) : null,
     ]);
   },
 });
