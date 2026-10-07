@@ -1,4 +1,9 @@
-import { isFillBlankAnswerCorrect, maskFillBlankAnswers, parseFillBlankTemplate } from '../../core/fill-blank.ts';
+import {
+  DEFAULT_ANSWER_STRICTNESS,
+  isAnswerCorrect,
+  type AnswerStrictness,
+} from '../../../packages/@dynamic-learner/answer-matching/src/index.ts';
+import { maskFillBlankAnswers, parseFillBlankTemplate } from '../../core/fill-blank.ts';
 import { createId, isValidId } from '../../core/ids.ts';
 import { isRecord } from '../../core/validation.ts';
 
@@ -73,23 +78,32 @@ export function questionResponseAnswered(question: Question, response: QuestionR
   return typeof response === 'string' && Boolean(response.trim());
 }
 
-export function fillBlankCorrectCount(question: Question, response: QuestionResponse | undefined): number {
+export function fillBlankCorrectCount(
+  question: Question,
+  response: QuestionResponse | undefined,
+  strictness: AnswerStrictness = DEFAULT_ANSWER_STRICTNESS,
+): number {
   if (question.type !== 'fill-in-the-blanks') return 0;
   const answers = parseFillBlankTemplate(question.prompt).answers;
   const responses = Array.isArray(response) ? response : [];
-  return answers.filter((answer, index) => isFillBlankAnswerCorrect(answer, responses[index] ?? '')).length;
+  return answers.filter((answer, index) =>
+    isAnswerCorrect(answer, responses[index] ?? '', { strictness })).length;
 }
 
-export function answerCorrect(question: Question, response: QuestionResponse): boolean {
+export function answerCorrect(
+  question: Question,
+  response: QuestionResponse,
+  strictness: AnswerStrictness = DEFAULT_ANSWER_STRICTNESS,
+): boolean {
   if (question.type === 'fill-in-the-blanks') {
     const answers = parseFillBlankTemplate(question.prompt).answers;
     if (!answers.length || !Array.isArray(response)) return false;
-    return answers.every((answer, index) => isFillBlankAnswerCorrect(answer, response[index] ?? ''));
+    return answers.every((answer, index) =>
+      isAnswerCorrect(answer, response[index] ?? '', { strictness }));
   }
   if (typeof response !== 'string') return false;
   if (question.type !== 'short-answer') return question.answer.trim() === response.trim();
-  const normalize = (text: string) => text.trim().replace(/\s+/g, ' ').toLocaleLowerCase();
-  return normalize(question.answer) === normalize(response);
+  return isAnswerCorrect(question.answer, response, { strictness });
 }
 
 export function validateQuestions(value: unknown): asserts value is Question[] {
