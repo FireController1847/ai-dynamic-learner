@@ -1,4 +1,5 @@
 import { defineComponent, h, ref, type PropType } from 'vue';
+import { AnswerStrictnessField } from '../../components/answer-strictness-field.ts';
 import type { CheckItem } from './library-model.ts';
 import type { CheckModeId } from './check-types.ts';
 import { QUESTION_ORDER_LABELS, settingsForMode, type SessionSettings } from './session-settings.ts';
@@ -47,7 +48,7 @@ export const SessionSetup = defineComponent({
       const count = defaults.questionLimit === null
         ? 'all questions'
         : `up to ${defaults.questionLimit} questions`;
-      return `${QUESTION_ORDER_LABELS[defaults.order]}, ${count}, ${defaults.shuffleChoices ? 'shuffled' : 'original'} answer-choice order, ${defaults.quizAttempts} ${defaults.quizAttempts === 1 ? 'attempt' : 'attempts'} per question.`;
+      return `${QUESTION_ORDER_LABELS[defaults.order]}, ${count}, ${defaults.shuffleChoices ? 'shuffled' : 'original'} answer-choice order, Short Answer strictness ${defaults.shortAnswerStrictness}, Fill in the Blanks strictness ${defaults.fillBlankAnswerStrictness}, ${defaults.quizAttempts} ${defaults.quizAttempts === 1 ? 'attempt' : 'attempts'} per question.`;
     }
 
     function emitStudy() {
@@ -66,7 +67,7 @@ export const SessionSetup = defineComponent({
       return () => h('section', { class: 'knowledge-session knowledge-session-setup', 'aria-label': 'Study setup' }, [
         h('p', { class: 'knowledge-session-setup-step' }, `Set up Study · ${props.questionCount} ${props.questionCount === 1 ? 'question' : 'questions'}`),
         h('h2', 'What order should the questions use?'),
-        h('p', { class: 'knowledge-session-setup-description' }, 'Choose an order for this Study session. You will choose again the next time you start studying.'),
+        h('p', { class: 'knowledge-session-setup-description' }, 'Choose an order for this Study session. Answer strictness comes from this knowledge set’s saved options.'),
         h('fieldset', { class: 'knowledge-session-choices' }, [
           h('legend', { class: 'visually-hidden' }, 'Study question order'),
           orderChoice('forward', 'In order', 'Start with the first question and continue normally.', studyOrder.value, () => { studyOrder.value = 'forward'; }, 'study-question-order'),
@@ -105,7 +106,7 @@ export const SessionSetup = defineComponent({
               }),
               h('span', [
                 h('strong', 'Customize Settings'),
-                h('span', { class: 'knowledge-session-choice-description' }, 'Temporarily change order, question count, answer-choice shuffling, or allowed attempts.'),
+                h('span', { class: 'knowledge-session-choice-description' }, 'Temporarily change order, question count, answer-choice shuffling, answer strictness, or allowed attempts.'),
               ]),
             ]),
           ]),
@@ -157,6 +158,18 @@ export const SessionSetup = defineComponent({
           }),
           'Shuffle multiple-choice answer choices',
         ]),
+        h(AnswerStrictnessField, {
+          id: 'quiz-short-answer-strictness',
+          label: 'Short Answer strictness',
+          value: custom.value.shortAnswerStrictness,
+          onChange: (value) => { custom.value.shortAnswerStrictness = value; },
+        }),
+        h(AnswerStrictnessField, {
+          id: 'quiz-fill-blank-strictness',
+          label: 'Fill in the Blanks strictness',
+          value: custom.value.fillBlankAnswerStrictness,
+          onChange: (value) => { custom.value.fillBlankAnswerStrictness = value; },
+        }),
         h('label', { class: 'knowledge-field' }, [
           'Allowed attempts per question',
           h('input', {

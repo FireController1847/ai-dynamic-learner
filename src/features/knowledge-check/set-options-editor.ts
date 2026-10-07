@@ -1,4 +1,5 @@
 import { defineComponent, h, type PropType } from 'vue';
+import { AnswerStrictnessField } from '../../components/answer-strictness-field.ts';
 import { inputValue } from '../../core/dom.ts';
 import { MAX_QUESTIONS, MAX_TEXT } from './question-model.ts';
 import type { QuestionOrder, SetOptions } from './set-options.ts';
@@ -17,6 +18,22 @@ export const SetOptionsEditor = defineComponent({
         onInput: (event: Event) => { props.options.description = inputValue(event); },
       })]),
       h('p', { class: 'knowledge-muted' }, 'Shown before starting a Quiz or Test. Explain the topic or what to expect.'),
+
+      h('h3', 'Answer matching'),
+      h(AnswerStrictnessField, {
+        id: 'knowledge-short-answer-strictness',
+        label: 'Short Answer strictness',
+        value: props.options.shortAnswerStrictness,
+        onChange: (value) => { props.options.shortAnswerStrictness = value; },
+      }),
+      h(AnswerStrictnessField, {
+        id: 'knowledge-fill-blank-strictness',
+        label: 'Fill in the Blanks strictness',
+        value: props.options.fillBlankAnswerStrictness,
+        onChange: (value) => { props.options.fillBlankAnswerStrictness = value; },
+      }),
+      h('p', { class: 'knowledge-muted' },
+        'These are independent. Level 1 requires normalized exact answers; higher levels add spelling tolerance, linguistic equivalents, and then conservative semantic equivalents.'),
 
       h('h3', 'Quiz & Test defaults'),
       h('label', { class: 'knowledge-field' }, ['Question order', h('select', {
