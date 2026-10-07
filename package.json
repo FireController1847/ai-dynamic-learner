@@ -9,7 +9,8 @@
     "build": "npm run typecheck && webpack --config webpack.config.mts --disable-interpret --mode production",
     "pages:prepare": "npm run build",
     "typecheck": "tsc -p tsconfig.app.json && tsc -p tsconfig.node.json",
-    "test:answer-matching": "node --test packages/@dynamic-learner/answer-matching/tests/*.test.mts"
+    "test:answer-matching": "node --test packages/@dynamic-learner/answer-matching/tests/*.test.mts",
+    "test:fill-blank": "node --test tests/fill-blank.test.mts"
   },
   "dependencies": {
     "dompurify": "3.4.16",
