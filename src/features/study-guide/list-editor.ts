@@ -2,7 +2,8 @@ import { defineComponent, h, nextTick, type PropType } from 'vue';
 import { inputValue } from '../../core/dom.ts';
 import { createSection, MAX_BULLETS, MAX_SECTIONS, MAX_TEXT_LENGTH, type GuideSection, type ListGuideData } from './library-model.ts';
 
-const MAX_BULLET_DEPTH = 6;
+const MAX_BULLET_DEPTH = 7;
+const BULLET_MARKERS = ['●', '○', '■', '□', '◆', '◇', '✱', '✳'] as const;
 
 function bulletDepth(value: string): number {
   return Math.min(MAX_BULLET_DEPTH, value.match(/^\t*/)?.[0].length ?? 0);
@@ -14,6 +15,10 @@ function bulletText(value: string): string {
 
 function withBulletDepth(value: string, depth: number): string {
   return `${'\t'.repeat(Math.max(0, Math.min(MAX_BULLET_DEPTH, depth)))}${value}`;
+}
+
+function bulletMarker(depth: number): string {
+  return BULLET_MARKERS[Math.max(0, Math.min(MAX_BULLET_DEPTH, depth))] ?? BULLET_MARKERS[0];
 }
 
 export const StudyGuideListEditor = defineComponent({
@@ -162,7 +167,7 @@ export const StudyGuideListEditor = defineComponent({
             class: 'study-guide-bullet-row',
             style: { paddingLeft: `${depth * 20}px` },
           }, [
-            h('span', { 'aria-hidden': 'true' }, '•'),
+            h('span', { 'aria-hidden': 'true' }, bulletMarker(depth)),
             h('input', {
               ref: (element) => {
                 const key = bulletKey(section, bi);
