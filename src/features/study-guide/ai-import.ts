@@ -1,4 +1,5 @@
 import { computed, defineComponent, h, ref } from 'vue';
+import { Icon } from '../../components/icon.ts';
 import { PopupDialog } from '../../components/popup-dialog.ts';
 import { inputValue } from '../../core/dom.ts';
 import { isRecord } from '../../core/validation.ts';
@@ -114,6 +115,7 @@ export const StudyGuideAiImportDialog = defineComponent({
     const detail = ref<PromptDetail>(DEFAULT_PROMPT_OPTIONS.detail);
     const coverage = ref<PromptCoverage>(DEFAULT_PROMPT_OPTIONS.coverage);
     const bulletStyle = ref<PromptBulletStyle>(DEFAULT_PROMPT_OPTIONS.bulletStyle);
+    const showPrompt = ref(false);
     const json = ref('');
     const problem = ref('');
     const copyStatus = ref('');
@@ -129,7 +131,8 @@ export const StudyGuideAiImportDialog = defineComponent({
         await navigator.clipboard.writeText(prompt.value);
         copyStatus.value = 'Prompt copied.';
       } catch {
-        copyStatus.value = 'Copy failed. Select the prompt and copy it manually.';
+        showPrompt.value = true;
+        copyStatus.value = 'Copy failed. The prompt is shown below so you can copy it manually.';
       }
     }
 
@@ -218,17 +221,30 @@ export const StudyGuideAiImportDialog = defineComponent({
                 { value: 'thoughts', label: 'Complete thoughts' },
               ], (value) => { bulletStyle.value = value; }),
             ]),
-            h('textarea', {
+            h('div', { style: { display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' } }, [
+              h('div', { style: { display: 'inline-flex', alignItems: 'stretch', gap: '4px' } }, [
+                h('button', { type: 'button', class: 'card-primary-button', onClick: copyPrompt }, 'Copy prompt'),
+                h('button', {
+                  type: 'button',
+                  class: 'quiet-button',
+                  title: showPrompt.value ? 'Hide prompt' : 'Show prompt',
+                  'aria-label': showPrompt.value ? 'Hide generated prompt' : 'Show generated prompt',
+                  'aria-expanded': showPrompt.value,
+                  'aria-controls': 'study-guide-ai-prompt-preview',
+                  style: { minWidth: '36px', paddingInline: '7px' },
+                  onClick: () => { showPrompt.value = !showPrompt.value; },
+                }, [h(Icon, { name: showPrompt.value ? 'chevron-up' : 'chevron-down' })]),
+              ]),
+              copyStatus.value ? h('span', { role: 'status', style: { color: 'var(--text-secondary)', fontSize: '12px' } }, copyStatus.value) : null,
+            ]),
+            showPrompt.value ? h('textarea', {
+              id: 'study-guide-ai-prompt-preview',
               value: prompt.value,
               readonly: true,
               rows: 17,
               'aria-label': 'AI Study Guide prompt',
               style: { width: '100%', minHeight: '290px', resize: 'vertical', padding: '10px' },
-            }),
-            h('div', { style: { display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '10px' } }, [
-              h('button', { type: 'button', class: 'card-primary-button', onClick: copyPrompt }, 'Copy prompt'),
-              copyStatus.value ? h('span', { role: 'status', style: { color: 'var(--text-secondary)', fontSize: '12px' } }, copyStatus.value) : null,
-            ]),
+            }) : null,
           ])
           : h('section', { role: 'tabpanel', style: { display: 'grid', gap: '10px' } }, [
             h('p', { style: { margin: '0', color: 'var(--text-secondary)' } },
