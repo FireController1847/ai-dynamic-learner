@@ -107,6 +107,7 @@ ${JSON_FENCE}json
     }
   ]
 }
+${JSON_FENCE}
 
 Study-guide preferences:
 - ${DETAIL_INSTRUCTIONS[options.detail]}
@@ -353,7 +354,7 @@ export const StudyGuideAiImportDialog = defineComponent({
             style: { display: 'grid', gap: '10px', minHeight: '480px', alignContent: 'start' },
           }, [
             h('p', { style: { margin: '0', color: 'var(--text-secondary)' } },
-              'Paste the JSON returned by the AI. Dynamic Learner validates it before creating anything.'),
+              'Paste the JSON code block returned by the AI. Dynamic Learner removes the code fence if present and validates the JSON before creating anything.'),
             h('textarea', {
               value: json.value,
               rows: 12,
