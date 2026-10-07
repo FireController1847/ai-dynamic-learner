@@ -42,8 +42,37 @@ export function parseFillBlankTemplate(source: string): FillBlankTemplate {
   return { segments, answers };
 }
 
+export type FillBlankAnswerMatcher = (answer: string, response: string) => boolean;
+
 export function isFillBlankAnswerCorrect(answer: string, response: string): boolean {
   return isAnswerCorrect(answer, response);
+}
+
+export function fillBlankCorrectness(
+  template: FillBlankTemplate,
+  responses: readonly string[],
+  matches: FillBlankAnswerMatcher = isFillBlankAnswerCorrect,
+): boolean[] {
+  const result = template.answers.map((answer, index) =>
+    matches(answer, responses[index] ?? ''));
+
+  for (let index = 0; index <= template.segments.length - 3; index += 1) {
+    const left = template.segments[index];
+    const connector = template.segments[index + 1];
+    const right = template.segments[index + 2];
+    if (left?.type !== 'blank' || connector?.type !== 'text' || right?.type !== 'blank' ||
+        !/^\s*(?:and|or)\s*$/i.test(connector.text)) {
+      continue;
+    }
+
+    if (matches(left.answer, responses[right.index] ?? '') &&
+        matches(right.answer, responses[left.index] ?? '')) {
+      result[left.index] = true;
+      result[right.index] = true;
+    }
+  }
+
+  return result;
 }
 
 export function maskFillBlankAnswers(source: string): string {

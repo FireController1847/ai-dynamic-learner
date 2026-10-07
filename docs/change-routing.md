@@ -13,10 +13,11 @@ Use this as a starting-file index, not a feature specification. Follow imports o
 | Tips content | `src/app/tips-content.ts` and feature-specific Tips adapters |
 | Tips engine/UI | `packages/tips/` |
 | Shared buttons/dialogs | `src/styles/base.css`, `src/components/use-dialog.ts`, `popup-dialog.ts` |
+| Answer strictness control | `src/components/answer-strictness-field.ts` |
 | Delete confirmation | `src/components/delete-confirmation.ts`, `src/styles/delete-confirmation.css` |
 | Shared tree behavior | `src/core/tree.ts` plus the calling feature model |
 | IDs | `src/core/ids.ts` |
-| Answer matching / morphology | `src/core/answer-matching.ts` |
+| Answer matching / morphology / semantics | `packages/@dynamic-learner/answer-matching/`; `src/core/answer-matching.ts` is the legacy-behavior adapter |
 | Fill-in-the-blanks parsing | `src/core/fill-blank.ts` |
 | Leave warnings | `src/core/leave-guards.ts` |
 | Workspace save/load/backups | `src/app/workspace.ts`, `workspace-format.ts` |
@@ -34,7 +35,7 @@ Use this as a starting-file index, not a feature specification. Follow imports o
 | Fill in the Blanks | `fill-blank-set.ts`, `fill-blank-paper.ts`, `fill-blank-editor.ts`, `fill-blank-model.ts` |
 | Index Cards review | `review-setup.ts`, `review-result.ts`, `card-set.ts`, `fill-blank-set.ts` |
 | Index Cards list / panel sizing | `card-list.ts`, `card-list.css`, `index-cards.ts`, `index-cards.css` |
-| Index Cards display settings | `display-options.ts`, `display-settings.ts`, `display-settings.css` |
+| Index Cards settings | `display-options.ts`, `display-settings.ts`, `tree-model.ts`, `display-settings.css` |
 | Word Search library/setup | `src/features/word-search/word-search.ts`, `library.ts`, `library-model.ts`, `puzzle-form.ts` |
 | Word Search generation/play | `puzzle-generator.ts`, `game-model.ts`, `puzzle-game.ts`, `puzzle-grid.ts` |
 | Word Search appearance | `display-options.ts`, `display-settings.ts`, `grid-sizing.ts`, `word-outline.ts` |

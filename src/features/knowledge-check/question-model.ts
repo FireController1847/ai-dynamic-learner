@@ -1,4 +1,9 @@
-import { isFillBlankAnswerCorrect, maskFillBlankAnswers, parseFillBlankTemplate } from '../../core/fill-blank.ts';
+import {
+  DEFAULT_ANSWER_STRICTNESS,
+  isAnswerCorrect,
+  type AnswerStrictness,
+} from '../../../packages/@dynamic-learner/answer-matching/src/index.ts';
+import { fillBlankCorrectness as evaluateFillBlankTemplate, maskFillBlankAnswers, parseFillBlankTemplate } from '../../core/fill-blank.ts';
 import { createId, isValidId } from '../../core/ids.ts';
 import { isRecord } from '../../core/validation.ts';
 
@@ -73,23 +78,39 @@ export function questionResponseAnswered(question: Question, response: QuestionR
   return typeof response === 'string' && Boolean(response.trim());
 }
 
-export function fillBlankCorrectCount(question: Question, response: QuestionResponse | undefined): number {
-  if (question.type !== 'fill-in-the-blanks') return 0;
-  const answers = parseFillBlankTemplate(question.prompt).answers;
+export function fillBlankCorrectness(
+  question: Question,
+  response: QuestionResponse | undefined,
+  strictness: AnswerStrictness = DEFAULT_ANSWER_STRICTNESS,
+): boolean[] {
+  if (question.type !== 'fill-in-the-blanks') return [];
+  const template = parseFillBlankTemplate(question.prompt);
   const responses = Array.isArray(response) ? response : [];
-  return answers.filter((answer, index) => isFillBlankAnswerCorrect(answer, responses[index] ?? '')).length;
+  return evaluateFillBlankTemplate(template, responses,
+    (answer, submitted) => isAnswerCorrect(answer, submitted, { strictness }));
 }
 
-export function answerCorrect(question: Question, response: QuestionResponse): boolean {
+export function fillBlankCorrectCount(
+  question: Question,
+  response: QuestionResponse | undefined,
+  strictness: AnswerStrictness = DEFAULT_ANSWER_STRICTNESS,
+): number {
+  return fillBlankCorrectness(question, response, strictness).filter(Boolean).length;
+}
+
+export function answerCorrect(
+  question: Question,
+  response: QuestionResponse,
+  strictness: AnswerStrictness = DEFAULT_ANSWER_STRICTNESS,
+): boolean {
   if (question.type === 'fill-in-the-blanks') {
-    const answers = parseFillBlankTemplate(question.prompt).answers;
-    if (!answers.length || !Array.isArray(response)) return false;
-    return answers.every((answer, index) => isFillBlankAnswerCorrect(answer, response[index] ?? ''));
+    const template = parseFillBlankTemplate(question.prompt);
+    if (!template.answers.length || !Array.isArray(response)) return false;
+    return fillBlankCorrectness(question, response, strictness).every(Boolean);
   }
   if (typeof response !== 'string') return false;
   if (question.type !== 'short-answer') return question.answer.trim() === response.trim();
-  const normalize = (text: string) => text.trim().replace(/\s+/g, ' ').toLocaleLowerCase();
-  return normalize(question.answer) === normalize(response);
+  return isAnswerCorrect(question.answer, response, { strictness });
 }
 
 export function validateQuestions(value: unknown): asserts value is Question[] {

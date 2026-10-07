@@ -49,7 +49,7 @@ export const FillBlankReviewSetup = defineComponent({
         h('p', { class: 'review-setup-step' }, `Set up review · ${props.cardCount} ${props.cardCount === 1 ? 'card' : 'cards'}`),
         h('h2', { id: 'fill-blank-review-setup-heading' }, 'What order should the cards use?'),
         h('p', { class: 'review-setup-description' },
-          'Fill the blanks, flip to the answer key if you get stuck, then verify all of your answers at once.'),
+          'Fill the blanks, flip to the answer key if you get stuck, then verify all of your answers at once. Answer strictness comes from Index Cards Settings.'),
         h('fieldset', { class: 'review-choices' }, [
           h('legend', { class: 'visually-hidden' }, 'Review order'),
           choice('forward', 'First to last', 'Start with your first card.'),

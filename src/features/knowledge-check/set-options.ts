@@ -1,3 +1,8 @@
+import {
+  DEFAULT_ANSWER_STRICTNESS,
+  isAnswerStrictness,
+  type AnswerStrictness,
+} from '../../../packages/@dynamic-learner/answer-matching/src/index.ts';
 import { isRecord } from '../../core/validation.ts';
 import { MAX_QUESTIONS, MAX_TEXT } from './question-model.ts';
 
@@ -7,6 +12,8 @@ const QUESTION_ORDERS: readonly QuestionOrder[] = ['forward', 'backward', 'shuff
 
 export interface SetOptions {
   description: string;
+  shortAnswerStrictness: AnswerStrictness;
+  fillBlankAnswerStrictness: AnswerStrictness;
   assessmentOrder: QuestionOrder;
   assessmentQuestionLimit: number | null;
   shuffleChoices: boolean;
@@ -18,6 +25,8 @@ export interface SetOptions {
 export function defaultSetOptions(): SetOptions {
   return {
     description: '',
+    shortAnswerStrictness: DEFAULT_ANSWER_STRICTNESS,
+    fillBlankAnswerStrictness: DEFAULT_ANSWER_STRICTNESS,
     assessmentOrder: 'forward',
     assessmentQuestionLimit: null,
     shuffleChoices: false,
@@ -36,6 +45,8 @@ export function validateSetOptions(value: unknown): asserts value is SetOptions 
 
   if (Object.keys(value).some(key => !Object.keys(defaults).includes(key)) ||
       typeof value.description !== 'string' || value.description.length > MAX_TEXT ||
+      !isAnswerStrictness(value.shortAnswerStrictness) ||
+      !isAnswerStrictness(value.fillBlankAnswerStrictness) ||
       !QUESTION_ORDERS.includes(value.assessmentOrder as QuestionOrder) ||
       (value.assessmentQuestionLimit !== null &&
         (typeof value.assessmentQuestionLimit !== 'number' || !Number.isInteger(value.assessmentQuestionLimit) ||

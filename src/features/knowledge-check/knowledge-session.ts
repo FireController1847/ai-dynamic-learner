@@ -1,10 +1,11 @@
-import { isFillBlankAnswerCorrect, maskFillBlankAnswers, parseFillBlankTemplate } from '../../core/fill-blank.ts';
+import { maskFillBlankAnswers, parseFillBlankTemplate } from '../../core/fill-blank.ts';
 import type { CheckItem } from './library-model.ts';
 import type { CheckModeId } from './check-types.ts';
-import { answerCorrect, fillBlankCorrectCount, questionResponseAnswered, type Question, type QuestionResponse } from './question-model.ts';
+import { answerCorrect, fillBlankCorrectness, questionResponseAnswered, type Question, type QuestionResponse } from './question-model.ts';
 import { inputValue } from '../../core/dom.ts';
 import { Icon } from '../../components/icon.ts';
 import { SessionIntro } from './session-intro.ts';
+import { answerStrictnessForQuestion } from './session-settings.ts';
 import { useKnowledgeSession } from './session-state.ts';
 import { defineComponent, h, ref, type PropType } from 'vue';
 
@@ -61,7 +62,11 @@ export const KnowledgeSession = defineComponent({
 
     function feedback(question: Question, showAnswer = true) {
       const submittedResponse = currentResponse(question);
-      const correct = answerCorrect(question, submittedResponse);
+      const correct = answerCorrect(
+        question,
+        submittedResponse,
+        answerStrictnessForQuestion(props.settings, question.type),
+      );
       const attemptCount = attempts.value[question.id] ?? 0;
       const quizRetry = props.mode === 'quiz' && !correct && !checked.value.has(question.id) && attemptCount > 0;
       const attemptsRemaining = Math.max(0, options.value.quizAttempts - attemptCount);
@@ -76,11 +81,16 @@ export const KnowledgeSession = defineComponent({
       if (question.type === 'fill-in-the-blanks') {
         const template = parseFillBlankTemplate(question.prompt);
         const values = blankResponses(question);
-        const correctCount = fillBlankCorrectCount(question, values);
+        const correctness = fillBlankCorrectness(
+          question,
+          values,
+          props.settings.fillBlankAnswerStrictness,
+        );
+        const correctCount = correctness.filter(Boolean).length;
         content.push(h('p', `${correctCount} of ${template.answers.length} ${template.answers.length === 1 ? 'blank' : 'blanks'} correct.`));
         content.push(h('ol', { class: 'knowledge-fill-blank-feedback-list' }, template.answers.map((answer, index) => {
           const value = values[index] ?? '';
-          const blankCorrect = isFillBlankAnswerCorrect(answer, value);
+          const blankCorrect = correctness[index] ?? false;
           return h('li', { key: `${index}-${answer}`, class: blankCorrect ? 'is-correct' : 'is-incorrect' }, [
             h('strong', `Blank ${index + 1}: ${blankCorrect ? 'Correct' : 'Incorrect'}`),
             showAnswer ? h('span', {}, [
@@ -192,7 +202,11 @@ export const KnowledgeSession = defineComponent({
       const quizRetrying = props.mode === 'quiz' && attemptCount > 0 && !wasChecked;
       const showFeedback = wasChecked || quizRetrying;
       const locked = props.mode === 'quiz' && wasChecked;
-      const correct = answerCorrect(question, currentResponse(question));
+      const correct = answerCorrect(
+        question,
+        currentResponse(question),
+        answerStrictnessForQuestion(props.settings, question.type),
+      );
       const choices = question.type === 'true-false' ? ['True', 'False'] : question.choices.filter(choice => choice.trim());
       const canCheck = question.type === 'fill-in-the-blanks' || questionResponseAnswered(question, currentResponse(question));
 

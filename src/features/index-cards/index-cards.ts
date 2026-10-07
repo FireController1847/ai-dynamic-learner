@@ -4,7 +4,7 @@ import type { SetModeId } from './set-modes.ts';
 interface CreationTarget extends SetTarget { destination: string }
 interface CardSetHandle { focusCardListToggle(): void }
 import { addTutorialActionListener, type TutorialRequest } from '../../../packages/tips/src/index.ts';
-import type { IndexCards as FeatureModel } from './tree-model.ts';
+import { resolvedIndexCardSettings, type IndexCards as FeatureModel } from './tree-model.ts';
 import { inputValue } from '../../core/dom.ts';
 import { DirectoryTree } from './directory-tree.ts';
 import { SetBuilder } from './set-builder.ts';
@@ -13,6 +13,7 @@ import { CardSet } from './card-set.ts';
 import { FillBlankSet } from './fill-blank-set.ts';
 import { DisplaySettings } from './display-settings.ts';
 import { displayForMode, displayStyles, resolvedDisplayOptions } from './display-options.ts';
+import type { AnswerStrictness } from './fill-blank-model.ts';
 import { Icon } from '../../components/icon.ts';
 import { LibraryEmptyState } from '../../components/library-empty-state.ts';
 import { useLibrarySelection } from '../../components/use-library-selection.ts';
@@ -88,6 +89,7 @@ export const IndexCards = defineComponent({
     const tutorialFillBlankReviewSetId = ref<string | null>(null);
     const settingsButton = ref<HTMLButtonElement | null>(null);
     const displayOptions = computed(() => resolvedDisplayOptions(props.model.display));
+    const indexCardSettings = computed(() => resolvedIndexCardSettings(props.model.settings));
     onDeactivated(() => { settingsOpen.value = false; });
 
     async function closeSettings() {
@@ -384,6 +386,7 @@ export const IndexCards = defineComponent({
                 key: selection.value.item.id,
                 ref: activeSet,
                 set: selection.value.item,
+                answerStrictness: indexCardSettings.value.answerStrictness,
                 totalCards: totalCards.value,
                 cardListWidth: cardListWidth.value, cardListCollapsed: cardListCollapsed.value,
                 onToggleCardList: () => setCardListCollapsed(true),
@@ -445,8 +448,12 @@ export const IndexCards = defineComponent({
       ]),
       settingsOpen.value ? h(DisplaySettings, {
         options: displayOptions.value,
+        answerStrictness: indexCardSettings.value.answerStrictness,
         initialTab: selectedMode.value,
         onUpdate: (options) => { props.model.display = options; },
+        onUpdateAnswerStrictness: (answerStrictness: AnswerStrictness) => {
+          props.model.settings = { ...indexCardSettings.value, answerStrictness };
+        },
         onClose: closeSettings,
       }) : null,
     ]);

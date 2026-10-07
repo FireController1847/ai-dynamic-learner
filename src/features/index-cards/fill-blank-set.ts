@@ -9,7 +9,7 @@ import { FillBlankEditor } from './fill-blank-editor.ts';
 import { FillBlankPaper, type FillBlankPaperHandle } from './fill-blank-paper.ts';
 import { FillBlankReviewSetup } from './fill-blank-review-setup.ts';
 import { ReviewResult } from './review-result.ts';
-import { isFillBlankAnswerCorrect, parseFillBlankTemplate } from './fill-blank-model.ts';
+import { fillBlankResponseCorrectness, parseFillBlankTemplate, type AnswerStrictness } from './fill-blank-model.ts';
 
 import { defineComponent, type PropType, computed, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, reactive, ref, watch } from 'vue';
 
@@ -24,6 +24,7 @@ export const FillBlankSet = defineComponent({
   name: 'FillBlankSet',
   props: {
     set: { type: Object as PropType<CardSetModel>, required: true },
+    answerStrictness: { type: Number as PropType<AnswerStrictness>, required: true },
     totalCards: { type: Number, required: true },
     cardListWidth: { type: Number as PropType<number | null>, default: null },
     tutorialReview: Boolean,
@@ -344,8 +345,11 @@ export const FillBlankSet = defineComponent({
       stopResultReview();
       verified.value = true;
       reviewSide.value = 'back';
-      const correct = template.answers.filter((answer, blankIndex) =>
-        isFillBlankAnswerCorrect(answer, responses.value[blankIndex] ?? '')).length;
+      const correct = fillBlankResponseCorrectness(
+        template,
+        responses.value,
+        props.answerStrictness,
+      ).filter(Boolean).length;
       reviewScores.set(card.id, { correct, total: template.answers.length });
       resultReviewNextIndex = 0;
       resultReviewComplete = false;
@@ -411,8 +415,7 @@ export const FillBlankSet = defineComponent({
       const template = card ? parseFillBlankTemplate(card.front) : { segments: [], answers: [] };
       const blankCount = template.answers.length;
       const correctCount = verified.value
-        ? template.answers.filter((answer, blankIndex) =>
-          isFillBlankAnswerCorrect(answer, responses.value[blankIndex] ?? '')).length
+        ? fillBlankResponseCorrectness(template, responses.value, props.answerStrictness).filter(Boolean).length
         : 0;
       const position = `Card ${index.value + 1} of ${orderedCards.value.length}`;
       const lastCard = index.value === orderedCards.value.length - 1;
@@ -472,6 +475,7 @@ export const FillBlankSet = defineComponent({
                 card,
                 position: index.value + 1,
                 responses: responses.value,
+                answerStrictness: props.answerStrictness,
                 verified: verified.value,
                 side: reviewSide.value,
                 resultReviewIndex: resultReviewIndex.value,
@@ -608,7 +612,8 @@ export const FillBlankSet = defineComponent({
             `Workspace limit reached: ${MAX_CARDS} cards.`) : null,
           h('p', { class: 'visually-hidden', role: 'status' }, message.value),
           reviewSetupOpen.value ? h(FillBlankReviewSetup, {
-            initialOrder: reviewOrder.value, cardCount: props.set.cards.length,
+            initialOrder: reviewOrder.value,
+            cardCount: props.set.cards.length,
             modal: !props.tutorialReview,
             onCancel: cancelReview, onStart: startReview,
           }) : null,

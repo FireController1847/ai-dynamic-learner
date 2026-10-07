@@ -1,3 +1,4 @@
+import type { AnswerStrictness } from '../../../packages/@dynamic-learner/answer-matching/src/index.ts';
 import type { CheckModeId } from './check-types.ts';
 import { defaultSetOptions, type QuestionOrder, type SetOptions } from './set-options.ts';
 import type { Question } from './question-model.ts';
@@ -6,9 +7,18 @@ export interface SessionSettings {
   order: QuestionOrder;
   questionLimit: number | null;
   shuffleChoices: boolean;
+  shortAnswerStrictness: AnswerStrictness;
+  fillBlankAnswerStrictness: AnswerStrictness;
   quizAttempts: number;
   timeLimitMinutes: number | null;
   showTestAnswers: boolean;
+}
+
+export function answerStrictnessForQuestion(
+  settings: Pick<SessionSettings, 'shortAnswerStrictness' | 'fillBlankAnswerStrictness'>,
+  type: Question['type'],
+): AnswerStrictness {
+  return type === 'fill-in-the-blanks' ? settings.fillBlankAnswerStrictness : settings.shortAnswerStrictness;
 }
 
 export const QUESTION_ORDER_LABELS: Record<QuestionOrder, string> = {
@@ -24,6 +34,8 @@ export function settingsForMode(options: SetOptions | undefined, mode: CheckMode
       order: 'forward',
       questionLimit: null,
       shuffleChoices: false,
+      shortAnswerStrictness: saved.shortAnswerStrictness,
+      fillBlankAnswerStrictness: saved.fillBlankAnswerStrictness,
       quizAttempts: saved.quizAttempts,
       timeLimitMinutes: null,
       showTestAnswers: true,
@@ -33,6 +45,8 @@ export function settingsForMode(options: SetOptions | undefined, mode: CheckMode
     order: saved.assessmentOrder,
     questionLimit: saved.assessmentQuestionLimit,
     shuffleChoices: saved.shuffleChoices,
+    shortAnswerStrictness: saved.shortAnswerStrictness,
+    fillBlankAnswerStrictness: saved.fillBlankAnswerStrictness,
     quizAttempts: saved.quizAttempts,
     timeLimitMinutes: mode === 'test' ? saved.timeLimitMinutes : null,
     showTestAnswers: mode === 'test' ? saved.showTestAnswers : true,

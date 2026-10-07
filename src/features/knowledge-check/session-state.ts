@@ -3,7 +3,7 @@ import { registerLeaveGuard } from '../../core/leave-guards.ts';
 import { answerCorrect, questionReady, questionResponseAnswered, type QuestionResponse } from './question-model.ts';
 import type { CheckItem } from './library-model.ts';
 import type { CheckModeId } from './check-types.ts';
-import { prepareSessionQuestions, sessionQuestionCount, type SessionSettings } from './session-settings.ts';
+import { answerStrictnessForQuestion, prepareSessionQuestions, sessionQuestionCount, type SessionSettings } from './session-settings.ts';
 
 export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings: SessionSettings) {
   const availableQuestions = computed(() => item.questions.filter(questionReady));
@@ -29,7 +29,11 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
   const answered = computed(() => questions.value.filter(question =>
     questionResponseAnswered(question, responses.value[question.id])).length);
   const score = computed(() => questions.value.filter(question =>
-    answerCorrect(question, responses.value[question.id] ?? (question.type === 'fill-in-the-blanks' ? [] : ''))).length);
+    answerCorrect(
+      question,
+      responses.value[question.id] ?? (question.type === 'fill-in-the-blanks' ? [] : ''),
+      answerStrictnessForQuestion(settings, question.type),
+    )).length);
   const remaining = computed(() => deadline.value === null ? null : Math.max(0, Math.ceil((deadline.value - now.value) / 1000)));
   let timer: number | null = null;
   let celebrationTimer: number | null = null;
@@ -74,7 +78,11 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
     if (question.type !== 'fill-in-the-blanks' && !questionResponseAnswered(question, response)) return;
     const nextAttempt = (attempts.value[question.id] ?? 0) + 1;
     attempts.value[question.id] = nextAttempt;
-    const correct = answerCorrect(question, response ?? (question.type === 'fill-in-the-blanks' ? [] : ''));
+    const correct = answerCorrect(
+      question,
+      response ?? (question.type === 'fill-in-the-blanks' ? [] : ''),
+      answerStrictnessForQuestion(settings, question.type),
+    );
 
     if (mode === 'study') {
       checked.value.add(question.id);
