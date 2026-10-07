@@ -27,28 +27,28 @@ function bulletMarker(depth: number) {
   };
 
   if (level === 0) return h('svg', common, [
-    h('circle', { cx: 8, cy: 8, r: 4.75, fill: 'currentColor', stroke: 'none' }),
+    h('circle', { cx: 8, cy: 8, r: 3.75, fill: 'currentColor', stroke: 'none' }),
   ]);
   if (level === 1) return h('svg', common, [
-    h('circle', { cx: 8, cy: 8, r: 4.75, fill: 'none', stroke: 'currentColor', 'stroke-width': 1.8 }),
+    h('circle', { cx: 8, cy: 8, r: 3.625, fill: 'none', stroke: 'currentColor', 'stroke-width': 1.8 }),
   ]);
   if (level === 2) return h('svg', common, [
-    h('rect', { x: 3.375, y: 3.375, width: 9.25, height: 9.25, rx: 1, fill: 'currentColor', stroke: 'none' }),
+    h('rect', { x: 4.375, y: 4.375, width: 7.25, height: 7.25, rx: 1, fill: 'currentColor', stroke: 'none' }),
   ]);
   if (level === 3) return h('svg', common, [
-    h('rect', { x: 3.375, y: 3.375, width: 9.25, height: 9.25, rx: 1, fill: 'none', stroke: 'currentColor', 'stroke-width': 1.8 }),
+    h('rect', { x: 4.5, y: 4.5, width: 7, height: 7, rx: 1, fill: 'none', stroke: 'currentColor', 'stroke-width': 1.8 }),
   ]);
   if (level === 4) return h('svg', common, [
-    h('path', { d: 'M8 2.25 13.75 8 8 13.75 2.25 8Z', fill: 'currentColor', stroke: 'none' }),
+    h('path', { d: 'M8 3.25 12.75 8 8 12.75 3.25 8Z', fill: 'currentColor', stroke: 'none' }),
   ]);
   if (level === 5) return h('svg', common, [
-    h('path', { d: 'M8 2.5 13.5 8 8 13.5 2.5 8Z', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.8, 'stroke-linejoin': 'round' }),
+    h('path', { d: 'M8 3.625 12.375 8 8 12.375 3.625 8Z', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.8, 'stroke-linejoin': 'round' }),
   ]);
 
   const strokeWidth = level === 6 ? 2.5 : 1.55;
   const asteriskPath = level === 6
-    ? 'M8 2.75v10.5M3.45 5.375l9.1 5.25M12.55 5.375l-9.1 5.25'
-    : 'M8 2.25v11.5M3.02 5.13l9.96 5.74M12.98 5.13l-9.96 5.74';
+    ? 'M8 3.75v8.5M4.317 5.875l7.366 4.25M11.683 5.875l-7.366 4.25'
+    : 'M8 3.25v9.5M3.886 5.629l8.228 4.742M12.114 5.629l-8.228 4.742';
   return h('svg', common, [
     h('path', {
       d: asteriskPath,
