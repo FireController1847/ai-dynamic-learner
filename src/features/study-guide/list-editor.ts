@@ -27,28 +27,31 @@ function bulletMarker(depth: number) {
   };
 
   if (level === 0) return h('svg', common, [
-    h('circle', { cx: 8, cy: 8, r: 5.25, fill: 'currentColor', stroke: 'none' }),
+    h('circle', { cx: 8, cy: 8, r: 4.75, fill: 'currentColor', stroke: 'none' }),
   ]);
   if (level === 1) return h('svg', common, [
-    h('circle', { cx: 8, cy: 8, r: 5.25, fill: 'none', stroke: 'currentColor', 'stroke-width': 1.8 }),
+    h('circle', { cx: 8, cy: 8, r: 4.75, fill: 'none', stroke: 'currentColor', 'stroke-width': 1.8 }),
   ]);
   if (level === 2) return h('svg', common, [
-    h('rect', { x: 2.75, y: 2.75, width: 10.5, height: 10.5, rx: 1, fill: 'currentColor', stroke: 'none' }),
+    h('rect', { x: 3.25, y: 3.25, width: 9.5, height: 9.5, rx: 1, fill: 'currentColor', stroke: 'none' }),
   ]);
   if (level === 3) return h('svg', common, [
-    h('rect', { x: 2.75, y: 2.75, width: 10.5, height: 10.5, rx: 1, fill: 'none', stroke: 'currentColor', 'stroke-width': 1.8 }),
+    h('rect', { x: 3.25, y: 3.25, width: 9.5, height: 9.5, rx: 1, fill: 'none', stroke: 'currentColor', 'stroke-width': 1.8 }),
   ]);
   if (level === 4) return h('svg', common, [
     h('path', { d: 'M8 2.25 13.75 8 8 13.75 2.25 8Z', fill: 'currentColor', stroke: 'none' }),
   ]);
   if (level === 5) return h('svg', common, [
-    h('path', { d: 'M8 2.25 13.75 8 8 13.75 2.25 8Z', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.8, 'stroke-linejoin': 'round' }),
+    h('path', { d: 'M8 2.5 13.5 8 8 13.5 2.5 8Z', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.8, 'stroke-linejoin': 'round' }),
   ]);
 
   const strokeWidth = level === 6 ? 2.5 : 1.55;
+  const asteriskPath = level === 6
+    ? 'M8 2.75v10.5M3.45 5.375l9.1 5.25M12.55 5.375l-9.1 5.25'
+    : 'M8 2.5v11M3.237 5.25l9.526 5.5M12.763 5.25l-9.526 5.5';
   return h('svg', common, [
     h('path', {
-      d: 'M8 2.25v11.5M3.02 5.13l9.96 5.74M12.98 5.13l-9.96 5.74',
+      d: asteriskPath,
       fill: 'none',
       stroke: 'currentColor',
       'stroke-width': strokeWidth,
