@@ -33,10 +33,10 @@ function bulletMarker(depth: number) {
     h('circle', { cx: 8, cy: 8, r: 4.75, fill: 'none', stroke: 'currentColor', 'stroke-width': 1.8 }),
   ]);
   if (level === 2) return h('svg', common, [
-    h('rect', { x: 3.25, y: 3.25, width: 9.5, height: 9.5, rx: 1, fill: 'currentColor', stroke: 'none' }),
+    h('rect', { x: 3.375, y: 3.375, width: 9.25, height: 9.25, rx: 1, fill: 'currentColor', stroke: 'none' }),
   ]);
   if (level === 3) return h('svg', common, [
-    h('rect', { x: 3.25, y: 3.25, width: 9.5, height: 9.5, rx: 1, fill: 'none', stroke: 'currentColor', 'stroke-width': 1.8 }),
+    h('rect', { x: 3.375, y: 3.375, width: 9.25, height: 9.25, rx: 1, fill: 'none', stroke: 'currentColor', 'stroke-width': 1.8 }),
   ]);
   if (level === 4) return h('svg', common, [
     h('path', { d: 'M8 2.25 13.75 8 8 13.75 2.25 8Z', fill: 'currentColor', stroke: 'none' }),
@@ -48,7 +48,7 @@ function bulletMarker(depth: number) {
   const strokeWidth = level === 6 ? 2.5 : 1.55;
   const asteriskPath = level === 6
     ? 'M8 2.75v10.5M3.45 5.375l9.1 5.25M12.55 5.375l-9.1 5.25'
-    : 'M8 2.5v11M3.237 5.25l9.526 5.5M12.763 5.25l-9.526 5.5';
+    : 'M8 2.25v11.5M3.02 5.13l9.96 5.74M12.98 5.13l-9.96 5.74';
   return h('svg', common, [
     h('path', {
       d: asteriskPath,
