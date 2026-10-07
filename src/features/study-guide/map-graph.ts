@@ -1,5 +1,5 @@
 import { createId } from '../../core/ids.ts';
-import type { MapConnection, MapGuideData, MapTopic } from './library-model.ts';
+import { MAP_GRID, MAP_MAX_X, MAP_MAX_Y, MAP_TOPIC_HEIGHT, MAP_TOPIC_WIDTH, type MapConnection, type MapGuideData, type MapTopic } from './library-model.ts';
 
 export function topicById(data: MapGuideData, id: string | null | undefined): MapTopic | null {
   return id ? data.topics.find(topic => topic.id === id) ?? null : null;
@@ -90,4 +90,87 @@ export function mapStudyProblem(data: MapGuideData): string | null {
   }
 
   return reached.size === data.topics.length ? null : 'Connect every topic to the map before studying.';
+}
+
+
+export interface MapTopicPosition { x: number; y: number }
+
+function snapped(value: number, max: number): number {
+  return Math.max(0, Math.min(max, Math.round(value / MAP_GRID) * MAP_GRID));
+}
+
+/**
+ * Deterministically place a connected acyclic map without persisting AI-supplied layout.
+ * Normal trees are arranged by distance from the starting topic; unusually wide/deep
+ * trees fall back to breadth-first grid packing within the existing fixed canvas.
+ */
+export function layoutMapTopics(
+  topicIds: readonly string[],
+  connections: readonly Pick<MapConnection, 'from' | 'to'>[],
+  startId: string,
+): Map<string, MapTopicPosition> {
+  const order = new Map(topicIds.map((id, index) => [id, index]));
+  const adjacency = new Map(topicIds.map(id => [id, [] as string[]]));
+  for (const connection of connections) {
+    adjacency.get(connection.from)?.push(connection.to);
+    adjacency.get(connection.to)?.push(connection.from);
+  }
+  for (const neighbors of adjacency.values()) {
+    neighbors.sort((left, right) => (order.get(left) ?? 0) - (order.get(right) ?? 0));
+  }
+
+  const levels: string[][] = [];
+  const traversal: string[] = [];
+  const visited = new Set<string>();
+  const queue: { id: string; depth: number }[] = [{ id: startId, depth: 0 }];
+  while (queue.length) {
+    const current = queue.shift();
+    if (!current || visited.has(current.id) || !adjacency.has(current.id)) continue;
+    visited.add(current.id);
+    traversal.push(current.id);
+    (levels[current.depth] ??= []).push(current.id);
+    for (const neighbor of adjacency.get(current.id) ?? []) {
+      if (!visited.has(neighbor)) queue.push({ id: neighbor, depth: current.depth + 1 });
+    }
+  }
+  for (const id of topicIds) {
+    if (!visited.has(id)) traversal.push(id);
+  }
+
+  const roomyXStep = 192;
+  const roomyYStep = 96;
+  const maxTreeColumns = Math.floor(MAP_MAX_X / roomyXStep) + 1;
+  const maxTreeRows = Math.floor(MAP_MAX_Y / roomyYStep) + 1;
+  const treeFits = levels.length <= maxTreeRows && levels.every(level => level.length <= maxTreeColumns);
+  const positions = new Map<string, MapTopicPosition>();
+
+  if (treeFits) {
+    levels.forEach((level, row) => {
+      const span = (level.length - 1) * roomyXStep;
+      const startX = snapped((MAP_MAX_X - span) / 2, MAP_MAX_X);
+      level.forEach((id, column) => {
+        positions.set(id, { x: snapped(startX + column * roomyXStep, MAP_MAX_X), y: row * roomyYStep });
+      });
+    });
+    return positions;
+  }
+
+  const minXStep = Math.ceil(MAP_TOPIC_WIDTH / MAP_GRID) * MAP_GRID;
+  const minYStep = Math.ceil(MAP_TOPIC_HEIGHT / MAP_GRID) * MAP_GRID;
+  const maxColumns = Math.floor(MAP_MAX_X / minXStep) + 1;
+  const columns = Math.max(1, Math.min(maxColumns, Math.ceil(Math.sqrt(Math.max(1, traversal.length) * 1.5))));
+  const rows = Math.ceil(traversal.length / columns);
+  const xStep = columns <= 1 ? 0 : Math.max(minXStep, Math.floor(MAP_MAX_X / (columns - 1) / MAP_GRID) * MAP_GRID);
+  const yStep = rows <= 1 ? 0 : Math.max(minYStep, Math.floor(MAP_MAX_Y / (rows - 1) / MAP_GRID) * MAP_GRID);
+
+  traversal.forEach((id, index) => {
+    const row = Math.floor(index / columns);
+    const logicalColumn = index % columns;
+    const column = row % 2 === 0 ? logicalColumn : columns - logicalColumn - 1;
+    positions.set(id, {
+      x: snapped(column * xStep, MAP_MAX_X),
+      y: snapped(row * yStep, MAP_MAX_Y),
+    });
+  });
+  return positions;
 }
