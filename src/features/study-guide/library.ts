@@ -37,7 +37,7 @@ export const StudyGuideLibrary=defineComponent({
     ]);}
     return ()=>h('aside',{id:'study-guide-library',class:'directory-panel',inert:props.collapsed,'aria-hidden':props.collapsed,'aria-label':'Study Guide library'},[
       h('div',{class:'directory-toolbar'},[h('h3','Library'),h('div',{class:'directory-create-actions'},[
-        h('button',{type:'button',class:'icon-button',title:'AI Prompt / JSON Import','aria-label':'AI Prompt / JSON Import',onClick:()=>emit('open-ai-import')},[h(Icon,{name:'ai'})]),
+        h('button',{type:'button',class:'icon-button',title:'Create study guide with AI','aria-label':'Create study guide with AI',onClick:()=>emit('open-ai-import')},[h(Icon,{name:'ai'})]),
         h('button',{type:'button',class:'icon-button',title:'New group','aria-label':'New group',onClick:addGroup},[h(Icon,{name:'folder'})]),
         h('button',{ref:newGuideButton,type:'button',class:'icon-button',title:'New study guide','aria-label':'New study guide',onClick:()=>emit('new-guide')},[h(Icon,{name:'document'})]),
         h('button',{ref:collapseButton,type:'button',class:'icon-button',title:'Minimize library','aria-label':'Minimize library','aria-expanded':true,'aria-controls':'study-guide-library',onClick:()=>emit('toggle-library')},[h(Icon,{name:'panel-close'})])
