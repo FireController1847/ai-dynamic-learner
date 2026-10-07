@@ -1,3 +1,9 @@
+import {
+  SEMANTIC_POLARITY_FAMILIES,
+  SEMANTIC_WORD_FAMILIES,
+  rewriteSemanticPhrases,
+} from './semantic-canonical.ts';
+
 export type AnswerStrictness = 1 | 2 | 3 | 4;
 export type AnswerMatchReason = 'exact' | 'fuzzy' | 'linguistic' | 'semantic' | 'incorrect';
 
@@ -49,21 +55,6 @@ const IRREGULAR_FAMILIES: readonly (readonly string[])[] = [
   ['goose', 'geese'],
   ['tooth', 'teeth'],
   ['foot', 'feet'],
-];
-
-const SEMANTIC_WORD_FAMILIES: readonly (readonly string[])[] = [
-  ['union', 'join', 'combine', 'merge', 'unite'],
-  ['begin', 'start'],
-  ['finish', 'end'],
-  ['buy', 'purchase'],
-  ['remove', 'delete'],
-  ['large', 'big'],
-  ['small', 'little'],
-];
-
-const SEMANTIC_PHRASE_FAMILIES: readonly (readonly string[])[] = [
-  ['for example', 'for instance'],
-  ['because of', 'due to'],
 ];
 
 const irregularLemma = new Map<string, string>();
@@ -197,18 +188,49 @@ function semanticWordConfidence(left: string, right: string): number {
     : 0;
 }
 
-function semanticConfidence(answer: string, response: string): number {
-  const expectedPhrase = normalizeAnswer(answer);
-  const submittedPhrase = normalizeAnswer(response);
-  for (const family of SEMANTIC_PHRASE_FAMILIES) {
-    if (family.includes(expectedPhrase) && family.includes(submittedPhrase)) {
-      return SEMANTIC_PHRASE_CONFIDENCE;
+function sameTokens(left: readonly string[], right: readonly string[]): boolean {
+  return left.length === right.length && left.every((token, index) => token === right[index]);
+}
+
+function wordPolarity(word: string): { family: number; side: 'positive' | 'negative' } | null {
+  for (const [family, polarity] of SEMANTIC_POLARITY_FAMILIES.entries()) {
+    if (polarity.positive.some((member) => morphologyEquivalentWord(word, member))) {
+      return { family, side: 'positive' };
+    }
+    if (polarity.negative.some((member) => morphologyEquivalentWord(word, member))) {
+      return { family, side: 'negative' };
     }
   }
+  return null;
+}
 
-  const expected = answerWords(answer);
-  const submitted = answerWords(response);
+function semanticPolarityConflict(answer: string, response: string): boolean {
+  const expectedRaw = answerWords(answer);
+  const submittedRaw = answerWords(response);
+  if (expectedRaw.includes('not') !== submittedRaw.includes('not')) return true;
+
+  const expected = rewriteSemanticPhrases(expectedRaw).tokens;
+  const submitted = rewriteSemanticPhrases(submittedRaw).tokens;
+  if (expected.length !== submitted.length) return false;
+
+  return expected.some((word, index) => {
+    const left = wordPolarity(word);
+    const right = wordPolarity(submitted[index]!);
+    return left !== null && right !== null &&
+      left.family === right.family && left.side !== right.side;
+  });
+}
+
+function semanticConfidence(answer: string, response: string): number {
+  const expectedRewrite = rewriteSemanticPhrases(answerWords(answer));
+  const submittedRewrite = rewriteSemanticPhrases(answerWords(response));
+  const expected = expectedRewrite.tokens;
+  const submitted = submittedRewrite.tokens;
+
   if (!expected.length || expected.length !== submitted.length) return 0;
+  if ((expectedRewrite.changed || submittedRewrite.changed) && sameTokens(expected, submitted)) {
+    return SEMANTIC_PHRASE_CONFIDENCE;
+  }
 
   let confidence = 1;
   let semanticSubstitution = false;
@@ -218,7 +240,7 @@ function semanticConfidence(answer: string, response: string): number {
     if (wordConfidence < 1) semanticSubstitution = true;
     confidence = Math.min(confidence, wordConfidence);
   }
-  return semanticSubstitution ? confidence : 0;
+  return semanticSubstitution || expectedRewrite.changed || submittedRewrite.changed ? confidence : 0;
 }
 
 function evaluateAnswerInternal(
@@ -238,7 +260,8 @@ function evaluateAnswerInternal(
     return { correct: true, reason: 'linguistic', similarity, confidence: 0.98 };
   }
 
-  if (strictness >= 2 && similarity >= similarityThreshold(expected.length)) {
+  if (strictness >= 2 && !semanticPolarityConflict(expected, submitted) &&
+      similarity >= similarityThreshold(expected.length)) {
     return { correct: true, reason: 'fuzzy', similarity, confidence: similarity };
   }
 
