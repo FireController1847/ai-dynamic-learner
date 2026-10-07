@@ -50,7 +50,7 @@ const COVERAGE_INSTRUCTIONS: Record<PromptCoverage, string> = {
 
 const BULLET_STYLE_INSTRUCTIONS: Record<PromptBulletStyle, string> = {
   phrases: 'Write short note fragments or points, usually about 5–10 words. They do not need to be complete sentences and normally should not end with a period.',
-  thoughts: 'Write every bullet and sub-bullet as an intelligible complete sentence, even if it is short. End each sentence with a period.',
+  thoughts: 'Write every bullet and sub-bullet as a short, intelligible complete sentence. Keep each sentence brief, focused on one idea, and free of unnecessary clauses or explanation. End each sentence with a period.',
 };
 
 export function studyGuideAiPrompt(options: StudyGuideAiPromptOptions = DEFAULT_PROMPT_OPTIONS): string {
