@@ -3,8 +3,6 @@ import { inputValue } from '../../core/dom.ts';
 import { createSection, MAX_BULLETS, MAX_SECTIONS, MAX_TEXT_LENGTH, type GuideSection, type ListGuideData } from './library-model.ts';
 
 const MAX_BULLET_DEPTH = 7;
-const BULLET_MARKERS = ['●', '○', '■', '□', '◆', '◇', '✱', '✳'] as const;
-
 function bulletDepth(value: string): number {
   return Math.min(MAX_BULLET_DEPTH, value.match(/^\t*/)?.[0].length ?? 0);
 }
@@ -17,8 +15,46 @@ function withBulletDepth(value: string, depth: number): string {
   return `${'\t'.repeat(Math.max(0, Math.min(MAX_BULLET_DEPTH, depth)))}${value}`;
 }
 
-function bulletMarker(depth: number): string {
-  return BULLET_MARKERS[Math.max(0, Math.min(MAX_BULLET_DEPTH, depth))] ?? BULLET_MARKERS[0];
+function bulletMarker(depth: number) {
+  const level = Math.max(0, Math.min(MAX_BULLET_DEPTH, depth));
+  const common = {
+    class: 'study-guide-bullet-marker',
+    viewBox: '0 0 16 16',
+    width: 14,
+    height: 14,
+    'aria-hidden': 'true',
+    focusable: 'false',
+  };
+
+  if (level === 0) return h('svg', common, [
+    h('circle', { cx: 8, cy: 8, r: 5.25, fill: 'currentColor', stroke: 'none' }),
+  ]);
+  if (level === 1) return h('svg', common, [
+    h('circle', { cx: 8, cy: 8, r: 5.25, fill: 'none', stroke: 'currentColor', 'stroke-width': 1.8 }),
+  ]);
+  if (level === 2) return h('svg', common, [
+    h('rect', { x: 2.75, y: 2.75, width: 10.5, height: 10.5, rx: 1, fill: 'currentColor', stroke: 'none' }),
+  ]);
+  if (level === 3) return h('svg', common, [
+    h('rect', { x: 2.75, y: 2.75, width: 10.5, height: 10.5, rx: 1, fill: 'none', stroke: 'currentColor', 'stroke-width': 1.8 }),
+  ]);
+  if (level === 4) return h('svg', common, [
+    h('path', { d: 'M8 2.25 13.75 8 8 13.75 2.25 8Z', fill: 'currentColor', stroke: 'none' }),
+  ]);
+  if (level === 5) return h('svg', common, [
+    h('path', { d: 'M8 2.25 13.75 8 8 13.75 2.25 8Z', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.8, 'stroke-linejoin': 'round' }),
+  ]);
+
+  const strokeWidth = level === 6 ? 2.5 : 1.55;
+  return h('svg', common, [
+    h('path', {
+      d: 'M8 2.25v11.5M3.02 5.13l9.96 5.74M12.98 5.13l-9.96 5.74',
+      fill: 'none',
+      stroke: 'currentColor',
+      'stroke-width': strokeWidth,
+      'stroke-linecap': 'round',
+    }),
+  ]);
 }
 
 export const StudyGuideListEditor = defineComponent({
@@ -167,7 +203,7 @@ export const StudyGuideListEditor = defineComponent({
             class: 'study-guide-bullet-row',
             style: { paddingLeft: `${depth * 20}px` },
           }, [
-            h('span', { class: 'study-guide-bullet-marker', 'aria-hidden': 'true' }, bulletMarker(depth)),
+            bulletMarker(depth),
             h('input', {
               ref: (element) => {
                 const key = bulletKey(section, bi);
