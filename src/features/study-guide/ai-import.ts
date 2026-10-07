@@ -1,10 +1,13 @@
-import { computed, defineComponent, h, ref } from 'vue';
+import { computed, defineComponent, h, ref, type PropType } from 'vue';
 import { Icon } from '../../components/icon.ts';
 import { inputValue } from '../../core/dom.ts';
 import { isRecord } from '../../core/validation.ts';
-import { MAX_BULLETS, MAX_NAME_LENGTH, MAX_SECTIONS, MAX_TEXT_LENGTH } from './library-model.ts';
+import {
+  MAX_BULLETS, MAX_NAME_LENGTH, MAX_SECTIONS, MAX_TEXT_LENGTH, MAX_TOPICS, type StudyGuideMode,
+} from './library-model.ts';
 
-const IMPORT_FORMAT = 'dynamic-learner-study-guide';
+const LIST_IMPORT_FORMAT = 'dynamic-learner-study-guide';
+const MAP_IMPORT_FORMAT = 'dynamic-learner-study-guide-map';
 const IMPORT_VERSION = 1;
 const MAX_IMPORT_BULLET_DEPTH = 7;
 const JSON_FENCE = '```';
@@ -24,10 +27,27 @@ export interface SimpleStudyGuideImportSection {
   bullets: string[];
 }
 
-export interface SimpleStudyGuideImport {
+export interface SimpleListStudyGuideImport {
+  mode: 'list';
   title: string;
   sections: SimpleStudyGuideImportSection[];
 }
+
+export interface SimpleMapStudyGuideImportTopic {
+  key: string;
+  title: string;
+  sections: SimpleStudyGuideImportSection[];
+}
+
+export interface SimpleMapStudyGuideImport {
+  mode: 'map';
+  title: string;
+  startTopic: string;
+  topics: SimpleMapStudyGuideImportTopic[];
+  connections: { from: string; to: string }[];
+}
+
+export type SimpleStudyGuideImport = SimpleListStudyGuideImport | SimpleMapStudyGuideImport;
 
 const DEFAULT_PROMPT_OPTIONS: StudyGuideAiPromptOptions = {
   detail: 'balanced',
@@ -52,26 +72,30 @@ const BULLET_STYLE_INSTRUCTIONS: Record<PromptBulletStyle, string> = {
   thoughts: 'Write every bullet and sub-bullet as a short, intelligible complete sentence. Keep each sentence brief, focused on one idea, and free of unnecessary clauses or explanation. End each sentence with a period.',
 };
 
-export function studyGuideAiPrompt(options: StudyGuideAiPromptOptions = DEFAULT_PROMPT_OPTIONS): string {
+function promptIntro(options: StudyGuideAiPromptOptions): string {
   return `Using the source material I supplied immediately before this instruction, create a Dynamic Learner Study Guide.
 
 Write in the style of a capable student taking organized notes during class: compact, practical, and easy to scan. This is a study guide, not a rewritten textbook or transcript.
 
-Silently organize the source into a logical outline, then classify possible study points as high, moderate, or low priority. Use that planning only to decide the final sections, bullets, and sub-bullets; do not output the planning itself.
+Silently organize the source into a logical structure, then classify possible study points as high, moderate, or low priority. Use that planning only to decide the final content; do not output the planning itself.
 
 Selected preferences:
 - Detail: ${DETAIL_INSTRUCTIONS[options.detail]}
 - Coverage: ${COVERAGE_INSTRUCTIONS[options.coverage]}
 - Bullet style: ${BULLET_STYLE_INSTRUCTIONS[options.bulletStyle]}
 
-Condense freely when several facts can be represented by one useful note. Prefer losing low-value detail over making the guide long.
+Condense freely when several facts can be represented by one useful note. Prefer losing low-value detail over making the guide long.`;
+}
+
+function listPrompt(options: StudyGuideAiPromptOptions): string {
+  return `${promptIntro(options)}
 
 Return ONLY one fenced JSON code block, starting with ${JSON_FENCE}json and ending with ${JSON_FENCE}.
 
 Use this structure:
 ${JSON_FENCE}json
 {
-  "format": "${IMPORT_FORMAT}",
+  "format": "${LIST_IMPORT_FORMAT}",
   "version": ${IMPORT_VERSION},
   "title": "Short study guide title",
   "sections": [
@@ -106,6 +130,85 @@ Limits:
 - do not generate IDs, layout, groups, maps, or other Dynamic Learner fields.`;
 }
 
+function mapPrompt(options: StudyGuideAiPromptOptions): string {
+  return `${promptIntro(options)}
+
+Create a connected topic map rather than one long outline. Each topic is a study stop with its own small list-style guide. Connect topics only when the relationship helps a learner move through the material. Choose one sensible starting topic.
+
+The map must be one connected tree: every topic is reachable from the starting topic, there are no loops/cycles, no duplicate connections, and a topic is never connected to itself. Branch where the subject naturally divides. Do not add arbitrary paths merely to make the map look busy.
+
+Return ONLY one fenced JSON code block, starting with ${JSON_FENCE}json and ending with ${JSON_FENCE}.
+
+Use this structure:
+${JSON_FENCE}json
+{
+  "format": "${MAP_IMPORT_FORMAT}",
+  "version": ${IMPORT_VERSION},
+  "title": "Short study guide title",
+  "startTopic": "foundations",
+  "topics": [
+    {
+      "key": "foundations",
+      "title": "Foundations",
+      "sections": [
+        {
+          "title": "Core ideas",
+          "bullets": [
+            {
+              "text": "Key idea",
+              "children": [
+                { "text": "Supporting detail" }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "applications",
+      "title": "Applications",
+      "sections": [
+        {
+          "title": "Using the ideas",
+          "bullets": [
+            { "text": "Application point" }
+          ]
+        }
+      ]
+    }
+  ],
+  "connections": [
+    ["foundations", "applications"]
+  ]
+}
+${JSON_FENCE}
+
+Map rules:
+- "key" is a short unique local reference used only by this JSON response;
+- "startTopic" must match one topic key;
+- each connection is exactly [fromTopicKey, toTopicKey];
+- with N topics, a valid connected tree has exactly N-1 connections;
+- every topic should represent a meaningful conceptual stop, not a single trivia fact;
+- each topic's sections and nested bullets use the same note structure as List mode;
+- preserve important terminology and factual accuracy;
+- do not invent unsupported information.
+
+Limits:
+- title: 1–${MAX_NAME_LENGTH} characters;
+- 1–${MAX_TOPICS} topics;
+- each topic supports up to ${MAX_SECTIONS} sections and ${MAX_BULLETS} bullets/sub-bullets;
+- topic titles, section titles, bullet text, and topic keys must be non-empty plain text no longer than ${MAX_TEXT_LENGTH} characters;
+- at most ${MAX_IMPORT_BULLET_DEPTH + 1} bullet levels;
+- do not generate Dynamic Learner IDs, x/y coordinates, layout, groups, or other application fields. Dynamic Learner owns IDs and map placement.`;
+}
+
+export function studyGuideAiPrompt(
+  options: StudyGuideAiPromptOptions = DEFAULT_PROMPT_OPTIONS,
+  mode: StudyGuideMode = 'list',
+): string {
+  return mode === 'map' ? mapPrompt(options) : listPrompt(options);
+}
+
 function parseImportBullet(
   value: unknown,
   depth: number,
@@ -125,7 +228,7 @@ function parseImportBullet(
 
   state.count += 1;
   if (state.count > MAX_BULLETS) {
-    throw new Error(`A Study Guide can contain up to ${MAX_BULLETS} bullets and sub-bullets.`);
+    throw new Error(`A Study Guide topic can contain up to ${MAX_BULLETS} bullets and sub-bullets.`);
   }
 
   const flattened = [`${'\t'.repeat(depth)}${value.text.trim()}`];
@@ -137,54 +240,151 @@ function parseImportBullet(
   return flattened;
 }
 
+function parseImportSections(
+  value: unknown,
+  state: { count: number },
+  label: string,
+): SimpleStudyGuideImportSection[] {
+  if (!Array.isArray(value) || !value.length || value.length > MAX_SECTIONS) {
+    throw new Error(`${label} must contain 1–${MAX_SECTIONS} sections.`);
+  }
+  return value.map((section, sectionIndex): SimpleStudyGuideImportSection => {
+    if (!isRecord(section) ||
+        Object.keys(section).some((key) => !['title', 'bullets'].includes(key)) ||
+        typeof section.title !== 'string' || !section.title.trim() ||
+        section.title.trim().length > MAX_TEXT_LENGTH ||
+        !Array.isArray(section.bullets) || !section.bullets.length) {
+      throw new Error(`${label}, section ${sectionIndex + 1} is empty, too long, or invalid.`);
+    }
+    const bullets = section.bullets.flatMap((bullet, bulletIndex) =>
+      parseImportBullet(bullet, 0, state, `${label}, section ${sectionIndex + 1}, bullet ${bulletIndex + 1}`));
+    return { title: section.title.trim(), bullets };
+  });
+}
+
 function stripJsonCodeFence(text: string): string {
   const trimmed = text.trim();
   const match = /^\`\`\`(?:json)?\s*([\s\S]*?)\s*\`\`\`$/i.exec(trimmed);
   return match?.[1]?.trim() ?? trimmed;
 }
 
-export function parseStudyGuideAiImport(text: string): SimpleStudyGuideImport {
-  let value: unknown;
+function parsedJson(text: string): unknown {
   try {
-    value = JSON.parse(stripJsonCodeFence(text));
+    return JSON.parse(stripJsonCodeFence(text));
   } catch {
     throw new Error('The pasted content is not valid JSON.');
   }
-
-  if (!isRecord(value) ||
-      Object.keys(value).some((key) => !['format', 'version', 'title', 'sections'].includes(key)) ||
-      value.format !== IMPORT_FORMAT || value.version !== IMPORT_VERSION ||
-      typeof value.title !== 'string' || !value.title.trim() || value.title.trim().length > MAX_NAME_LENGTH ||
-      !Array.isArray(value.sections) || !value.sections.length || value.sections.length > MAX_SECTIONS) {
-    throw new Error('This is not a supported Study Guide import.');
-  }
-
-  const state = { count: 0 };
-  const sections = value.sections.map((section, sectionIndex): SimpleStudyGuideImportSection => {
-    if (!isRecord(section) ||
-        Object.keys(section).some((key) => !['title', 'bullets'].includes(key)) ||
-        typeof section.title !== 'string' || !section.title.trim() || section.title.trim().length > MAX_TEXT_LENGTH ||
-        !Array.isArray(section.bullets) || !section.bullets.length) {
-      throw new Error(`Section ${sectionIndex + 1} is empty, too long, or invalid.`);
-    }
-
-    const bullets = section.bullets.flatMap((bullet, bulletIndex) =>
-      parseImportBullet(bullet, 0, state, `Section ${sectionIndex + 1}, bullet ${bulletIndex + 1}`));
-
-    return { title: section.title.trim(), bullets };
-  });
-
-  return { title: value.title.trim(), sections };
 }
 
-function importBulletCount(value: SimpleStudyGuideImport): number {
+function parseListImport(value: unknown): SimpleListStudyGuideImport {
+  if (!isRecord(value) ||
+      Object.keys(value).some((key) => !['format', 'version', 'title', 'sections'].includes(key)) ||
+      value.format !== LIST_IMPORT_FORMAT || value.version !== IMPORT_VERSION ||
+      typeof value.title !== 'string' || !value.title.trim() || value.title.trim().length > MAX_NAME_LENGTH) {
+    throw new Error('This is not a supported List-mode Study Guide import.');
+  }
+  const state = { count: 0 };
+  return {
+    mode: 'list',
+    title: value.title.trim(),
+    sections: parseImportSections(value.sections, state, 'Study Guide'),
+  };
+}
+
+function parseMapImport(value: unknown): SimpleMapStudyGuideImport {
+  if (!isRecord(value) ||
+      Object.keys(value).some((key) => !['format', 'version', 'title', 'startTopic', 'topics', 'connections'].includes(key)) ||
+      value.format !== MAP_IMPORT_FORMAT || value.version !== IMPORT_VERSION ||
+      typeof value.title !== 'string' || !value.title.trim() || value.title.trim().length > MAX_NAME_LENGTH ||
+      typeof value.startTopic !== 'string' || !value.startTopic.trim() ||
+      !Array.isArray(value.topics) || !value.topics.length || value.topics.length > MAX_TOPICS ||
+      !Array.isArray(value.connections)) {
+    throw new Error('This is not a supported Map-mode Study Guide import.');
+  }
+
+  const keys = new Set<string>();
+  const topics = value.topics.map((topic, topicIndex): SimpleMapStudyGuideImportTopic => {
+    if (!isRecord(topic) ||
+        Object.keys(topic).some((key) => !['key', 'title', 'sections'].includes(key)) ||
+        typeof topic.key !== 'string' || !topic.key.trim() || topic.key.trim().length > MAX_TEXT_LENGTH ||
+        typeof topic.title !== 'string' || !topic.title.trim() || topic.title.trim().length > MAX_TEXT_LENGTH) {
+      throw new Error(`Topic ${topicIndex + 1} is empty, too long, or invalid.`);
+    }
+    const key = topic.key.trim();
+    if (keys.has(key)) throw new Error(`Topic key "${key}" is duplicated.`);
+    keys.add(key);
+    return {
+      key,
+      title: topic.title.trim(),
+      sections: parseImportSections(topic.sections, { count: 0 }, `Topic ${topicIndex + 1}`),
+    };
+  });
+
+  const startTopic = value.startTopic.trim();
+  if (!keys.has(startTopic)) throw new Error('The starting topic does not match a topic key.');
+
+  const pairs = new Set<string>();
+  const adjacency = new Map([...keys].map(key => [key, new Set<string>()]));
+  const connections = value.connections.map((connection, index): { from: string; to: string } => {
+    if (!Array.isArray(connection) || connection.length !== 2 ||
+        typeof connection[0] !== 'string' || typeof connection[1] !== 'string') {
+      throw new Error(`Connection ${index + 1} must be [fromTopicKey, toTopicKey].`);
+    }
+    const from = connection[0].trim();
+    const to = connection[1].trim();
+    if (!from || !to || !keys.has(from) || !keys.has(to)) {
+      throw new Error(`Connection ${index + 1} references an unknown topic.`);
+    }
+    if (from === to) throw new Error(`Connection ${index + 1} connects a topic to itself.`);
+    const pair = [from, to].sort().join('\u0000');
+    if (pairs.has(pair)) throw new Error(`Connection ${index + 1} duplicates an existing path.`);
+    pairs.add(pair);
+    adjacency.get(from)?.add(to);
+    adjacency.get(to)?.add(from);
+    return { from, to };
+  });
+
+  if (connections.length !== topics.length - 1) {
+    throw new Error(`A connected Map-mode Study Guide with ${topics.length} topics needs exactly ${Math.max(0, topics.length - 1)} paths.`);
+  }
+
+  const reached = new Set<string>([startTopic]);
+  const pending = [startTopic];
+  while (pending.length) {
+    const current = pending.shift();
+    if (!current) break;
+    for (const neighbor of adjacency.get(current) ?? []) {
+      if (reached.has(neighbor)) continue;
+      reached.add(neighbor);
+      pending.push(neighbor);
+    }
+  }
+  if (reached.size !== topics.length) {
+    throw new Error('Every Map-mode topic must be connected to the starting topic.');
+  }
+
+  return { mode: 'map', title: value.title.trim(), startTopic, topics, connections };
+}
+
+export function parseStudyGuideAiImport(text: string, mode: StudyGuideMode = 'list'): SimpleStudyGuideImport {
+  const value = parsedJson(text);
+  return mode === 'map' ? parseMapImport(value) : parseListImport(value);
+}
+
+function importBulletCount(value: SimpleListStudyGuideImport): number {
   return value.sections.reduce((count, section) => count + section.bullets.length, 0);
+}
+
+function mapBulletCount(value: SimpleMapStudyGuideImport): number {
+  return value.topics.reduce((total, topic) =>
+    total + topic.sections.reduce((count, section) => count + section.bullets.length, 0), 0);
 }
 
 export const StudyGuideAiImportWorkspace = defineComponent({
   name: 'StudyGuideAiImportWorkspace',
   props: {
     destination: { type: String, required: true },
+    mode: { type: String as PropType<StudyGuideMode>, required: true },
   },
   emits: {
     back: () => true,
@@ -205,7 +405,7 @@ export const StudyGuideAiImportWorkspace = defineComponent({
       detail: detail.value,
       coverage: coverage.value,
       bulletStyle: bulletStyle.value,
-    }));
+    }, props.mode));
 
     async function copyPrompt() {
       try {
@@ -221,7 +421,7 @@ export const StudyGuideAiImportWorkspace = defineComponent({
       problem.value = '';
       candidate.value = null;
       try {
-        candidate.value = parseStudyGuideAiImport(json.value);
+        candidate.value = parseStudyGuideAiImport(json.value, props.mode);
       } catch (error) {
         problem.value = error instanceof Error ? error.message : String(error);
       }
@@ -260,13 +460,46 @@ export const StudyGuideAiImportWorkspace = defineComponent({
       ]);
     }
 
+    function importPreview(value: SimpleStudyGuideImport) {
+      if (value.mode === 'list') {
+        return [
+          h('strong', value.title),
+          h('span', { class: 'study-guide-ai-status' },
+            `${value.sections.length} section${value.sections.length === 1 ? '' : 's'} · ${importBulletCount(value)} bullets and sub-bullets`),
+          h('ul', [
+            ...value.sections.slice(0, 5).map((section) =>
+              h('li', `${section.title} — ${section.bullets.length} item${section.bullets.length === 1 ? '' : 's'}`)),
+            value.sections.length > 5 ? h('li', `…and ${value.sections.length - 5} more sections`) : null,
+          ]),
+        ];
+      }
+
+      const start = value.topics.find(topic => topic.key === value.startTopic);
+      return [
+        h('strong', value.title),
+        h('span', { class: 'study-guide-ai-status' },
+          `${value.topics.length} topic${value.topics.length === 1 ? '' : 's'} · ${value.connections.length} path${value.connections.length === 1 ? '' : 's'} · ${mapBulletCount(value)} bullets and sub-bullets`),
+        h('span', { class: 'study-guide-ai-status' }, 'Starts at ' + (start?.title ?? value.startTopic)),
+        h('ul', [
+          ...value.topics.slice(0, 5).map(topic =>
+            h('li', `${topic.title} — ${topic.sections.length} section${topic.sections.length === 1 ? '' : 's'}`)),
+          value.topics.length > 5 ? h('li', `…and ${value.topics.length - 5} more topics`) : null,
+        ]),
+      ];
+    }
+
+    const modeLabel = computed(() => props.mode === 'map' ? 'Map mode' : 'List mode');
+    const placeholder = computed(() => props.mode === 'map'
+      ? '{\n  "format": "dynamic-learner-study-guide-map",\n  "topics": [\n    ...\n  ],\n  "connections": [\n    ...\n  ]\n}'
+      : '{\n  "format": "dynamic-learner-study-guide",\n  "sections": [\n    ...\n  ]\n}');
+
     return () => h('section', {
       class: 'study-guide-ai-workspace',
       'aria-labelledby': 'study-guide-ai-title',
     }, [
       h('header', { class: 'study-guide-ai-header' }, [
         h('div', { class: 'study-guide-ai-heading' }, [
-          h('span', { class: 'study-guide-ai-kicker' }, 'List mode · Saved in ' + props.destination),
+          h('span', { class: 'study-guide-ai-kicker' }, modeLabel.value + ' · Saved in ' + props.destination),
           h('h2', { id: 'study-guide-ai-title' }, 'Create with AI'),
           h('p', 'Generate a prompt for your AI, then paste its JSON response back here to create the guide.'),
         ]),
@@ -283,7 +516,9 @@ export const StudyGuideAiImportWorkspace = defineComponent({
         tab.value === 'prompt'
           ? h('section', { role: 'tabpanel', class: 'study-guide-ai-panel' }, [
             h('p', { class: 'study-guide-ai-help' },
-              'Give the AI the source material first. Then paste this generated prompt after it. Paste the returned JSON into the JSON Import tab.'),
+              props.mode === 'map'
+                ? 'Give the AI the source material first. The prompt asks it for topic relationships and study content; Dynamic Learner assigns IDs and lays the map out after import.'
+                : 'Give the AI the source material first. Then paste this generated prompt after it. Paste the returned JSON into the JSON Import tab.'),
             h('div', { class: 'study-guide-ai-options' }, [
               optionField('study-guide-ai-detail', 'Detail', detail.value, [
                 { value: 'concise', label: 'Concise' },
@@ -326,11 +561,13 @@ export const StudyGuideAiImportWorkspace = defineComponent({
           ])
           : h('section', { role: 'tabpanel', class: 'study-guide-ai-panel' }, [
             h('p', { class: 'study-guide-ai-help' },
-              'Paste the JSON code block returned by the AI. Dynamic Learner removes the code fence if present and validates the JSON before creating anything.'),
+              props.mode === 'map'
+                ? 'Paste the JSON code block returned by the AI. Dynamic Learner validates every topic and path before creating anything, then assigns IDs and map positions.'
+                : 'Paste the JSON code block returned by the AI. Dynamic Learner removes the code fence if present and validates the JSON before creating anything.'),
             h('textarea', {
               value: json.value,
               rows: 12,
-              placeholder: '{\n  "format": "dynamic-learner-study-guide",\n  "sections": [\n    ...\n  ]\n}',
+              placeholder: placeholder.value,
               'aria-label': 'Study Guide JSON import',
               class: 'study-guide-ai-json',
               onInput: (event: Event) => {
@@ -345,16 +582,7 @@ export const StudyGuideAiImportWorkspace = defineComponent({
             ]),
             h('div', { class: 'study-guide-ai-preview-slot' }, [
               candidate.value ? h('div', { class: 'study-guide-ai-preview' }, [
-                h('strong', candidate.value.title),
-                h('span', { class: 'study-guide-ai-status' },
-                  `${candidate.value.sections.length} section${candidate.value.sections.length === 1 ? '' : 's'} · ${importBulletCount(candidate.value)} bullets and sub-bullets`),
-                h('ul', [
-                  ...candidate.value.sections.slice(0, 5).map((section) =>
-                    h('li', `${section.title} — ${section.bullets.length} item${section.bullets.length === 1 ? '' : 's'}`)),
-                  candidate.value.sections.length > 5
-                    ? h('li', `…and ${candidate.value.sections.length - 5} more sections`)
-                    : null,
-                ]),
+                ...importPreview(candidate.value),
                 h('button', {
                   type: 'button',
                   class: 'card-primary-button',
