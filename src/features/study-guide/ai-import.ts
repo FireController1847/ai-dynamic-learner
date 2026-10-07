@@ -33,7 +33,7 @@ export interface SimpleStudyGuideImport {
 const DEFAULT_PROMPT_OPTIONS: StudyGuideAiPromptOptions = {
   detail: 'balanced',
   coverage: 'balanced',
-  bulletStyle: 'phrases',
+  bulletStyle: 'thoughts',
 };
 
 const DETAIL_INSTRUCTIONS: Record<PromptDetail, string> = {
