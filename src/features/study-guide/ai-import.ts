@@ -49,21 +49,11 @@ const COVERAGE_INSTRUCTIONS: Record<PromptCoverage, string> = {
 };
 
 const BULLET_STYLE_INSTRUCTIONS: Record<PromptBulletStyle, string> = {
-  phrases: 'Prefer short note fragments, usually about 5–10 words.',
-  thoughts: 'Use compact self-contained thoughts with no unnecessary wording.',
+  phrases: 'Write short note fragments or points, usually about 5–10 words. They do not need to be complete sentences and normally should not end with a period.',
+  thoughts: 'Write every bullet and sub-bullet as an intelligible complete sentence, even if it is short. End each sentence with a period.',
 };
 
-function fullSentencesAllowed(options: StudyGuideAiPromptOptions): boolean {
-  return options.detail === 'detailed' &&
-    options.coverage === 'comprehensive' &&
-    options.bulletStyle === 'thoughts';
-}
-
 export function studyGuideAiPrompt(options: StudyGuideAiPromptOptions = DEFAULT_PROMPT_OPTIONS): string {
-  const sentenceRule = fullSentencesAllowed(options)
-    ? 'Full sentences are allowed, but keep them brief and note-like.'
-    : 'Avoid full sentences when a short phrase or fragment communicates the point clearly.';
-
   return `Using the source material I supplied immediately before this instruction, create a Dynamic Learner Study Guide.
 
 Write in the style of a capable student taking organized notes during class: compact, practical, and easy to scan. This is a study guide, not a rewritten textbook or transcript.
@@ -74,7 +64,6 @@ Selected preferences:
 - Detail: ${DETAIL_INSTRUCTIONS[options.detail]}
 - Coverage: ${COVERAGE_INSTRUCTIONS[options.coverage]}
 - Bullet style: ${BULLET_STYLE_INSTRUCTIONS[options.bulletStyle]}
-- ${sentenceRule}
 
 Condense freely when several facts can be represented by one useful note. Prefer losing low-value detail over making the guide long.
 
