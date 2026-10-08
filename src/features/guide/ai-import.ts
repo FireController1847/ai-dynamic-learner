@@ -4,11 +4,13 @@ import { inputValue } from '../../core/dom.ts';
 import { isRecord } from '../../core/validation.ts';
 import {
   MAP_GRID, MAP_MAX_X, MAP_MAX_Y, MAP_TOPIC_HEIGHT, MAP_TOPIC_WIDTH,
-  MAX_BULLETS, MAX_NAME_LENGTH, MAX_SECTIONS, MAX_TEXT_LENGTH, MAX_TOPICS, type StudyGuideMode,
+  MAX_BULLETS, MAX_NAME_LENGTH, MAX_SECTIONS, MAX_TEXT_LENGTH, MAX_TOPICS, type GuideMode,
 } from './library-model.ts';
 
-const LIST_IMPORT_FORMAT = 'dynamic-learner-study-guide';
-const MAP_IMPORT_FORMAT = 'dynamic-learner-study-guide-map';
+const LIST_IMPORT_FORMAT = 'dynamic-learner-guide';
+const MAP_IMPORT_FORMAT = 'dynamic-learner-guide-map';
+const LEGACY_LIST_IMPORT_FORMAT = 'dynamic-learner-study-guide';
+const LEGACY_MAP_IMPORT_FORMAT = 'dynamic-learner-study-guide-map';
 const IMPORT_VERSION = 1;
 const MAX_IMPORT_BULLET_DEPTH = 7;
 const JSON_FENCE = '```';
@@ -17,42 +19,42 @@ type PromptDetail = 'concise' | 'balanced' | 'detailed';
 type PromptCoverage = 'essentials' | 'balanced' | 'comprehensive';
 type PromptBulletStyle = 'phrases' | 'thoughts';
 
-export interface StudyGuideAiPromptOptions {
+export interface GuideAiPromptOptions {
   detail: PromptDetail;
   coverage: PromptCoverage;
   bulletStyle: PromptBulletStyle;
 }
 
-export interface SimpleStudyGuideImportSection {
+export interface SimpleGuideImportSection {
   title: string;
   bullets: string[];
 }
 
-export interface SimpleListStudyGuideImport {
+export interface SimpleListGuideImport {
   mode: 'list';
   title: string;
-  sections: SimpleStudyGuideImportSection[];
+  sections: SimpleGuideImportSection[];
 }
 
-export interface SimpleMapStudyGuideImportTopic {
+export interface SimpleMapGuideImportTopic {
   key: string;
   title: string;
   description?: string;
   position?: readonly [number, number];
-  sections: SimpleStudyGuideImportSection[];
+  sections: SimpleGuideImportSection[];
 }
 
-export interface SimpleMapStudyGuideImport {
+export interface SimpleMapGuideImport {
   mode: 'map';
   title: string;
   startTopic: string;
-  topics: SimpleMapStudyGuideImportTopic[];
+  topics: SimpleMapGuideImportTopic[];
   connections: { from: string; to: string }[];
 }
 
-export type SimpleStudyGuideImport = SimpleListStudyGuideImport | SimpleMapStudyGuideImport;
+export type SimpleGuideImport = SimpleListGuideImport | SimpleMapGuideImport;
 
-const DEFAULT_PROMPT_OPTIONS: StudyGuideAiPromptOptions = {
+const DEFAULT_PROMPT_OPTIONS: GuideAiPromptOptions = {
   detail: 'balanced',
   coverage: 'balanced',
   bulletStyle: 'thoughts',
@@ -75,13 +77,13 @@ const BULLET_STYLE_INSTRUCTIONS: Record<PromptBulletStyle, string> = {
   thoughts: 'Write every bullet and sub-bullet as a short, intelligible complete sentence. Keep each sentence brief, focused on one idea, and free of unnecessary clauses or explanation. End each sentence with a period.',
 };
 
-function promptIntro(options: StudyGuideAiPromptOptions, mode: StudyGuideMode): string {
+function promptIntro(options: GuideAiPromptOptions, mode: GuideMode): string {
   const planning = mode === 'list'
     ? 'Silently organize the source into a logical outline, then classify possible study points as high, moderate, or low priority. Use that planning only to decide the final sections, bullets, and sub-bullets; do not output the planning itself.'
     : 'Silently organize the source into a logical topic structure, then classify possible study points as high, moderate, or low priority. Use that planning only to decide the final topics, paths, sections, and bullets; do not output the planning itself.';
-  return `Using the source material I supplied immediately before this instruction, create a Dynamic Learner Study Guide.
+  return `Using the source material I supplied immediately before this instruction, create a Dynamic Learner Guide.
 
-Write in the style of a capable student taking organized notes during class: compact, practical, and easy to scan. This is a study guide, not a rewritten textbook or transcript.
+Write in the style of a capable student taking organized notes during class: compact, practical, and easy to scan. This is a guide, not a rewritten textbook or transcript.
 
 ${planning}
 
@@ -95,7 +97,7 @@ Condense freely when several facts can be represented by one useful note. Prefer
 Do NOT include citations, references, footnotes, source annotations, source lists, or citation/source URLs anywhere in the response. Do not emit ChatGPT citation markers or content-reference tokens such as :chatgpt-content-reference{...}, :contentReference[...]{...}, or cite.... Omit citations even if the source material contains them. The JSON must contain study content only.`;
 }
 
-function listPrompt(options: StudyGuideAiPromptOptions): string {
+function listPrompt(options: GuideAiPromptOptions): string {
   return `${promptIntro(options, 'list')}
 
 Return ONLY one fenced JSON code block, starting with ${JSON_FENCE}json and ending with ${JSON_FENCE}.
@@ -105,7 +107,7 @@ ${JSON_FENCE}json
 {
   "format": "${LIST_IMPORT_FORMAT}",
   "version": ${IMPORT_VERSION},
-  "title": "Short study guide title",
+  "title": "Short guide title",
   "sections": [
     {
       "title": "Major topic",
@@ -138,7 +140,7 @@ Limits:
 - do not generate IDs, layout, groups, maps, or other Dynamic Learner fields.`;
 }
 
-function mapPrompt(options: StudyGuideAiPromptOptions): string {
+function mapPrompt(options: GuideAiPromptOptions): string {
   return `${promptIntro(options, 'map')}
 
 Create a connected topic map that feels like an adventurous path the learner can explore, not a plain outline drawn as boxes. Each topic is a study stop with its own small list-style guide and an optional short introduction. Put the topics in a useful learning order so one stop naturally leads to the next.
@@ -169,7 +171,7 @@ ${JSON_FENCE}json
 {
   "format": "${MAP_IMPORT_FORMAT}",
   "version": ${IMPORT_VERSION},
-  "title": "Short study guide title",
+  "title": "Short guide title",
   "startTopic": "foundations",
   "topics": [
     {
@@ -284,9 +286,9 @@ Limits:
 - do not generate Dynamic Learner IDs, groups, or other application fields. Dynamic Learner validates suggested positions and owns the stored map data.`;
 }
 
-export function studyGuideAiPrompt(
-  options: StudyGuideAiPromptOptions = DEFAULT_PROMPT_OPTIONS,
-  mode: StudyGuideMode = 'list',
+export function guideAiPrompt(
+  options: GuideAiPromptOptions = DEFAULT_PROMPT_OPTIONS,
+  mode: GuideMode = 'list',
 ): string {
   return mode === 'map' ? mapPrompt(options) : listPrompt(options);
 }
@@ -310,7 +312,7 @@ function parseImportBullet(
 
   state.count += 1;
   if (state.count > MAX_BULLETS) {
-    throw new Error(`A Study Guide section set can contain up to ${MAX_BULLETS} bullets and sub-bullets.`);
+    throw new Error(`A Guide section set can contain up to ${MAX_BULLETS} bullets and sub-bullets.`);
   }
 
   const flattened = [`${'\t'.repeat(depth)}${value.text.trim()}`];
@@ -326,11 +328,11 @@ function parseImportSections(
   value: unknown,
   state: { count: number },
   label: string,
-): SimpleStudyGuideImportSection[] {
+): SimpleGuideImportSection[] {
   if (!Array.isArray(value) || !value.length || value.length > MAX_SECTIONS) {
     throw new Error(`${label} must contain 1–${MAX_SECTIONS} sections.`);
   }
-  return value.map((section, sectionIndex): SimpleStudyGuideImportSection => {
+  return value.map((section, sectionIndex): SimpleGuideImportSection => {
     if (!isRecord(section) ||
         Object.keys(section).some((key) => !['title', 'bullets'].includes(key)) ||
         typeof section.title !== 'string' || !section.title.trim() ||
@@ -366,34 +368,34 @@ function parsedJson(text: string): unknown {
   }
 }
 
-function parseListImport(value: unknown): SimpleListStudyGuideImport {
+function parseListImport(value: unknown): SimpleListGuideImport {
   if (!isRecord(value) ||
       Object.keys(value).some((key) => !['format', 'version', 'title', 'sections'].includes(key)) ||
-      value.format !== LIST_IMPORT_FORMAT || value.version !== IMPORT_VERSION ||
+      (value.format !== LIST_IMPORT_FORMAT && value.format !== LEGACY_LIST_IMPORT_FORMAT) || value.version !== IMPORT_VERSION ||
       typeof value.title !== 'string' || !value.title.trim() || value.title.trim().length > MAX_NAME_LENGTH) {
-    throw new Error('This is not a supported List-mode Study Guide import.');
+    throw new Error('This is not a supported List-mode Guide import.');
   }
   const state = { count: 0 };
   return {
     mode: 'list',
     title: value.title.trim(),
-    sections: parseImportSections(value.sections, state, 'Study Guide'),
+    sections: parseImportSections(value.sections, state, 'Guide'),
   };
 }
 
-function parseMapImport(value: unknown): SimpleMapStudyGuideImport {
+function parseMapImport(value: unknown): SimpleMapGuideImport {
   if (!isRecord(value) ||
       Object.keys(value).some((key) => !['format', 'version', 'title', 'startTopic', 'topics', 'connections'].includes(key)) ||
-      value.format !== MAP_IMPORT_FORMAT || value.version !== IMPORT_VERSION ||
+      (value.format !== MAP_IMPORT_FORMAT && value.format !== LEGACY_MAP_IMPORT_FORMAT) || value.version !== IMPORT_VERSION ||
       typeof value.title !== 'string' || !value.title.trim() || value.title.trim().length > MAX_NAME_LENGTH ||
       typeof value.startTopic !== 'string' || !value.startTopic.trim() ||
       !Array.isArray(value.topics) || !value.topics.length || value.topics.length > MAX_TOPICS ||
       !Array.isArray(value.connections)) {
-    throw new Error('This is not a supported Map-mode Study Guide import.');
+    throw new Error('This is not a supported Map-mode Guide import.');
   }
 
   const keys = new Set<string>();
-  const topics = value.topics.map((topic, topicIndex): SimpleMapStudyGuideImportTopic => {
+  const topics = value.topics.map((topic, topicIndex): SimpleMapGuideImportTopic => {
     if (!isRecord(topic) ||
         Object.keys(topic).some((key) => !['key', 'title', 'description', 'position', 'sections'].includes(key)) ||
         typeof topic.key !== 'string' || !topic.key.trim() || topic.key.trim().length > MAX_TEXT_LENGTH ||
@@ -466,7 +468,7 @@ function parseMapImport(value: unknown): SimpleMapStudyGuideImport {
   });
 
   if (connections.length !== topics.length - 1) {
-    throw new Error(`A connected Map-mode Study Guide with ${topics.length} topics needs exactly ${Math.max(0, topics.length - 1)} paths.`);
+    throw new Error(`A connected Map-mode Guide with ${topics.length} topics needs exactly ${Math.max(0, topics.length - 1)} paths.`);
   }
 
   const reached = new Set<string>([startTopic]);
@@ -487,30 +489,30 @@ function parseMapImport(value: unknown): SimpleMapStudyGuideImport {
   return { mode: 'map', title: value.title.trim(), startTopic, topics, connections };
 }
 
-export function parseStudyGuideAiImport(text: string, mode: StudyGuideMode = 'list'): SimpleStudyGuideImport {
+export function parseGuideAiImport(text: string, mode: GuideMode = 'list'): SimpleGuideImport {
   const value = parsedJson(text);
   return mode === 'map' ? parseMapImport(value) : parseListImport(value);
 }
 
-function importBulletCount(value: SimpleListStudyGuideImport): number {
+function importBulletCount(value: SimpleListGuideImport): number {
   return value.sections.reduce((count, section) => count + section.bullets.length, 0);
 }
 
-function mapBulletCount(value: SimpleMapStudyGuideImport): number {
+function mapBulletCount(value: SimpleMapGuideImport): number {
   return value.topics.reduce((total, topic) =>
     total + topic.sections.reduce((count, section) => count + section.bullets.length, 0), 0);
 }
 
-export const StudyGuideAiImportWorkspace = defineComponent({
-  name: 'StudyGuideAiImportWorkspace',
+export const GuideAiImportWorkspace = defineComponent({
+  name: 'GuideAiImportWorkspace',
   props: {
     destination: { type: String, required: true },
-    mode: { type: String as PropType<StudyGuideMode>, required: true },
+    mode: { type: String as PropType<GuideMode>, required: true },
   },
   emits: {
     back: () => true,
     cancel: () => true,
-    import: (_value: SimpleStudyGuideImport) => true,
+    import: (_value: SimpleGuideImport) => true,
   },
   setup(props, { emit }) {
     const tab = ref<'prompt' | 'import'>('prompt');
@@ -526,10 +528,10 @@ export const StudyGuideAiImportWorkspace = defineComponent({
     const handoff = ref<'idle' | 'waiting' | 'ready'>('idle');
     const jsonInput = ref<HTMLTextAreaElement | null>(null);
     const responseReadyButton = ref<HTMLButtonElement | null>(null);
-    const candidate = ref<SimpleStudyGuideImport | null>(null);
+    const candidate = ref<SimpleGuideImport | null>(null);
     let copyTimer: number | null = null;
     let focusAfterCopy = false;
-    const prompt = computed(() => studyGuideAiPrompt({
+    const prompt = computed(() => guideAiPrompt({
       detail: detail.value,
       coverage: coverage.value,
       bulletStyle: bulletStyle.value,
@@ -572,13 +574,13 @@ export const StudyGuideAiImportWorkspace = defineComponent({
       const input = jsonInput.value;
       if (!input) return;
       input.focus({ preventScroll: true });
-      // The Study Guide detail, not the page or textarea, owns this scrollbar.
+      // The Guide detail, not the page or textarea, owns this scrollbar.
       // Align the instructions above the paste field so the next step stays clear.
       window.requestAnimationFrame(() => {
         if (!input.isConnected) return;
-        const container = input.closest<HTMLElement>('.study-guide-detail');
-        const instructions = input.closest('.study-guide-ai-panel')
-          ?.querySelector<HTMLElement>('.study-guide-ai-handoff.is-ready');
+        const container = input.closest<HTMLElement>('.guide-detail');
+        const instructions = input.closest('.guide-ai-panel')
+          ?.querySelector<HTMLElement>('.guide-ai-handoff.is-ready');
         if (!container || !instructions) return;
         const offset = instructions.getBoundingClientRect().top - container.getBoundingClientRect().top - 24;
         container.scrollTo({
@@ -592,7 +594,7 @@ export const StudyGuideAiImportWorkspace = defineComponent({
       problem.value = '';
       candidate.value = null;
       try {
-        candidate.value = parseStudyGuideAiImport(json.value, props.mode);
+        candidate.value = parseGuideAiImport(json.value, props.mode);
       } catch (error) {
         problem.value = error instanceof Error ? error.message : String(error);
       }
@@ -630,7 +632,7 @@ export const StudyGuideAiImportWorkspace = defineComponent({
       options: readonly { value: T; label: string }[],
       change: (value: T) => void,
     ) {
-      return h('label', { for: id, class: 'study-guide-ai-option' }, [
+      return h('label', { for: id, class: 'guide-ai-option' }, [
         h('span', label),
         h('select', {
           id,
@@ -643,11 +645,11 @@ export const StudyGuideAiImportWorkspace = defineComponent({
       ]);
     }
 
-    function importPreview(value: SimpleStudyGuideImport) {
+    function importPreview(value: SimpleGuideImport) {
       if (value.mode === 'list') {
         return [
           h('strong', value.title),
-          h('span', { class: 'study-guide-ai-status' },
+          h('span', { class: 'guide-ai-status' },
             `${value.sections.length} section${value.sections.length === 1 ? '' : 's'} · ${importBulletCount(value)} bullets and sub-bullets`),
           h('ul', [
             ...value.sections.slice(0, 5).map((section) =>
@@ -660,9 +662,9 @@ export const StudyGuideAiImportWorkspace = defineComponent({
       const start = value.topics.find(topic => topic.key === value.startTopic);
       return [
         h('strong', value.title),
-        h('span', { class: 'study-guide-ai-status' },
+        h('span', { class: 'guide-ai-status' },
           `${value.topics.length} topic${value.topics.length === 1 ? '' : 's'} · ${value.connections.length} path${value.connections.length === 1 ? '' : 's'} · ${mapBulletCount(value)} bullets and sub-bullets`),
-        h('span', { class: 'study-guide-ai-status' }, 'Starts at ' + (start?.title ?? value.startTopic)),
+        h('span', { class: 'guide-ai-status' }, 'Starts at ' + (start?.title ?? value.startTopic)),
         h('ul', [
           ...value.topics.slice(0, 5).map(topic =>
             h('li', `${topic.title} — ${topic.sections.length} section${topic.sections.length === 1 ? '' : 's'}`)),
@@ -673,84 +675,84 @@ export const StudyGuideAiImportWorkspace = defineComponent({
 
     const modeLabel = computed(() => props.mode === 'map' ? 'Map mode' : 'List mode');
     const placeholder = computed(() => props.mode === 'map'
-      ? '{\n  "format": "dynamic-learner-study-guide-map",\n  "topics": [\n    ...\n  ],\n  "connections": [\n    ...\n  ]\n}'
-      : '{\n  "format": "dynamic-learner-study-guide",\n  "sections": [\n    ...\n  ]\n}');
+      ? '{\n  "format": "dynamic-learner-guide-map",\n  "topics": [\n    ...\n  ],\n  "connections": [\n    ...\n  ]\n}'
+      : '{\n  "format": "dynamic-learner-guide",\n  "sections": [\n    ...\n  ]\n}');
 
     return () => h('section', {
-      class: 'study-guide-ai-workspace',
-      'aria-labelledby': 'study-guide-ai-title',
+      class: 'guide-ai-workspace',
+      'aria-labelledby': 'guide-ai-title',
     }, [
-      h('header', { class: 'study-guide-ai-header' }, [
-        h('div', { class: 'study-guide-ai-heading' }, [
-          h('span', { class: 'study-guide-ai-kicker' }, modeLabel.value + ' · Saved in ' + props.destination),
-          h('h2', { id: 'study-guide-ai-title' }, 'Create with AI'),
+      h('header', { class: 'guide-ai-header' }, [
+        h('div', { class: 'guide-ai-heading' }, [
+          h('span', { class: 'guide-ai-kicker' }, modeLabel.value + ' · Saved in ' + props.destination),
+          h('h2', { id: 'guide-ai-title' }, 'Create with AI'),
           h('p', 'Generate a prompt for your AI, then paste its JSON response back here to create the guide.'),
         ]),
-        h('div', { class: 'study-guide-ai-actions' }, [
+        h('div', { class: 'guide-ai-actions' }, [
           h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('back') }, 'Back'),
           h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel') }, 'Cancel'),
         ]),
       ]),
-      h('div', { class: 'study-guide-ai-content' }, [
-        h('div', { role: 'tablist', 'aria-label': 'Study Guide import method', class: 'study-guide-ai-tabs' }, [
+      h('div', { class: 'guide-ai-content' }, [
+        h('div', { role: 'tablist', 'aria-label': 'Guide import method', class: 'guide-ai-tabs' }, [
           tabButton('prompt', 'AI Prompt'),
           tabButton('import', 'JSON Import'),
         ]),
-        h('div', { class: ['study-guide-ai-tab-frame', { 'is-backward': tabDirection.value === 'backward' }] }, [
-          h(Transition, { name: 'study-guide-ai-tab', mode: 'out-in', onAfterEnter: afterTabEntered }, {
+        h('div', { class: ['guide-ai-tab-frame', { 'is-backward': tabDirection.value === 'backward' }] }, [
+          h(Transition, { name: 'guide-ai-tab', mode: 'out-in', onAfterEnter: afterTabEntered }, {
             default: () => tab.value === 'prompt'
-          ? h('section', { key: 'prompt', role: 'tabpanel', class: 'study-guide-ai-panel' }, [
-            h('p', { class: 'study-guide-ai-help' },
+          ? h('section', { key: 'prompt', role: 'tabpanel', class: 'guide-ai-panel' }, [
+            h('p', { class: 'guide-ai-help' },
               props.mode === 'map'
                 ? 'Give the AI the source material first. The prompt asks it for topic relationships and study content; Dynamic Learner assigns IDs and lays the map out after import.'
                 : 'Give the AI the source material first. Then paste this generated prompt after it. Paste the returned JSON into the JSON Import tab.'),
-            h('div', { class: 'study-guide-ai-options' }, [
-              optionField('study-guide-ai-detail', 'Detail', detail.value, [
+            h('div', { class: 'guide-ai-options' }, [
+              optionField('guide-ai-detail', 'Detail', detail.value, [
                 { value: 'concise', label: 'Concise' },
                 { value: 'balanced', label: 'Balanced' },
                 { value: 'detailed', label: 'Detailed' },
               ], (value) => { detail.value = value; }),
-              optionField('study-guide-ai-coverage', 'Coverage', coverage.value, [
+              optionField('guide-ai-coverage', 'Coverage', coverage.value, [
                 { value: 'essentials', label: 'Essentials only' },
                 { value: 'balanced', label: 'Balanced' },
                 { value: 'comprehensive', label: 'Comprehensive' },
               ], (value) => { coverage.value = value; }),
-              optionField('study-guide-ai-bullet-style', 'Bullet style', bulletStyle.value, [
+              optionField('guide-ai-bullet-style', 'Bullet style', bulletStyle.value, [
                 { value: 'phrases', label: 'Key phrases' },
                 { value: 'thoughts', label: 'Complete thoughts' },
               ], (value) => { bulletStyle.value = value; }),
             ]),
-            h('div', { class: 'study-guide-ai-copy-row' }, [
-              h('div', { class: 'study-guide-ai-copy-actions' }, [
+            h('div', { class: 'guide-ai-copy-row' }, [
+              h('div', { class: 'guide-ai-copy-actions' }, [
                 h('button', {
                   type: 'button',
-                  class: ['card-primary-button study-guide-ai-copy-button', { 'is-copied': copyAnimating.value }],
+                  class: ['card-primary-button guide-ai-copy-button', { 'is-copied': copyAnimating.value }],
                   onClick: copyPrompt,
                 }, copyAnimating.value ? '✓ Copied!' : 'Copy prompt'),
                 h('button', {
                   type: 'button',
-                  class: 'quiet-button study-guide-ai-prompt-toggle',
+                  class: 'quiet-button guide-ai-prompt-toggle',
                   title: showPrompt.value ? 'Hide prompt' : 'Show prompt',
                   'aria-label': showPrompt.value ? 'Hide generated prompt' : 'Show generated prompt',
                   'aria-expanded': showPrompt.value,
-                  'aria-controls': 'study-guide-ai-prompt-preview',
+                  'aria-controls': 'guide-ai-prompt-preview',
                   onClick: () => { showPrompt.value = !showPrompt.value; },
                 }, [h(Icon, { name: showPrompt.value ? 'chevron-up' : 'chevron-down' })]),
               ]),
-              copyStatus.value ? h('span', { role: 'status', class: 'study-guide-ai-status' }, copyStatus.value) : null,
+              copyStatus.value ? h('span', { role: 'status', class: 'guide-ai-status' }, copyStatus.value) : null,
             ]),
             showPrompt.value ? h('textarea', {
-              id: 'study-guide-ai-prompt-preview',
+              id: 'guide-ai-prompt-preview',
               value: prompt.value,
               readonly: true,
               rows: 17,
-              'aria-label': 'AI Study Guide prompt',
-              class: 'study-guide-ai-prompt-preview',
+              'aria-label': 'AI Guide prompt',
+              class: 'guide-ai-prompt-preview',
             }) : null,
           ])
-          : h('section', { key: 'import', role: 'tabpanel', class: 'study-guide-ai-panel' }, [
+          : h('section', { key: 'import', role: 'tabpanel', class: 'guide-ai-panel' }, [
             handoff.value === 'waiting'
-              ? h('div', { class: 'study-guide-ai-handoff', role: 'status' }, [
+              ? h('div', { class: 'guide-ai-handoff', role: 'status' }, [
                 h('strong', 'Prompt copied — send it to your AI.'),
                 h('p', 'Paste the copied prompt after your source material. Wait for the AI to finish generating its JSON response, then come back here.'),
                 h('button', {
@@ -762,15 +764,15 @@ export const StudyGuideAiImportWorkspace = defineComponent({
               ])
               : null,
             handoff.value === 'ready'
-              ? h('div', { class: 'study-guide-ai-handoff is-ready' }, [
+              ? h('div', { class: 'guide-ai-handoff is-ready' }, [
                 h('strong', 'Great — bring the JSON back here.'),
                 h('ol', [
                   h('li', 'Paste the AI response into the box below.'),
                   h('li', 'Choose Validate JSON.'),
-                  h('li', 'Review the preview, then choose Import study guide.'),
+                  h('li', 'Review the preview, then choose Import guide.'),
                 ]),
               ])
-              : h('p', { class: 'study-guide-ai-help' },
+              : h('p', { class: 'guide-ai-help' },
                 props.mode === 'map'
                   ? 'Paste the JSON code block returned by the AI. Dynamic Learner validates every topic and path before creating anything, then assigns IDs and map positions.'
                   : 'Paste the JSON code block returned by the AI. Dynamic Learner removes the code fence if present and validates the JSON before creating anything.'),
@@ -780,26 +782,26 @@ export const StudyGuideAiImportWorkspace = defineComponent({
                 value: json.value,
                 rows: 12,
                 placeholder: placeholder.value,
-                'aria-label': 'Study Guide JSON import',
-                class: 'study-guide-ai-json',
+                'aria-label': 'Guide JSON import',
+                class: 'guide-ai-json',
                 onInput: (event: Event) => {
                   json.value = inputValue(event);
                   candidate.value = null;
                   problem.value = '';
                 },
               }),
-              h('div', { class: 'study-guide-ai-validate-row' }, [
+              h('div', { class: 'guide-ai-validate-row' }, [
                 h('button', { type: 'button', class: 'quiet-button', disabled: !json.value.trim(), onClick: preview }, 'Validate JSON'),
-                problem.value ? h('span', { role: 'alert', class: 'study-guide-ai-error' }, problem.value) : null,
+                problem.value ? h('span', { role: 'alert', class: 'guide-ai-error' }, problem.value) : null,
               ]),
-              h('div', { class: 'study-guide-ai-preview-slot' }, [
-                candidate.value ? h('div', { class: 'study-guide-ai-preview' }, [
+              h('div', { class: 'guide-ai-preview-slot' }, [
+                candidate.value ? h('div', { class: 'guide-ai-preview' }, [
                   ...importPreview(candidate.value),
                   h('button', {
                     type: 'button',
                     class: 'card-primary-button',
                     onClick: () => { if (candidate.value) emit('import', candidate.value); },
-                  }, 'Import study guide'),
+                  }, 'Import guide'),
                 ]) : null,
               ]),
             ] : null,

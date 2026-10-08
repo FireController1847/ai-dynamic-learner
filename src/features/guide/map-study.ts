@@ -11,8 +11,8 @@ interface StudyPoint {
   bullet: string;
 }
 
-export const StudyGuideMapStudy = defineComponent({
-  name: 'StudyGuideMapStudy',
+export const GuideMapStudy = defineComponent({
+  name: 'GuideMapStudy',
   props: {
     data: { type: Object as PropType<MapGuideData>, required: true },
     guideName: { type: String, required: true },
@@ -119,7 +119,7 @@ export const StudyGuideMapStudy = defineComponent({
         window.requestAnimationFrame(() => {
           const panel = topicPanel.value;
           if (!panel || !focused.value || travelling.value) return;
-          const bullets = panel.querySelectorAll<HTMLElement>('.study-guide-study-bullet');
+          const bullets = panel.querySelectorAll<HTMLElement>('.guide-study-bullet');
           const latest = bullets.item(bullets.length - 1);
           if (!latest) return;
 
@@ -128,8 +128,8 @@ export const StudyGuideMapStudy = defineComponent({
           // Keep the freshly revealed point readable; include the next action
           // when it fits, so learners can continue without manual scrolling.
           const action = panel.querySelector<HTMLElement>(
-            '.study-guide-study-reveal, .study-guide-study-topic-inner > .card-primary-button, ' +
-            '.study-guide-study-branch button, .study-guide-study-backtrack button, .study-guide-study-finished button',
+            '.guide-study-reveal, .guide-study-topic-inner > .card-primary-button, ' +
+            '.guide-study-branch button, .guide-study-backtrack button, .guide-study-finished button',
           );
           const actionBottom = action?.getBoundingClientRect().bottom ?? point.bottom;
           const bottomOverflow = Math.max(0, Math.max(point.bottom, actionBottom) - (viewport.bottom - 24));
@@ -287,31 +287,31 @@ export const StudyGuideMapStudy = defineComponent({
         bySection.set(point.sectionId, entry);
       }
       return [...bySection.entries()].map(([sectionId, entry]) => h('section', {
-        key: sectionId, class: 'study-guide-study-section',
+        key: sectionId, class: 'guide-study-section',
       }, [
         entry.section?.title ? h('h4', entry.section.title) : null,
         h('ul', entry.bullets.map((bullet, index) => h('li', {
-          key: index, class: 'study-guide-study-bullet',
+          key: index, class: 'guide-study-bullet',
         }, bullet))),
       ]));
     }
 
     function routeControls(topic: MapTopic) {
       if (!visited.value.has(topic.id) || travelling.value) return null;
-      if (complete.value) return h('div', { class: 'study-guide-study-finished', role: 'status' }, [
+      if (complete.value) return h('div', { class: 'guide-study-finished', role: 'status' }, [
         h('strong', 'Map complete'),
         h('p', 'You visited every topic on this study route.'),
-        h('div', { class: 'study-guide-study-actions' }, [
+        h('div', { class: 'guide-study-actions' }, [
           h('button', { type: 'button', class: 'card-primary-button', onClick: restart }, 'Study again'),
           h('button', { type: 'button', class: 'quiet-button', onClick: returnToOverview }, 'Return to overview'),
         ]),
       ]);
 
       if (available.value.length > 1) {
-        return h('div', { class: 'study-guide-study-branch' }, [
+        return h('div', { class: 'guide-study-branch' }, [
           h('strong', 'Choose the next path'),
           h('p', 'This stop branches. Pick which unvisited topic to study next.'),
-          h('div', { class: 'study-guide-study-branch-actions' }, available.value.map(id => {
+          h('div', { class: 'guide-study-branch-actions' }, available.value.map(id => {
             const next = topicById(props.data, id);
             return next ? h('button', {
               key: id, type: 'button', class: 'quiet-button',
@@ -332,7 +332,7 @@ export const StudyGuideMapStudy = defineComponent({
       const plan = backtrackPlan();
       if (plan) {
         const ancestor = topicById(props.data, plan.ancestorId);
-        return h('div', { class: 'study-guide-study-backtrack' }, [
+        return h('div', { class: 'guide-study-backtrack' }, [
           h('p', 'This branch is finished. Go back along the path to continue the map.'),
           h('button', { type: 'button', class: 'card-primary-button', onClick: backtrack },
             'Backtrack to ' + (ancestor?.title || 'previous fork')),
@@ -343,28 +343,28 @@ export const StudyGuideMapStudy = defineComponent({
 
     return () => {
       if (!started.value) {
-        return h('section', { class: 'study-guide-study-intro', 'aria-label': 'Map study overview' }, [
-          h('header', { class: 'study-guide-study-intro-header' }, [
-            h('div', { class: 'study-guide-study-intro-art', 'aria-hidden': 'true' }, [
+        return h('section', { class: 'guide-study-intro', 'aria-label': 'Map study overview' }, [
+          h('header', { class: 'guide-study-intro-header' }, [
+            h('div', { class: 'guide-study-intro-art', 'aria-hidden': 'true' }, [
               h(GuideTypeIcon, { mode: 'map' }),
             ]),
             h('div', [
-              h('p', { class: 'study-guide-study-kicker' }, 'Ready to explore?'),
+              h('p', { class: 'guide-study-kicker' }, 'Ready to explore?'),
               h('h3', props.guideName),
               h('p', 'Follow the trail, discover each topic, and reveal what you learn at every stop.'),
             ]),
           ]),
-          h('div', { class: 'study-guide-study-pills', 'aria-label': 'Session details' }, [
+          h('div', { class: 'guide-study-pills', 'aria-label': 'Session details' }, [
             h('span', props.data.topics.length + (props.data.topics.length === 1 ? ' topic' : ' topics')),
             h('span', props.data.connections.length + (props.data.connections.length === 1 ? ' path' : ' paths')),
             h('span', 'No score or timer'),
           ]),
-          h('div', { class: 'study-guide-study-expect' }, [
+          h('div', { class: 'guide-study-expect' }, [
             h('h4', 'What to expect'),
             h('p', 'Reveal the current topic’s bullet points one at a time. Finishing a topic marks that stop visited. At forks, choose which branch to take; dead ends send you back along visited paths until there is somewhere new to go.'),
           ]),
-          studyProblem.value ? h('p', { class: 'study-guide-map-status', role: 'status' }, studyProblem.value) : null,
-          h('div', { class: 'study-guide-study-actions' }, [
+          studyProblem.value ? h('p', { class: 'guide-map-status', role: 'status' }, studyProblem.value) : null,
+          h('div', { class: 'guide-study-actions' }, [
             h('button', {
               type: 'button', class: 'card-primary-button', disabled: studyProblem.value !== null, onClick: start,
             }, 'Start adventure'),
@@ -379,13 +379,13 @@ export const StudyGuideMapStudy = defineComponent({
       const travelerId = travelTargetId.value ?? currentId.value;
       const traveler = topicById(props.data, travelerId);
 
-      return h('div', { class: 'study-guide-study-session' }, [
-        h('div', { class: 'study-guide-study-toolbar' }, [
+      return h('div', { class: 'guide-study-session' }, [
+        h('div', { class: 'guide-study-toolbar' }, [
           h('div', [
             h('strong', topic.title || 'Untitled topic'),
             h('span', visitedCount.value + ' of ' + props.data.topics.length + ' visited'),
           ]),
-          h('div', { class: 'study-guide-study-toolbar-actions' }, [
+          h('div', { class: 'guide-study-toolbar-actions' }, [
             h('button', {
               ref: viewMapButton, type: 'button', class: 'quiet-button', disabled: travelling.value,
               onClick: () => { if (focused.value) closeTopic(); else showTopic(); },
@@ -393,32 +393,32 @@ export const StudyGuideMapStudy = defineComponent({
             h('button', { type: 'button', class: 'quiet-button', onClick: returnToOverview }, 'End studying'),
           ]),
         ]),
-        h('div', { class: 'study-guide-study-layout' }, [
-          h('div', { ref: scroll, class: 'study-guide-study-map-scroll', inert: focused.value }, [
+        h('div', { class: 'guide-study-layout' }, [
+          h('div', { ref: scroll, class: 'guide-study-map-scroll', inert: focused.value }, [
             h('div', {
-              class: 'study-guide-study-map',
+              class: 'guide-study-map',
               style: { width: MAP_WIDTH + 'px', height: MAP_HEIGHT + 'px' },
               'aria-label': 'Study route map',
             }, [
               h('svg', {
-                class: 'study-guide-study-route',
+                class: 'guide-study-route',
                 viewBox: '0 0 ' + MAP_WIDTH + ' ' + MAP_HEIGHT,
                 width: MAP_WIDTH, height: MAP_HEIGHT, 'aria-hidden': 'true',
               }, props.data.connections.map(connectionLine)),
               ...props.data.topics.map((entry, index) => h('div', {
                 key: entry.id,
-                class: ['study-guide-study-stop', {
+                class: ['guide-study-stop', {
                   'is-current': entry.id === currentId.value,
                   'is-visited': visited.value.has(entry.id),
                   'is-target': entry.id === travelTargetId.value,
                 }],
                 style: { left: entry.x + 'px', top: entry.y + 'px' },
               }, [
-                h('span', { class: 'study-guide-topic-number' }, visited.value.has(entry.id) ? '✓' : String(index + 1)),
-                h('span', { class: 'study-guide-topic-name' }, entry.title || 'Untitled topic'),
+                h('span', { class: 'guide-topic-number' }, visited.value.has(entry.id) ? '✓' : String(index + 1)),
+                h('span', { class: 'guide-topic-name' }, entry.title || 'Untitled topic'),
               ])),
               traveler ? h('span', {
-                class: ['study-guide-traveler', { 'is-moving': travelling.value }],
+                class: ['guide-traveler', { 'is-moving': travelling.value }],
                 style: {
                   left: traveler.x + MAP_TOPIC_WIDTH / 2 + 'px',
                   top: traveler.y + MAP_TOPIC_HEIGHT / 2 + 'px',
@@ -429,44 +429,44 @@ export const StudyGuideMapStudy = defineComponent({
           ]),
           h('section', {
             ref: topicPanel,
-            class: ['study-guide-study-topic', { 'is-visible': focused.value && !travelling.value }],
+            class: ['guide-study-topic', { 'is-visible': focused.value && !travelling.value }],
             'aria-hidden': !focused.value || travelling.value,
             inert: !focused.value || travelling.value,
             'aria-label': 'Current topic study points',
             'aria-live': 'polite',
           }, [
-            h('div', { class: 'study-guide-study-close-row' }, [
+            h('div', { class: 'guide-study-close-row' }, [
               h('button', {
                 type: 'button',
-                class: 'icon-button study-guide-study-close',
+                class: 'icon-button guide-study-close',
                 title: 'View map',
                 'aria-label': 'Close topic points and view map',
                 onClick: closeTopic,
               }, '×'),
             ]),
-            h('div', { class: 'study-guide-study-topic-inner' }, [
-            travelling.value ? h('div', { class: 'study-guide-study-travelling' }, [
+            h('div', { class: 'guide-study-topic-inner' }, [
+            travelling.value ? h('div', { class: 'guide-study-travelling' }, [
               h('strong', 'Following the path…'),
               h('p', 'Moving to the next stop.'),
             ]) : [
-              h('div', { class: 'study-guide-study-topic-heading' }, [
+              h('div', { class: 'guide-study-topic-heading' }, [
                 h('span', currentVisited ? 'Visited' : 'Current stop'),
                 h('h3', { ref: topicHeading, tabindex: -1 }, topic.title || 'Untitled topic'),
                 topic.description?.trim()
-                  ? h('p', { class: 'study-guide-study-topic-description' }, topic.description.trim())
+                  ? h('p', { class: 'guide-study-topic-description' }, topic.description.trim())
                   : null,
               ]),
               currentPoints.value.length
-                ? h('div', { class: 'study-guide-study-points' }, [
+                ? h('div', { class: 'guide-study-points' }, [
                     ...revealedContent(topic),
                     !currentVisited ? h('button', {
-                      type: 'button', class: 'quiet-button study-guide-study-reveal',
+                      type: 'button', class: 'quiet-button guide-study-reveal',
                       onClick: revealNext,
                     }, revealedCount.value ? 'Reveal next point →' : 'Reveal first point →') : null,
                   ])
-                : h('p', { class: 'study-guide-study-empty-topic' }, 'This topic has no bullet points. It counts as visited when you arrive.'),
+                : h('p', { class: 'guide-study-empty-topic' }, 'This topic has no bullet points. It counts as visited when you arrive.'),
               currentVisited && !complete.value ? h('p', {
-                class: 'study-guide-study-visited-note',
+                class: 'guide-study-visited-note',
               }, 'All points revealed. This stop is visited.') : null,
               routeControls(topic),
             ],

@@ -9,13 +9,13 @@ import {
   createListGuideData, MAP_GRID, MAP_HEIGHT, MAP_MAX_X, MAP_MAX_Y, MAP_TOPIC_HEIGHT,
   MAP_TOPIC_WIDTH, MAP_WIDTH, MAX_TEXT_LENGTH, MAX_TOPICS, type MapGuideData, type MapTopic,
 } from './library-model.ts';
-import { StudyGuideListEditor } from './list-editor.ts';
+import { GuideListEditor } from './list-editor.ts';
 
 const snap = (value: number) => Math.round(value / MAP_GRID) * MAP_GRID;
 const clamp = (value: number, max: number) => Math.max(0, Math.min(max, value));
 
-export const StudyGuideMapEditor = defineComponent({
-  name: 'StudyGuideMapEditor',
+export const GuideMapEditor = defineComponent({
+  name: 'GuideMapEditor',
   props: { data: { type: Object as PropType<MapGuideData>, required: true } },
   emits: { study: () => true },
   setup(props, { emit }) {
@@ -152,9 +152,9 @@ export const StudyGuideMapEditor = defineComponent({
           .filter((topic): topic is MapTopic => topic !== null)
         : [];
 
-      return h('div', { class: 'study-guide-map-editor' }, [
-        h('div', { class: 'study-guide-map-toolbar' }, [
-          h('div', { class: 'study-guide-map-toolbar-actions' }, [
+      return h('div', { class: 'guide-map-editor' }, [
+        h('div', { class: 'guide-map-toolbar' }, [
+          h('div', { class: 'guide-map-toolbar-actions' }, [
             h('button', {
               type: 'button', class: 'quiet-button',
               disabled: props.data.topics.length >= MAX_TOPICS, onClick: addTopic,
@@ -170,8 +170,8 @@ export const StudyGuideMapEditor = defineComponent({
               },
             }, connectingFromId.value ? 'Cancel connection' : 'Connect'),
           ]),
-          h('div', { class: 'study-guide-map-toolbar-study' }, [
-            studyProblem.value ? h('span', { class: 'study-guide-map-status' }, studyProblem.value) : null,
+          h('div', { class: 'guide-map-toolbar-study' }, [
+            studyProblem.value ? h('span', { class: 'guide-map-status' }, studyProblem.value) : null,
             h('button', {
               type: 'button', class: 'card-primary-button',
               disabled: studyProblem.value !== null,
@@ -180,29 +180,29 @@ export const StudyGuideMapEditor = defineComponent({
           ]),
         ]),
         h('p', {
-          class: ['study-guide-connection-prompt', {
+          class: ['guide-connection-prompt', {
             'is-visible': connectingFromId.value !== null,
             'is-invalid': invalidConnection.value !== null,
           }],
           role: 'status',
           'aria-hidden': connectingFromId.value === null ? 'true' : undefined,
         }, connectionMessage.value),
-        h('div', { class: 'study-guide-map-layout' }, [
-          h('div', { class: 'study-guide-map-scroll' }, [
+        h('div', { class: 'guide-map-layout' }, [
+          h('div', { class: 'guide-map-scroll' }, [
             h('div', {
-              class: ['study-guide-map-canvas', { 'is-connecting': connectingFromId.value !== null }],
-              style: { width: MAP_WIDTH + 'px', height: MAP_HEIGHT + 'px', '--study-guide-grid': MAP_GRID + 'px' },
+              class: ['guide-map-canvas', { 'is-connecting': connectingFromId.value !== null }],
+              style: { width: MAP_WIDTH + 'px', height: MAP_HEIGHT + 'px', '--guide-grid': MAP_GRID + 'px' },
               role: 'group', 'aria-label': 'Topic map editor',
             }, [
               h('svg', {
-                class: 'study-guide-route',
+                class: 'guide-route',
                 viewBox: '0 0 ' + MAP_WIDTH + ' ' + MAP_HEIGHT,
                 width: MAP_WIDTH, height: MAP_HEIGHT, 'aria-hidden': 'true',
               }, [...props.data.connections.map(connectionLine), invalidConnectionLine()]),
               ...props.data.topics.map((topic, index) => h('button', {
                 key: topic.id,
                 type: 'button',
-                class: ['study-guide-topic-stop', {
+                class: ['guide-topic-stop', {
                   'is-selected': selectedId.value === topic.id,
                   'is-start': props.data.startTopicId === topic.id,
                   'is-connection-source': connectingFromId.value === topic.id,
@@ -230,16 +230,16 @@ export const StudyGuideMapEditor = defineComponent({
                   moveTopic(topic, movement[0], movement[1]);
                 },
               }, [
-                h('span', { class: 'study-guide-topic-number' }, String(index + 1)),
-                h('span', { class: 'study-guide-topic-name' }, topic.title || 'Untitled topic'),
+                h('span', { class: 'guide-topic-number' }, String(index + 1)),
+                h('span', { class: 'guide-topic-name' }, topic.title || 'Untitled topic'),
                 props.data.startTopicId === topic.id ? h('span', {
-                  class: 'study-guide-topic-start', 'aria-hidden': 'true',
+                  class: 'guide-topic-start', 'aria-hidden': 'true',
                 }, 'Start') : null,
               ])),
             ]),
           ]),
-          h('aside', { class: 'study-guide-topic-panel', 'aria-label': 'Selected topic guide' }, selectedTopic ? [
-            h('div', { class: 'study-guide-topic-panel-heading' }, [
+          h('aside', { class: 'guide-topic-panel', 'aria-label': 'Selected topic guide' }, selectedTopic ? [
+            h('div', { class: 'guide-topic-panel-heading' }, [
               h('input', {
                 value: selectedTopic.title,
                 maxlength: MAX_TEXT_LENGTH,
@@ -247,7 +247,7 @@ export const StudyGuideMapEditor = defineComponent({
                 'aria-label': 'Topic name',
                 onInput: (event: Event) => { selectedTopic.title = inputValue(event); },
               }),
-              h('div', { class: 'study-guide-topic-actions' }, [
+              h('div', { class: 'guide-topic-actions' }, [
                 h('button', {
                   type: 'button', class: 'quiet-button',
                   disabled: props.data.startTopicId === selectedTopic.id,
@@ -259,7 +259,7 @@ export const StudyGuideMapEditor = defineComponent({
                 }, 'Delete topic'),
               ]),
             ]),
-            h('label', { class: 'study-guide-topic-description-field' }, [
+            h('label', { class: 'guide-topic-description-field' }, [
               h('span', 'Stop description (optional)'),
               h('textarea', {
                 value: selectedTopic.description ?? '',
@@ -274,9 +274,9 @@ export const StudyGuideMapEditor = defineComponent({
                 },
               }),
             ]),
-            h('section', { class: 'study-guide-connections', 'aria-labelledby': 'study-guide-connections-title' }, [
-              h('div', { class: 'study-guide-connections-heading' }, [
-                h('h3', { id: 'study-guide-connections-title' }, 'Connections'),
+            h('section', { class: 'guide-connections', 'aria-labelledby': 'guide-connections-title' }, [
+              h('div', { class: 'guide-connections-heading' }, [
+                h('h3', { id: 'guide-connections-title' }, 'Connections'),
                 h('span', String(connected.length)),
               ]),
               connected.length ? h('ul', connected.map(topic => {
@@ -285,7 +285,7 @@ export const StudyGuideMapEditor = defineComponent({
                   (entry.to === selectedTopic.id && entry.from === topic.id));
                 return h('li', { key: topic.id }, [
                   h('button', {
-                    type: 'button', class: 'study-guide-connection-name',
+                    type: 'button', class: 'guide-connection-name',
                     onClick: () => { selectedId.value = topic.id; connectingFromId.value = null; clearInvalidConnection(); },
                   }, topic.title || 'Untitled topic'),
                   h('button', {
@@ -295,12 +295,12 @@ export const StudyGuideMapEditor = defineComponent({
                     onClick: () => { if (connection) removeConnection(props.data, connection.id); },
                   }, '×'),
                 ]);
-              })) : h('p', { class: 'study-guide-topic-help' }, 'No paths yet. Use Connect, then choose another topic.'),
+              })) : h('p', { class: 'guide-topic-help' }, 'No paths yet. Use Connect, then choose another topic.'),
             ]),
-            h('p', { class: 'study-guide-topic-help' }, 'This stop has its own mini study guide.'),
-            h(StudyGuideListEditor, { data: selectedTopic.guide, compact: true }),
+            h('p', { class: 'guide-topic-help' }, 'This stop has its own mini guide.'),
+            h(GuideListEditor, { data: selectedTopic.guide, compact: true }),
           ] : [
-            h('div', { class: 'study-guide-topic-panel-empty' }, [h('p', 'Add a topic to start building the map.')]),
+            h('div', { class: 'guide-topic-panel-empty' }, [h('p', 'Add a topic to start building the map.')]),
           ]),
         ]),
       ]);

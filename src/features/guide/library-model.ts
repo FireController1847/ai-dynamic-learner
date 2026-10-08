@@ -2,7 +2,7 @@ import { createId, isValidId } from '../../core/ids.ts';
 import { createTreeOperations, type TreeMovePosition } from '../../core/tree.ts';
 import { isRecord } from '../../core/validation.ts';
 
-export type StudyGuideMode = 'list' | 'map';
+export type GuideMode = 'list' | 'map';
 export interface GuideSection { id: string; title: string; bullets: string[] }
 export interface ListGuideData { sections: GuideSection[] }
 export interface MapTopic { id: string; title: string; description?: string; x: number; y: number; guide: ListGuideData }
@@ -13,7 +13,7 @@ export type GuideItem =
   | { id: string; kind: 'guide'; name: string; mode: 'map'; data: MapGuideData };
 export interface Group { id: string; kind: 'group'; name: string; children: LibraryItem[] }
 export type LibraryItem = Group | GuideItem;
-export interface StudyGuideModel { items: LibraryItem[] }
+export interface GuideModel { items: LibraryItem[] }
 export interface GuideTarget { parentId: string | null; parentName: string; selectedId?: string | null }
 export type MovePosition = TreeMovePosition;
 
@@ -40,12 +40,12 @@ export function createListGuideData(): ListGuideData { return { sections: [] }; 
 export function createMapGuideData(): MapGuideData { return { topics: [], connections: [], startTopicId: null }; }
 export function createGroup(): Group { return { id: createId(), kind: 'group', name: 'New group', children: [] }; }
 
-export function insertGuide(items: LibraryItem[], target: GuideTarget, mode: StudyGuideMode): GuideItem {
-  if (countItems(items) >= MAX_ITEMS) throw new Error('The Study Guide library supports ' + MAX_ITEMS + ' items.');
+export function insertGuide(items: LibraryItem[], target: GuideTarget, mode: GuideMode): GuideItem {
+  if (countItems(items) >= MAX_ITEMS) throw new Error('The Guide library supports ' + MAX_ITEMS + ' items.');
   const parent = target.parentId ? findItem(items, target.parentId) : null;
   if (target.parentId && (!parent || parent.item.kind !== 'group')) throw new Error('The destination group no longer exists.');
   if (parent && parent.depth >= MAX_DEPTH) throw new Error('Groups can be at most ' + MAX_DEPTH + ' levels deep.');
-  const base = { id: createId(), kind: 'guide' as const, name: 'New study guide' };
+  const base = { id: createId(), kind: 'guide' as const, name: 'New guide' };
   const item: GuideItem = mode === 'list'
     ? { ...base, mode, data: createListGuideData() }
     : { ...base, mode, data: createMapGuideData() };
@@ -68,19 +68,19 @@ function text(value: unknown, label: string): asserts value is string {
 }
 function listData(value: unknown, ids: Set<string>): asserts value is ListGuideData {
   if (!isRecord(value) || !Array.isArray(value.sections) || Object.keys(value).some(key => key !== 'sections') || value.sections.length > MAX_SECTIONS)
-    throw new Error('A Study Guide list has invalid sections.');
+    throw new Error('A Guide list has invalid sections.');
   let bullets = 0;
   for (const section of value.sections) {
     if (!isRecord(section) || !isValidId(section.id) || ids.has(section.id) || !Array.isArray(section.bullets) ||
-        Object.keys(section).some(key => !['id','title','bullets'].includes(key))) throw new Error('A Study Guide section is invalid.');
+        Object.keys(section).some(key => !['id','title','bullets'].includes(key))) throw new Error('A Guide section is invalid.');
     ids.add(section.id); text(section.title, 'Section title');
     bullets += section.bullets.length;
-    if (bullets > MAX_BULLETS) throw new Error('A Study Guide can contain up to ' + MAX_BULLETS + ' bullets.');
+    if (bullets > MAX_BULLETS) throw new Error('A Guide can contain up to ' + MAX_BULLETS + ' bullets.');
     for (const bullet of section.bullets) text(bullet, 'Bullet');
   }
 }
 function mapData(value: unknown, ids: Set<string>): asserts value is MapGuideData {
-  if (!isRecord(value) || !Array.isArray(value.topics)) throw new Error('A Study Guide map has invalid topics.');
+  if (!isRecord(value) || !Array.isArray(value.topics)) throw new Error('A Guide map has invalid topics.');
 
   if (!Object.hasOwn(value, 'connections')) value.connections = [];
   if (!Object.hasOwn(value, 'startTopicId')) {
@@ -90,7 +90,7 @@ function mapData(value: unknown, ids: Set<string>): asserts value is MapGuideDat
 
   if (!Array.isArray(value.connections) ||
       Object.keys(value).some(key => !['topics','connections','startTopicId'].includes(key)) ||
-      value.topics.length > MAX_TOPICS) throw new Error('A Study Guide map is invalid.');
+      value.topics.length > MAX_TOPICS) throw new Error('A Guide map is invalid.');
 
   const topicIds = new Set<string>();
   for (const topic of value.topics) {
@@ -98,14 +98,14 @@ function mapData(value: unknown, ids: Set<string>): asserts value is MapGuideDat
         Object.keys(topic).some(key => !['id','title','description','x','y','guide'].includes(key)) ||
         typeof topic.x !== 'number' || !Number.isInteger(topic.x) || topic.x < 0 || topic.x > MAP_MAX_X || topic.x % MAP_GRID !== 0 ||
         typeof topic.y !== 'number' || !Number.isInteger(topic.y) || topic.y < 0 || topic.y > MAP_MAX_Y || topic.y % MAP_GRID !== 0)
-      throw new Error('A Study Guide map topic is invalid.');
+      throw new Error('A Guide map topic is invalid.');
     ids.add(topic.id); topicIds.add(topic.id); text(topic.title, 'Topic title');
     if (Object.hasOwn(topic, 'description')) text(topic.description, 'Topic description');
     listData(topic.guide, ids);
   }
 
   if (value.startTopicId !== null && (!isValidId(value.startTopicId) || !topicIds.has(value.startTopicId))) {
-    throw new Error('The Study Guide map starting topic is invalid.');
+    throw new Error('The Guide map starting topic is invalid.');
   }
   if (value.topics.length && value.startTopicId === null) value.startTopicId = value.topics[0].id;
 
@@ -135,10 +135,10 @@ function mapData(value: unknown, ids: Set<string>): asserts value is MapGuideDat
         Object.keys(connection).some(key => !['id','from','to'].includes(key)) ||
         !isValidId(connection.from) || !isValidId(connection.to) ||
         connection.from === connection.to || !topicIds.has(connection.from) || !topicIds.has(connection.to)) {
-      throw new Error('A Study Guide map connection is invalid.');
+      throw new Error('A Guide map connection is invalid.');
     }
     const pair = [connection.from, connection.to].sort().join(':');
-    if (pairs.has(pair)) throw new Error('A Study Guide map contains a duplicate connection.');
+    if (pairs.has(pair)) throw new Error('A Guide map contains a duplicate connection.');
     pairs.add(pair);
     ids.add(connection.id);
 
@@ -152,21 +152,21 @@ function mapData(value: unknown, ids: Set<string>): asserts value is MapGuideDat
   value.connections = acceptedConnections;
 }
 
-export function validateStudyGuide(value: unknown): asserts value is StudyGuideModel {
-  if (!isRecord(value) || !Array.isArray(value.items) || Object.keys(value).some(key => key !== 'items')) throw new Error('The Study Guide library is invalid.');
+export function validateGuide(value: unknown): asserts value is GuideModel {
+  if (!isRecord(value) || !Array.isArray(value.items) || Object.keys(value).some(key => key !== 'items')) throw new Error('The Guide library is invalid.');
   const ids = new Set<string>(); let count = 0;
   function visit(items: unknown[], depth: number): void {
-    if (items.length && depth > MAX_DEPTH) throw new Error('Study Guide groups are nested too deeply.');
+    if (items.length && depth > MAX_DEPTH) throw new Error('Guide groups are nested too deeply.');
     for (const item of items) {
       if (!isRecord(item) || !isValidId(item.id) || ids.has(item.id) || typeof item.name !== 'string' || !item.name.trim() || item.name.length > MAX_NAME_LENGTH)
-        throw new Error('A Study Guide item has an invalid name or duplicate ID.');
-      ids.add(item.id); if (++count > MAX_ITEMS) throw new Error('The Study Guide library is too large.');
+        throw new Error('A Guide item has an invalid name or duplicate ID.');
+      ids.add(item.id); if (++count > MAX_ITEMS) throw new Error('The Guide library is too large.');
       if (item.kind === 'group') {
-        if (!Array.isArray(item.children) || Object.keys(item).some(key => !['id','kind','name','children'].includes(key))) throw new Error('A Study Guide group is invalid.');
+        if (!Array.isArray(item.children) || Object.keys(item).some(key => !['id','kind','name','children'].includes(key))) throw new Error('A Guide group is invalid.');
         visit(item.children, depth + 1);
       } else {
         if (item.kind !== 'guide' || (item.mode !== 'list' && item.mode !== 'map') ||
-            Object.keys(item).some(key => !['id','kind','name','mode','data'].includes(key))) throw new Error('A Study Guide entry is invalid.');
+            Object.keys(item).some(key => !['id','kind','name','mode','data'].includes(key))) throw new Error('A Guide entry is invalid.');
         if (item.mode === 'list') listData(item.data, ids); else mapData(item.data, ids);
       }
     }
