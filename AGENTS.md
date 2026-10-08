@@ -1,14 +1,25 @@
 # Maintenance rules
 
-- `README.md` is the public, human-facing project overview. Do not use it as agent memory, a task journal, a regression checklist, a manual QA dump, or a place to persist implementation notes. Put durable coding-agent rules in this `AGENTS.md`, specialized technical documentation in `docs/`, and transient task context in the active work session. Update the README only when human-facing project description, setup, behavior, or usage materially changes.
-- Runtime: use Node.js 24 or newer and `npm ci`. `npm start` runs webpack-dev-server at `127.0.0.1:3000` with live reload; `HOST` and `PORT` override it. `npm run build` emits production assets into ignored `dist/`. Source uses strict TypeScript ES modules and plain Vue components; no single-file component compilation. `npm run typecheck` checks browser and Node code; `npm run build` runs it before bundling. See `docs/typescript-migration.md` before continuing the conversion.
-- GitHub Pages: `npm run pages:prepare` runs the webpack production build, including route entry points and metadata. Actions runs `npm ci` and builds the selected source commit before uploading `dist/`; do not commit build output or maintain a deployment branch. Publishing uses the manually dispatched `.github/workflows/deploy-pages.yml`. See `docs/github-pages.md` before changing deployment behavior.
-- Read [docs/change-routing.md](docs/change-routing.md) before changing code. Read [docs/architecture.md](docs/architecture.md) for dependency or structural changes, not every routine edit.
-- Start with the smallest relevant file set. Use targeted `rg` searches and file discovery before reading directories; expand only when imports or behavior require it. Search by stable identifiers, exports, and field keys. Do not load every document, feature, or schema for a local change.
-- Keep composition, root Vue state, and browser workflow coordination in `app`; feature behavior in `features`; generic components in `components`; neutral utilities in `core`. Lower layers never import from `app`. Generic components import only `core` or other generic components; `core` never imports upper layers.
-- TypeScript: keep converted modules strict, accept untrusted data as `unknown`, and narrow it through runtime validation. Do not use `@ts-nocheck`, blanket `any`, or weakened strictness to claim completion. Use explicit `.ts`/`.mts` imports and erasable syntax so Node 24 can run build tooling directly.
-- Register future features in `src/features/feature-registry.ts`. Use ES module exports instead of new application globals. Vue owns reactive state and UI rendering; isolate imperative browser operations when needed. Keep schemas declarative and shared data canonical.
-- Prefer focused modules below 400 lines; split large schemas by section around 500 lines. Split by responsibility, avoiding monoliths and unnecessary one-function wrappers.
-- Make focused edits without unrelated refactors or formatting churn. Keep tool output bounded and progress updates concise.
-- Update routing documentation when file ownership changes. Add specialized documentation and infrastructure only when corresponding functionality exists.
-- Verification is manual unless the user explicitly requests automated checks. Do not add or run automated tests, builds, browser checks, or other automated verification without that request. Provide a focused manual checklist at handoff.
+- `README.md` is the public project overview. Do not use it as agent memory, a task journal, implementation history, or QA log.
+- Runtime: Node.js 24+, `npm ci`, `npm start` for webpack-dev-server, `npm run typecheck` for type checking, and `npm run build` for production output in ignored `dist/`. Source is strict TypeScript ES modules with plain Vue render-function components.
+- Read only the documentation relevant to the change:
+  - `docs/change-routing.md` to find ownership/files.
+  - `docs/architecture.md` for dependency, shared-system, or structural changes.
+  - `docs/design.md` for UI/presentation changes.
+  - `docs/workspace-data.md` for persistence, backup, or compatibility changes.
+  - `docs/graph-paper.md` only for Graph Paper behavior.
+  - `docs/github-pages.md` only for deployment/routing output.
+  - `docs/app-versions.md` when deciding an app version bump.
+- Start with the smallest relevant file set. Search by stable identifiers/exports/keys before opening broad directories.
+- Layering: `app` may depend on app/features/components/core; `features` on features/components/core; `components` on components/core; `core` on core only. Lower layers never import upward.
+- Keep shared data canonical. Prefer feature-neutral code in `core` or `components` when multiple features genuinely share behavior; do not create abstractions for one caller.
+- TypeScript stays strict. Treat external/persisted/uploaded data as `unknown` until runtime validation. Do not use `@ts-nocheck`, blanket `any`, or weakened strictness to claim completion.
+- Register features in `src/features/feature-definitions.ts` and `src/features/feature-registry.ts`. Keep build-consumed definitions browser-neutral.
+- Vue owns reactive state/rendering. Keep imperative browser work isolated in focused modules.
+- Keep per-app semantic versions canonical in `src/features/feature-definitions.ts`; follow `docs/app-versions.md`.
+- Prefer focused modules below ~400 lines and split by responsibility rather than arbitrary wrappers.
+- Make focused edits without unrelated formatting/refactors. Update `docs/change-routing.md` only when ownership changes.
+- UI changes follow `docs/design.md`: reuse shared controls/tokens/patterns and preserve keyboard, touch, reduced-motion, and theme behavior.
+- GitHub Pages builds from source with `.github/workflows/deploy-pages.yml`; never commit `dist/` or maintain a deployment branch.
+- `.github/workflows/verify-build.yml` automatically runs `npm ci`, strict type checking, and a production build on every pushed commit. Prefer checking that CI result over creating ad hoc build workflows or manually rebuilding solely for compile verification.
+- Behavioral verification remains manual unless the user explicitly requests additional automated checks. Do not run tests or browser automation unless asked. Give a focused manual-check list at handoff.

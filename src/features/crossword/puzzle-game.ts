@@ -29,6 +29,10 @@ export const PuzzleGame = defineComponent({
     const gridVersion = ref(0);
     const cancelButton = ref<HTMLButtonElement | null>(null);
     const restartButton = ref<HTMLButtonElement | null>(null);
+    const celebratingAnswers = ref<string[]>([]);
+    const celebratingComplete = ref(false);
+    const wordCelebrationTimers = new Map<string, number>();
+    let completeCelebrationTimer: number | undefined;
     let controller: AbortController | null = null;
     let actionTrigger: HTMLElement | null = null;
 
@@ -51,12 +55,59 @@ export const PuzzleGame = defineComponent({
       if (!game.value) generate();
       else selectInitialCell();
     });
-    onBeforeUnmount(() => controller?.abort());
+    onBeforeUnmount(() => {
+      controller?.abort();
+      clearCelebrations();
+    });
     onDeactivated(() => {
       pending.value = null;
       revealed.value = false;
       showIncorrect.value = false;
+      clearCelebrations();
     });
+
+    function stopWordCelebration(answer: string) {
+      const timer = wordCelebrationTimers.get(answer);
+      if (timer !== undefined) window.clearTimeout(timer);
+      wordCelebrationTimers.delete(answer);
+      celebratingAnswers.value = celebratingAnswers.value.filter((candidate) => candidate !== answer);
+    }
+
+    function celebrateWord(answer: string) {
+      stopWordCelebration(answer);
+      celebratingAnswers.value = [...celebratingAnswers.value, answer];
+      wordCelebrationTimers.set(answer, window.setTimeout(() => stopWordCelebration(answer), 1100));
+    }
+
+    function stopCompleteCelebration() {
+      if (completeCelebrationTimer !== undefined) window.clearTimeout(completeCelebrationTimer);
+      completeCelebrationTimer = undefined;
+      celebratingComplete.value = false;
+    }
+
+    function celebrateComplete() {
+      stopCompleteCelebration();
+      celebratingComplete.value = true;
+      completeCelebrationTimer = window.setTimeout(stopCompleteCelebration, 1900);
+    }
+
+    function clearCelebrations() {
+      for (const timer of wordCelebrationTimers.values()) window.clearTimeout(timer);
+      wordCelebrationTimers.clear();
+      celebratingAnswers.value = [];
+      stopCompleteCelebration();
+    }
+
+    function placementLabel(placement: Placement) {
+      return `${placement.number} ${placement.direction === 'across' ? 'Across' : 'Down'}`;
+    }
+
+    function solvedMessage(placements: readonly Placement[]) {
+      const labels = placements.map(placementLabel);
+      if (labels.length === 1) return `Solved ${labels[0]}!`;
+      if (labels.length === 2) return `Solved ${labels[0]} and ${labels[1]}!`;
+      return `Solved ${labels.slice(0, -1).join(', ')}, and ${labels.at(-1)}!`;
+    }
 
     function firstOpenCell(): number | null {
       if (!game.value) return null;
@@ -85,6 +136,7 @@ export const PuzzleGame = defineComponent({
       pending.value = null;
       showIncorrect.value = false;
       revealed.value = false;
+      clearCelebrations();
 
       try {
         const result = await generatePuzzle(props.item.puzzle, request.signal);
@@ -110,10 +162,38 @@ export const PuzzleGame = defineComponent({
 
     function input(cell: number, letter: string) {
       if (!game.value || revealed.value) return;
-      game.value.cells[cell] = letter;
+
+      const currentGame = game.value;
+      const solvedBefore = new Set(
+        currentGame.placements
+          .filter((placement) => placementSolved(currentGame, placement))
+          .map(({ answer }) => answer),
+      );
+      const wasComplete = gameComplete(currentGame);
+
+      currentGame.cells[cell] = letter;
       showIncorrect.value = false;
-      if (letter && gameComplete(game.value)) {
+
+      for (const answer of [...celebratingAnswers.value]) {
+        const placement = currentGame.placements.find((candidate) => candidate.answer === answer);
+        if (!placement || !placementSolved(currentGame, placement)) stopWordCelebration(answer);
+      }
+      if (!letter) {
+        if (!gameComplete(currentGame)) stopCompleteCelebration();
+        return;
+      }
+
+      const newlySolved = currentGame.placements.filter((placement) =>
+        !solvedBefore.has(placement.answer) && placementSolved(currentGame, placement));
+      newlySolved.forEach((placement) => celebrateWord(placement.answer));
+
+      const isComplete = gameComplete(currentGame);
+      if (!isComplete) stopCompleteCelebration();
+      if (!wasComplete && isComplete) {
+        celebrateComplete();
         message.value = 'You completed the crossword! Every letter is correct.';
+      } else if (newlySolved.length) {
+        message.value = solvedMessage(newlySolved);
       }
     }
 
@@ -212,6 +292,7 @@ export const PuzzleGame = defineComponent({
         clearGame(game.value);
         revealed.value = false;
         showIncorrect.value = false;
+        clearCelebrations();
         gridVersion.value += 1;
         selectInitialCell();
         message.value = 'Progress cleared. Same crossword, fresh start.';
@@ -233,7 +314,11 @@ export const PuzzleGame = defineComponent({
           return h('li', { key: `${placement.answer}-${placement.direction}` }, [
             h('button', {
               type: 'button',
-              class: ['crossword-clue-button', { 'is-solved': solved, 'is-selected': selected }],
+              class: ['crossword-clue-button', {
+                'is-solved': solved,
+                'is-selected': selected,
+                'is-celebrating': celebratingAnswers.value.includes(placement.answer),
+              }],
               'aria-pressed': selected,
               onClick: () => focusPlacement(placement),
             }, [
@@ -267,7 +352,20 @@ export const PuzzleGame = defineComponent({
           h('p', error.value),
           h('button', { type: 'button', class: 'quiet-button', disabled: loading.value, onClick: generate }, 'Try again'),
         ]) : null,
-        game.value ? h('div', { class: 'crossword-play-layout', inert: loading.value }, [
+        game.value ? h('div', {
+          class: ['crossword-play-layout', { 'is-celebrating-complete': celebratingComplete.value }],
+          inert: loading.value,
+        }, [
+          celebratingComplete.value ? h('div', {
+            class: 'crossword-complete-celebration',
+            'aria-hidden': 'true',
+          }, [
+            h('div', { class: 'crossword-complete-badge' }, 'Crossword complete!'),
+            ...Array.from({ length: 24 }, (_, index) => h('span', {
+              class: ['crossword-confetti-piece', { 'is-star': index % 5 === 0 }],
+              style: `--confetti-left: ${4 + ((index * 17) % 92)}%; --confetti-delay: ${(index * 37) % 220}ms; --confetti-drift: ${((index % 7) - 3) * 13}px; --confetti-turn: ${index % 2 ? '-' : ''}${220 + (index % 6) * 55}deg;`,
+            }, index % 5 === 0 ? '✦' : '')),
+          ]) : null,
           h(PuzzleGrid, {
             ref: grid,
             key: gridVersion.value,
@@ -277,6 +375,7 @@ export const PuzzleGame = defineComponent({
             direction: direction.value,
             revealed: revealed.value,
             showIncorrect: showIncorrect.value,
+            celebratingAnswers: celebratingAnswers.value,
             onActivate: activate,
             onInput: input,
           }),

@@ -11,6 +11,7 @@ export const CardPaper = defineComponent({
     card: { type: Object as PropType<Card>, required: true },
     side: { type: String as PropType<CardSide>, required: true },
     position: { type: Number, required: true },
+    reviewing: Boolean,
   },
   setup(props, { expose }) {
     const editors: Partial<Record<CardSide, HTMLTextAreaElement>> = {};
@@ -28,7 +29,7 @@ export const CardPaper = defineComponent({
           h('input', {
             class: 'card-title-input', type: 'text', value: props.card[titleKey] ?? '',
             maxlength: MAX_CARD_TITLE_LENGTH,
-            placeholder: side === 'front' ? 'Untitled card' : '',
+            placeholder: side === 'front' && !props.reviewing ? 'Untitled card' : '',
             'aria-label': `${label} title`,
             onInput: (event: Event) => { props.card[titleKey] = inputValue(event); },
           }),

@@ -9,8 +9,28 @@
     <%= htmlWebpackPlugin.options.page.structuredData %>
     <base href="<%= htmlWebpackPlugin.options.page.basePath %>">
     <link rel="icon" href="assets/dynamic-learner.ico" sizes="16x16 32x32 48x48 64x64 128x128 256x256">
-    <link rel="icon" type="image/png" href="assets/dynamic-learner.png" sizes="512x512">
+    <link rel="icon" type="image/png" href="assets/app-icons/dynamic-learner.png" sizes="512x512">
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" sizes="180x180">
+    <script>
+      try {
+        const legacyTheme = localStorage.getItem('dynamic-learner.theme');
+        let theme = legacyTheme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        const saved = localStorage.getItem('dynamic-learner.theme-preferences');
+        if (saved) {
+          try {
+            const preferences = JSON.parse(saved);
+            if (preferences?.followSystem) {
+              theme = matchMedia('(prefers-color-scheme: dark)').matches
+                ? preferences.darkTheme
+                : preferences.lightTheme;
+            } else if (preferences?.theme) {
+              theme = preferences.theme;
+            }
+          } catch { /* Keep the legacy/system-default theme if saved preferences are malformed. */ }
+        }
+        if (typeof theme === 'string') document.documentElement.dataset.theme = theme;
+      } catch { /* Theme preference is best-effort only. */ }
+    </script>
   </head>
   <body>
     <div id="app"></div>

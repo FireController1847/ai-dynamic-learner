@@ -10,6 +10,8 @@
     "outDir": ".cache/typescript"
   },
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "packages/tips/**/*.ts",
+    "packages/@dynamic-learner/answer-matching/**/*.ts"
   ]
 }

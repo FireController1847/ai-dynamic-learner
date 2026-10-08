@@ -1,53 +1,60 @@
 # Change routing
 
-Start with the primary files below; follow imports only as needed. Paths are relative to the project root.
+Use this as a starting-file index, not a feature specification. Follow imports only as needed.
 
-| Change | Primary files or locations |
+| Change | Start here |
 | --- | --- |
-| App name/configuration | `src/app/app-config.ts`; `package.json` for package metadata |
-| Search/social metadata | `src/app/app-config.ts` for global metadata defaults and social image configuration; optional per-feature `metadata` in `src/features/feature-definitions.ts`; `src/html/index.html` for the HTML template; `build/page-metadata.mts` renders canonical, Open Graph, Twitter, theme, keyword, and JSON-LD metadata for each route |
-| Home app cards and footer | `src/app/home-page.ts` and `src/styles/home.css`; `src/features/feature-definitions.ts` supplies shared app labels, paths, icons, and descriptions; `src/app/app-config.ts` supplies repository URL and license identifier |
-| Initial page markup | `src/html/index.html` for the document and mount point; `src/app/app.ts` for the rendered main and heading |
-| Branding and favicons | `src/assets/` for the Dynamic Learner logo, app icons, and social-preview artwork; `src/html/index.html` for favicon/touch-icon metadata; `src/app/app.ts`, `src/app/navigation-drawer.ts`, and `src/styles/shell.css` for visible shell branding; `webpack.config.mts` copies artwork into `dist/assets` |
-| Vue startup and state | `src/app/app.ts` |
-| Compact page header and titles | `src/app/app.ts` renders the current page title beside navigation; `src/styles/shell.css` controls header sizing. Feature views do not repeat the page title. |
-| Sidebar and application switching | `src/app/app.ts` for composition; `src/app/navigation-drawer.ts` for the modal drawer and links; `src/styles/shell.css` for layout and animation |
-| Page URLs and browser history | `src/features/feature-definitions.ts` for feature paths, labels, and order; `src/app/navigation.ts` for browser history; `webpack.config.mts` for development routes and canonical redirects; `src/app/app.ts` for Home |
-| Notebook scaffolding and library | `src/features/notebook/notebook.ts` for composition, selection, resizing, document-builder coordination, and editor placeholders; `library.ts` for grouped library interactions and document deletion; `document-builder.ts` for paper-type creation cards; `document-type-icon.ts` for matching document-type SVG icons shared by the builder and library; `library-model.ts` for Notebook item data, insertion, limits, persistence validation, and legacy normalization; `src/core/tree.ts` for shared hierarchy lookup, deletion, movement, and group options; `document-types.ts` for canonical document type IDs, metadata, default storage, and type-owned data validation; `markdown-editor.ts` for the raw/source-preview editor, view modes, panel swapping, and resizing; `markdown-renderer.ts` for safe Markdown preview rendering; `markdown-editor.css` for split editor/preview layout and rendered Markdown styling; `display-settings.ts` for per-type display settings; `notebook.css` for layout, builder cards, and placeholder styling |
-| Todo List library | `src/features/todo-list/todo-list.ts` for selection, creation, responsive layout, resizing, clock refresh, list deletion confirmation, and task-editor composition; `library.ts` for date sections, aging rows, renaming, deletion, and Settings/Archive footer; `library-model.ts` for flat records, date ordering, configurable expiry, limits, and validation; `library-settings.ts` for Library/Display settings tabs and a live paper preview; `display-options.ts` for canonical typography, positioning, ruling, margin, priority size, and paper/ink options; `todo-list.css` for appearance; `src/app/workspace-format.ts` for saving/backup compatibility; `src/assets/todo-list.png` and `docs/todo-list-artwork.md` for artwork. `task-editor.ts` owns continuous ruled task rows, measured vertically centered section priorities, shared editable prefixes, blank-line section splitting, completion, direct × skip/defer toggles beside checkboxes and skipped-first ordering within sections, row menus, ordering, and deletion/undo; `task-model.ts` owns task/section limits and validation. |
-| Index Cards page and selected item | `src/features/index-cards/index-cards.ts` for selection, last-set persistence/restoration, and revealing its parent groups; `tree-model.ts` validates the optional saved set ID |
-| Notebook Markdown contents and files | `src/features/notebook/markdown-outline.ts` for hierarchical preview navigation; `markdown-renderer.ts` supplies heading targets and titles from the same parse as the preview; `markdown-editor.ts` owns Contents visibility and download state; `document-files.ts` validates Markdown uploads and prepares portable filenames; `library.ts` owns the file picker and import feedback; `notebook.ts` inserts/selects imports; `src/core/file-download.ts` isolates standard browser downloads |
-| Notebook Lined Paper | `src/features/notebook/lined-editor.ts` for independent per-page headings, main text, and right-aligned margin notes; `lined-pagination.ts` for measured text page boundaries; `lined-editor.css` for paper proportions, ruling, punch holes, and responsive styling; `document-types.ts` for the text contract and validation; `library-model.ts` for normalizing older empty lined documents; `library.ts` for content-aware deletion; `notebook.ts` for editor composition |
-| Todo List Tips | `src/app/tips-content.ts` for short library and task-writing guides; `src/app/use-tips.ts` for shared guide coordination |
-| Notebook Tips | `src/app/tips-content.ts` for library, creation, Markdown, and Lined Paper guide steps; `src/features/notebook/notebook.ts` for temporary example documents and selection restoration; `src/app/use-tips.ts` for shared guide coordination |
-| Notebook display settings | `src/features/notebook/display-options.ts` for per-type defaults, controls, validation, and CSS mapping; `display-settings.ts` and `display-settings.css` for the accessible tabbed dialog; `notebook.ts` for the Settings button and saved preferences; `library-model.ts` for backup validation; `markdown-editor.css` and `lined-editor.css` apply the type-specific styles |
-| Index Cards display settings | `src/features/index-cards/display-options.ts` for canonical defaults, choices, bounds, validation, and CSS mapping; `display-settings.ts` and `display-settings.css` for the dialog and preview; `index-cards.ts` for persisted options and the Settings footer; `tree-model.ts` for backup validation |
-| Card stack, editing, and review | `src/features/index-cards/card-set.ts` for the unified UI; `card-paper.ts` for the two editable faces and flip state rendering; `card-model.ts` for card creation, shuffle, and validation; `card-set.css` for the 5:3 paper geometry, ten proportional writing rows, styling, and animation |
-| Review setup and sequence | `src/features/index-cards/review-setup.ts` and `review-setup.css` for the two-step dialog; `card-set.ts` for the visible session summary, finish/end actions, starting side, and forward/backward/shuffled sequence; `card-list.ts` for matching previews |
-| Card titles and right-hand card list | `src/features/index-cards/card-paper.ts` for separate front/back title inputs; `index-cards.ts` owns the transient Cards-panel width; `card-set.ts` owns the resize separator and selected card; `card-model.ts` handles title defaults and validation; `card-list.ts`, `card-set.css`, and `card-list.css` own list navigation, sizing, and responsive layout |
-| Library minimization, resizing, and height | `src/features/index-cards/index-cards.ts` owns collapsed state, transient width, the resize separator, and the floating restore icon; `directory-tree.ts` owns the minimize control; `index-cards.css` and `src/styles/shell.css` own sizing, animation, and scrolling |
-| Mobile and tablet behavior | `src/styles/mobile.css` for scoped layout, safe areas, scrolling, and touch targets; `src/features/index-cards/index-cards.ts` for responsive library dismissal; `directory-tree.ts` distinguishes opening an item from creating/renaming; `src/html/index.html` for viewport handling |
-| Groups, sets, renaming, and dragging | `src/features/index-cards/directory-tree.ts` for the UI; `src/features/index-cards/tree-model.ts` for feature data and validation; `src/core/tree.ts` for shared hierarchy lookup and movement |
-| Deleting groups, sets, and cards | `src/features/index-cards/directory-tree.ts` for immediate empty-container deletion and confirmation of populated containers; `card-set.ts` for immediate individual-card deletion and selection cleanup; `src/components/delete-confirmation.ts` and `src/styles/delete-confirmation.css` for the shared fullscreen prompt; `tree-model.ts` for directory deletion |
-| Index Cards styling | `src/features/index-cards/index-cards.css`, `card-set.css`, and `card-list.css`, imported by `src/styles/index.css` |
-| Local saving and workspace backups | `src/app/workspace.ts` for storage and files; `src/app/workspace-tools.ts` for download/upload and replacement review, composed into the navigation drawer footer by `src/app/app.ts`; `docs/workspace-data.md` for the format |
-| Word Search library | `src/features/word-search/word-search.ts` for feature composition; `library.ts` for tree interactions; `library-model.ts` for Word Search item data, limits, validation, and saving setup; `src/core/tree.ts` for shared hierarchy lookup, deletion, movement, and group options; `src/components/delete-confirmation.ts` for destructive confirmation; `word-search.css` for layout and responsive behavior |
-| Word Search creation, editing, and saved settings | `src/features/word-search/puzzle-form.ts` for the staged form and saved summary; `puzzle-form.css` for responsive form layout; `puzzle-model.ts` for canonical choices, word normalization, and validation; `word-search.ts` for destination and selection coordination |
-| Word Search generation and play | `src/features/word-search/puzzle-generator.ts` for bounded asynchronous word placement; `game-model.ts` for directions, line matching, and saved-game validation; `puzzle-game.ts` for progress, hints, reveal, and restart; `puzzle-grid.ts` for mouse, touch, and keyboard selection; `puzzle-game.css` for grid and word-bank layout |
-| Word Search display settings and highlights | `src/features/word-search/display-options.ts` for canonical settings and validation; `display-settings.ts` and `display-settings.css` for the dialog and live preview; `word-search.ts` for saved options and the library Settings entry point; `grid-sizing.ts` for available-space sizing; `word-outline.ts` for rounded SVG word outlines; `puzzle-grid.ts` for pointer tracking; `puzzle-game.css` for appearance and motion |
-| Crossword library | `src/features/crossword/crossword.ts` for feature composition, selection, resizing, setup coordination, and Settings; `library.ts` for grouped tree interactions; `library-model.ts` for hierarchy data, limits, puzzle saving, and backup validation; `crossword.css` for library/workspace layout; `src/assets/crossword.png` and `docs/crossword-artwork.md` for artwork. |
-| Crossword creation and generation | `src/features/crossword/puzzle-form.ts` and `puzzle-form.css` for answer/clue setup; `puzzle-model.ts` for canonical entries, normalization, compatibility analysis, and validation; `puzzle-generator.ts` for bounded asynchronous connected Across/Down placement, automatic grid sizing, and clue numbering. |
-| Crossword solving and display | `src/features/crossword/game-model.ts` for placements, progress, completion, and saved-game validation; `puzzle-grid.ts` for cell input and keyboard navigation; `grid-sizing.ts` for responsive sizing; `puzzle-game.ts` and `puzzle-game.css` for clues, checking, hints, reveal, restart, and regeneration; `display-options.ts`, `display-settings.ts`, and `display-settings.css` for persisted appearance controls. |
-| Visual styling | `src/styles/index.css` for imports; `tokens.css` for semantic design values; `base.css` for typography and shared controls; `shell.css` for navigation. See `docs/design.md` for styling conventions and manual review guidance. |
-| Adding a future feature | Create feature modules in `src/features/`; add metadata in `src/features/feature-definitions.ts` and its component in `src/features/feature-registry.ts`; restart the development server and rebuild production output to generate the new path |
-| Shared icons, dialogs, and panel behavior | `src/components/icon.ts` for inline SVG icons; `src/components/delete-confirmation.ts` for destructive confirmation; `src/components/use-dialog.ts` for native dialog lifecycle; `src/components/use-persisted-panel-resize.ts` for persisted horizontal panel resizing; `src/styles/base.css` and `src/styles/delete-confirmation.css` for shared control/dialog styles |
-| Adding a shared component or utility | `src/components/` contains reusable feature-neutral Vue components; `src/core/` contains neutral utilities such as shared tree operations, ID creation, validation, and best-effort browser-local UI preferences that stay outside workspace backups |
-| TypeScript configuration and contracts | `tsconfig.json`, `tsconfig.app.json`, and `tsconfig.node.json` define checking boundaries; `src/core/metadata.ts` and `validation.ts` provide shared neutral contracts; `docs/typescript-migration.md` records the completed conversion and compatibility boundaries |
-| Build and development server | `webpack.config.mts` for bundles, styles, assets, HTML, and live reload; `build/site-config.mts` for base-path/route validation; `package.json` and `package-lock.json` for commands and pinned dependencies |
-| GitHub Pages deployment | `.github/workflows/deploy-pages.yml` for manual publishing; `webpack.config.mts` for the production build and route entry points; `build/page-metadata.mts` for metadata; `src/html/index.html` for the base element; `src/app/navigation.ts` for repository-prefixed URLs; `docs/github-pages.md` for setup |
-| Architectural changes | `docs/architecture.md`, affected modules, and this routing table; `AGENTS.md` if maintenance rules change |
-| Markdown GFM and HTML support | `src/features/notebook/markdown-renderer.ts` owns parsing, the HTML sanitizer allowlist, safe Vue node conversion, and heading metadata; `markdown-editor.css` styles tables, task lists, and HTML; `package.json` and `package-lock.json` pin Marked/DOMPurify; `webpack.config.mts` includes their licenses in output |
-| Markdown cheatsheet | `src/features/notebook/markdown-cheatsheet.ts` owns the compact reference dialog and syntax examples; `markdown-editor.ts` opens it from the Source header; `markdown-editor.css` styles the dialog |
-| Notebook deletion | `src/features/notebook/library.ts` owns group/document trash controls, immediate empty-group/empty-document deletion, confirmation, descendant selection cleanup, and focus recovery; `src/components/delete-confirmation.ts` renders the shared confirmation while `library.ts` supplies Notebook-specific detail; `library-model.ts` removes the entry and its subtree |
-
-All named files exist. Index Cards owns the directory editor and editable card stack; Word Search owns its library, staged puzzle setup, generation, and play. Consult [architecture.md](architecture.md) for dependency and structural changes.
+| App identity / metadata | `src/app/app-config.ts`, `build/page-metadata.mts`, `src/html/index.html` |
+| Feature registration, labels, routes, groups, versions | `src/features/feature-definitions.ts`, `feature-registry.ts` |
+| Home cards/search | `src/app/home-page.ts`, `src/styles/home.css` |
+| App artwork / visible icons | `src/app/app-icon.ts`, `src/assets/app-icons/`, `src/styles/shell.css` |
+| Header / shell / navigation drawer | `src/app/app.ts`, `navigation-drawer.ts`, `navigation.ts`, `src/styles/shell.css` |
+| Theme registry/settings | `src/app/theme.ts`, `theme-menu.ts`, `theme-picker.ts`, `src/styles/themes.css`, `theme.css` |
+| Tips content | `src/app/tips-content.ts` and feature-specific Tips adapters |
+| Tips engine/UI | `packages/tips/` |
+| Shared buttons/dialogs | `src/styles/base.css`, `src/components/use-dialog.ts`, `popup-dialog.ts` |
+| Shared AI prompt/import tabs, handoff, and animation | `src/components/ai-prompt-exchange.ts`, `src/styles/ai-prompt-exchange.css` |
+| Shared AI category discovery/history | `src/components/ai-category-picker.ts`, `src/core/ai-study-categories.ts`, `ai-category-history.ts`, `ai-json.ts` |
+| Answer strictness control | `src/components/answer-strictness-field.ts` |
+| Delete confirmation | `src/components/delete-confirmation.ts`, `src/styles/delete-confirmation.css` |
+| Shared tree behavior | `src/core/tree.ts` plus the calling feature model |
+| IDs | `src/core/ids.ts` |
+| Answer matching / morphology / semantics | `packages/@dynamic-learner/answer-matching/`; `src/core/answer-matching.ts` is the legacy-behavior adapter |
+| Fill-in-the-blanks parsing | `src/core/fill-blank.ts` |
+| Leave warnings | `src/core/leave-guards.ts` |
+| Workspace save/load/backups | `src/app/workspace.ts`, `workspace-format.ts`, `workspace-tools.ts` |
+| Backup reminders / study suppression | `src/app/backup-reminders.ts`, `backup-reminder-policy.ts`, `backup-reminder-ui.ts`, `src/core/study-activity.ts`, `src/components/use-study-session.ts` |
+| GitHub Pages / route output | `webpack.config.mts`, `build/site-config.mts`, `build/page-metadata.mts`, `.github/workflows/deploy-pages.yml` |
+| Calculator | `src/features/calculator/` |
+| Notebook composition/library | `src/features/notebook/notebook.ts`, `library.ts`, `library-model.ts`, `document-types.ts` |
+| Workbook scaffold | `src/features/workbook/workbook.ts`; register in `src/features/feature-definitions.ts` and `feature-registry.ts` |
+| Notebook Markdown | `markdown-editor.ts`, `markdown-renderer.ts`, `markdown-outline.ts`, `document-files.ts` |
+| Notebook Lined Paper | `lined-editor.ts`, `lined-pagination.ts`, `lined-editor.css` |
+| Notebook Graph Paper | `graph-editor.ts`, `graph-paper.ts`, `graph-model.ts`, `graph-scene.ts`, `graph-interaction.ts`, `graph-gestures.ts`; see `graph-paper.md` |
+| Notebook display settings | `display-options.ts`, `display-settings.ts`, `display-settings.css` |
+| Todo library/model/settings | `src/features/todo-list/todo-list.ts`, `library.ts`, `library-model.ts`, `library-settings.ts` |
+| Todo task behavior | `task-editor.ts`, `task-model.ts`, `todo-list.css` |
+| Index Cards composition/library | `src/features/index-cards/index-cards.ts`, `directory-tree.ts`, `tree-model.ts` |
+| Flash Cards | `card-set.ts`, `card-paper.ts`, `card-model.ts` |
+| Index Cards AI category flow | `ai-category-step.ts` plus the shared AI category picker/history |
+| Index Cards AI/JSON card creation | `ai-import.ts`, `ai-import-format.ts`, `fill-blank-ai-format.ts`, `ai-import.css`, `set-builder.ts`, `index-cards.ts`, `directory-tree.ts` |
+| Fill in the Blanks | `fill-blank-set.ts`, `fill-blank-paper.ts`, `fill-blank-editor.ts`, `fill-blank-model.ts` |
+| Index Cards review | `review-setup.ts`, `review-result.ts`, `card-set.ts`, `fill-blank-set.ts` |
+| Index Cards list / panel sizing | `card-list.ts`, `card-list.css`, `index-cards.ts`, `index-cards.css` |
+| Index Cards settings | `display-options.ts`, `display-settings.ts`, `tree-model.ts`, `display-settings.css` |
+| Word Search library/setup | `src/features/word-search/word-search.ts`, `library.ts`, `library-model.ts`, `puzzle-form.ts` |
+| Word Search generation/play | `puzzle-generator.ts`, `game-model.ts`, `puzzle-game.ts`, `puzzle-grid.ts` |
+| Word Search appearance | `display-options.ts`, `display-settings.ts`, `grid-sizing.ts`, `word-outline.ts` |
+| Crossword library/setup | `src/features/crossword/crossword.ts`, `library.ts`, `library-model.ts`, `puzzle-form.ts` |
+| Crossword generation/play | `puzzle-generator.ts`, `puzzle-model.ts`, `game-model.ts`, `puzzle-game.ts`, `puzzle-grid.ts` |
+| Crossword appearance | `display-options.ts`, `display-settings.ts`, `grid-sizing.ts` |
+| Guide library/modes | `src/features/guide/guide.ts`, `library.ts`, `library-model.ts`, `mode-picker.ts` |
+| Guide List | `list-editor.ts` |
+| Guide AI/JSON import | `ai-import.ts`, `guide.ts`, `library.ts` |
+| Guide Map | `map-editor.ts`, `map-graph.ts`, `map-study.ts`, `map-presentation.ts`, `guide.css` |
+| Review library/model | `src/features/knowledge-check/knowledge-check.ts`, `library.ts`, `library-model.ts` |
+| Review authoring | `check-builder.ts`, `question-model.ts`, `fill-blank-editor.ts`, `set-options*.ts` |
+| Review Study/Quiz/Test | `knowledge-set.ts`, `session-setup.ts`, `session-settings.ts`, `session-intro.ts`, `session-state.ts`, `knowledge-session.ts`, `review-motion.ts`, `review-motion.css` |
+| Review imports | `import-knowledge-set.ts`, `index-cards-import-picker.ts`, `fill-blank-import-resolution.ts`, `import-index-cards.ts` |
+| Review AI creation / question mix | `ai-creation.ts`, `ai-creation.css`, `ai-import-format.ts`, `ai-question-mix.ts`, `knowledge-check.ts`, `library.ts` |
+| Responsive/touch overrides | `src/styles/mobile.css` plus the owning feature stylesheet |

@@ -1,0 +1,50 @@
+.ai-exchange { display:grid; gap:16px; min-width:0; }
+.ai-exchange-tabs,.ai-exchange-actions { display:flex;align-items:center;flex-wrap:wrap;gap:8px; }
+.ai-exchange-tabs { padding-bottom:10px;border-bottom:1px solid var(--border-color); }
+.ai-exchange-tabs [aria-selected=true] { border-color:var(--brand);background:var(--brand-tint);color:var(--brand-text); }
+.ai-exchange-frame { min-width:0;min-height:260px; }
+.ai-exchange-panel { display:grid;align-content:start;justify-items:start;gap:14px;min-width:0; }
+.ai-exchange-help { margin:0;color:var(--text-secondary); }
+.ai-exchange-muted { color:var(--text-secondary);font-size:12px; }
+.ai-exchange-panel textarea { width:100%;min-width:0;min-height:220px;padding:10px;resize:vertical;font-family:monospace; }
+.ai-exchange-handoff { display:grid;gap:8px;width:100%;padding:16px;border:1px solid var(--brand);border-radius:var(--radius-dialog);background:var(--brand-tint); }
+.ai-exchange-handoff p { margin:0; }
+.ai-exchange-handoff ol { display:grid;gap:6px;margin:0;padding-left:22px; }
+.ai-exchange-handoff button { justify-self:start; }
+.ai-exchange-error { color:var(--danger); }
+.ai-exchange-preview { width:100%;min-width:0; }
+.ai-exchange-panel-enter-active,.ai-exchange-panel-leave-active,.ai-workflow-step-enter-active,.ai-workflow-step-leave-active { transition:opacity 190ms var(--ease-out),transform 190ms var(--ease-out); }
+.ai-exchange-panel-enter-from,.ai-workflow-step-enter-from { opacity:0;transform:translate(16px,4px); }
+.ai-exchange-panel-leave-to,.ai-workflow-step-leave-to { opacity:0;transform:translate(-12px,-2px); }
+.is-backward .ai-exchange-panel-enter-from,.is-backward .ai-workflow-step-enter-from { transform:translate(-16px,4px); }
+.is-backward .ai-exchange-panel-leave-to,.is-backward .ai-workflow-step-leave-to { transform:translate(12px,-2px); }
+.ai-exchange-reveal-enter-active,.ai-exchange-reveal-leave-active { transition:opacity 160ms var(--ease-out),transform 160ms var(--ease-out); }
+.ai-exchange-reveal-enter-from,.ai-exchange-reveal-leave-to { opacity:0;transform:translateY(4px); }
+.ai-exchange-copy.is-copied { animation:ai-exchange-copied 650ms var(--ease-out); }
+@keyframes ai-exchange-copied { 0%,100%{transform:scale(1)}35%{transform:scale(1.04)} }
+@media(prefers-reduced-motion:reduce) {
+  .ai-exchange-panel-enter-active,.ai-exchange-panel-leave-active,.ai-workflow-step-enter-active,.ai-workflow-step-leave-active,.ai-exchange-reveal-enter-active,.ai-exchange-reveal-leave-active { transition:none; }
+  .ai-exchange-panel-enter-from,.ai-exchange-panel-leave-to,.ai-workflow-step-enter-from,.ai-workflow-step-leave-to,.ai-exchange-reveal-enter-from,.ai-exchange-reveal-leave-to { transform:none!important; }
+  .ai-exchange-copy.is-copied { animation:none; }
+}
+
+.study-ai-workspace { display:grid;gap:20px;width:min(900px,100%);margin-inline:auto;padding:clamp(28px,5vw,56px); }
+.library-collapsed .study-ai-workspace { padding-top:48px; }
+.study-ai-header { display:flex;align-items:flex-start;justify-content:space-between;gap:20px; }
+.study-ai-header h2 { margin:0 0 8px;font-size:24px;line-height:30px; }
+.study-ai-header p { margin:0 0 8px; }
+.study-ai-actions { display:flex;align-items:center;flex-wrap:wrap;gap:8px; }
+.study-ai-muted { color:var(--text-secondary);font-size:12px; }
+.study-ai-preview { display:grid;gap:12px;padding:16px;border:1px solid var(--border-color);border-radius:var(--radius-dialog);background:var(--page-background); }
+.study-ai-preview p,.study-ai-preview h3 { margin:0; }
+.study-ai-error { color:var(--danger); }
+.study-ai-categories { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 12px; width: 100%; }
+.study-ai-category { display: grid; align-content: start; gap: 8px; padding: 16px; text-align: left; white-space: normal; overflow-wrap: anywhere; }
+.study-ai-category span { color: var(--text-secondary); font-size: 12px; line-height: 18px; }
+.study-ai-history { padding-block:12px;border-block:1px solid var(--border-color); }
+.study-ai-history summary { cursor:pointer;font-weight:600; }
+.study-ai-history ul { display:grid;gap:8px;max-height:240px;overflow:auto;padding:0;list-style:none; }
+.study-ai-history li button { display:flex;flex-wrap:wrap;align-items:center;gap:8px;width:100%;text-align:left;white-space:normal;overflow-wrap:anywhere; }
+.study-ai-history li button strong { flex:1;min-width:0; }
+.study-ai-history li button .study-ai-muted { flex-basis:100%; }
+@media(max-width:700px),(max-width:1100px) and (pointer:coarse) { .study-ai-workspace { padding:48px 20px 20px; } .study-ai-header { flex-wrap:wrap; } }

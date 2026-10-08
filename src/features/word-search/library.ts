@@ -5,7 +5,7 @@ import { inputValue } from '../../core/dom.ts';
 import { Icon } from '../../components/icon.ts';
 import { DeleteConfirmation } from '../../components/delete-confirmation.ts';
 import {
-  canMove, countItems, countWordSearches, createGroup, deleteItem, findItem,
+  canMove, countItems, countWordSearches, createGroup, deleteItem, findItem, firstEntry,
   MAX_DEPTH, MAX_ITEMS, MAX_NAME_LENGTH, moveItem,
 } from './library-model.ts';
 
@@ -191,12 +191,12 @@ export const WordSearchLibrary = defineComponent({
     async function confirmDelete(id = pendingDelete.value?.id) {
       const found = id && findItem(props.items, id);
       if (!found) { cancelDelete(); return; }
-      const { item, siblings, index, parentId } = found;
-      const fallbackId = siblings[index + 1]?.id ?? siblings[index - 1]?.id ?? parentId;
+      const { item } = found;
       const removesSelection = props.selectedId === item.id ||
         (item.kind === 'group' && Boolean(findItem(item.children, props.selectedId)));
 
       deleteItem(props.items, item.id);
+      const fallbackId = firstEntry(props.items)?.id ?? null;
       const removed = [item];
       while (removed.length) {
         const next = removed.pop();
@@ -204,7 +204,10 @@ export const WordSearchLibrary = defineComponent({
         expanded.value.delete(next.id);
         if (next.kind === 'group') removed.push(...next.children);
       }
-      if (removesSelection) emit('select', fallbackId);
+      if (removesSelection) {
+        if (fallbackId) reveal(fallbackId);
+        emit('select', fallbackId);
+      }
       pendingDelete.value = null;
       deleteTrigger = null;
       announcement.value = `Deleted ${item.name}${item.kind === 'group' ? ' and everything inside it' : ''}.`;

@@ -19,6 +19,7 @@ export const PuzzleGrid = defineComponent({
     direction: { type: String as PropType<Direction>, default: 'across' },
     revealed: Boolean,
     showIncorrect: Boolean,
+    celebratingAnswers: { type: Array as PropType<string[]>, default: () => [] },
   },
   emits: {
     'activate': (_cell: number, _direction: Direction) => true,
@@ -35,6 +36,18 @@ export const PuzzleGrid = defineComponent({
     const activeWordCells = computed(() => new Set(activePlacement.value
       ? placementCells(activePlacement.value, activePlacement.value.answer.length, size.value)
       : []));
+    const celebrationCells = computed(() => {
+      const result = new Map<number, number>();
+      const celebrating = new Set(props.celebratingAnswers);
+      for (const placement of props.game.placements) {
+        if (!celebrating.has(placement.answer)) continue;
+        placementCells(placement, placement.answer.length, size.value).forEach((cell, index) => {
+          const existing = result.get(cell);
+          if (existing === undefined || index < existing) result.set(cell, index);
+        });
+      }
+      return result;
+    });
 
     const starts = computed(() => {
       const result = new Map<number, number>();
@@ -176,6 +189,7 @@ export const PuzzleGrid = defineComponent({
               const incorrect = props.showIncorrect && Boolean(entered) && entered !== solution;
               const selected = props.activeCell === cell;
               const inWord = activeWordCells.value.has(cell);
+              const celebrationIndex = celebrationCells.value.get(cell);
               return h('button', {
                 ref: (element) => {
                   if (element instanceof HTMLButtonElement) cells.set(cell, element);
@@ -187,7 +201,11 @@ export const PuzzleGrid = defineComponent({
                   'is-word': inWord,
                   'is-incorrect': incorrect,
                   'is-revealed': props.revealed,
+                  'is-celebrating': celebrationIndex !== undefined,
                 }],
+                style: celebrationIndex === undefined
+                  ? undefined
+                  : `--crossword-celebration-delay: ${celebrationIndex * 18}ms;`,
                 role: 'gridcell',
                 tabindex: selected || (props.activeCell === null && cell === props.game.rows.join('').search(/[A-Z]/)) ? 0 : -1,
                 'aria-selected': selected,

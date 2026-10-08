@@ -23,6 +23,7 @@ const libraryTree = createTreeOperations<LibraryItem>({
   maxDepth: MAX_DEPTH,
 });
 export const findItem = libraryTree.findItem;
+export const firstEntry = libraryTree.firstEntry;
 export const countItems = libraryTree.countItems;
 export const deleteItem = libraryTree.deleteItem;
 export const canMove = libraryTree.canMove;
@@ -129,6 +130,10 @@ export function validateNotebook(value: unknown): asserts value is Notebook {
         // Lined Paper existed as an empty placeholder in version-1 workspaces.
         if (item.type === 'lined' && isRecord(item.data) && Object.keys(item.data).length === 0) {
           item.data = createDocumentData('lined');
+        }
+        // Graph Paper also existed as an empty version-1 placeholder.
+        if (item.type === 'graph' && isRecord(item.data) && Object.keys(item.data).length === 0) {
+          item.data = createDocumentData('graph');
         }
         if (item.type === 'lined') {
           // Validate the specific type before accessing its optional editor fields.

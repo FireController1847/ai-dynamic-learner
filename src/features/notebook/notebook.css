@@ -58,22 +58,6 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
-.notebook-empty-state {
-  grid-column: 2;
-  grid-row: 1;
-  display: grid;
-  align-content: center;
-  justify-items: center;
-  gap: 8px;
-  min-width: 0;
-  min-height: 0;
-  padding: 32px;
-  color: var(--text-secondary);
-  text-align: center;
-}
-.notebook-empty-state .ui-icon { width: 36px; height: 36px; }
-.notebook-empty-state h2 { margin: 4px 0 0; color: var(--text-primary); font-size: 18px; }
-.notebook-empty-state p { margin: 0; }
 .notebook-settings-placeholder {
   min-height: 120px;
   display: grid;

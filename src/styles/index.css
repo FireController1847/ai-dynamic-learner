@@ -1,16 +1,44 @@
 @import './tokens.css';
+@import './themes.css';
 @import './base.css';
 @import './delete-confirmation.css';
+@import './popup-dialog.css';
+@import './library-empty-state.css';
+@import './ai-prompt-exchange.css';
 @import './shell.css';
-@import './tips.css';
+@import './backup-reminders.css';
+@import './theme.css';
+@import '../../packages/tips/src/tips.css';
+
+.tips-layer,
+.tips-menu-dialog {
+  --tips-scrim: var(--scrim);
+  --tips-brand: var(--brand);
+  --tips-brand-tint: var(--brand-tint);
+  --tips-brand-text: var(--brand-text);
+  --tips-overlay-shadow: var(--shadow-overlay);
+  --tips-radius: var(--radius);
+  --tips-background: var(--page-background);
+  --tips-border: var(--border-color);
+  --tips-text: var(--text-color);
+  --tips-text-secondary: var(--text-secondary);
+  --tips-control-border: var(--control-border);
+  --tips-hover: var(--surface-hover);
+  --tips-pressed: var(--surface-pressed);
+  --tips-fast: var(--motion-fast);
+}
 @import './home.css';
+@import '../features/calculator/calculator.css';
 @import '../features/notebook/notebook.css';
 @import '../features/notebook/markdown-editor.css';
 @import '../features/notebook/lined-editor.css';
+@import '../features/notebook/graph-editor.css';
 @import '../features/notebook/display-settings.css';
 @import '../features/todo-list/todo-list.css';
 @import '../features/index-cards/index-cards.css';
+@import '../features/index-cards/ai-import.css';
 @import '../features/index-cards/card-set.css';
+@import '../features/index-cards/fill-blank.css';
 @import '../features/index-cards/card-list.css';
 @import '../features/index-cards/review-setup.css';
 @import '../features/index-cards/display-settings.css';
@@ -22,4 +50,9 @@
 @import '../features/crossword/puzzle-form.css';
 @import '../features/crossword/puzzle-game.css';
 @import '../features/crossword/display-settings.css';
+@import '../features/guide/guide.css';
+@import '../features/knowledge-check/knowledge-check.css';
+@import '../features/knowledge-check/ai-creation.css';
+@import '../features/knowledge-check/knowledge-set.css';
+@import '../features/knowledge-check/review-motion.css';
 @import './mobile.css';

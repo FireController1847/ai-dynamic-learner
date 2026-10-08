@@ -1,18 +1,25 @@
 import { h, type VNode } from 'vue';
+import { Calculator } from './calculator/calculator.ts';
 import { Notebook } from './notebook/notebook.ts';
+import { Workbook } from './workbook/workbook.ts';
 import { TodoList } from './todo-list/todo-list.ts';
 import { IndexCards } from './index-cards/index-cards.ts';
 import { WordSearch } from './word-search/word-search.ts';
 import { Crossword } from './crossword/crossword.ts';
-import { Workbook } from './workbook/workbook.ts';
+import { Guide } from './guide/guide.ts';
+import { KnowledgeCheck } from './knowledge-check/knowledge-check.ts';
 import { featureDefinitions, type FeatureDefinition, type FeatureId } from './feature-definitions.ts';
 import type { Notebook as NotebookModel } from './notebook/library-model.ts';
 import type { IndexCards as IndexCardsModel } from './index-cards/tree-model.ts';
 import type { WordSearch as WordSearchModel } from './word-search/library-model.ts';
 import type { Crossword as CrosswordModel } from './crossword/library-model.ts';
+import type { KnowledgeCheck as KnowledgeCheckModel } from './knowledge-check/library-model.ts';
+import type { GuideModel } from './guide/library-model.ts';
 import type { TodoLists } from './todo-list/library-model.ts';
 
 export interface FeatureModels {
+  'guide': GuideModel;
+  'knowledge-check': KnowledgeCheckModel;
   notebook: NotebookModel;
   'todo-list': TodoLists;
   'index-cards': IndexCardsModel;
@@ -22,12 +29,20 @@ export interface FeatureModels {
 
 // Each renderer keeps the component and its model paired at the typed boundary.
 const renderers: Record<FeatureId, (definition: FeatureDefinition, models: FeatureModels) => VNode> = {
+  calculator: (definition) => h(Calculator, { key: definition.id, title: definition.label }),
   notebook: (definition, models) => h(Notebook, { key: definition.id, title: definition.label, model: models.notebook }),
-  'todo-list': (definition, models) => h(TodoList, { key: definition.id, title: definition.label, image: definition.image, model: models['todo-list'] }),
+  workbook: (definition) => h(Workbook, { key: definition.id }),
+  'todo-list': (definition, models) => h(TodoList, { key: definition.id, title: definition.label, model: models['todo-list'] }),
   'index-cards': (definition, models) => h(IndexCards, { key: definition.id, title: definition.label, model: models['index-cards'] }),
   'word-search': (definition, models) => h(WordSearch, { key: definition.id, title: definition.label, model: models['word-search'] }),
-  crossword: (definition, models) => h(Crossword, { key: definition.id, title: definition.label, image: definition.image, model: models.crossword }),
-  workbook: (definition) => h(Workbook, { key: definition.id }),
+  crossword: (definition, models) => h(Crossword, { key: definition.id, title: definition.label, model: models.crossword }),
+  'guide': (definition, models) => h(Guide, { key: definition.id, title: definition.label, model: models['guide'] }),
+  'knowledge-check': (definition, models) => h(KnowledgeCheck, {
+    key: definition.id,
+    title: definition.label,
+    model: models['knowledge-check'],
+    indexCards: models['index-cards'],
+  }),
 };
 
 export const features = featureDefinitions.map((definition) => ({

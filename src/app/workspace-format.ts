@@ -1,3 +1,5 @@
+import { validateKnowledgeCheck, type KnowledgeCheck } from '../features/knowledge-check/library-model.ts';
+import { validateGuide, type GuideModel } from '../features/guide/library-model.ts';
 import { isRecord } from '../core/validation.ts';
 import type { Notebook } from '../features/notebook/library-model.ts';
 import type { IndexCards } from '../features/index-cards/tree-model.ts';
@@ -8,7 +10,7 @@ import { validateTodoLists, type TodoLists } from '../features/todo-list/library
 export interface Workspace {
   format: 'dynamic-learner';
   version: 1;
-  features: { notebook: Notebook; 'todo-list': TodoLists; 'index-cards': IndexCards; 'word-search': WordSearch; crossword: Crossword };
+  features: { notebook: Notebook; 'todo-list': TodoLists; 'index-cards': IndexCards; 'word-search': WordSearch; crossword: Crossword; 'guide': GuideModel; 'knowledge-check': KnowledgeCheck };
 }
 
 import { validateNotebook } from '../features/notebook/library-model.ts';
@@ -28,6 +30,8 @@ export function emptyWorkspace(): Workspace {
       'index-cards': { items: [] },
       'word-search': { items: [] },
       crossword: { items: [] },
+      'guide': { items: [] },
+      'knowledge-check': { items: [] },
     },
   };
 }
@@ -40,20 +44,28 @@ export function parseWorkspace(text: string): Workspace {
   if (!isRecord(value) || value.format !== 'dynamic-learner' || value.version !== 1 ||
       Object.keys(value).some((key) => !['format', 'version', 'features'].includes(key)) ||
       !isRecord(value.features) || !value.features['index-cards'] ||
-      Object.keys(value.features).some((key) => !['notebook', 'todo-list', 'index-cards', 'word-search', 'crossword'].includes(key))) {
+      Object.keys(value.features).some((key) => !['notebook', 'todo-list', 'index-cards', 'word-search', 'crossword', 'guide', 'study-guide', 'knowledge-check'].includes(key))) {
     throw new Error('This is not a supported Dynamic Learner workspace backup (version 1).');
+  }
+  if (Object.hasOwn(value.features, 'guide') && Object.hasOwn(value.features, 'study-guide')) {
+    throw new Error('A workspace cannot contain both the legacy and current Guide feature keys.');
   }
   const notebook = value.features.notebook || { items: [] };
   const indexCards = value.features['index-cards'];
   const wordSearch = value.features['word-search'] || { items: [] };
   const todoLists = Object.hasOwn(value.features, 'todo-list') ? value.features['todo-list'] : { items: [] };
   const crossword = value.features.crossword || { items: [] };
+  const guide = Object.hasOwn(value.features, 'guide') ? value.features['guide']
+    : Object.hasOwn(value.features, 'study-guide') ? value.features['study-guide'] : { items: [] };
+  const knowledgeCheck = Object.hasOwn(value.features, 'knowledge-check') ? value.features['knowledge-check'] : { items: [] };
+  validateGuide(guide);
+  validateKnowledgeCheck(knowledgeCheck);
   validateNotebook(notebook);
   validateIndexCards(indexCards);
   validateWordSearch(wordSearch);
   validateTodoLists(todoLists);
   validateCrossword(crossword);
   return { format: 'dynamic-learner', version: 1,
-    features: { notebook, 'todo-list': todoLists, 'index-cards': indexCards, 'word-search': wordSearch, crossword } };
+    features: { notebook, 'todo-list': todoLists, 'index-cards': indexCards, 'word-search': wordSearch, crossword, 'guide': guide, 'knowledge-check': knowledgeCheck } };
 
 }

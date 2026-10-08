@@ -7,7 +7,7 @@ export interface TodoDisplay {
 }
 export const DISPLAY_FIELDS: DisplayField<TodoDisplay>[] = [
   { key: 'paper', label: 'Paper', default: 'white', choices: [
-    { value: 'white', label: 'White', css: '#fff' }, { value: 'cream', label: 'Cream', css: 'var(--paper)' },
+    { value: 'white', label: 'White', css: 'var(--paper-white)' }, { value: 'cream', label: 'Cream', css: 'var(--paper-cream)' },
   ] },
   { key: 'font', label: 'Font', default: 'serif', choices: [
     { value: 'serif', label: 'Serif', css: "'Times New Roman', Times, serif" },
@@ -15,8 +15,8 @@ export const DISPLAY_FIELDS: DisplayField<TodoDisplay>[] = [
     { value: 'mono', label: 'Monospace', css: 'ui-monospace, Consolas, monospace' },
   ] },
   { key: 'ink', label: 'Ink', default: 'pencil', choices: [
-    { value: 'pencil', label: 'Pencil', css: '#3d3d3d' }, { value: 'dark', label: 'Black', css: '#242424' },
-    { value: 'blue', label: 'Blue', css: '#174a7e' },
+    { value: 'pencil', label: 'Pencil', css: 'var(--paper-ink-pencil)' }, { value: 'dark', label: 'Black', css: 'var(--paper-ink-dark)' },
+    { value: 'blue', label: 'Blue', css: 'var(--paper-ink-blue)' },
   ] },
   { key: 'textSize', label: 'Text size', default: 100, min: 80, max: 130, step: 5, unit: '%' },
   { key: 'baseline', label: 'Text vertical offset', default: 0, min: -8, max: 8, step: 1, unit: 'px' },

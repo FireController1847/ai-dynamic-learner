@@ -24,6 +24,16 @@ export interface TreeOperationsOptions<T extends TreeItem> {
 }
 
 export function createTreeOperations<T extends TreeItem>(options: TreeOperationsOptions<T>) {
+  function firstEntry(items: T[]): T | null {
+    for (const item of items) {
+      const children = options.children(item);
+      if (children === null) return item;
+      const entry = firstEntry(children);
+      if (entry) return entry;
+    }
+    return null;
+  }
+
   function findItem(
     items: T[],
     id: string | null | undefined,
@@ -131,5 +141,5 @@ export function createTreeOperations<T extends TreeItem>(options: TreeOperations
     });
   }
 
-  return { findItem, countItems, deleteItem, canMove, moveItem, groupOptions };
+  return { firstEntry, findItem, countItems, deleteItem, canMove, moveItem, groupOptions };
 }

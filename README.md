@@ -1,7 +1,7 @@
 <!-- If you are an AI coding agent working in this repository, start with [`AGENTS.md`](https://github.com/FireController1847/ai-dynamic-learner/blob/main/AGENTS.md). -->
 
 <p align="center">
-  <img src="src/assets/dynamic-learner.png" alt="Dynamic Learner" width="104">
+  <img src="src/assets/app-icons/dynamic-learner.png" alt="Dynamic Learner" width="104">
 </p>
 
 <h1 align="center">Dynamic Learner</h1>
@@ -11,9 +11,6 @@
 </p>
 
 <p align="center">
-  <a href="https://firecontroller1847.github.io/ai-dynamic-learner/">
-    <img alt="Open Dynamic Learner on GitHub Pages" src="https://img.shields.io/badge/Open%20Dynamic%20Learner-GitHub%20Pages-0f6cbd?style=for-the-badge&logo=githubpages&logoColor=white">
-  </a>
   <a href="https://github.com/FireController1847/ai-dynamic-learner/stargazers">
     <img alt="GitHub stars" src="https://img.shields.io/github/stars/FireController1847/ai-dynamic-learner?style=for-the-badge">
   </a>
@@ -46,16 +43,21 @@ That distinction matters when reading the codebase:
 
 Dynamic Learner is a lightweight study workspace that runs in the browser. It is designed around small, focused tools that share one workspace instead of trying to turn studying into one giant all-purpose editor.
 
+On Home, tools are grouped into Utilities, Applications, and Mastery. Search app names and descriptions to find a tool.
+
 The current application includes:
 
 | Tool | What it does |
 | --- | --- |
-| **Notebook** | Organizes documents into a nested library. Write plain-text notes on Lined Paper with automatic overflow pages, or use Markdown documents with source and preview workflows. Customize appearance separately for each supported paper type. |
+| **Calculator** | Uses a MathPrint-style scientific entry display with clickable cursor editing, editable stacked fractions, insert/backspace/delete controls, expression history navigation, normal precedence, scientific functions, explicit decimal-place rounding, DEG/RAD and fraction/decimal modes, configurable display precision, memory controls, and a reusable session-history panel. |
+| **Notebook** | Organizes documents into a nested library. Write on Lined Paper with automatic overflow pages, use Markdown source and preview, or combine expressions and visual drawing on Graph Paper with point coordinates, line measurements, and closed-region areas. Customize appearance separately for each paper type. |
+| **Workbook** | Provides a blank workspace scaffold for future data-oriented tools, keeping data independent from how it is processed or displayed. |
 | **Todo List** | Lined-paper tasks with adjustable fonts and alignment, checkboxes, centered section priorities, and shared section-name prefixes. Lists are organized by creation date and gradually fade into an archive with configurable expiry. |
-| **Index Cards** | Creates nested groups and card sets with editable fronts and backs, review modes, appearance controls, and resumable workspace storage. |
+| **Index Cards** | Creates nested study sets in Flash Cards or Fill in the Blanks mode, with editable card content, guided review, per-mode appearance controls, and resumable workspace storage. |
 | **Word Search** | Builds custom word-search puzzles with configurable difficulty and appearance, saved grids, hints, answer reveal, and persistent progress. |
 | **Crossword** | Builds custom crosswords from answer-and-clue pairs, automatically arranges Across and Down entries, and saves typed progress with checking, hints, reveals, and display controls. |
-| **Workbook** | Provides a blank data-oriented workspace scaffold, ready for future tools that keep source data independent from how it is processed or presented. |
+| **Guide** | Builds lightweight titled bullet lists or connected topic maps. Map study walks the route stop by stop, revealing points, tracking visited topics, branching, and backtracking as needed. |
+| **Review** | Builds grouped knowledge sets with multiple-choice, true/false, short-answer, and fill-in-the-blanks questions. Study with hints and retries, take a Quiz with immediate feedback, or start a Test with optional timing and answer review. |
 
 The interface uses a Fluent-inspired visual language with neutral surfaces, compact controls, blue accents, and responsive layouts. The tools are meant to feel related without forcing every feature into the same interaction model.
 
@@ -66,6 +68,10 @@ The latest published GitHub Pages snapshot is available here:
 **[Open Dynamic Learner →](https://firecontroller1847.github.io/ai-dynamic-learner/)**
 
 GitHub Pages is deployed manually, so the published site may occasionally lag behind the latest commit on `main`.
+
+Older `/study-guide/` bookmarks redirect to `/guide/`. Existing workspaces and AI imports from before the Guide rename remain supported.
+
+Opening an app with a library selects its first entry in library order. Todo List follows your chosen date order and opens Archive when only past lists remain. Select or create a group to see its creation screen, then use the button there to add an entry inside that group.
 
 To run the current source locally, install Node.js 24 or newer and run:
 

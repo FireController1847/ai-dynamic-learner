@@ -1,5 +1,4 @@
-import type { FeatureDefinition } from '../features/feature-definitions.ts';
-import type { TipsHandle } from './tips.ts';
+import type { TipsHandle } from '../../packages/tips/src/index.ts';
 import '../styles/index.css';
 import { appConfig } from './app-config.ts';
 import { features } from '../features/feature-registry.ts';
@@ -7,24 +6,24 @@ import { NavigationDrawer } from './navigation-drawer.ts';
 import { pageHref, useNavigation } from './navigation.ts';
 import { useWorkspace } from './workspace.ts';
 import { WorkspaceTools } from './workspace-tools.ts';
+import { BackupReminderBanner } from './backup-reminder-ui.ts';
+import { ThemeMenu, type ThemeMenuHandle } from './theme-menu.ts';
+import { initializeTheme } from './theme.ts';
 import { HomePage } from './home-page.ts';
-import { TipsExperience } from './tips.ts';
+import { TipsExperience } from '../../packages/tips/src/index.ts';
 import { tipsCatalog } from './tips-content.ts';
 import { Icon } from '../components/icon.ts';
+import { AppIcon } from './app-icon.ts';
 
 import { defineComponent, type PropType, computed, createApp, h, KeepAlive, nextTick, ref } from 'vue';
 
-const appLogoSrc = new URL('assets/dynamic-learner.png', document.baseURI).href;
-const homeTipsFeature = Object.freeze({ id: 'home', label: appConfig.name });
+initializeTheme();
 
-const featureImageSrc = (feature?: FeatureDefinition) => feature?.image
-  ? new URL(feature.image, document.baseURI).href
-  : '';
+const homeTipsFeature = Object.freeze({ id: 'home', label: appConfig.name });
 
 const navigationItems = features.filter((feature) => !feature.hidden).map((item) => ({
   ...item,
   href: pageHref(item.path),
-  imageSrc: item.imageSrc ?? featureImageSrc(item),
 }));
 
 if (!document.title) document.title = appConfig.name;
@@ -33,19 +32,33 @@ const App = defineComponent({
   name: 'App',
   setup() {
     const workspace = useWorkspace();
+    const backupMessage = ref('');
+    const backupBusy = ref(false);
+    async function backUpNow() {
+      if (backupBusy.value) return;
+      backupBusy.value = true;
+      backupMessage.value = '';
+      try {
+        await workspace.downloadBackup();
+        backupMessage.value = 'Backup download started. Check your Downloads folder to confirm the file was saved.';
+      } catch (error) {
+        backupMessage.value = error instanceof Error ? error.message : 'The backup could not be downloaded.';
+      } finally {
+        backupBusy.value = false;
+      }
+    }
     const sidebarOpen = ref(false);
     const menuButton = ref<HTMLButtonElement | null>(null);
     const tipsExperience = ref<TipsHandle | null>(null);
+    const themeMenu = ref<ThemeMenuHandle | null>(null);
     const main = ref<HTMLElement | null>(null);
     let focusContentOnClose = false;
     const { currentPath, navigate } = useNavigation(onNavigate);
     const activeFeature = computed(() => features.find((feature) => feature.path === currentPath.value));
     const tipsFeature = computed(() => {
       const feature = activeFeature.value ?? (currentPath.value === '/' ? homeTipsFeature : null);
-      return feature && tipsCatalog[feature.id].sections.length ? feature : null;
+      return feature && tipsCatalog[feature.id]?.sections.length ? feature : null;
     });
-    const activeLogoSrc = computed(() => featureImageSrc(activeFeature.value));
-
     function closeSidebar() {
       focusContentOnClose = false;
       sidebarOpen.value = false;
@@ -91,27 +104,53 @@ const App = defineComponent({
           h('rect', { x: 0, y: 6, width: 18, height: 2, rx: 1 }),
           h('rect', { x: 0, y: 12, width: 18, height: 2, rx: 1 }),
         ])]),
-        activeLogoSrc.value
-          ? h('img', { class: 'app-logo app-header-logo', src: activeLogoSrc.value, alt: '', 'aria-hidden': 'true' })
-          : activeFeature.value?.icon
-            ? h(Icon, { name: activeFeature.value.icon })
-            : h('img', { class: 'app-logo app-header-logo', src: appLogoSrc, alt: '', 'aria-hidden': 'true' }),
+        activeFeature.value
+          ? activeFeature.value.image
+            ? h(AppIcon, { name: activeFeature.value.id, imageClass: 'app-logo app-header-logo' })
+            : h(Icon, { name: activeFeature.value.icon })
+          : currentPath.value === '/'
+            ? h(AppIcon, { name: 'dynamic-learner', imageClass: 'app-logo app-header-logo' })
+            : h(Icon, { name: 'document' }),
         h('h1', activeFeature.value?.label ?? (currentPath.value === '/' ? appConfig.name : 'Page not found')),
-        tipsFeature.value ? h('button', {
-          type: 'button',
-          class: 'quiet-button tips-trigger',
-          title: currentPath.value === '/' ? 'Show tips' : `Show ${tipsFeature.value.label} tips`,
-          'aria-haspopup': 'dialog',
-          onClick: (event: MouseEvent) => tipsExperience.value?.open(event.currentTarget),
-        }, [
-          h(Icon, { name: 'lightbulb' }),
-          h('span', { class: 'tips-trigger-label' }, 'Tips'),
-        ]) : null,
+        h('div', { class: 'app-header-actions' }, [
+          workspace.backup.showIndicator.value ? h('button', {
+            type: 'button',
+            class: ['quiet-button', 'app-header-action', 'backup-indicator', {
+              'is-urgent': workspace.backup.stage.value === 3,
+            }],
+            title: 'Backup needed — open Workspace backups',
+            'aria-label': 'Backup needed. Open navigation to backup controls.',
+            onClick: () => { sidebarOpen.value = true; },
+          }, [
+            h(Icon, { name: 'download' }),
+            h('span', { class: 'app-header-action-label' }, 'Backup'),
+          ]) : null,
+          h('button', {
+            type: 'button',
+            class: 'quiet-button app-header-action theme-trigger',
+            title: 'Theme settings',
+            'aria-haspopup': 'dialog',
+            onClick: (event: MouseEvent) => themeMenu.value?.open(event.currentTarget),
+          }, [
+            h(Icon, { name: 'theme' }),
+            h('span', { class: 'app-header-action-label' }, 'Theme'),
+          ]),
+          tipsFeature.value ? h('button', {
+            type: 'button',
+            class: 'quiet-button app-header-action tips-trigger',
+            title: currentPath.value === '/' ? 'Show tips' : `Show ${tipsFeature.value.label} tips`,
+            'aria-haspopup': 'dialog',
+            onClick: (event: MouseEvent) => tipsExperience.value?.open(event.currentTarget),
+          }, [
+            h(Icon, { name: 'lightbulb' }),
+            h('span', { class: 'app-header-action-label tips-trigger-label' }, 'Tips'),
+          ]) : null,
+        ]),
       ]),
       h(NavigationDrawer, {
         open: sidebarOpen.value,
         title: appConfig.name,
-        logoSrc: appLogoSrc,
+        logoName: 'dynamic-learner',
         homeHref: pageHref('/'),
         items: navigationItems,
         activePath: currentPath.value,
@@ -121,15 +160,35 @@ const App = defineComponent({
       }, {
         footer: () => h(WorkspaceTools, { workspace }),
       }),
-      h(TipsExperience, { ref: tipsExperience, feature: tipsFeature.value }),
+      h(ThemeMenu, { ref: themeMenu }),
+      h(TipsExperience, {
+        ref: tipsExperience,
+        feature: tipsFeature.value,
+        catalog: tipsCatalog,
+        storageKey: 'dynamic-learner.tips.v1',
+      }),
       workspace.storageProblem.value ? h('p', {
         class: 'workspace-storage-warning', role: 'alert',
       }, workspace.storageProblem.value) : null,
+      workspace.backup.problem.value ? h('p', {
+        class: 'workspace-storage-warning', role: 'alert',
+      }, workspace.backup.problem.value) : null,
+      h(BackupReminderBanner, { reminders: workspace.backup, busy: backupBusy.value, onBackup: () => { void backUpNow(); } }),
+      backupMessage.value ? h('p', {
+        class: 'workspace-message backup-app-message', role: 'status',
+      }, [
+        backupMessage.value,
+        h('button', {
+          type: 'button', class: 'icon-button',
+          'aria-label': 'Dismiss backup message', onClick: () => { backupMessage.value = ''; },
+        }, '×'),
+      ]) : null,
       h('div', { class: 'app-layout' }, [
         h('main', {
           ref: main,
           class: ['app-content', {
-            'app-content--workspace': ['notebook', 'todo-list', 'index-cards', 'word-search', 'crossword', 'workbook'].includes(activeFeature.value?.id ?? ''),
+            'app-content--home': currentPath.value === '/',
+            'app-content--workspace': ['notebook', 'workbook', 'todo-list', 'index-cards', 'word-search', 'crossword', 'guide', 'knowledge-check'].includes(activeFeature.value?.id ?? ''),
           }],
           tabindex: -1,
         }, [
@@ -139,6 +198,9 @@ const App = defineComponent({
           }),
         ]),
       ]),
+      activeFeature.value ? h('span', {
+        class: 'app-version',
+      }, `v${activeFeature.value.version}`) : null,
     ]);
   },
 });
