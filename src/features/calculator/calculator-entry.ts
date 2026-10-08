@@ -370,7 +370,7 @@ export function backspaceMathPrint(source: string, cursor: number) {
 
   const atoms = mathPrintEditAtoms(source)
     .filter((atom) => atom.end <= cursor)
-    .sort((left, right) => right.end - left.end || (right.end - right.start) - (left.end - left.start));
+    .sort((left, right) => right.end - left.end || right.start - left.start);
   const atom = atoms[0];
   if (!atom) return { source, cursor };
 
