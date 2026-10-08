@@ -489,7 +489,7 @@ export const Calculator = defineComponent({
                 h('button', {
                   type: 'button',
                   class: 'calculator-history-arrow calculator-arrow-right',
-                  title: 'Move cursor right',
+                  title: 'Move cursor right or exit the current MathPrint field',
                   'aria-label': 'Right',
                   onClick: () => calculator.moveRight(),
                 }, '▶'),
