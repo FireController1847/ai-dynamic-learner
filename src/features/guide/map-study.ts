@@ -2,6 +2,7 @@ import { useStudySession } from '../../components/use-study-session.ts';
 import { computed, defineComponent, h, nextTick, onBeforeUnmount, onDeactivated, ref, type PropType } from 'vue';
 import { GuideTypeIcon } from './guide-type-icon.ts';
 import { connectedTopicIds, mapStudyProblem, startTopic, topicById } from './map-graph.ts';
+import { MAP_CANVAS_HEIGHT, MAP_CANVAS_WIDTH, MAP_PADDING } from './map-presentation.ts';
 import {
   MAP_HEIGHT, MAP_TOPIC_HEIGHT, MAP_TOPIC_WIDTH, MAP_WIDTH, type GuideSection,
   type MapGuideData, type MapStudySession, type MapTopic,
@@ -147,8 +148,8 @@ export const GuideMapStudy = defineComponent({
         const container = scroll.value;
         if (!topic || !container) return;
         container.scrollTo({
-          left: Math.max(0, topic.x + MAP_TOPIC_WIDTH / 2 - container.clientWidth / 2),
-          top: Math.max(0, topic.y + MAP_TOPIC_HEIGHT / 2 - container.clientHeight / 2),
+          left: Math.max(0, topic.x + MAP_PADDING + MAP_TOPIC_WIDTH / 2 - container.clientWidth / 2),
+          top: Math.max(0, topic.y + MAP_PADDING + MAP_TOPIC_HEIGHT / 2 - container.clientHeight / 2),
           behavior,
         });
       });
@@ -249,13 +250,13 @@ export const GuideMapStudy = defineComponent({
         // Preview the full map in the existing viewport before moving the camera.
         // The destination is the exact scroll position of the normal 100% map:
         // the animated camera can be swapped for native scrolling without a jump.
-        const scale = Math.min(1, width / MAP_WIDTH, height / MAP_HEIGHT);
-        const destinationX = Math.max(0, Math.min(MAP_WIDTH - width, first.x + MAP_TOPIC_WIDTH / 2 - width / 2));
-        const destinationY = Math.max(0, Math.min(MAP_HEIGHT - height, first.y + MAP_TOPIC_HEIGHT / 2 - height / 2));
+        const scale = Math.min(1, width / MAP_CANVAS_WIDTH, height / MAP_CANVAS_HEIGHT);
+        const destinationX = Math.max(0, Math.min(MAP_CANVAS_WIDTH - width, first.x + MAP_PADDING + MAP_TOPIC_WIDTH / 2 - width / 2));
+        const destinationY = Math.max(0, Math.min(MAP_CANVAS_HEIGHT - height, first.y + MAP_PADDING + MAP_TOPIC_HEIGHT / 2 - height / 2));
         container.scrollTo({ left: 0, top: 0, behavior: 'instant' });
         camera.value = {
-          x: (width - MAP_WIDTH * scale) / 2,
-          y: (height - MAP_HEIGHT * scale) / 2,
+          x: (width - MAP_CANVAS_WIDTH * scale) / 2,
+          y: (height - MAP_CANVAS_HEIGHT * scale) / 2,
           scale,
         };
         later(() => {
@@ -587,8 +588,8 @@ export const GuideMapStudy = defineComponent({
             h('div', {
               class: ['guide-study-map', { 'is-camera-zooming': cameraZooming.value }],
               style: {
-                width: MAP_WIDTH + 'px',
-                height: MAP_HEIGHT + 'px',
+                width: MAP_CANVAS_WIDTH + 'px',
+                height: MAP_CANVAS_HEIGHT + 'px',
                 ...(camera.value ? {
                   transform: `translate(${camera.value.x}px, ${camera.value.y}px) scale(${camera.value.scale})`,
                 } : {}),
@@ -597,6 +598,7 @@ export const GuideMapStudy = defineComponent({
             }, [
               h('svg', {
                 class: 'guide-study-route',
+                style: { left: MAP_PADDING + 'px', top: MAP_PADDING + 'px' },
                 viewBox: '0 0 ' + MAP_WIDTH + ' ' + MAP_HEIGHT,
                 width: MAP_WIDTH, height: MAP_HEIGHT, 'aria-hidden': 'true',
               }, props.data.connections.map(connectionLine)),
@@ -616,23 +618,24 @@ export const GuideMapStudy = defineComponent({
                     'is-arrival-highlight': startPromptVisible.value && entry.id === startTopic(props.data)?.id,
                   'is-start-near-top': entry.y < 64,
                   }],
-                  style: { left: entry.x + 'px', top: entry.y + 'px' },
+                  style: { left: entry.x + MAP_PADDING + 'px', top: entry.y + MAP_PADDING + 'px' },
                   'aria-label': (startPromptVisible.value && entry.id === startTopic(props.data)?.id
                     ? 'Start here: ' : unlocked ? 'Open ' : 'Locked: ') + (entry.title || 'Untitled topic') +
                     (opened.value.has(entry.id) ? ', previously opened' : ''),
-                  title: unlocked ? 'Open ' + (entry.title || 'Untitled topic') : 'Complete a connected stop to unlock',
+                  title: unlocked ? 'Open ' + (entry.title || 'Untitled topic') :
+                    (entry.title || 'Untitled topic') + ' — complete a connected stop to unlock',
                   onClick: () => openStop(entry.id),
                 }, [
                   h('span', { class: 'guide-topic-number' },
                     skipped.value.has(entry.id) ? '↷' : visited.value.has(entry.id) ? '✓' : String(index + 1)),
-                  h('span', { class: 'guide-topic-name' }, entry.title || 'Untitled topic'),
+                  h('span', { class: 'guide-topic-name', title: entry.title || 'Untitled topic' }, entry.title || 'Untitled topic'),
                 ]);
               }),
               traveler ? h('span', {
                 class: ['guide-traveler', { 'is-moving': travelling.value }],
                 style: {
-                  left: traveler.x + MAP_TOPIC_WIDTH / 2 + 'px',
-                  top: traveler.y + MAP_TOPIC_HEIGHT / 2 + 'px',
+                  left: traveler.x + MAP_PADDING + MAP_TOPIC_WIDTH / 2 + 'px',
+                  top: traveler.y + MAP_PADDING + MAP_TOPIC_HEIGHT / 2 + 'px',
                 },
                 'aria-hidden': 'true',
               }) : null,

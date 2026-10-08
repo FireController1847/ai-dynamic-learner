@@ -3,6 +3,7 @@ export interface KnowledgeCheckLibraryHandle {
   focusToggle(): void;
   focusNewKnowledgeCheck(): void;
   focusImportKnowledgeCheck(): void;
+  focusAiCreation(): void;
 }
 import type { VNode } from 'vue';
 import type { LibraryItem, MovePosition } from './library-model.ts';
@@ -30,6 +31,7 @@ export const KnowledgeCheckLibrary = defineComponent({
     'toggle-library': () => true,
     'new-check': (_target: { parentId: string | null; parentName: string; selectedId?: string | null }) => true,
     'import-check': (_target: { parentId: string | null; parentName: string; selectedId?: string | null }) => true,
+    'ai-check': (_target: { parentId: string | null; parentName: string; selectedId?: string | null }) => true,
   },
   setup(props, { emit, expose, slots }) {
     const expanded = ref(new Set<string>());
@@ -41,6 +43,7 @@ export const KnowledgeCheckLibrary = defineComponent({
     const announcement = ref('');
     const pendingDelete = ref<LibraryItem | null>(null);
     const createGroupButton = ref<HTMLButtonElement | null>(null);
+    const aiButton = ref<HTMLButtonElement | null>(null);
     const createKnowledgeCheckButton = ref<HTMLButtonElement | null>(null);
     const importKnowledgeCheckButton = ref<HTMLButtonElement | null>(null);
     const collapseButton = ref<HTMLButtonElement | null>(null);
@@ -151,6 +154,7 @@ export const KnowledgeCheckLibrary = defineComponent({
       focusToggle: () => collapseButton.value?.focus(),
       focusNewKnowledgeCheck: () => createKnowledgeCheckButton.value?.focus(),
       focusImportKnowledgeCheck: () => importKnowledgeCheckButton.value?.focus(),
+      focusAiCreation: () => aiButton.value?.focus(),
     });
 
     function endDrag() {
@@ -333,6 +337,10 @@ export const KnowledgeCheckLibrary = defineComponent({
       h('div', { class: 'knowledge-check-library-toolbar' }, [
         h('h3', 'Library'),
         h('div', { class: 'knowledge-check-library-actions' }, [
+          h('button', {
+            ref: aiButton, type: 'button', class: 'icon-button', title: 'Create knowledge set with AI',
+            'aria-label': 'Create knowledge set with AI', onClick: () => emit('ai-check', setupTarget()),
+          }, [h(Icon, { name: 'ai' })]),
           h('button', {
             ref: createGroupButton,
             type: 'button', class: 'icon-button', title: 'New group',

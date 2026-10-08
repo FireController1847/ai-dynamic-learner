@@ -1,5 +1,5 @@
-import { computed, defineComponent, h, nextTick, onBeforeUnmount, ref, Transition, type PropType } from 'vue';
-import { Icon } from '../../components/icon.ts';
+import { computed, defineComponent, h, ref, type PropType } from 'vue';
+import { AiPromptExchange } from '../../components/ai-prompt-exchange.ts';
 import { inputValue } from '../../core/dom.ts';
 import { isRecord } from '../../core/validation.ts';
 import {
@@ -509,122 +509,21 @@ export const GuideAiImportWorkspace = defineComponent({
     destination: { type: String, required: true },
     mode: { type: String as PropType<GuideMode>, required: true },
   },
-  emits: {
-    back: () => true,
-    cancel: () => true,
-    import: (_value: SimpleGuideImport) => true,
-  },
+  emits: { back: () => true, cancel: () => true, import: (_value: SimpleGuideImport) => true },
   setup(props, { emit }) {
-    const tab = ref<'prompt' | 'import'>('prompt');
-    const tabDirection = ref<'forward' | 'backward'>('forward');
     const detail = ref<PromptDetail>(DEFAULT_PROMPT_OPTIONS.detail);
     const coverage = ref<PromptCoverage>(DEFAULT_PROMPT_OPTIONS.coverage);
     const bulletStyle = ref<PromptBulletStyle>(DEFAULT_PROMPT_OPTIONS.bulletStyle);
-    const showPrompt = ref(false);
     const json = ref('');
     const problem = ref('');
-    const copyStatus = ref('');
-    const copyAnimating = ref(false);
-    const handoff = ref<'idle' | 'waiting' | 'ready'>('idle');
-    const jsonInput = ref<HTMLTextAreaElement | null>(null);
-    const responseReadyButton = ref<HTMLButtonElement | null>(null);
     const candidate = ref<SimpleGuideImport | null>(null);
-    let copyTimer: number | null = null;
-    let focusAfterCopy = false;
-    const prompt = computed(() => guideAiPrompt({
-      detail: detail.value,
-      coverage: coverage.value,
-      bulletStyle: bulletStyle.value,
-    }, props.mode));
-
-    function clearCopyTimer() {
-      if (copyTimer !== null) window.clearTimeout(copyTimer);
-      copyTimer = null;
-    }
-
-    onBeforeUnmount(clearCopyTimer);
-
-    async function copyPrompt() {
-      clearCopyTimer();
-      try {
-        await navigator.clipboard.writeText(prompt.value);
-        copyStatus.value = 'Prompt copied.';
-        copyAnimating.value = true;
-        handoff.value = 'waiting';
-        copyTimer = window.setTimeout(() => {
-          copyTimer = null;
-          copyStatus.value = '';
-          tabDirection.value = 'forward';
-          focusAfterCopy = true;
-          tab.value = 'import';
-          problem.value = '';
-        }, 650);
-      } catch {
-        copyAnimating.value = false;
-        focusAfterCopy = false;
-        handoff.value = 'idle';
-        showPrompt.value = true;
-        copyStatus.value = 'Copy failed. The prompt is shown below so you can copy it manually.';
-      }
-    }
-
-    async function responseReady() {
-      handoff.value = 'ready';
-      await nextTick();
-      const input = jsonInput.value;
-      if (!input) return;
-      input.focus({ preventScroll: true });
-      // The Guide detail, not the page or textarea, owns this scrollbar.
-      // Align the instructions above the paste field so the next step stays clear.
-      window.requestAnimationFrame(() => {
-        if (!input.isConnected) return;
-        const container = input.closest<HTMLElement>('.guide-detail');
-        const instructions = input.closest('.guide-ai-panel')
-          ?.querySelector<HTMLElement>('.guide-ai-handoff.is-ready');
-        if (!container || !instructions) return;
-        const offset = instructions.getBoundingClientRect().top - container.getBoundingClientRect().top - 24;
-        container.scrollTo({
-          top: Math.max(0, Math.min(container.scrollHeight - container.clientHeight, container.scrollTop + offset)),
-          behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
-        });
-      });
-    }
-
+    const prompt = computed(() => guideAiPrompt({ detail: detail.value, coverage: coverage.value, bulletStyle: bulletStyle.value }, props.mode));
     function preview() {
-      problem.value = '';
       candidate.value = null;
-      try {
-        candidate.value = parseGuideAiImport(json.value, props.mode);
-      } catch (error) {
-        problem.value = error instanceof Error ? error.message : String(error);
-      }
-    }
-
-    function selectTab(next: 'prompt' | 'import') {
-      if (tab.value === next) return;
-      clearCopyTimer();
-      copyAnimating.value = false;
-      focusAfterCopy = false;
-      tabDirection.value = next === 'import' ? 'forward' : 'backward';
-      tab.value = next;
       problem.value = '';
+      try { candidate.value = parseGuideAiImport(json.value, props.mode); }
+      catch (error) { problem.value = error instanceof Error ? error.message : String(error); }
     }
-
-    function afterTabEntered() {
-      if (!focusAfterCopy || tab.value !== 'import') return;
-      focusAfterCopy = false;
-      copyAnimating.value = false;
-      responseReadyButton.value?.focus({ preventScroll: true });
-    }
-
-    const tabButton = (id: 'prompt' | 'import', label: string) => h('button', {
-      type: 'button',
-      class: 'quiet-button',
-      role: 'tab',
-      'aria-selected': tab.value === id,
-      onClick: () => selectTab(id),
-    }, label);
-
     function optionField<T extends string>(
       id: string,
       label: string,
@@ -639,7 +538,6 @@ export const GuideAiImportWorkspace = defineComponent({
           value,
           onChange: (event: Event) => {
             if (event.target instanceof HTMLSelectElement) change(event.target.value as T);
-            copyStatus.value = '';
           },
         }, options.map((option) => h('option', { value: option.value }, option.label))),
       ]);
@@ -673,18 +571,10 @@ export const GuideAiImportWorkspace = defineComponent({
       ];
     }
 
-    const modeLabel = computed(() => props.mode === 'map' ? 'Map mode' : 'List mode');
-    const placeholder = computed(() => props.mode === 'map'
-      ? '{\n  "format": "dynamic-learner-guide-map",\n  "topics": [\n    ...\n  ],\n  "connections": [\n    ...\n  ]\n}'
-      : '{\n  "format": "dynamic-learner-guide",\n  "sections": [\n    ...\n  ]\n}');
-
-    return () => h('section', {
-      class: 'guide-ai-workspace',
-      'aria-labelledby': 'guide-ai-title',
-    }, [
+    return () => h('section', { class: 'guide-ai-workspace', 'aria-labelledby': 'guide-ai-title' }, [
       h('header', { class: 'guide-ai-header' }, [
         h('div', { class: 'guide-ai-heading' }, [
-          h('span', { class: 'guide-ai-kicker' }, modeLabel.value + ' · Saved in ' + props.destination),
+          h('span', { class: 'guide-ai-kicker' }, `${props.mode === 'map' ? 'Map mode' : 'List mode'} · Saved in ${props.destination}`),
           h('h2', { id: 'guide-ai-title' }, 'Create with AI'),
           h('p', 'Generate a prompt for your AI, then paste its JSON response back here to create the guide.'),
         ]),
@@ -693,20 +583,16 @@ export const GuideAiImportWorkspace = defineComponent({
           h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel') }, 'Cancel'),
         ]),
       ]),
-      h('div', { class: 'guide-ai-content' }, [
-        h('div', { role: 'tablist', 'aria-label': 'Guide import method', class: 'guide-ai-tabs' }, [
-          tabButton('prompt', 'AI Prompt'),
-          tabButton('import', 'JSON Import'),
-        ]),
-        h('div', { class: ['guide-ai-tab-frame', { 'is-backward': tabDirection.value === 'backward' }] }, [
-          h(Transition, { name: 'guide-ai-tab', mode: 'out-in', onAfterEnter: afterTabEntered }, {
-            default: () => tab.value === 'prompt'
-          ? h('section', { key: 'prompt', role: 'tabpanel', class: 'guide-ai-panel' }, [
-            h('p', { class: 'guide-ai-help' },
-              props.mode === 'map'
-                ? 'Give the AI the source material first. The prompt asks it for topic relationships and study content; Dynamic Learner assigns IDs and lays the map out after import.'
-                : 'Give the AI the source material first. Then paste this generated prompt after it. Paste the returned JSON into the JSON Import tab.'),
-            h('div', { class: 'guide-ai-options' }, [
+      h(AiPromptExchange, {
+        idPrefix: 'guide-ai', label: 'Guide', prompt: prompt.value, json: json.value, problem: problem.value,
+        hasPreview: candidate.value !== null,
+        promptHelp: 'Give the AI the source material first, then send this prompt to create your guide.',
+        importHelp: 'Wait for the AI response, then paste its JSON here. Dynamic Learner validates the content before creating the guide.',
+        readyInstructions: ['Paste the Guide JSON below.', 'Choose Validate JSON.', 'Review the preview, then choose Import guide.'],
+        onUpdateJson: (value: string) => { json.value = value; candidate.value = null; problem.value = ''; },
+        onValidate: preview,
+      }, {
+        options: () => h('div', { class: 'guide-ai-options' }, [
               optionField('guide-ai-detail', 'Detail', detail.value, [
                 { value: 'concise', label: 'Concise' },
                 { value: 'balanced', label: 'Balanced' },
@@ -722,93 +608,11 @@ export const GuideAiImportWorkspace = defineComponent({
                 { value: 'thoughts', label: 'Complete thoughts' },
               ], (value) => { bulletStyle.value = value; }),
             ]),
-            h('div', { class: 'guide-ai-copy-row' }, [
-              h('div', { class: 'guide-ai-copy-actions' }, [
-                h('button', {
-                  type: 'button',
-                  class: ['card-primary-button guide-ai-copy-button', { 'is-copied': copyAnimating.value }],
-                  onClick: copyPrompt,
-                }, copyAnimating.value ? '✓ Copied!' : 'Copy prompt'),
-                h('button', {
-                  type: 'button',
-                  class: 'quiet-button guide-ai-prompt-toggle',
-                  title: showPrompt.value ? 'Hide prompt' : 'Show prompt',
-                  'aria-label': showPrompt.value ? 'Hide generated prompt' : 'Show generated prompt',
-                  'aria-expanded': showPrompt.value,
-                  'aria-controls': 'guide-ai-prompt-preview',
-                  onClick: () => { showPrompt.value = !showPrompt.value; },
-                }, [h(Icon, { name: showPrompt.value ? 'chevron-up' : 'chevron-down' })]),
-              ]),
-              copyStatus.value ? h('span', { role: 'status', class: 'guide-ai-status' }, copyStatus.value) : null,
-            ]),
-            showPrompt.value ? h('textarea', {
-              id: 'guide-ai-prompt-preview',
-              value: prompt.value,
-              readonly: true,
-              rows: 17,
-              'aria-label': 'AI Guide prompt',
-              class: 'guide-ai-prompt-preview',
-            }) : null,
-          ])
-          : h('section', { key: 'import', role: 'tabpanel', class: 'guide-ai-panel' }, [
-            handoff.value === 'waiting'
-              ? h('div', { class: 'guide-ai-handoff', role: 'status' }, [
-                h('strong', 'Prompt copied — send it to your AI.'),
-                h('p', 'Paste the copied prompt after your source material. Wait for the AI to finish generating its JSON response, then come back here.'),
-                h('button', {
-                  type: 'button',
-                  ref: responseReadyButton,
-                  class: 'card-primary-button',
-                  onClick: responseReady,
-                }, 'My AI response is ready'),
-              ])
-              : null,
-            handoff.value === 'ready'
-              ? h('div', { class: 'guide-ai-handoff is-ready' }, [
-                h('strong', 'Great — bring the JSON back here.'),
-                h('ol', [
-                  h('li', 'Paste the AI response into the box below.'),
-                  h('li', 'Choose Validate JSON.'),
-                  h('li', 'Review the preview, then choose Import guide.'),
-                ]),
-              ])
-              : h('p', { class: 'guide-ai-help' },
-                props.mode === 'map'
-                  ? 'Paste the JSON code block returned by the AI. Dynamic Learner validates every topic and path before creating anything, then assigns IDs and map positions.'
-                  : 'Paste the JSON code block returned by the AI. Dynamic Learner removes the code fence if present and validates the JSON before creating anything.'),
-            handoff.value !== 'waiting' ? [
-              h('textarea', {
-                ref: jsonInput,
-                value: json.value,
-                rows: 12,
-                placeholder: placeholder.value,
-                'aria-label': 'Guide JSON import',
-                class: 'guide-ai-json',
-                onInput: (event: Event) => {
-                  json.value = inputValue(event);
-                  candidate.value = null;
-                  problem.value = '';
-                },
-              }),
-              h('div', { class: 'guide-ai-validate-row' }, [
-                h('button', { type: 'button', class: 'quiet-button', disabled: !json.value.trim(), onClick: preview }, 'Validate JSON'),
-                problem.value ? h('span', { role: 'alert', class: 'guide-ai-error' }, problem.value) : null,
-              ]),
-              h('div', { class: 'guide-ai-preview-slot' }, [
-                candidate.value ? h('div', { class: 'guide-ai-preview' }, [
-                  ...importPreview(candidate.value),
-                  h('button', {
-                    type: 'button',
-                    class: 'card-primary-button',
-                    onClick: () => { if (candidate.value) emit('import', candidate.value); },
-                  }, 'Import guide'),
-                ]) : null,
-              ]),
-            ] : null,
-          ]),
-          }),
-        ]),
-      ]),
+        preview: () => candidate.value ? h('div', { class: 'guide-ai-preview' }, [
+          ...importPreview(candidate.value),
+          h('button', { type: 'button', class: 'card-primary-button', onClick: () => { if (candidate.value) emit('import', candidate.value); } }, 'Import guide'),
+        ]) : null,
+      }),
     ]);
   },
 });

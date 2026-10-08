@@ -48,6 +48,8 @@ Important shared modules include:
 - `src/components/use-dialog.ts`: native dialog lifecycle.
 - `src/components/delete-confirmation.ts`: shared destructive confirmation.
 - `src/components/use-persisted-panel-resize.ts`: shared persisted panel resizing.
+- `src/components/ai-prompt-exchange.ts`: common AI prompt/JSON tabs, clipboard handoff, validation/preview slots, and reduced-motion-aware transitions for Guide, Index Cards, and Review. Features own prompt contracts and validators.
+- `src/components/ai-category-picker.ts`: category selection shared by Index Cards and Review, using the validated content-only category contract and local history in `src/core/ai-study-categories.ts` / `ai-category-history.ts`. `src/core/ai-json.ts` owns bounded bare/fenced JSON parsing. Review and Index Cards retain their own generated-content validators.
 - `src/app/app-icon.ts`: visible 256px app artwork selection (WebP, then PNG, GIF fallback).
 
 Reusable packages live under `packages/`. Tips owns guided-tutorial UI; `@dynamic-learner/answer-matching` owns generic answer equivalency. `src/components/answer-strictness-field.ts` provides the shared 1–4 UI control. Index Cards persists one app-wide Fill-in-the-Blanks strictness value; Review persists separate Short Answer and Fill-in-the-Blanks strictness values per knowledge set.

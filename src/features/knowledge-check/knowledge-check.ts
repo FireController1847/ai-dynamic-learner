@@ -2,7 +2,9 @@ import type { KnowledgeCheck as FeatureModel, CheckTarget, LibraryItem } from '.
 import type { IndexCards as IndexCardsModel } from '../index-cards/tree-model.ts';
 import type { KnowledgeCheckLibraryHandle } from './library.ts';
 import { requestLeave } from '../../core/leave-guards.ts';
-import { validateSetOptions, type SetOptions } from './set-options.ts';
+import { defaultSetOptions, validateSetOptions, type SetOptions } from './set-options.ts';
+import { ReviewAiCreation } from './ai-creation.ts';
+import type { ReviewAiImport } from './ai-import-format.ts';
 import { questionsForSave } from './question-model.ts';
 import { inputValue } from '../../core/dom.ts';
 import { Icon } from '../../components/icon.ts';
@@ -19,7 +21,7 @@ import { canMove, deleteItem, findItem, firstEntry, groupOptions, moveItem, inse
 import { addTutorialActionListener, type TutorialCleanup, type TutorialRequest } from '../../../packages/tips/src/index.ts';
 
 import {
-  defineComponent, type PropType, computed, h, nextTick, onBeforeUnmount, onMounted, ref,
+  defineComponent, type PropType, computed, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref,
 } from 'vue';
 
 type SetupTarget = CheckTarget;
@@ -37,10 +39,12 @@ export const KnowledgeCheck = defineComponent({
   setup(props) {
     const setupTarget = ref<SetupTarget | null>(null);
     const importTarget = ref<SetupTarget | null>(null);
+    const aiTarget = ref<SetupTarget | null>(null);
+    onDeactivated(() => { aiTarget.value = null; });
     const selectedId = useLibrarySelection({
       firstId: () => firstEntry(props.model.items)?.id ?? null,
       hasItem: (id) => findItem(props.model.items, id) !== null,
-      enabled: () => setupTarget.value === null && importTarget.value === null,
+      enabled: () => setupTarget.value === null && importTarget.value === null && aiTarget.value === null,
       onAutoSelect: (id) => {
         library.value?.reveal(id);
       },
@@ -183,11 +187,13 @@ export const KnowledgeCheck = defineComponent({
       selectedId.value = id;
       setupTarget.value = null;
       importTarget.value = null;
+      aiTarget.value = null;
       message.value = '';
     }
 
     function openNewKnowledgeCheck(target: SetupTarget) {
       if (!requestLeave()) return;
+      aiTarget.value = null;
       importTarget.value = null;
       setupTarget.value = target;
       setupVersion.value += 1;
@@ -197,10 +203,42 @@ export const KnowledgeCheck = defineComponent({
 
     function openImportKnowledgeCheck(target: SetupTarget) {
       if (!requestLeave()) return;
+      aiTarget.value = null;
       setupTarget.value = null;
       importTarget.value = target;
       message.value = '';
       if (libraryOverlay.value) libraryCollapsed.value = true;
+    }
+
+    function openAiCreation(target: SetupTarget) {
+      if (!requestLeave()) return;
+      setupTarget.value = null;
+      importTarget.value = null;
+      aiTarget.value = target;
+      message.value = '';
+      if (libraryOverlay.value) libraryCollapsed.value = true;
+    }
+
+    async function cancelAiCreation() {
+      aiTarget.value = null;
+      message.value = '';
+      await nextTick();
+      if (workspaceHeading.value) workspaceHeading.value.focus();
+      else if (libraryCollapsed.value) showLibraryButton.value?.focus();
+      else library.value?.focusAiCreation();
+    }
+
+    function completeAiCreation(value: ReviewAiImport) {
+      if (!aiTarget.value) return;
+      try {
+        const item = insertCheck(props.model.items, aiTarget.value, value.title, questionsForSave(value.questions),
+          { ...defaultSetOptions(), description: value.description });
+        selectedId.value = item.id;
+        aiTarget.value = null;
+        library.value?.reveal(item.id);
+        message.value = `Created ${item.name} with ${item.questions.length} items.`;
+        nextTick(() => workspaceHeading.value?.focus());
+      } catch (error) { message.value = error instanceof Error ? error.message : String(error); }
     }
 
     async function cancelSetup() {
@@ -312,6 +350,13 @@ export const KnowledgeCheck = defineComponent({
     }
 
     function detail() {
+      if (aiTarget.value) return h('section', {
+        class: 'knowledge-check-detail', 'data-ai-scroll-region': '', 'aria-label': 'Create knowledge set with AI',
+        inert: libraryOverlay.value && !libraryCollapsed.value,
+      }, [
+        h(ReviewAiCreation, { destination: aiTarget.value.parentName, onCancel: cancelAiCreation, onCreate: completeAiCreation }),
+        message.value ? h('p', { class: 'knowledge-check-placeholder', role: 'alert' }, message.value) : null,
+      ]);
       if (importTarget.value) {
         return h('section', {
           class: 'knowledge-check-detail',
@@ -429,6 +474,7 @@ export const KnowledgeCheck = defineComponent({
           onOpenItem: () => { if (libraryOverlay.value) setLibraryCollapsed(true); },
           onNewCheck: openNewKnowledgeCheck,
           onImportCheck: openImportKnowledgeCheck,
+          onAiCheck: openAiCreation,
         }),
         !libraryOverlay.value && !libraryCollapsed.value ? h('div', {
           class: 'knowledge-check-library-resizer',

@@ -121,7 +121,7 @@ export const Guide=defineComponent({
         h(GuideModePicker,{destination:aiTarget.value.parentName,onCreate:chooseAiMode,onCancel:cancelAi}),
         h('p',{class:'visually-hidden',role:'status'},message.value)
       ]);
-      if(aiTarget.value&&aiStage.value==='import'&&aiMode.value)return h('section',{class:'guide-detail guide-builder-detail',inert:overlay.value&&!collapsed.value},[
+      if(aiTarget.value&&aiStage.value==='import'&&aiMode.value)return h('section',{'data-ai-scroll-region':'',class:'guide-detail guide-builder-detail',inert:overlay.value&&!collapsed.value},[
         h(GuideAiImportWorkspace,{destination:aiTarget.value.parentName,mode:aiMode.value,onBack:()=>{aiMode.value=null;aiStage.value='choose';},onCancel:cancelAi,onImport:importAi}),
         h('p',{class:'visually-hidden',role:'status'},message.value)
       ]);

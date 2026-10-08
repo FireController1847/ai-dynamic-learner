@@ -81,3 +81,28 @@ Keep import/export behavior centralized; features should not invent separate who
 The reminder service compares the current workspace with that exported snapshot. Navigation selection alone does not count as new authored work. An imported workspace is always flagged as needing a fresh backup even if its content matches an earlier download. The browser cannot confirm that a generated download was saved, so UI wording describes downloads as *started*, never as verified backups. Empty workspaces do not trigger reminders.
 
 First-time work starts the clock when saved content appears; already-stored work without metadata gets a quiet immediate reminder instead of a fabricated export date. Urgency rises after 1, 2, and 3 configured intervals. Dismissal lasts the current session; snoozing lasts 24 hours without changing backup history. Study/review sessions suppress the banner; the overdue header indicator remains available.
+
+## Index Cards AI import
+
+AI creation first selects Flash Cards or Fill in the Blanks, then discovers categories from the source material. The first AI response is a `dynamic-learner-index-card-categories` version-1 object with a subject `title` and `categories` containing unique `key`/`title` pairs and a scope `description`. It accepts 1–40 categories and does not create library content.
+
+The user chooses one validated category. The second prompt includes its title and scope and asks for cards only within that category, using the matching source in the AI conversation. Back preserves the category list for another choice. Selection, both prompts, and pasted card JSON remain transient.
+
+Index Cards and Review share validated category lists, remembered outside workspace backups in browser-local history under `dynamic-learner.ui.index-cards.category-history.v1`. The 20 most recent distinct lists are retained across reloads; repeats move to the top. Reuse restores validated category JSON without another paste. History contains category lists and save timestamps, not source documents or AI conversations. Clear history removes the stored lists while preserving the active list and existing card sets. Storage failures leave the current session usable and report that history could not be saved. Category prompts request compact descriptions of 3–8 words, at most 80 characters; validation continues accepting older descriptions up to 500 characters for reuse compatibility.
+
+Both card modes accept bare JSON or a single JSON code block and create a new set at the selected library location without replacing the workspace.
+
+Flash Cards accepts a content-only `dynamic-learner-flash-cards` version-1 object with a set `title` and `cards` containing only `question` and `answer` strings. Questions become fronts and answers become backs.
+
+Fill in the Blanks accepts `dynamic-learner-fill-in-the-blanks` version 1 with a set `title` and `cards` containing only `text` strings. Each card must contain at least one valid `{{answer}}` marker and visible context outside the blanks. Empty/nested/multiline blanks and stray braces are rejected. The text becomes the card front; the back remains blank because answers are embedded in the front. Blank recognition uses the canonical core parser.
+
+Import validation enforces card/name/text limits and remaining workspace capacity before insertion. Front/back titles stay blank and IDs are generated locally. Both modes use the existing Index Cards backup schema and preserve the app's answer-strictness setting. Prompt preferences, pasted JSON, and preview state remain transient.
+
+
+## Review AI import
+
+Review AI creation chooses overall-subject scope or one category using the shared category picker/history, then configures a question count and integer percentage weights totaling 100%. Defaults are 60% multiple choice, 25% true/false, 15% fill in the blanks, and 0% short answer/statements. The requested count is allocated by largest remainder with a stable type order; disabled types stay at zero. These generation preferences are transient, independent of saved assessment/session settings.
+
+A content-only `dynamic-learner-review` version-1 response includes a `title`, `description`, and `questions`. Each item uses only fields supported by its type. Multiple-choice answers must match a distinct choice; true/false answers use `True`/`False`; fill-in-the-blanks answers remain embedded in valid `{{answer}}` markers with visible context. Statements have no answer, choices, or explanation. Strict import validation enforces the selected item count and type allocation, creates local IDs, and applies the canonical question validator/readiness rules before insertion.
+
+Creation produces a normal knowledge set with the supplied description and existing default set options. It uses the normal saved Review schema and Study/Quiz/Test modes. Existing Index Cards imports remain available independently.

@@ -268,7 +268,7 @@
   padding: clamp(28px, 5vw, 56px);
 }
 .knowledge-check-builder-intro { max-width: 680px; }
-.knowledge-check-builder-intro h2 { margin: 4px 0 8px; font-size: clamp(26px, 4vw, 36px); }
+.knowledge-check-builder-intro h2 { margin: 4px 0 8px; font-size: clamp(26px, 4vw, 36px); line-height: 1.2; }
 .knowledge-check-builder-intro p { margin: 0; color: var(--text-secondary); }
 .knowledge-check-builder-eyebrow {
   color: var(--brand);

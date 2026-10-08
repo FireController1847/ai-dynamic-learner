@@ -10,6 +10,7 @@ import {
   MAP_TOPIC_WIDTH, MAP_WIDTH, MAX_TEXT_LENGTH, MAX_TOPICS, type MapGuideData, type MapTopic,
 } from './library-model.ts';
 import { GuideListEditor } from './list-editor.ts';
+import { MAP_CANVAS_HEIGHT, MAP_CANVAS_WIDTH, MAP_PADDING } from './map-presentation.ts';
 
 const snap = (value: number) => Math.round(value / MAP_GRID) * MAP_GRID;
 const clamp = (value: number, max: number) => Math.max(0, Math.min(max, value));
@@ -191,11 +192,12 @@ export const GuideMapEditor = defineComponent({
           h('div', { class: 'guide-map-scroll' }, [
             h('div', {
               class: ['guide-map-canvas', { 'is-connecting': connectingFromId.value !== null }],
-              style: { width: MAP_WIDTH + 'px', height: MAP_HEIGHT + 'px', '--guide-grid': MAP_GRID + 'px' },
+              style: { width: MAP_CANVAS_WIDTH + 'px', height: MAP_CANVAS_HEIGHT + 'px', '--guide-grid': MAP_GRID + 'px' },
               role: 'group', 'aria-label': 'Topic map editor',
             }, [
               h('svg', {
                 class: 'guide-route',
+                style: { left: MAP_PADDING + 'px', top: MAP_PADDING + 'px' },
                 viewBox: '0 0 ' + MAP_WIDTH + ' ' + MAP_HEIGHT,
                 width: MAP_WIDTH, height: MAP_HEIGHT, 'aria-hidden': 'true',
               }, [...props.data.connections.map(connectionLine), invalidConnectionLine()]),
@@ -207,7 +209,7 @@ export const GuideMapEditor = defineComponent({
                   'is-start': props.data.startTopicId === topic.id,
                   'is-connection-source': connectingFromId.value === topic.id,
                 }],
-                style: { left: topic.x + 'px', top: topic.y + 'px' },
+                style: { left: topic.x + MAP_PADDING + 'px', top: topic.y + MAP_PADDING + 'px' },
                 'aria-label': topic.title + ', topic ' + (index + 1) + (props.data.startTopicId === topic.id ? ', starting topic' : ''),
                 onPointerdown: (event: PointerEvent) => pointerDown(event, topic),
                 onPointermove: (event: PointerEvent) => pointerMove(event, topic),
@@ -231,7 +233,7 @@ export const GuideMapEditor = defineComponent({
                 },
               }, [
                 h('span', { class: 'guide-topic-number' }, String(index + 1)),
-                h('span', { class: 'guide-topic-name' }, topic.title || 'Untitled topic'),
+                h('span', { class: 'guide-topic-name', title: topic.title || 'Untitled topic' }, topic.title || 'Untitled topic'),
                 props.data.startTopicId === topic.id ? h('span', {
                   class: 'guide-topic-start', 'aria-hidden': 'true',
                 }, 'Start') : null,
