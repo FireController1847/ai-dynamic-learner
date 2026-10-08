@@ -264,6 +264,49 @@ export const Calculator = defineComponent({
           ]);
         }
 
+
+        if (node.kind === 'power') {
+          const contentActive = cursor !== null
+            && cursor >= node.contentStart && cursor <= node.contentEnd;
+          const content = renderMathNodes(node.content, contentActive ? cursor : null);
+
+          return h('span', {
+            class: ['calculator-mathprint-power-wrap', {
+              'is-overwrite-cursor': cursor === node.start && calculator.overwriteMode,
+            }],
+          }, [
+            cursor === node.start && !calculator.overwriteMode
+              ? h('span', { class: 'calculator-entry-caret', 'aria-hidden': 'true' })
+              : null,
+            h('span', {
+              class: ['calculator-mathprint-power', {
+                'is-active': contentActive,
+                'is-editable': cursor !== null,
+              }],
+              onPointerdown: cursor === null ? undefined : (event: PointerEvent) => {
+                event.preventDefault();
+                event.stopPropagation();
+                if (calculator.overwriteMode) {
+                  calculator.setCursor(node.contentStart);
+                  return;
+                }
+                const target = event.currentTarget as HTMLElement;
+                const bounds = target.getBoundingClientRect();
+                calculator.setCursor(
+                  event.clientX < bounds.left + bounds.width / 2
+                    ? node.contentStart
+                    : node.contentEnd,
+                );
+              },
+            }, content.length
+              ? content
+              : [h('span', { class: 'calculator-mathprint-placeholder' }, '□')]),
+            cursor === node.end && node.end !== node.contentEnd
+              ? h('span', { class: 'calculator-entry-caret', 'aria-hidden': 'true' })
+              : null,
+          ]);
+        }
+
         const numeratorActive = cursor !== null
           && cursor >= node.numeratorStart && cursor <= node.numeratorEnd;
         const denominatorActive = cursor !== null
