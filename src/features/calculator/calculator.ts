@@ -139,10 +139,12 @@ export const Calculator = defineComponent({
           children.push(h('span', { class: 'calculator-entry-caret', 'aria-hidden': 'true' }));
         }
         children.push(h('span', {
-          class: 'calculator-entry-token',
+          class: ['calculator-entry-token', { 'is-editable': cursor !== null }],
           'data-cursor-start': token.start,
           'data-cursor-end': token.end,
-          onPointerdown: (event: PointerEvent) => placeCursorFromToken(event, token.start, token.end),
+          onPointerdown: cursor === null
+            ? undefined
+            : (event: PointerEvent) => placeCursorFromToken(event, token.start, token.end),
         }, token.display));
       }
 
@@ -166,15 +168,15 @@ export const Calculator = defineComponent({
         const denominator = renderMathNodes(node.denominator, denominatorActive ? cursor : null);
 
         const fraction = h('span', {
-          class: 'calculator-mathprint-fraction',
-          onPointerdown: (event: PointerEvent) => {
+          class: ['calculator-mathprint-fraction', { 'is-editable': cursor !== null }],
+          onPointerdown: cursor === null ? undefined : (event: PointerEvent) => {
             if (event.target !== event.currentTarget) return;
             calculator.setCursor(node.denominatorStart);
           },
         }, [
           h('span', {
             class: ['calculator-mathprint-part', { 'is-active': numeratorActive }],
-            onPointerdown: (event: PointerEvent) => {
+            onPointerdown: cursor === null ? undefined : (event: PointerEvent) => {
               if (event.target !== event.currentTarget) return;
               event.preventDefault();
               event.stopPropagation();
@@ -184,7 +186,7 @@ export const Calculator = defineComponent({
             ? [h('span', { class: 'calculator-entry-caret', 'aria-hidden': 'true' })]
             : [h('span', {
                 class: 'calculator-mathprint-placeholder',
-                onPointerdown: (event: PointerEvent) => {
+                onPointerdown: cursor === null ? undefined : (event: PointerEvent) => {
                   event.preventDefault();
                   event.stopPropagation();
                   calculator.setCursor(node.numeratorStart);
@@ -192,7 +194,7 @@ export const Calculator = defineComponent({
               }, '□')]),
           h('span', {
             class: 'calculator-mathprint-bar',
-            onPointerdown: (event: PointerEvent) => {
+            onPointerdown: cursor === null ? undefined : (event: PointerEvent) => {
               event.preventDefault();
               event.stopPropagation();
               calculator.setCursor(node.denominatorStart);
@@ -200,7 +202,7 @@ export const Calculator = defineComponent({
           }),
           h('span', {
             class: ['calculator-mathprint-part', { 'is-active': denominatorActive }],
-            onPointerdown: (event: PointerEvent) => {
+            onPointerdown: cursor === null ? undefined : (event: PointerEvent) => {
               if (event.target !== event.currentTarget) return;
               event.preventDefault();
               event.stopPropagation();
@@ -210,7 +212,7 @@ export const Calculator = defineComponent({
             ? [h('span', { class: 'calculator-entry-caret', 'aria-hidden': 'true' })]
             : [h('span', {
                 class: 'calculator-mathprint-placeholder',
-                onPointerdown: (event: PointerEvent) => {
+                onPointerdown: cursor === null ? undefined : (event: PointerEvent) => {
                   event.preventDefault();
                   event.stopPropagation();
                   calculator.setCursor(node.denominatorStart);
