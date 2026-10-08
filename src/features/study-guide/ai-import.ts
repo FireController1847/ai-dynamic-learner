@@ -3,6 +3,7 @@ import { Icon } from '../../components/icon.ts';
 import { inputValue } from '../../core/dom.ts';
 import { isRecord } from '../../core/validation.ts';
 import {
+  MAP_GRID, MAP_MAX_X, MAP_MAX_Y, MAP_TOPIC_HEIGHT, MAP_TOPIC_WIDTH,
   MAX_BULLETS, MAX_NAME_LENGTH, MAX_SECTIONS, MAX_TEXT_LENGTH, MAX_TOPICS, type StudyGuideMode,
 } from './library-model.ts';
 
@@ -36,6 +37,7 @@ export interface SimpleListStudyGuideImport {
 export interface SimpleMapStudyGuideImportTopic {
   key: string;
   title: string;
+  position?: readonly [number, number];
   sections: SimpleStudyGuideImportSection[];
 }
 
@@ -138,16 +140,24 @@ Limits:
 function mapPrompt(options: StudyGuideAiPromptOptions): string {
   return `${promptIntro(options, 'map')}
 
-Create a connected topic map that feels like a path the learner can explore. Each topic is a study stop with its own small list-style guide. Put the topics in a useful learning order so one stop naturally leads to the next.
+Create a connected topic map that feels like an adventurous path the learner can explore, not a plain outline drawn as boxes. Each topic is a study stop with its own small list-style guide. Put the topics in a useful learning order so one stop naturally leads to the next.
 
-Design the route path-first:
-- prefer a clear main journey through the material, such as A → B → C → D;
-- use branches sparingly for meaningful side topics or alternate subtopics;
-- keep branches shallow enough that the learner can explore them and naturally backtrack to the main route;
-- avoid hub-and-spoke maps where one broad topic connects directly to most or all other topics;
-- the starting topic should normally lead into the route rather than serve as a central hub;
-- most topics should have only one or two connections; use three only for a genuine fork and avoid higher-degree hubs unless the source truly requires one;
+Shape the route like a small exploration tree:
+- build a clear main path through most of the material;
+- for a medium or large map, usually add one or two meaningful branch points when the content supports them instead of forcing everything into one straight chain;
+- keep side branches short, usually one or two stops and only occasionally three, so the learner can explore them and naturally backtrack to the main route;
+- a branch may go above or below the main path and should feel like a short optional trail;
+- avoid both extremes: do not make every topic a single unbranched line, and do not make a hub-and-spoke map where one broad topic connects to most other topics;
+- most topics should have one or two connections; three is appropriate at a genuine fork;
 - connect concepts according to prerequisite, chronology, process, increasing depth, or another natural learning progression.
+
+Make the visual layout creative and predominantly horizontal, like an adventure-map trail:
+- place the starting topic toward the left and let the main route generally progress toward the right;
+- let the route gently wander up and down instead of putting every stop on one row;
+- place short branches above or below the main route;
+- do not form a vertical line or a vertical tree;
+- avoid overlapping topic boxes and leave breathing room between nearby stops;
+- every topic must include a suggested "position": [x, y]. x and y are snapped map coordinates, not semantic data.
 
 The map must still be one connected tree: every topic is reachable from the starting topic, there are no loops/cycles, no duplicate connections, and a topic is never connected to itself. With N topics, use exactly N-1 connections.
 
@@ -164,6 +174,7 @@ ${JSON_FENCE}json
     {
       "key": "foundations",
       "title": "Foundations",
+      "position": [64, 384],
       "sections": [
         {
           "title": "Core ideas",
@@ -181,6 +192,7 @@ ${JSON_FENCE}json
     {
       "key": "core-process",
       "title": "Core Process",
+      "position": [288, 288],
       "sections": [
         {
           "title": "How it works",
@@ -193,6 +205,7 @@ ${JSON_FENCE}json
     {
       "key": "applications",
       "title": "Applications",
+      "position": [608, 352],
       "sections": [
         {
           "title": "Using the ideas",
@@ -203,8 +216,22 @@ ${JSON_FENCE}json
       ]
     },
     {
+      "key": "case-study",
+      "title": "Case Study",
+      "position": [608, 544],
+      "sections": [
+        {
+          "title": "Explore a side trail",
+          "bullets": [
+            { "text": "Short branch point" }
+          ]
+        }
+      ]
+    },
+    {
       "key": "advanced-topics",
       "title": "Advanced Topics",
+      "position": [960, 288],
       "sections": [
         {
           "title": "Going deeper",
@@ -218,7 +245,8 @@ ${JSON_FENCE}json
   "connections": [
     ["foundations", "core-process"],
     ["core-process", "applications"],
-    ["applications", "advanced-topics"]
+    ["applications", "advanced-topics"],
+    ["applications", "case-study"]
   ]
 }
 ${JSON_FENCE}
@@ -228,8 +256,12 @@ Map rules:
 - "startTopic" must match one topic key;
 - each connection is exactly [fromTopicKey, toTopicKey];
 - order connections to reflect the intended exploration route from the starting topic outward;
-- make the longest useful learning path pass through as much of the material as reasonably possible;
-- prefer sequential paths and occasional forks over wide hub-and-spoke structures;
+- make the longest useful learning path pass through most of the material, while allowing one or two short side trails when useful;
+- prefer a horizontal main route with occasional small forks; avoid both a perfectly straight chain and a wide hub-and-spoke structure;
+- "position" is [x, y] on Dynamic Learner's 1440×896 map canvas;
+- position x must be a multiple of ${MAP_GRID} from 0–${MAP_MAX_X}; position y must be a multiple of ${MAP_GRID} from 0–${MAP_MAX_Y};
+- each topic occupies about ${MAP_TOPIC_WIDTH}×${MAP_TOPIC_HEIGHT}; keep topic rectangles from overlapping;
+- use position creatively to make the route visually wander while still reading primarily left-to-right;
 - every topic should represent a meaningful conceptual stop, not a single trivia fact;
 - each topic's sections and nested bullets use the same note structure as List mode;
 - preserve important terminology and factual accuracy;
@@ -241,7 +273,7 @@ Limits:
 - each topic supports up to ${MAX_SECTIONS} sections and ${MAX_BULLETS} bullets/sub-bullets;
 - topic titles, section titles, bullet text, and topic keys must be non-empty plain text no longer than ${MAX_TEXT_LENGTH} characters;
 - at most ${MAX_IMPORT_BULLET_DEPTH + 1} bullet levels;
-- do not generate Dynamic Learner IDs, x/y coordinates, layout, groups, or other application fields. Dynamic Learner owns IDs and map placement.`;
+- do not generate Dynamic Learner IDs, groups, or other application fields. Dynamic Learner validates suggested positions and owns the stored map data.`;
 }
 
 export function studyGuideAiPrompt(
