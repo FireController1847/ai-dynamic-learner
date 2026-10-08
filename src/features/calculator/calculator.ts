@@ -48,7 +48,7 @@ export const Calculator = defineComponent({
       else if (event.key === 'Enter' || event.key === '=') calculator.equals();
       else if (event.key === 'Backspace') calculator.backspace();
       else if (event.key === 'Delete') calculator.deleteForward();
-      else if (event.key === 'Insert') calculator.armInsert();
+      else if (event.key === 'Insert') calculator.toggleOverwriteMode();
       else if (event.key === 'Escape') calculator.clearAll();
       else if (event.key === 'ArrowUp') calculator.moveVertical('up');
       else if (event.key === 'ArrowDown') calculator.moveVertical('down');
@@ -123,10 +123,16 @@ export const Calculator = defineComponent({
       h('span', { class: 'calculator-fraction-denominator' }, String(fraction.denominator)),
     ]);
 
-    function placeCursorFromToken(event: PointerEvent, start: number) {
+    function placeCursorFromToken(event: PointerEvent, start: number, end: number) {
       event.preventDefault();
       event.stopPropagation();
-      calculator.setCursor(start);
+      if (calculator.overwriteMode) {
+        calculator.setCursor(start);
+        return;
+      }
+      const target = event.currentTarget as HTMLElement;
+      const bounds = target.getBoundingClientRect();
+      calculator.setCursor(event.clientX < bounds.left + bounds.width / 2 ? start : end);
     }
 
     function renderTextNode(node: Extract<MathPrintNode, { kind: 'text' }>, cursor: number | null) {
@@ -134,19 +140,19 @@ export const Calculator = defineComponent({
       const children: VNode[] = [];
 
       for (const token of tokens) {
-        if (cursor === token.start && calculator.insertArmed) {
+        if (cursor === token.start && !calculator.overwriteMode) {
           children.push(h('span', { class: 'calculator-entry-caret', 'aria-hidden': 'true' }));
         }
         children.push(h('span', {
           class: ['calculator-entry-token', {
             'is-editable': cursor !== null,
-            'is-overwrite-cursor': cursor === token.start && !calculator.insertArmed,
+            'is-overwrite-cursor': cursor === token.start && calculator.overwriteMode,
           }],
           'data-cursor-start': token.start,
           'data-cursor-end': token.end,
           onPointerdown: cursor === null
             ? undefined
-            : (event: PointerEvent) => placeCursorFromToken(event, token.start),
+            : (event: PointerEvent) => placeCursorFromToken(event, token.start, token.end),
         }, token.display));
       }
 
@@ -224,10 +230,10 @@ export const Calculator = defineComponent({
 
         return h('span', {
           class: ['calculator-mathprint-fraction-wrap', {
-            'is-overwrite-cursor': cursor === node.start && !calculator.insertArmed,
+            'is-overwrite-cursor': cursor === node.start && calculator.overwriteMode,
           }],
         }, [
-          cursor === node.start && calculator.insertArmed
+          cursor === node.start && !calculator.overwriteMode
             ? h('span', { class: 'calculator-entry-caret', 'aria-hidden': 'true' })
             : null,
           fraction,
@@ -311,7 +317,7 @@ export const Calculator = defineComponent({
                     }, displayFraction ? stackedFraction(displayFraction) : calculator.display)]
                   : [h('div', {
                       class: ['calculator-current-entry', {
-                        'is-insert-armed': calculator.insertArmed,
+                        'is-overwrite-mode': calculator.overwriteMode,
                       }],
                       'aria-label': calculator.formattedExpression() || 'Empty calculator entry',
                       onPointerdown: (event: PointerEvent) => {
@@ -352,12 +358,15 @@ export const Calculator = defineComponent({
             h('div', { class: 'calculator-edit-row', 'aria-label': 'Calculator editing controls' }, [
               h('button', {
                 type: 'button',
-                class: ['calculator-edit-key', { 'is-active': calculator.insertArmed }],
-                'aria-pressed': calculator.insertArmed,
-                title: calculator.insertArmed
-                  ? 'INS armed: the next character will be inserted at the cursor.'
-                  : 'INS: Insert the next character at the cursor instead of replacing.',
-                onClick: () => calculator.armInsert(),
+                class: ['calculator-edit-key', { 'is-active': calculator.overwriteMode }],
+                'aria-pressed': calculator.overwriteMode,
+                title: calculator.overwriteMode
+                  ? 'Overwrite mode is on. Press INS to return to normal insert mode.'
+                  : 'INS: Toggle overwrite mode. Normal typing inserts at the cursor.',
+                'aria-label': calculator.overwriteMode
+                  ? 'Overwrite mode on. Switch to insert mode'
+                  : 'Insert mode on. Switch to overwrite mode',
+                onClick: () => calculator.toggleOverwriteMode(),
               }, 'INS'),
               h('button', {
                 type: 'button',
@@ -454,9 +463,11 @@ export const Calculator = defineComponent({
                 'cos⁻¹: Inverse cosine (arccos).'),
               key('tan⁻¹', () => calculator.inputFunction('atan'), 'function', 'Inverse tangent',
                 'tan⁻¹: Inverse tangent (arctan).'),
+              key('rnd', () => calculator.inputRound(), 'function', 'Round to decimal places',
+                'rnd: Wrap the current value, then enter how many decimal places to keep.'),
+
               key('√x', () => calculator.inputFunction('sqrt'), 'function', 'Square root',
                 '√x: Take the square root of a value.'),
-
               key('xʸ', () => calculator.chooseOperator('^'), 'function', 'Raise to a power',
                 'xʸ: Raise the current value to a power.'),
               key('x²', () => calculator.inputPowerShortcut('2'), 'function', 'Square',
@@ -469,8 +480,6 @@ export const Calculator = defineComponent({
                 '10ˣ: Raise 10 to a power.'),
               key('eˣ', () => calculator.inputPowerFunction('e'), 'function', 'Euler’s number to a power',
                 'eˣ: Raise Euler’s number e to a power.'),
-              key('rnd', () => calculator.inputRound(), 'function', 'Round to decimal places',
-                'rnd: Wrap the current value, then enter how many decimal places to keep.'),
               key(',', () => calculator.inputComma(), 'function', 'Argument separator',
                 'Comma: Separate function arguments, such as rnd(value, places).'),
             ]),
