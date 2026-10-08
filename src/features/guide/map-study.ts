@@ -266,7 +266,7 @@ export const GuideMapStudy = defineComponent({
     function restart() {
       focused.value = false;
       started.value = false;
-      nextTick(() => start(false));
+      nextTick(() => start(true));
     }
 
     function resumeAdventure() {
@@ -530,7 +530,7 @@ export const GuideMapStudy = defineComponent({
               }, 'Resume adventure'),
               h('button', {
                 type: 'button', class: 'quiet-button', disabled: studyProblem.value !== null,
-                onClick: () => start(false),
+                onClick: () => start(true),
               }, 'Start over'),
             ] : h('button', {
               type: 'button', class: 'card-primary-button', disabled: studyProblem.value !== null,
