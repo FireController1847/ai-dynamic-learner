@@ -195,7 +195,7 @@ export function createRoundTemplate(source: string, cursor: number) {
   const template = 'round(,)';
   return {
     source: `${before}${template}${after}`,
-    cursor: before.length + 6,
+    cursor: before.length + 7,
   };
 }
 
@@ -262,7 +262,10 @@ function collectEditAtoms(nodes: MathPrintNode[], atoms: EditAtom[]) {
         atoms.push({
           start: token.start,
           end: token.end,
-          replaceable: !token.raw.endsWith('(') && token.raw !== '^(-1)' && token.raw !== '^(2)',
+          replaceable: !token.raw.endsWith('(')
+            && !['(', ')', ','].includes(token.raw)
+            && token.raw !== '^(-1)'
+            && token.raw !== '^(2)',
         });
       }
       continue;
