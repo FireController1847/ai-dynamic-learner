@@ -45,6 +45,7 @@ export const FillBlankSet = defineComponent({
     const reviewScores = reactive(new Map<string, { correct: number; total: number }>());
     const reviewResult = ref<{ correct: number; total: number } | null>(null);
     const reviewButton = ref<HTMLButtonElement | null>(null);
+    const viewButton = ref<HTMLButtonElement | null>(null);
     const verifyButton = ref<HTMLButtonElement | null>(null);
     const stack = ref<HTMLElement | null>(null);
     const shuffleOrder = ref<string[] | null>(null);
@@ -274,6 +275,11 @@ export const FillBlankSet = defineComponent({
       if (card) await selectCard(card.id);
     }
 
+    function openSessionSetup(mode: FillBlankSessionMode) {
+      sessionMode.value = mode;
+      reviewSetupOpen.value = true;
+    }
+
     async function startReview(mode: FillBlankSessionMode, order: ReviewOrder) {
       reviewScores.clear();
       reviewResult.value = null;
@@ -304,7 +310,7 @@ export const FillBlankSet = defineComponent({
         resetReviewView();
         reviewNotice.value = 'View finished. You are back to browsing in saved order.';
         await nextTick();
-        reviewButton.value?.focus();
+        viewButton.value?.focus();
         return;
       }
 
@@ -324,7 +330,7 @@ export const FillBlankSet = defineComponent({
       resetReviewView();
       reviewNotice.value = `${endingMode === 'view' ? 'View' : 'Review'} ended. You are back to browsing in saved order.`;
       await nextTick();
-      reviewButton.value?.focus();
+      (endingMode === 'view' ? viewButton.value : reviewButton.value)?.focus();
     }
 
     async function dismissReviewResult() {
@@ -337,13 +343,14 @@ export const FillBlankSet = defineComponent({
 
     async function reviewAgain() {
       reviewResult.value = null;
-      reviewSetupOpen.value = true;
+      openSessionSetup('review');
       await nextTick();
     }
     async function cancelReview() {
+      const cancelledMode = sessionMode.value;
       reviewSetupOpen.value = false;
       await nextTick();
-      reviewButton.value?.focus();
+      (cancelledMode === 'view' ? viewButton.value : reviewButton.value)?.focus();
     }
     function updateResponse(blankIndex: number, value: string) {
       const next = [...responses.value];
@@ -454,16 +461,25 @@ export const FillBlankSet = defineComponent({
                 ? `${position} · ${blankCount} ${blankCount === 1 ? 'blank' : 'blanks'} · ${orderDescription}`
                 : `${position} · ${blankCount} ${blankCount === 1 ? 'blank' : 'blanks'}`),
             ]),
-            h('div', { class: 'card-review-session-actions' }, [
+            h('div', { class: 'card-review-session-actions' }, reviewActive.value ? [
               h('button', {
                 ref: reviewButton, type: 'button', class: 'quiet-button card-review-button',
                 'aria-haspopup': 'dialog', onClick: () => { reviewSetupOpen.value = true; },
-              }, reviewActive.value ? 'Change setup' : 'Review / view'),
-              reviewActive.value ? h('button', {
+              }, 'Change setup'),
+              h('button', {
                 type: 'button', class: 'quiet-button',
                 'aria-label': sessionMode.value === 'view' ? 'End view' : 'End review',
                 onClick: endReview,
-              }, sessionMode.value === 'view' ? 'End view' : 'End review') : null,
+              }, sessionMode.value === 'view' ? 'End view' : 'End review'),
+            ] : [
+              h('button', {
+                ref: reviewButton, type: 'button', class: 'quiet-button card-review-button',
+                'aria-haspopup': 'dialog', onClick: () => openSessionSetup('review'),
+              }, 'Review'),
+              h('button', {
+                ref: viewButton, type: 'button', class: 'quiet-button fill-blank-view-button',
+                'aria-haspopup': 'dialog', onClick: () => openSessionSetup('view'),
+              }, 'View'),
             ]),
           ]) : null,
           reviewResult.value ? h(ReviewResult, {
@@ -642,11 +658,12 @@ export const FillBlankSet = defineComponent({
             `Workspace limit reached: ${MAX_CARDS} cards.`) : null,
           h('p', { class: 'visually-hidden', role: 'status' }, message.value),
           reviewSetupOpen.value ? h(FillBlankReviewSetup, {
-            initialMode: sessionMode.value,
+            mode: sessionMode.value,
             initialOrder: reviewOrder.value,
             cardCount: props.set.cards.length,
             modal: !props.tutorialReview,
-            onCancel: cancelReview, onStart: startReview,
+            onCancel: cancelReview,
+            onStart: (order: ReviewOrder) => startReview(sessionMode.value, order),
           }) : null,
         ]),
         !props.cardListCollapsed ? h('div', {
