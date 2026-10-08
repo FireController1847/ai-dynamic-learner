@@ -283,7 +283,6 @@ export class CalculatorModel {
 
     if (this.expression[this.cursor] === ',') {
       this.cursor += 1;
-      this.overwriteMode = false;
       return;
     }
 
