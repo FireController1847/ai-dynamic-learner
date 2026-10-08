@@ -21,10 +21,12 @@ export const GuideMapStudy = defineComponent({
   setup(props, { emit }) {
     const started = ref(false);
     const visited = ref(new Set<string>());
+    const skipped = ref(new Set<string>());
     const currentId = ref<string | null>(null);
     const path = ref<string[]>([]);
     const revealedCount = ref(0);
     const travelling = ref(false);
+    const arriving = ref(false);
     const focused = ref(false);
     const travelTargetId = ref<string | null>(null);
     const scroll = ref<HTMLElement | null>(null);
@@ -60,6 +62,7 @@ export const GuideMapStudy = defineComponent({
       for (const timer of timers) window.clearTimeout(timer);
       timers.clear();
       travelling.value = false;
+      arriving.value = false;
       travelTargetId.value = null;
     }
 
@@ -128,8 +131,8 @@ export const GuideMapStudy = defineComponent({
           // Keep the freshly revealed point readable; include the next action
           // when it fits, so learners can continue without manual scrolling.
           const action = panel.querySelector<HTMLElement>(
-            '.guide-study-reveal, .guide-study-topic-inner > .card-primary-button, ' +
-            '.guide-study-branch button, .guide-study-backtrack button, .guide-study-finished button',
+            '.guide-study-reveal-actions button, .guide-study-branch button, ' +
+            '.guide-study-backtrack button, .guide-study-finished button',
           );
           const actionBottom = action?.getBoundingClientRect().bottom ?? point.bottom;
           const bottomOverflow = Math.max(0, Math.max(point.bottom, actionBottom) - (viewport.bottom - 24));
@@ -151,13 +154,20 @@ export const GuideMapStudy = defineComponent({
       const first = startTopic(props.data);
       if (!first) return;
       visited.value = new Set();
+      skipped.value = new Set();
+      focused.value = false;
+      arriving.value = true;
       currentId.value = first.id;
       path.value = [first.id];
       revealedCount.value = 0;
       started.value = true;
       prepareCurrent();
       focusTopic(first.id, 'auto');
-      showTopic();
+      // Let the learner see the starting marker before the study sheet opens.
+      later(() => {
+        arriving.value = false;
+        showTopic();
+      }, reducedMotion.matches ? 0 : 900);
     }
 
     function restart() {
@@ -180,6 +190,21 @@ export const GuideMapStudy = defineComponent({
       if (revealedCount.value < count) revealedCount.value += 1;
       if (revealedCount.value >= count) markVisited(topic.id);
       followRevealedPoint();
+    }
+
+    function skipSection() {
+      const topic = current.value;
+      if (!topic || visited.value.has(topic.id) || travelling.value || arriving.value) return;
+      skipped.value = new Set([...skipped.value, topic.id]);
+      markVisited(topic.id);
+      // Skipping isn't revealing the remaining content. Carry on automatically
+      // when there is one route, or backtrack from a finished dead-end.
+      if (available.value.length === 1) {
+        visitNext(available.value[0]);
+      } else if (available.value.length === 0 && backtrackPlan()) {
+        backtrack();
+      }
+      // Multiple routes still require the learner to choose one.
     }
 
     function travelTo(targetId: string, after: () => void) {
@@ -300,7 +325,9 @@ export const GuideMapStudy = defineComponent({
       if (!visited.value.has(topic.id) || travelling.value) return null;
       if (complete.value) return h('div', { class: 'guide-study-finished', role: 'status' }, [
         h('strong', 'Map complete'),
-        h('p', 'You visited every topic on this study route.'),
+        h('p', skipped.value.size
+          ? 'You reached every stop, including ' + skipped.value.size + (skipped.value.size === 1 ? ' skipped section.' : ' skipped sections.')
+          : 'You visited every topic on this study route.'),
         h('div', { class: 'guide-study-actions' }, [
           h('button', { type: 'button', class: 'card-primary-button', onClick: restart }, 'Study again'),
           h('button', { type: 'button', class: 'quiet-button', onClick: returnToOverview }, 'Return to overview'),
@@ -314,7 +341,7 @@ export const GuideMapStudy = defineComponent({
           h('div', { class: 'guide-study-branch-actions' }, available.value.map(id => {
             const next = topicById(props.data, id);
             return next ? h('button', {
-              key: id, type: 'button', class: 'quiet-button',
+              key: id, type: 'button', class: 'quiet-button guide-study-action',
               onClick: () => visitNext(id),
             }, next.title || 'Untitled topic') : null;
           })),
@@ -324,7 +351,7 @@ export const GuideMapStudy = defineComponent({
       if (available.value.length === 1) {
         const next = topicById(props.data, available.value[0]);
         return next ? h('button', {
-          type: 'button', class: 'card-primary-button',
+          type: 'button', class: 'quiet-button guide-study-action',
           onClick: () => visitNext(next.id),
         }, 'Continue to ' + (next.title || 'next topic')) : null;
       }
@@ -334,7 +361,7 @@ export const GuideMapStudy = defineComponent({
         const ancestor = topicById(props.data, plan.ancestorId);
         return h('div', { class: 'guide-study-backtrack' }, [
           h('p', 'This branch is finished. Go back along the path to continue the map.'),
-          h('button', { type: 'button', class: 'card-primary-button', onClick: backtrack },
+          h('button', { type: 'button', class: 'quiet-button guide-study-action', onClick: backtrack },
             'Backtrack to ' + (ancestor?.title || 'previous fork')),
         ]);
       }
@@ -361,7 +388,7 @@ export const GuideMapStudy = defineComponent({
           ]),
           h('div', { class: 'guide-study-expect' }, [
             h('h4', 'What to expect'),
-            h('p', 'Reveal the current topic’s bullet points one at a time. Finishing a topic marks that stop visited. At forks, choose which branch to take; dead ends send you back along visited paths until there is somewhere new to go.'),
+            h('p', 'Reveal a topic’s points one at a time, or skip its remaining points to keep moving. At forks, choose which branch to explore; dead ends lead back toward unfinished paths.'),
           ]),
           studyProblem.value ? h('p', { class: 'guide-map-status', role: 'status' }, studyProblem.value) : null,
           h('div', { class: 'guide-study-actions' }, [
@@ -383,11 +410,12 @@ export const GuideMapStudy = defineComponent({
         h('div', { class: 'guide-study-toolbar' }, [
           h('div', [
             h('strong', topic.title || 'Untitled topic'),
-            h('span', visitedCount.value + ' of ' + props.data.topics.length + ' visited'),
+            h('span', visitedCount.value + ' of ' + props.data.topics.length + ' visited'
+              + (skipped.value.size ? ' (' + skipped.value.size + ' skipped)' : '')),
           ]),
           h('div', { class: 'guide-study-toolbar-actions' }, [
             h('button', {
-              ref: viewMapButton, type: 'button', class: 'quiet-button', disabled: travelling.value,
+              ref: viewMapButton, type: 'button', class: 'quiet-button', disabled: travelling.value || arriving.value,
               onClick: () => { if (focused.value) closeTopic(); else showTopic(); },
             }, focused.value ? 'View map' : 'View points'),
             h('button', { type: 'button', class: 'quiet-button', onClick: returnToOverview }, 'End studying'),
@@ -450,7 +478,7 @@ export const GuideMapStudy = defineComponent({
               h('p', 'Moving to the next stop.'),
             ]) : [
               h('div', { class: 'guide-study-topic-heading' }, [
-                h('span', currentVisited ? 'Visited' : 'Current stop'),
+                h('span', skipped.value.has(topic.id) ? 'Skipped' : currentVisited ? 'Visited' : 'Current stop'),
                 h('h3', { ref: topicHeading, tabindex: -1 }, topic.title || 'Untitled topic'),
                 topic.description?.trim()
                   ? h('p', { class: 'guide-study-topic-description' }, topic.description.trim())
@@ -459,15 +487,23 @@ export const GuideMapStudy = defineComponent({
               currentPoints.value.length
                 ? h('div', { class: 'guide-study-points' }, [
                     ...revealedContent(topic),
-                    !currentVisited ? h('button', {
-                      type: 'button', class: 'quiet-button guide-study-reveal',
-                      onClick: revealNext,
-                    }, revealedCount.value ? 'Reveal next point →' : 'Reveal first point →') : null,
+                    !currentVisited ? h('div', { class: 'guide-study-reveal-actions' }, [
+                      h('button', {
+                        type: 'button', class: 'quiet-button guide-study-action guide-study-reveal',
+                        onClick: revealNext,
+                      }, revealedCount.value ? 'Reveal next point →' : 'Reveal first point →'),
+                      h('button', {
+                        type: 'button', class: 'quiet-button guide-study-action guide-study-skip',
+                        onClick: skipSection,
+                      }, 'Skip section'),
+                    ]) : null,
                   ])
                 : h('p', { class: 'guide-study-empty-topic' }, 'This topic has no bullet points. It counts as visited when you arrive.'),
               currentVisited && !complete.value ? h('p', {
                 class: 'guide-study-visited-note',
-              }, 'All points revealed. This stop is visited.') : null,
+              }, skipped.value.has(topic.id)
+                ? 'Section skipped. Choose another path to continue.'
+                : 'All points revealed. This stop is visited.') : null,
               routeControls(topic),
             ],
             ]),
