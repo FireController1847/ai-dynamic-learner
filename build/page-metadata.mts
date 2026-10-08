@@ -13,11 +13,12 @@ function absoluteUrl(path: string, baseUrl: URL | null) {
 }
 
 function pageMetadata(route: string, baseUrl: URL | null) {
-  const feature = featureDefinitions.find((candidate) => candidate.path === route);
+  const canonicalRoute = route === '/study-guide/' ? '/guide/' : route;
+  const feature = featureDefinitions.find((candidate) => candidate.path === canonicalRoute);
   const overrides = feature?.metadata ?? {};
   const title = overrides.title ?? (feature ? `${feature.label} · ${appConfig.name}` : appConfig.name);
   const description = overrides.description ?? feature?.description ?? appConfig.description;
-  const canonicalUrl = baseUrl ? new URL(route.slice(1), baseUrl).href : null;
+  const canonicalUrl = baseUrl ? new URL(canonicalRoute.slice(1), baseUrl).href : null;
   const siteUrl = baseUrl?.href ?? null;
   const keywords = [...new Set([
     ...appConfig.metadata.keywords,

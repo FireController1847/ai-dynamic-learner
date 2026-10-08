@@ -16,7 +16,7 @@ interface Workspace {
     'index-cards': IndexCards;
     'word-search': WordSearch;
     crossword: Crossword;
-    'study-guide': StudyGuideModel;
+    'guide': GuideModel;
     'knowledge-check': KnowledgeCheck;
   };
 }
@@ -26,7 +26,7 @@ The browser-local key is `dynamic-learner.workspace.v1`. JSON backups and saved 
 
 Uploaded or persisted data is untrusted: parse as `unknown`, reject unsupported top-level fields/version/format, then delegate to feature validators before replacing live state. Invalid replacement never partially mutates the current workspace.
 
-For version-1 compatibility, missing Notebook, Todo List, Word Search, Crossword, Study Guide, or Review payloads normalize to empty models. Index Cards remains required because it existed in the original v1 contract. Unknown feature keys are rejected.
+For version-1 compatibility, missing Notebook, Todo List, Word Search, Crossword, Guide, or Review payloads normalize to empty models. Index Cards remains required because it existed in the original v1 contract. Unknown feature keys are rejected.
 
 ## Feature ownership
 
@@ -37,7 +37,7 @@ Each feature owns its saved model and runtime validation:
 - Index Cards: `src/features/index-cards/tree-model.ts` / card and display models. The optional app-level `settings.answerStrictness` applies to every Fill-in-the-Blanks set. Older workspaces without it behave as level 4. Workspaces saved during the short-lived per-set strictness implementation are migrated on load: one consistent legacy value is promoted to the app setting; conflicting legacy values fall back to level 4, and the obsolete per-set fields are removed.
 - Word Search: `src/features/word-search/library-model.ts` plus puzzle/game/display models.
 - Crossword: `src/features/crossword/library-model.ts` plus puzzle/game/display models.
-- Study Guide: `src/features/study-guide/library-model.ts`.
+- Guide: `src/features/guide/library-model.ts`.
 - Review: `src/features/knowledge-check/library-model.ts`, question/options models. Statement items persist in the same ordered question array but carry only display text and are non-scorable. Review set options persist independent Short Answer and Fill-in-the-Blanks strictness levels, shared Quiz/Test assessment defaults (question order, optional question limit, and multiple-choice choice shuffling), Quiz attempts per question, and Test-only time/result settings. Older saved sets normalize missing strictness fields to level 4 and other missing fields to compatible defaults.
 
 Do not duplicate feature schemas in `workspace-format.ts`; it coordinates them.
@@ -45,6 +45,7 @@ Do not duplicate feature schemas in `workspace-format.ts`; it coordinates them.
 ## Compatibility rules
 
 - Existing valid v1 backups must continue to load unless a deliberate workspace-format migration is introduced.
+- Guide is saved under `features.guide`; old backups with `features['study-guide']` migrate on load. New backups emit only the Guide key.
 - Additive feature fields should default/normalize safely when older backups omit them.
 - Saved IDs, feature IDs, route IDs, and mode IDs are compatibility-sensitive.
 - Validation must reject malformed/unknown values rather than silently coercing arbitrary data.

@@ -10,7 +10,13 @@ export function pageHref(path: string): string {
 
 function localPath() {
   const pathname = window.location.pathname;
-  return pathname.startsWith(basePath) ? `/${pathname.slice(basePath.length)}` : pathname;
+  const path = pathname.startsWith(basePath) ? `/${pathname.slice(basePath.length)}` : pathname;
+  if (path === '/study-guide/' || path === '/study-guide') {
+    // Preserve existing bookmarks but expose only the new Guide route.
+    window.history.replaceState(window.history.state, '', pageHref('/guide/') + window.location.search + window.location.hash);
+    return '/guide/';
+  }
+  return path;
 }
 
 export function useNavigation(onNavigate: () => void) {
