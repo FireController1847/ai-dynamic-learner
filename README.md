@@ -55,7 +55,7 @@ The current application includes:
 | **Index Cards** | Creates nested study sets in Flash Cards or Fill in the Blanks mode, with editable card content, guided review, per-mode appearance controls, and resumable workspace storage. |
 | **Word Search** | Builds custom word-search puzzles with configurable difficulty and appearance, saved grids, hints, answer reveal, and persistent progress. |
 | **Crossword** | Builds custom crosswords from answer-and-clue pairs, automatically arranges Across and Down entries, and saves typed progress with checking, hints, reveals, and display controls. |
-| **Study Guide** | Builds lightweight titled bullet lists or connected topic maps. Map study walks the route stop by stop, revealing points, tracking visited topics, branching, and backtracking as needed. |
+| **Guide** | Builds lightweight titled bullet lists or connected topic maps. Map study walks the route stop by stop, revealing points, tracking visited topics, branching, and backtracking as needed. |
 | **Review** | Builds grouped knowledge sets with multiple-choice, true/false, short-answer, and fill-in-the-blanks questions. Study with hints and retries, take a Quiz with immediate feedback, or start a Test with optional timing and answer review. |
 
 The interface uses a Fluent-inspired visual language with neutral surfaces, compact controls, blue accents, and responsive layouts. The tools are meant to feel related without forcing every feature into the same interaction model.
@@ -67,6 +67,8 @@ The latest published GitHub Pages snapshot is available here:
 **[Open Dynamic Learner →](https://firecontroller1847.github.io/ai-dynamic-learner/)**
 
 GitHub Pages is deployed manually, so the published site may occasionally lag behind the latest commit on `main`.
+
+Older `/study-guide/` bookmarks redirect to `/guide/`. Existing workspaces and AI imports from before the Guide rename remain supported.
 
 Opening an app with a library selects its first entry in library order. Todo List follows your chosen date order and opens Archive when only past lists remain. Select or create a group to see its creation screen, then use the button there to add an entry inside that group.
 

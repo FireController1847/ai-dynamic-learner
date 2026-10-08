@@ -27,7 +27,8 @@ export function siteConfig(env: Record<string, string | undefined> = process.env
     }
   }
 
-  const routes = ['/', ...featureDefinitions.map((feature) => feature.path)];
+  // Build a legacy entry page so old direct links can redirect to Guide.
+  const routes = ['/', ...featureDefinitions.map((feature) => feature.path), '/study-guide/'];
   if (new Set(routes).size !== routes.length || routes.some((route) => !/^\/(?:[a-z0-9-]+\/)*$/.test(route))) {
     throw new Error('Feature routes must be unique, canonical slash-terminated paths.');
   }
