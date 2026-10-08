@@ -37,6 +37,7 @@ export interface SimpleListStudyGuideImport {
 export interface SimpleMapStudyGuideImportTopic {
   key: string;
   title: string;
+  description?: string;
   position?: readonly [number, number];
   sections: SimpleStudyGuideImportSection[];
 }
@@ -140,7 +141,7 @@ Limits:
 function mapPrompt(options: StudyGuideAiPromptOptions): string {
   return `${promptIntro(options, 'map')}
 
-Create a connected topic map that feels like an adventurous path the learner can explore, not a plain outline drawn as boxes. Each topic is a study stop with its own small list-style guide. Put the topics in a useful learning order so one stop naturally leads to the next.
+Create a connected topic map that feels like an adventurous path the learner can explore, not a plain outline drawn as boxes. Each topic is a study stop with its own small list-style guide and an optional short introduction. Put the topics in a useful learning order so one stop naturally leads to the next.
 
 Shape the route like a small exploration tree:
 - build a clear main path through most of the material;
@@ -173,6 +174,7 @@ ${JSON_FENCE}json
   "topics": [
     {
       "key": "foundations",
+      "description": "Begin with the core ideas that make the rest of the journey easier to understand.",
       "title": "Foundations",
       "position": [64, 384],
       "sections": [
@@ -191,6 +193,7 @@ ${JSON_FENCE}json
     },
     {
       "key": "core-process",
+      "description": "Now explore how those foundations connect and work together in practice.",
       "title": "Core Process",
       "position": [288, 288],
       "sections": [
@@ -204,6 +207,7 @@ ${JSON_FENCE}json
     },
     {
       "key": "applications",
+      "description": "See why the earlier concepts matter when they are put to use.",
       "title": "Applications",
       "position": [608, 352],
       "sections": [
@@ -217,6 +221,7 @@ ${JSON_FENCE}json
     },
     {
       "key": "case-study",
+      "description": "Take an optional detour to see these ideas through one concrete example.",
       "title": "Case Study",
       "position": [608, 544],
       "sections": [
@@ -263,6 +268,8 @@ Map rules:
 - each topic occupies about ${MAP_TOPIC_WIDTH}×${MAP_TOPIC_HEIGHT}; keep topic rectangles from overlapping;
 - use position creatively to make the route visually wander while still reading primarily left-to-right;
 - every topic should represent a meaningful conceptual stop, not a single trivia fact;
+- usually include a short "description" for each topic: one or two plain-text sentences explaining why this stop belongs on the journey and what kind of ideas will be revealed;
+- descriptions should set context and curiosity, not merely repeat the title, list the forthcoming bullets, or spoil the entire content; omit the description when it would be filler;
 - each topic's sections and nested bullets use the same note structure as List mode;
 - preserve important terminology and factual accuracy;
 - do not invent unsupported information.
@@ -272,6 +279,7 @@ Limits:
 - 1–${MAX_TOPICS} topics;
 - each topic supports up to ${MAX_SECTIONS} sections and ${MAX_BULLETS} bullets/sub-bullets;
 - topic titles, section titles, bullet text, and topic keys must be non-empty plain text no longer than ${MAX_TEXT_LENGTH} characters;
+- optional topic descriptions must be plain text no longer than ${MAX_TEXT_LENGTH} characters (normally just 1–2 short sentences);
 - at most ${MAX_IMPORT_BULLET_DEPTH + 1} bullet levels;
 - do not generate Dynamic Learner IDs, groups, or other application fields. Dynamic Learner validates suggested positions and owns the stored map data.`;
 }
@@ -387,9 +395,10 @@ function parseMapImport(value: unknown): SimpleMapStudyGuideImport {
   const keys = new Set<string>();
   const topics = value.topics.map((topic, topicIndex): SimpleMapStudyGuideImportTopic => {
     if (!isRecord(topic) ||
-        Object.keys(topic).some((key) => !['key', 'title', 'position', 'sections'].includes(key)) ||
+        Object.keys(topic).some((key) => !['key', 'title', 'description', 'position', 'sections'].includes(key)) ||
         typeof topic.key !== 'string' || !topic.key.trim() || topic.key.trim().length > MAX_TEXT_LENGTH ||
         typeof topic.title !== 'string' || !topic.title.trim() || topic.title.trim().length > MAX_TEXT_LENGTH ||
+        (Object.hasOwn(topic, 'description') && (typeof topic.description !== 'string' || topic.description.length > MAX_TEXT_LENGTH)) ||
         (Object.hasOwn(topic, 'position') && (
           !Array.isArray(topic.position) || topic.position.length !== 2 ||
           !topic.position.every(value => typeof value === 'number' && Number.isInteger(value)) ||
@@ -407,6 +416,7 @@ function parseMapImport(value: unknown): SimpleMapStudyGuideImport {
     return {
       key,
       title: topic.title.trim(),
+      ...(typeof topic.description === 'string' && topic.description.trim() ? { description: topic.description.trim() } : {}),
       position,
       sections: parseImportSections(topic.sections, { count: 0 }, `Topic ${topicIndex + 1}`),
     };
