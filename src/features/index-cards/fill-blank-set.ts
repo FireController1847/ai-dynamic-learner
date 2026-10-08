@@ -348,9 +348,11 @@ export const FillBlankSet = defineComponent({
     }
     async function cancelReview() {
       const cancelledMode = sessionMode.value;
+      const active = reviewActive.value;
       reviewSetupOpen.value = false;
       await nextTick();
-      (cancelledMode === 'view' ? viewButton.value : reviewButton.value)?.focus();
+      if (active) reviewButton.value?.focus();
+      else (cancelledMode === 'view' ? viewButton.value : reviewButton.value)?.focus();
     }
     function updateResponse(blankIndex: number, value: string) {
       const next = [...responses.value];
