@@ -2,8 +2,9 @@ import {
   evaluateExpression, formatExpression, type AngleMode,
 } from './expression-engine.ts';
 import {
-  backspaceMathPrint, createFractionTemplate, endsValue, fractionContextAt,
-  lastOperandStart, moveFractionCursor, parenthesesBalancedEnoughToClose,
+  backspaceMathPrint, createFractionTemplate, deleteMathPrintForward, endsValue, fractionContextAt,
+  lastOperandStart, moveFractionCursor, moveMathPrintCursor, normaliseMathPrintCursor,
+  overwriteRangeAtCursor, parenthesesBalancedEnoughToClose,
 } from './calculator-entry.ts';
 import {
   formatNumber, fractionForValue, fractionPartsForValue, normaliseNumber,
@@ -32,6 +33,7 @@ export class CalculatorModel {
   angleMode: AngleMode = 'DEG';
   lastAnswer = 0;
   justEvaluated = false;
+  insertArmed = false;
   decimalPlaces: DecimalPlaces;
   displayMode: 'decimal' | 'fraction' = 'decimal';
   private displayValue = 0;
@@ -99,6 +101,26 @@ export class CalculatorModel {
     this.historyIndex = null;
   }
 
+  armInsert() {
+    if (this.hasError || this.justEvaluated) return;
+    this.dismissHistory();
+    this.insertArmed = true;
+  }
+
+  setCursor(position: number) {
+    if (this.hasError || this.justEvaluated) return;
+    this.dismissHistory();
+    this.cursor = normaliseMathPrintCursor(this.expression, position);
+    this.insertArmed = false;
+  }
+
+  moveHorizontal(direction: 'left' | 'right') {
+    if (this.hasError || this.justEvaluated) return;
+    this.dismissHistory();
+    this.cursor = moveMathPrintCursor(this.expression, this.cursor, direction);
+    this.insertArmed = false;
+  }
+
   private prepareValue() {
     this.dismissHistory();
     if (this.hasError) {
@@ -116,9 +138,21 @@ export class CalculatorModel {
   }
 
   private insert(text: string) {
-    if (this.expression.length + text.length > MAX_EXPRESSION_LENGTH) return false;
-    this.expression = this.expression.slice(0, this.cursor) + text + this.expression.slice(this.cursor);
-    this.cursor += text.length;
+    const overwrite = this.insertArmed ? null : overwriteRangeAtCursor(this.expression, this.cursor);
+    const replacedLength = overwrite ? overwrite.end - overwrite.start : 0;
+    if (this.expression.length - replacedLength + text.length > MAX_EXPRESSION_LENGTH) return false;
+
+    if (overwrite) {
+      this.expression = this.expression.slice(0, overwrite.start)
+        + text
+        + this.expression.slice(overwrite.end);
+      this.cursor = overwrite.start + text.length;
+    } else {
+      this.expression = this.expression.slice(0, this.cursor) + text + this.expression.slice(this.cursor);
+      this.cursor += text.length;
+    }
+
+    this.insertArmed = false;
     this.refreshPreview();
     return true;
   }
@@ -153,6 +187,7 @@ export class CalculatorModel {
     this.expression = '';
     this.cursor = 0;
     this.historyIndex = null;
+    this.insertArmed = false;
     this.showValue(0);
     this.hasError = false;
     this.justEvaluated = false;
@@ -160,6 +195,7 @@ export class CalculatorModel {
 
   clearEntry() {
     this.dismissHistory();
+    this.insertArmed = false;
     if (this.hasError) {
       this.hasError = false;
       this.refreshPreview();
@@ -193,6 +229,7 @@ export class CalculatorModel {
 
   backspace() {
     this.dismissHistory();
+    this.insertArmed = false;
     if (this.hasError) {
       this.hasError = false;
       this.refreshPreview();
@@ -204,6 +241,17 @@ export class CalculatorModel {
     }
 
     const edited = backspaceMathPrint(this.expression, this.cursor);
+    this.expression = edited.source;
+    this.cursor = edited.cursor;
+    this.refreshPreview();
+  }
+
+  deleteForward() {
+    this.dismissHistory();
+    this.insertArmed = false;
+    if (this.hasError || this.justEvaluated) return;
+
+    const edited = deleteMathPrintForward(this.expression, this.cursor);
     this.expression = edited.source;
     this.cursor = edited.cursor;
     this.refreshPreview();
@@ -240,6 +288,7 @@ export class CalculatorModel {
     if (template.source.length > MAX_EXPRESSION_LENGTH) return;
     this.expression = template.source;
     this.cursor = template.cursor;
+    this.insertArmed = false;
     this.refreshPreview();
   }
 
@@ -402,9 +451,11 @@ export class CalculatorModel {
   }
 
   moveRight() {
-    if (this.justEvaluated || this.hasError) return;
-    const moved = moveFractionCursor(this.expression, this.cursor, 'right');
-    if (moved !== null) this.cursor = moved;
+    this.moveHorizontal('right');
+  }
+
+  moveLeft() {
+    this.moveHorizontal('left');
   }
 
   recallHistorySelection() {
@@ -419,6 +470,7 @@ export class CalculatorModel {
     this.expression = entry.source;
     this.cursor = entry.source.length;
     this.historyIndex = null;
+    this.insertArmed = false;
     this.hasError = false;
     this.justEvaluated = false;
     this.refreshPreview();
