@@ -222,6 +222,22 @@ class Parser {
   }
 }
 
+
+export function completeTrailingClosures(source: string) {
+  let depth = 0;
+
+  for (const character of source) {
+    if (character === '(') {
+      depth += 1;
+    } else if (character === ')') {
+      if (depth === 0) return source;
+      depth -= 1;
+    }
+  }
+
+  return depth > 0 ? `${source}${')'.repeat(depth)}` : source;
+}
+
 export function evaluateExpression(source: string, context: EvaluationContext) {
   return new Parser(source, context).parse();
 }
