@@ -7,7 +7,20 @@ export interface GuideSection { id: string; title: string; bullets: string[] }
 export interface ListGuideData { sections: GuideSection[] }
 export interface MapTopic { id: string; title: string; description?: string; x: number; y: number; guide: ListGuideData }
 export interface MapConnection { id: string; from: string; to: string }
-export interface MapGuideData { topics: MapTopic[]; connections: MapConnection[]; startTopicId: string | null }
+export interface MapStudySession {
+  paused: boolean;
+  currentId: string;
+  openedIds: string[];
+  visitedIds: string[];
+  skippedIds: string[];
+  revealed: Record<string, number>;
+}
+export interface MapGuideData {
+  topics: MapTopic[];
+  connections: MapConnection[];
+  startTopicId: string | null;
+  session?: MapStudySession;
+}
 export type GuideItem =
   | { id: string; kind: 'guide'; name: string; mode: 'list'; data: ListGuideData }
   | { id: string; kind: 'guide'; name: string; mode: 'map'; data: MapGuideData };
@@ -89,7 +102,7 @@ function mapData(value: unknown, ids: Set<string>): asserts value is MapGuideDat
   }
 
   if (!Array.isArray(value.connections) ||
-      Object.keys(value).some(key => !['topics','connections','startTopicId'].includes(key)) ||
+      Object.keys(value).some(key => !['topics','connections','startTopicId','session'].includes(key)) ||
       value.topics.length > MAX_TOPICS) throw new Error('A Guide map is invalid.');
 
   const topicIds = new Set<string>();
@@ -150,6 +163,49 @@ function mapData(value: unknown, ids: Set<string>): asserts value is MapGuideDat
     adjacency.get(connection.to)?.add(connection.from);
   }
   value.connections = acceptedConnections;
+
+  if (Object.hasOwn(value, 'session')) {
+    const session = value.session;
+    if (!isRecord(session) ||
+        Object.keys(session).some(key => !['paused', 'currentId', 'openedIds', 'visitedIds', 'skippedIds', 'revealed'].includes(key)) ||
+        typeof session.paused !== 'boolean' ||
+        !isValidId(session.currentId) ||
+        !Array.isArray(session.openedIds) || !Array.isArray(session.visitedIds) || !Array.isArray(session.skippedIds) ||
+        !isRecord(session.revealed)) {
+      throw new Error('The saved Guide map adventure is invalid.');
+    }
+    const ids = [session.openedIds, session.visitedIds, session.skippedIds];
+    for (const entries of ids) {
+      if (entries.length > MAX_TOPICS || entries.some(id => !isValidId(id)) || new Set(entries).size !== entries.length)
+        throw new Error('The saved Guide map adventure has invalid stop references.');
+    }
+    if (Object.keys(session.revealed).length > MAX_TOPICS ||
+        Object.entries(session.revealed).some(([id, count]) => !isValidId(id) || typeof count !== 'number' ||
+          !Number.isInteger(count) || count < 0 || count > MAX_BULLETS)) {
+      throw new Error('The saved Guide map adventure has invalid reveal counts.');
+    }
+
+    // Authored maps can change after studying. Prune stale references without
+    // making an otherwise valid backup unloadable when a topic was removed.
+    if (!topicIds.size) {
+      delete value.session;
+    } else {
+      const currentId = topicIds.has(session.currentId) ? session.currentId
+        : value.startTopicId ?? value.topics[0].id;
+      const openedIds = session.openedIds.filter(id => topicIds.has(id));
+      const visitedIds = session.visitedIds.filter(id => topicIds.has(id));
+      const skippedIds = session.skippedIds.filter(id => visitedIds.includes(id));
+      const revealed = Object.fromEntries(Object.entries(session.revealed)
+        .filter(([id]) => topicIds.has(id))
+        .map(([id, count]) => {
+          const topic = value.topics.find(entry => entry.id === id);
+          const max = topic?.guide.sections.reduce((sum, section) =>
+            sum + section.bullets.filter(bullet => bullet.trim()).length, 0) ?? 0;
+          return [id, Math.min(count as number, max)];
+        }));
+      value.session = { paused: session.paused, currentId, openedIds, visitedIds, skippedIds, revealed };
+    }
+  }
 }
 
 export function validateGuide(value: unknown): asserts value is GuideModel {
