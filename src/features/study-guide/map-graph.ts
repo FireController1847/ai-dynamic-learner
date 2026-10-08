@@ -100,9 +100,9 @@ function snapped(value: number, max: number): number {
 }
 
 /**
- * Deterministically place a connected acyclic map without persisting AI-supplied layout.
- * Normal trees are arranged by distance from the starting topic; unusually wide/deep
- * trees fall back to breadth-first grid packing within the existing fixed canvas.
+ * Deterministically place a connected acyclic map when no validated AI layout is present.
+ * Normal trees progress left-to-right from the starting topic with a small vertical wander;
+ * unusually wide/deep trees fall back to breadth-first horizontal grid packing.
  */
 export function layoutMapTopics(
   topicIds: readonly string[],
@@ -141,15 +141,20 @@ export function layoutMapTopics(
   const roomyYStep = 96;
   const maxTreeColumns = Math.floor(MAP_MAX_X / roomyXStep) + 1;
   const maxTreeRows = Math.floor(MAP_MAX_Y / roomyYStep) + 1;
-  const treeFits = levels.length <= maxTreeRows && levels.every(level => level.length <= maxTreeColumns);
+  const treeFits = levels.length <= maxTreeColumns && levels.every(level => level.length <= maxTreeRows);
   const positions = new Map<string, MapTopicPosition>();
 
   if (treeFits) {
-    levels.forEach((level, row) => {
-      const span = (level.length - 1) * roomyXStep;
-      const startX = snapped((MAP_MAX_X - span) / 2, MAP_MAX_X);
-      level.forEach((id, column) => {
-        positions.set(id, { x: snapped(startX + column * roomyXStep, MAP_MAX_X), y: row * roomyYStep });
+    const wander = [0, -64, 32, -32, 64, 0];
+    levels.forEach((level, column) => {
+      const centerY = MAP_MAX_Y / 2 + (wander[column % wander.length] ?? 0);
+      const span = (level.length - 1) * roomyYStep;
+      const startY = snapped(centerY - span / 2, MAP_MAX_Y);
+      level.forEach((id, row) => {
+        positions.set(id, {
+          x: column * roomyXStep,
+          y: snapped(startY + row * roomyYStep, MAP_MAX_Y),
+        });
       });
     });
     return positions;
