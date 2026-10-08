@@ -245,7 +245,7 @@ export const tipsCatalog: TipsCatalog = {
   'knowledge-check': knowledgeCheckTips,
 
   'index-cards': {
-    version: 7,
+    version: 8,
     sections: [
       {
         id: 'library',
@@ -381,19 +381,11 @@ export const tipsCatalog: TipsCatalog = {
           },
           {
             title: 'Review or view',
-            body: 'Review tests the missing words. View shows the completed answers as you browse.',
-            target: '.card-review-button',
-            targetLabel: 'Review or view button',
+            body: 'Review tests the missing words. View, right beside it, shows the completed answers as you browse.',
+            target: '.card-review-session-actions',
+            targetLabel: 'Review and View buttons',
             placement: 'bottom',
             nextAction: { prepare: 'enable-review', click: '.card-review-button' },
-          },
-          {
-            title: 'Choose a session',
-            body: 'Use Review to practice, or View when you just want the answers visible.',
-            target: '.fill-blank-session-mode-choices',
-            targetLabel: 'Session mode',
-            placement: 'right',
-            blockTarget: true,
           },
           {
             title: 'Choose the card order',
