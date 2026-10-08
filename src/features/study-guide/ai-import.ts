@@ -569,7 +569,15 @@ export const StudyGuideAiImportWorkspace = defineComponent({
     async function responseReady() {
       handoff.value = 'ready';
       await nextTick();
-      jsonInput.value?.focus();
+      const input = jsonInput.value;
+      if (!input) return;
+      // Keep focus for keyboard users, but let the content scroll gently into view.
+      input.focus({ preventScroll: true });
+      input.scrollIntoView({
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+        block: 'nearest',
+        inline: 'nearest',
+      });
     }
 
     function preview() {
