@@ -60,7 +60,7 @@ export function useWorkspace() {
     // Validate the exact full-workspace payload before initiating the download.
     parseWorkspace(text);
     const filename = `dynamic-learner-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
-    await downloadText(filename, text, 'application/json');
+    await downloadText(filename, text, 'application/json', { deferPaint: false });
     // Browser download APIs cannot confirm that the file was actually saved.
     await backup.recordExport(text, Date.now());
   }

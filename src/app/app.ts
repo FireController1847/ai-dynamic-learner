@@ -33,13 +33,18 @@ const App = defineComponent({
   setup() {
     const workspace = useWorkspace();
     const backupMessage = ref('');
+    const backupBusy = ref(false);
     async function backUpNow() {
+      if (backupBusy.value) return;
+      backupBusy.value = true;
       backupMessage.value = '';
       try {
         await workspace.downloadBackup();
         backupMessage.value = 'Backup download started. Check your Downloads folder to confirm the file was saved.';
       } catch (error) {
         backupMessage.value = error instanceof Error ? error.message : 'The backup could not be downloaded.';
+      } finally {
+        backupBusy.value = false;
       }
     }
     const sidebarOpen = ref(false);
@@ -163,7 +168,10 @@ const App = defineComponent({
       workspace.storageProblem.value ? h('p', {
         class: 'workspace-storage-warning', role: 'alert',
       }, workspace.storageProblem.value) : null,
-      h(BackupReminderBanner, { reminders: workspace.backup, onBackup: () => { void backUpNow(); } }),
+      workspace.backup.problem.value ? h('p', {
+        class: 'workspace-storage-warning', role: 'alert',
+      }, workspace.backup.problem.value) : null,
+      h(BackupReminderBanner, { reminders: workspace.backup, busy: backupBusy.value, onBackup: () => { void backUpNow(); } }),
       backupMessage.value ? h('p', {
         class: 'workspace-message backup-app-message', role: 'status',
       }, [

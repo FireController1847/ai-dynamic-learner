@@ -160,6 +160,14 @@ export function useBackupReminders(state: Ref<Workspace>, savedWorkspacePresent:
     return 'Your workspace has changes since the last backup download.';
   });
 
+  function onStorage(event: StorageEvent) {
+    if (event.key !== BACKUP_REMINDER_KEY) return;
+    const incoming = parseBackupMetadata(event.newValue);
+    if (!incoming) return;
+    metadata.value = incoming;
+    refreshFingerprint(0);
+  }
+  window.addEventListener('storage', onStorage);
   const stopActivity = subscribeStudySessions(active => { activeStudy.value = active; });
   const checkTime = () => { now.value = Date.now(); };
   document.addEventListener('visibilitychange', checkTime);
@@ -169,6 +177,7 @@ export function useBackupReminders(state: Ref<Workspace>, savedWorkspacePresent:
     if (fingerprintTimer !== undefined) window.clearTimeout(fingerprintTimer);
     if (tickTimer !== undefined) window.clearInterval(tickTimer);
     document.removeEventListener('visibilitychange', checkTime);
+    window.removeEventListener('storage', onStorage);
     stopActivity();
   });
 

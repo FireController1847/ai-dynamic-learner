@@ -28,3 +28,6 @@
   .backup-reminder-actions > button { min-height: 44px; }
   .backup-reminder-actions .card-primary-button { flex: 1; }
 }
+
+.backup-app-message { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.backup-app-message .icon-button { margin-left: auto; font-size: 18px; }

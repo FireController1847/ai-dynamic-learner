@@ -1,7 +1,14 @@
 // Standard browser downloads work without a platform-specific filesystem API.
-export async function downloadText(filename: string, text: string, type = 'text/plain;charset=utf-8'): Promise<void> {
-  // Give the initiating button a chance to paint its busy state before preparing the file.
-  await new Promise<void>((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
+export async function downloadText(
+  filename: string,
+  text: string,
+  type = 'text/plain;charset=utf-8',
+  options: { deferPaint?: boolean } = {},
+): Promise<void> {
+  // For browser backups, preserve the immediate click gesture for mobile/Safari.
+  if (options.deferPaint !== false) {
+    await new Promise<void>((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
+  }
   const blob = new Blob([text], { type });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
