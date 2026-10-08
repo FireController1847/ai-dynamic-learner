@@ -138,9 +138,18 @@ Limits:
 function mapPrompt(options: StudyGuideAiPromptOptions): string {
   return `${promptIntro(options, 'map')}
 
-Create a connected topic map rather than one long outline. Each topic is a study stop with its own small list-style guide. Connect topics only when the relationship helps a learner move through the material. Choose one sensible starting topic.
+Create a connected topic map that feels like a path the learner can explore. Each topic is a study stop with its own small list-style guide. Put the topics in a useful learning order so one stop naturally leads to the next.
 
-The map must be one connected tree: every topic is reachable from the starting topic, there are no loops/cycles, no duplicate connections, and a topic is never connected to itself. Branch where the subject naturally divides. Do not add arbitrary paths merely to make the map look busy.
+Design the route path-first:
+- prefer a clear main journey through the material, such as A → B → C → D;
+- use branches sparingly for meaningful side topics or alternate subtopics;
+- keep branches shallow enough that the learner can explore them and naturally backtrack to the main route;
+- avoid hub-and-spoke maps where one broad topic connects directly to most or all other topics;
+- the starting topic should normally lead into the route rather than serve as a central hub;
+- most topics should have only one or two connections; use three only for a genuine fork and avoid higher-degree hubs unless the source truly requires one;
+- connect concepts according to prerequisite, chronology, process, increasing depth, or another natural learning progression.
+
+The map must still be one connected tree: every topic is reachable from the starting topic, there are no loops/cycles, no duplicate connections, and a topic is never connected to itself. With N topics, use exactly N-1 connections.
 
 Return ONLY one fenced JSON code block, starting with ${JSON_FENCE}json and ending with ${JSON_FENCE}.
 
@@ -170,6 +179,18 @@ ${JSON_FENCE}json
       ]
     },
     {
+      "key": "core-process",
+      "title": "Core Process",
+      "sections": [
+        {
+          "title": "How it works",
+          "bullets": [
+            { "text": "Core process point" }
+          ]
+        }
+      ]
+    },
+    {
       "key": "applications",
       "title": "Applications",
       "sections": [
@@ -180,10 +201,24 @@ ${JSON_FENCE}json
           ]
         }
       ]
+    },
+    {
+      "key": "advanced-topics",
+      "title": "Advanced Topics",
+      "sections": [
+        {
+          "title": "Going deeper",
+          "bullets": [
+            { "text": "Advanced point" }
+          ]
+        }
+      ]
     }
   ],
   "connections": [
-    ["foundations", "applications"]
+    ["foundations", "core-process"],
+    ["core-process", "applications"],
+    ["applications", "advanced-topics"]
   ]
 }
 ${JSON_FENCE}
@@ -192,7 +227,9 @@ Map rules:
 - "key" is a short unique local reference used only by this JSON response;
 - "startTopic" must match one topic key;
 - each connection is exactly [fromTopicKey, toTopicKey];
-- with N topics, a valid connected tree has exactly N-1 connections;
+- order connections to reflect the intended exploration route from the starting topic outward;
+- make the longest useful learning path pass through as much of the material as reasonably possible;
+- prefer sequential paths and occasional forks over wide hub-and-spoke structures;
 - every topic should represent a meaningful conceptual stop, not a single trivia fact;
 - each topic's sections and nested bullets use the same note structure as List mode;
 - preserve important terminology and factual accuracy;
