@@ -42,10 +42,10 @@ Use this as a starting-file index, not a feature specification. Follow imports o
 | Crossword library/setup | `src/features/crossword/crossword.ts`, `library.ts`, `library-model.ts`, `puzzle-form.ts` |
 | Crossword generation/play | `puzzle-generator.ts`, `puzzle-model.ts`, `game-model.ts`, `puzzle-game.ts`, `puzzle-grid.ts` |
 | Crossword appearance | `display-options.ts`, `display-settings.ts`, `grid-sizing.ts` |
-| Study Guide library/modes | `src/features/study-guide/study-guide.ts`, `library.ts`, `library-model.ts`, `mode-picker.ts` |
-| Study Guide List | `list-editor.ts` |
-| Study Guide AI/JSON import | `ai-import.ts`, `study-guide.ts`, `library.ts` |
-| Study Guide Map | `map-editor.ts`, `map-graph.ts`, `map-study.ts`, `study-guide.css` |
+| Guide library/modes | `src/features/guide/guide.ts`, `library.ts`, `library-model.ts`, `mode-picker.ts` |
+| Guide List | `list-editor.ts` |
+| Guide AI/JSON import | `ai-import.ts`, `guide.ts`, `library.ts` |
+| Guide Map | `map-editor.ts`, `map-graph.ts`, `map-study.ts`, `guide.css` |
 | Review library/model | `src/features/knowledge-check/knowledge-check.ts`, `library.ts`, `library-model.ts` |
 | Review authoring | `check-builder.ts`, `question-model.ts`, `fill-blank-editor.ts`, `set-options*.ts` |
 | Review Study/Quiz/Test | `knowledge-set.ts`, `session-setup.ts`, `session-settings.ts`, `session-intro.ts`, `session-state.ts`, `knowledge-session.ts` |

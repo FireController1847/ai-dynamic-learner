@@ -1,7 +1,7 @@
 import { h } from 'vue';
-import type { StudyGuideMode } from './library-model.ts';
-export function GuideTypeIcon({ mode, compact = false }: { mode: StudyGuideMode; compact?: boolean }) {
-  const common = { class: compact ? 'ui-icon' : 'study-guide-mode-icon', viewBox: '0 0 96 96', width: compact ? 20 : 96, height: compact ? 20 : 96,
+import type { GuideMode } from './library-model.ts';
+export function GuideTypeIcon({ mode, compact = false }: { mode: GuideMode; compact?: boolean }) {
+  const common = { class: compact ? 'ui-icon' : 'guide-mode-icon', viewBox: '0 0 96 96', width: compact ? 20 : 96, height: compact ? 20 : 96,
     fill: 'none', stroke: 'currentColor', 'stroke-width': compact ? 5 : 2.5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
     'aria-hidden': 'true', focusable: 'false' };
   if (mode === 'list') return h('svg', common, [

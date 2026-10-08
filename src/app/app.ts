@@ -145,7 +145,7 @@ const App = defineComponent({
           ref: main,
           class: ['app-content', {
             'app-content--home': currentPath.value === '/',
-            'app-content--workspace': ['notebook', 'todo-list', 'index-cards', 'word-search', 'crossword', 'study-guide', 'knowledge-check'].includes(activeFeature.value?.id ?? ''),
+            'app-content--workspace': ['notebook', 'todo-list', 'index-cards', 'word-search', 'crossword', 'guide', 'knowledge-check'].includes(activeFeature.value?.id ?? ''),
           }],
           tabindex: -1,
         }, [
