@@ -1,4 +1,4 @@
-import { computed, defineComponent, h, ref, type PropType } from 'vue';
+import { computed, defineComponent, h, nextTick, onBeforeUnmount, ref, type PropType } from 'vue';
 import { Icon } from '../../components/icon.ts';
 import { inputValue } from '../../core/dom.ts';
 import { isRecord } from '../../core/validation.ts';
@@ -450,21 +450,50 @@ export const StudyGuideAiImportWorkspace = defineComponent({
     const json = ref('');
     const problem = ref('');
     const copyStatus = ref('');
+    const copyAnimating = ref(false);
+    const handoff = ref<'idle' | 'waiting' | 'ready'>('idle');
+    const jsonInput = ref<HTMLTextAreaElement | null>(null);
     const candidate = ref<SimpleStudyGuideImport | null>(null);
+    let copyTimer: number | null = null;
     const prompt = computed(() => studyGuideAiPrompt({
       detail: detail.value,
       coverage: coverage.value,
       bulletStyle: bulletStyle.value,
     }, props.mode));
 
+    function clearCopyTimer() {
+      if (copyTimer !== null) window.clearTimeout(copyTimer);
+      copyTimer = null;
+    }
+
+    onBeforeUnmount(clearCopyTimer);
+
     async function copyPrompt() {
+      clearCopyTimer();
       try {
         await navigator.clipboard.writeText(prompt.value);
         copyStatus.value = 'Prompt copied.';
+        copyAnimating.value = true;
+        handoff.value = 'waiting';
+        copyTimer = window.setTimeout(() => {
+          copyTimer = null;
+          copyAnimating.value = false;
+          copyStatus.value = '';
+          tab.value = 'import';
+          problem.value = '';
+        }, 650);
       } catch {
+        copyAnimating.value = false;
+        handoff.value = 'idle';
         showPrompt.value = true;
         copyStatus.value = 'Copy failed. The prompt is shown below so you can copy it manually.';
       }
+    }
+
+    async function responseReady() {
+      handoff.value = 'ready';
+      await nextTick();
+      jsonInput.value?.focus();
     }
 
     function preview() {
@@ -587,7 +616,11 @@ export const StudyGuideAiImportWorkspace = defineComponent({
             ]),
             h('div', { class: 'study-guide-ai-copy-row' }, [
               h('div', { class: 'study-guide-ai-copy-actions' }, [
-                h('button', { type: 'button', class: 'card-primary-button', onClick: copyPrompt }, 'Copy prompt'),
+                h('button', {
+                  type: 'button',
+                  class: ['card-primary-button study-guide-ai-copy-button', { 'is-copied': copyAnimating.value }],
+                  onClick: copyPrompt,
+                }, copyAnimating.value ? '✓ Copied!' : 'Copy prompt'),
                 h('button', {
                   type: 'button',
                   class: 'quiet-button study-guide-ai-prompt-toggle',
@@ -610,36 +643,59 @@ export const StudyGuideAiImportWorkspace = defineComponent({
             }) : null,
           ])
           : h('section', { role: 'tabpanel', class: 'study-guide-ai-panel' }, [
-            h('p', { class: 'study-guide-ai-help' },
-              props.mode === 'map'
-                ? 'Paste the JSON code block returned by the AI. Dynamic Learner validates every topic and path before creating anything, then assigns IDs and map positions.'
-                : 'Paste the JSON code block returned by the AI. Dynamic Learner removes the code fence if present and validates the JSON before creating anything.'),
-            h('textarea', {
-              value: json.value,
-              rows: 12,
-              placeholder: placeholder.value,
-              'aria-label': 'Study Guide JSON import',
-              class: 'study-guide-ai-json',
-              onInput: (event: Event) => {
-                json.value = inputValue(event);
-                candidate.value = null;
-                problem.value = '';
-              },
-            }),
-            h('div', { class: 'study-guide-ai-validate-row' }, [
-              h('button', { type: 'button', class: 'quiet-button', disabled: !json.value.trim(), onClick: preview }, 'Validate JSON'),
-              problem.value ? h('span', { role: 'alert', class: 'study-guide-ai-error' }, problem.value) : null,
-            ]),
-            h('div', { class: 'study-guide-ai-preview-slot' }, [
-              candidate.value ? h('div', { class: 'study-guide-ai-preview' }, [
-                ...importPreview(candidate.value),
+            handoff.value === 'waiting'
+              ? h('div', { class: 'study-guide-ai-handoff', role: 'status' }, [
+                h('strong', 'Prompt copied — send it to your AI.'),
+                h('p', 'Paste the copied prompt after your source material. Wait for the AI to finish generating its JSON response, then come back here.'),
                 h('button', {
                   type: 'button',
                   class: 'card-primary-button',
-                  onClick: () => { if (candidate.value) emit('import', candidate.value); },
-                }, 'Import study guide'),
-              ]) : null,
-            ]),
+                  onClick: responseReady,
+                }, 'My AI response is ready'),
+              ])
+              : null,
+            handoff.value === 'ready'
+              ? h('div', { class: 'study-guide-ai-handoff is-ready' }, [
+                h('strong', 'Great — bring the JSON back here.'),
+                h('ol', [
+                  h('li', 'Paste the AI response into the box below.'),
+                  h('li', 'Choose Validate JSON.'),
+                  h('li', 'Review the preview, then choose Import study guide.'),
+                ]),
+              ])
+              : h('p', { class: 'study-guide-ai-help' },
+                props.mode === 'map'
+                  ? 'Paste the JSON code block returned by the AI. Dynamic Learner validates every topic and path before creating anything, then assigns IDs and map positions.'
+                  : 'Paste the JSON code block returned by the AI. Dynamic Learner removes the code fence if present and validates the JSON before creating anything.'),
+            handoff.value !== 'waiting' ? [
+              h('textarea', {
+                ref: jsonInput,
+                value: json.value,
+                rows: 12,
+                placeholder: placeholder.value,
+                'aria-label': 'Study Guide JSON import',
+                class: 'study-guide-ai-json',
+                onInput: (event: Event) => {
+                  json.value = inputValue(event);
+                  candidate.value = null;
+                  problem.value = '';
+                },
+              }),
+              h('div', { class: 'study-guide-ai-validate-row' }, [
+                h('button', { type: 'button', class: 'quiet-button', disabled: !json.value.trim(), onClick: preview }, 'Validate JSON'),
+                problem.value ? h('span', { role: 'alert', class: 'study-guide-ai-error' }, problem.value) : null,
+              ]),
+              h('div', { class: 'study-guide-ai-preview-slot' }, [
+                candidate.value ? h('div', { class: 'study-guide-ai-preview' }, [
+                  ...importPreview(candidate.value),
+                  h('button', {
+                    type: 'button',
+                    class: 'card-primary-button',
+                    onClick: () => { if (candidate.value) emit('import', candidate.value); },
+                  }, 'Import study guide'),
+                ]) : null,
+              ]),
+            ] : null,
           ]),
       ]),
     ]);
