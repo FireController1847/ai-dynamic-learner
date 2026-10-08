@@ -98,7 +98,7 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'guide', label: 'Guide', path: '/guide/', icon: 'document',
     group: 'mastery',
-    version: '1.5.0',
+    version: '1.5.1',
     image: 'assets/app-icons/guide.png',
     description: 'Build simple bullet lists or connected topic maps, then study a map one stop at a time.',
     metadata: {
