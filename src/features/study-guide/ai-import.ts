@@ -87,7 +87,9 @@ Selected preferences:
 - Coverage: ${COVERAGE_INSTRUCTIONS[options.coverage]}
 - Bullet style: ${BULLET_STYLE_INSTRUCTIONS[options.bulletStyle]}
 
-Condense freely when several facts can be represented by one useful note. Prefer losing low-value detail over making the guide long.`;
+Condense freely when several facts can be represented by one useful note. Prefer losing low-value detail over making the guide long.
+
+Do NOT include citations, references, footnotes, source annotations, source lists, or citation/source URLs anywhere in the response. Do not emit ChatGPT citation markers or content-reference tokens such as :chatgpt-content-reference{...}, :contentReference[...]{...}, or cite.... Omit citations even if the source material contains them. The JSON must contain study content only.`;
 }
 
 function listPrompt(options: StudyGuideAiPromptOptions): string {
@@ -271,9 +273,17 @@ function stripJsonCodeFence(text: string): string {
   return match?.[1]?.trim() ?? trimmed;
 }
 
+function stripAiCitationArtifacts(text: string): string {
+  return text
+    .replace(/:chatgpt-content-reference\{[^{}]*\}/gi, '')
+    .replace(/:contentReference\[[^\]]*\]\{[^{}]*\}/gi, '')
+    .replace(/(?:cite|filecite|url|memcite)[^]*/g, '')
+    .replace(/memcite/g, '');
+}
+
 function parsedJson(text: string): unknown {
   try {
-    return JSON.parse(stripJsonCodeFence(text));
+    return JSON.parse(stripAiCitationArtifacts(stripJsonCodeFence(text)));
   } catch {
     throw new Error('The pasted content is not valid JSON.');
   }
