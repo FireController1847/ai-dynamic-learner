@@ -6,6 +6,7 @@ import { NavigationDrawer } from './navigation-drawer.ts';
 import { pageHref, useNavigation } from './navigation.ts';
 import { useWorkspace } from './workspace.ts';
 import { WorkspaceTools } from './workspace-tools.ts';
+import { BackupReminderBanner } from './backup-reminder-ui.ts';
 import { ThemeMenu, type ThemeMenuHandle } from './theme-menu.ts';
 import { initializeTheme } from './theme.ts';
 import { HomePage } from './home-page.ts';
@@ -31,6 +32,21 @@ const App = defineComponent({
   name: 'App',
   setup() {
     const workspace = useWorkspace();
+    const backupMessage = ref('');
+    const backupBusy = ref(false);
+    async function backUpNow() {
+      if (backupBusy.value) return;
+      backupBusy.value = true;
+      backupMessage.value = '';
+      try {
+        await workspace.downloadBackup();
+        backupMessage.value = 'Backup download started. Check your Downloads folder to confirm the file was saved.';
+      } catch (error) {
+        backupMessage.value = error instanceof Error ? error.message : 'The backup could not be downloaded.';
+      } finally {
+        backupBusy.value = false;
+      }
+    }
     const sidebarOpen = ref(false);
     const menuButton = ref<HTMLButtonElement | null>(null);
     const tipsExperience = ref<TipsHandle | null>(null);
@@ -95,6 +111,18 @@ const App = defineComponent({
             : h(Icon, { name: 'document' }),
         h('h1', activeFeature.value?.label ?? (currentPath.value === '/' ? appConfig.name : 'Page not found')),
         h('div', { class: 'app-header-actions' }, [
+          workspace.backup.showIndicator.value ? h('button', {
+            type: 'button',
+            class: ['quiet-button', 'app-header-action', 'backup-indicator', {
+              'is-urgent': workspace.backup.stage.value === 3,
+            }],
+            title: 'Backup needed — open Workspace backups',
+            'aria-label': 'Backup needed. Open navigation to backup controls.',
+            onClick: () => { sidebarOpen.value = true; },
+          }, [
+            h(Icon, { name: 'download' }),
+            h('span', { class: 'app-header-action-label' }, 'Backup'),
+          ]) : null,
           h('button', {
             type: 'button',
             class: 'quiet-button app-header-action theme-trigger',
@@ -140,6 +168,19 @@ const App = defineComponent({
       workspace.storageProblem.value ? h('p', {
         class: 'workspace-storage-warning', role: 'alert',
       }, workspace.storageProblem.value) : null,
+      workspace.backup.problem.value ? h('p', {
+        class: 'workspace-storage-warning', role: 'alert',
+      }, workspace.backup.problem.value) : null,
+      h(BackupReminderBanner, { reminders: workspace.backup, busy: backupBusy.value, onBackup: () => { void backUpNow(); } }),
+      backupMessage.value ? h('p', {
+        class: 'workspace-message backup-app-message', role: 'status',
+      }, [
+        backupMessage.value,
+        h('button', {
+          type: 'button', class: 'icon-button',
+          'aria-label': 'Dismiss backup message', onClick: () => { backupMessage.value = ''; },
+        }, '×'),
+      ]) : null,
       h('div', { class: 'app-layout' }, [
         h('main', {
           ref: main,

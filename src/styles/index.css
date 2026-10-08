@@ -5,6 +5,7 @@
 @import './popup-dialog.css';
 @import './library-empty-state.css';
 @import './shell.css';
+@import './backup-reminders.css';
 @import './theme.css';
 @import '../../packages/tips/src/tips.css';
 

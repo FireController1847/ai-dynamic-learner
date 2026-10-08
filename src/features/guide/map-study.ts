@@ -1,3 +1,4 @@
+import { useStudySession } from '../../components/use-study-session.ts';
 import { computed, defineComponent, h, nextTick, onBeforeUnmount, onDeactivated, ref, type PropType } from 'vue';
 import { GuideTypeIcon } from './guide-type-icon.ts';
 import { connectedTopicIds, mapStudyProblem, startTopic, topicById } from './map-graph.ts';
@@ -21,6 +22,7 @@ export const GuideMapStudy = defineComponent({
   setup(props, { emit }) {
     const saved = props.data.session;
     const started = ref(Boolean(saved && saved.openedIds.length > 0 && !saved.paused && topicById(props.data, saved.currentId)));
+    useStudySession(started);
     const visited = ref(new Set(saved?.visitedIds ?? []));
     const opened = ref(new Set(saved?.openedIds ?? []));
     const skipped = ref(new Set(saved?.skippedIds ?? []));

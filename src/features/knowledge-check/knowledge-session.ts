@@ -1,3 +1,4 @@
+import { useStudySession } from '../../components/use-study-session.ts';
 import { maskFillBlankAnswers, parseFillBlankTemplate } from '../../core/fill-blank.ts';
 import type { CheckItem } from './library-model.ts';
 import type { CheckModeId } from './check-types.ts';
@@ -7,7 +8,7 @@ import { Icon } from '../../components/icon.ts';
 import { SessionIntro } from './session-intro.ts';
 import { answerStrictnessForQuestion } from './session-settings.ts';
 import { useKnowledgeSession } from './session-state.ts';
-import { defineComponent, h, ref, type PropType } from 'vue';
+import { computed, defineComponent, h, ref, type PropType } from 'vue';
 
 export const KnowledgeSession = defineComponent({
   name: 'KnowledgeSession',
@@ -22,6 +23,7 @@ export const KnowledgeSession = defineComponent({
     const { questions, questionCount, options, position, responses, checked, revealed, hints, submitted, started, expired, ended,
       answered, resolved, score, scoredCount, remaining, celebrating, attempts, studyChecks, studyCorrectChecks,
       start, end, check, submit, tick } = state;
+    useStudySession(computed(() => started.value && !submitted.value && !ended.value));
     const fillBlankPrimaryButton = ref<HTMLButtonElement | null>(null);
 
     function currentResponse(question: Question): QuestionResponse {
