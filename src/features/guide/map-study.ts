@@ -38,7 +38,6 @@ export const GuideMapStudy = defineComponent({
     const viewMapButton = ref<HTMLButtonElement | null>(null);
     const camera = ref<{ x: number; y: number; scale: number } | null>(null);
     const cameraZooming = ref(false);
-    const arrivalHighlight = ref(false);
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const timers = new Set<number>();
 
@@ -46,6 +45,12 @@ export const GuideMapStudy = defineComponent({
     const studyProblem = computed(() => mapStudyProblem(props.data));
     const visitedCount = computed(() => visited.value.size);
     const complete = computed(() => props.data.topics.length > 0 && visited.value.size === props.data.topics.length);
+    // Keep the starting marker inviting until the first stop is actually opened.
+    // Deriving from saved opened IDs also preserves the cue after resume/reload.
+    const startPromptVisible = computed(() => {
+      const first = startTopic(props.data);
+      return started.value && !arriving.value && first !== null && !opened.value.has(first.id);
+    });
 
     function points(topic: MapTopic | null): StudyPoint[] {
       if (!topic) return [];
@@ -114,7 +119,6 @@ export const GuideMapStudy = defineComponent({
       arriving.value = false;
       camera.value = null;
       cameraZooming.value = false;
-      arrivalHighlight.value = false;
       travelTargetId.value = null;
     }
 
@@ -253,11 +257,7 @@ export const GuideMapStudy = defineComponent({
             container.scrollTo({ left: destinationX, top: destinationY, behavior: 'instant' });
             cameraZooming.value = false;
             camera.value = null;
-            arrivalHighlight.value = true;
-            later(() => {
-              arrivalHighlight.value = false;
-              arriving.value = false;
-            }, 680);
+            arriving.value = false;
           }, 1050);
         }, 260);
       });
@@ -604,7 +604,8 @@ export const GuideMapStudy = defineComponent({
                     'is-opened': opened.value.has(entry.id),
                     'is-unlocked': unlocked,
                     'is-target': entry.id === travelTargetId.value,
-                    'is-arrival-highlight': arrivalHighlight.value && entry.id === currentId.value,
+                    'is-arrival-highlight': startPromptVisible.value && entry.id === props.data.startTopicId,
+                  'is-start-near-top': entry.y < 64,
                   }],
                   style: { left: entry.x + 'px', top: entry.y + 'px' },
                   'aria-label': (unlocked ? 'Open ' : 'Locked: ') + (entry.title || 'Untitled topic') +
