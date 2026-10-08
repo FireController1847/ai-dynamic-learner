@@ -33,7 +33,7 @@ export const tipsCatalog: TipsCatalog = {
 
 
   calculator: {
-    version: 10,
+    version: 11,
     sections: [
       {
         id: 'basics',
@@ -43,7 +43,7 @@ export const tipsCatalog: TipsCatalog = {
         steps: [
           {
             title: 'Use the MathPrint display',
-            body: 'Enter fractions with n/d. Click the formula or use the arrows to edit it. Typing inserts normally; INS toggles overwrite mode. BCK deletes left and DEL deletes at the cursor. Press = to solve; trailing closing parentheses are assumed.',
+            body: 'Use the stacked box-over-box key to enter fractions. Click the formula or use the arrows to edit it. Typing inserts normally; INS toggles overwrite mode. BCK deletes left and DEL deletes at the cursor.',
             target: ['.calculator-display', '.calculator-basic-keypad'],
             targetLabel: 'Calculator display and keypad',
             placement: 'bottom',
