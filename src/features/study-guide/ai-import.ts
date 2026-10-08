@@ -571,12 +571,20 @@ export const StudyGuideAiImportWorkspace = defineComponent({
       await nextTick();
       const input = jsonInput.value;
       if (!input) return;
-      // Keep focus for keyboard users, but let the content scroll gently into view.
       input.focus({ preventScroll: true });
-      input.scrollIntoView({
-        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
-        block: 'nearest',
-        inline: 'nearest',
+      // The Study Guide detail, not the page or textarea, owns this scrollbar.
+      // Align the instructions above the paste field so the next step stays clear.
+      window.requestAnimationFrame(() => {
+        if (!input.isConnected) return;
+        const container = input.closest<HTMLElement>('.study-guide-detail');
+        const instructions = input.closest('.study-guide-ai-panel')
+          ?.querySelector<HTMLElement>('.study-guide-ai-handoff.is-ready');
+        if (!container || !instructions) return;
+        const offset = instructions.getBoundingClientRect().top - container.getBoundingClientRect().top - 24;
+        container.scrollTo({
+          top: Math.max(0, Math.min(container.scrollHeight - container.clientHeight, container.scrollTop + offset)),
+          behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+        });
       });
     }
 
