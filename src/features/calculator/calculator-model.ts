@@ -2,7 +2,7 @@ import {
   completeTrailingClosures, evaluateExpression, formatExpression, type AngleMode,
 } from './expression-engine.ts';
 import {
-  backspaceMathPrint, createFractionTemplate, deleteMathPrintForward, endsValue, fractionContextAt,
+  backspaceMathPrint, createFractionTemplate, createRoundTemplate, deleteMathPrintForward, endsValue, fractionContextAt,
   lastOperandStart, moveFractionCursor, moveMathPrintCursor, normaliseMathPrintCursor,
   overwriteRangeAtCursor, parenthesesBalancedEnoughToClose,
 } from './calculator-entry.ts';
@@ -283,6 +283,16 @@ export class CalculatorModel {
   inputFraction() {
     this.prepareValue();
     const template = createFractionTemplate(this.expression, this.cursor);
+    if (template.source.length > MAX_EXPRESSION_LENGTH) return;
+    this.expression = template.source;
+    this.cursor = template.cursor;
+    this.insertArmed = false;
+    this.refreshPreview();
+  }
+
+  inputRound() {
+    this.prepareValue();
+    const template = createRoundTemplate(this.expression, this.cursor);
     if (template.source.length > MAX_EXPRESSION_LENGTH) return;
     this.expression = template.source;
     this.cursor = template.cursor;
