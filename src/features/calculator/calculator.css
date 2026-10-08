@@ -155,6 +155,16 @@
 .calculator-current-entry.is-insert-armed .calculator-entry-caret {
   background: var(--brand);
 }
+.calculator-entry-token.is-overwrite-cursor {
+  color: var(--page-background);
+  background: var(--text-color);
+  border-radius: 1px;
+}
+.calculator-mathprint-fraction-wrap.is-overwrite-cursor {
+  border-radius: 2px;
+  outline: 1px solid currentColor;
+  outline-offset: 1px;
+}
 .calculator-current-entry::-webkit-scrollbar { display: none; }
 .calculator-error-text {
   color: var(--danger);
