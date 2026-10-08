@@ -15,9 +15,9 @@
 body:has(.review-setup[open]) { overflow: hidden; }
 .review-setup-step { margin: 0 0 8px; color: var(--text-secondary); font-size: 12px; }
 .review-setup-description { color: var(--text-secondary); }
-.review-setup-section-heading { margin: 4px 0 -8px; font-size: 14px; line-height: 20px; font-weight: 600; }
-.fill-blank-session-mode-choices { margin-bottom: 16px; }
-.fill-blank-review-order-choices { margin-top: 12px; }
+.review-setup-section-heading { margin: 0 0 8px; font-size: 14px; line-height: 20px; font-weight: 600; }
+.fill-blank-session-mode-choices { margin: 20px 0 16px; }
+.fill-blank-review-order-choices { margin: 0 0 24px; }
 .review-choices { display: grid; gap: 8px; margin: 20px 0 24px; padding: 0; border: 0; }
 .review-choice { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--control-border); border-radius: var(--radius); cursor: pointer; transition: background-color var(--motion-fast), border-color var(--motion-fast); }
 .review-choice:hover { background: var(--surface-subtle); }
