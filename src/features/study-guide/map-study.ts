@@ -17,7 +17,7 @@ export const StudyGuideMapStudy = defineComponent({
     data: { type: Object as PropType<MapGuideData>, required: true },
     guideName: { type: String, required: true },
   },
-  emits: { end: () => true },
+  emits: { edit: () => true },
   setup(props, { emit }) {
     const started = ref(false);
     const visited = ref(new Set<string>());
@@ -25,6 +25,7 @@ export const StudyGuideMapStudy = defineComponent({
     const path = ref<string[]>([]);
     const revealedCount = ref(0);
     const travelling = ref(false);
+    const focused = ref(false);
     const travelTargetId = ref<string | null>(null);
     const scroll = ref<HTMLElement | null>(null);
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -109,11 +110,20 @@ export const StudyGuideMapStudy = defineComponent({
       started.value = true;
       prepareCurrent();
       focusTopic(first.id, 'auto');
+      nextTick(() => { focused.value = true; });
     }
 
     function restart() {
+      focused.value = false;
       started.value = false;
       nextTick(start);
+    }
+
+    function returnToOverview() {
+      clearTimers();
+      focused.value = false;
+      started.value = false;
+      currentId.value = null;
     }
 
     function revealNext() {
@@ -127,6 +137,7 @@ export const StudyGuideMapStudy = defineComponent({
     function travelTo(targetId: string, after: () => void) {
       if (travelling.value) return;
       const duration = reducedMotion.matches ? 0 : 520;
+      focused.value = false;
       travelling.value = true;
       travelTargetId.value = targetId;
       focusTopic(targetId, reducedMotion.matches ? 'auto' : 'smooth');
@@ -135,6 +146,7 @@ export const StudyGuideMapStudy = defineComponent({
         travelTargetId.value = null;
         travelling.value = false;
         after();
+        nextTick(() => { focused.value = true; });
       }, duration);
     }
 
@@ -165,6 +177,7 @@ export const StudyGuideMapStudy = defineComponent({
       if (!plan || travelling.value) return;
       const { route, ancestorId } = plan;
       const duration = reducedMotion.matches ? 0 : 520;
+      focused.value = false;
       travelling.value = true;
 
       function step(index: number) {
@@ -174,6 +187,8 @@ export const StudyGuideMapStudy = defineComponent({
           path.value = path.value.slice(0, path.value.indexOf(ancestorId) + 1);
           travelTargetId.value = null;
           travelling.value = false;
+          revealedCount.value = points(topicById(props.data, ancestorId)).length;
+          nextTick(() => { focused.value = true; });
           return;
         }
         travelTargetId.value = targetId;
@@ -232,7 +247,7 @@ export const StudyGuideMapStudy = defineComponent({
         h('p', 'You visited every topic on this study route.'),
         h('div', { class: 'study-guide-study-actions' }, [
           h('button', { type: 'button', class: 'card-primary-button', onClick: restart }, 'Study again'),
-          h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('end') }, 'Back to editor'),
+          h('button', { type: 'button', class: 'quiet-button', onClick: returnToOverview }, 'Return to overview'),
         ]),
       ]);
 
@@ -278,9 +293,9 @@ export const StudyGuideMapStudy = defineComponent({
               h(GuideTypeIcon, { mode: 'map' }),
             ]),
             h('div', [
-              h('p', { class: 'study-guide-study-kicker' }, 'Map study'),
+              h('p', { class: 'study-guide-study-kicker' }, 'Ready to explore?'),
               h('h3', props.guideName),
-              h('p', 'Follow the paths between topics and reveal each stop one point at a time.'),
+              h('p', 'Follow the trail, discover each topic, and reveal what you learn at every stop.'),
             ]),
           ]),
           h('div', { class: 'study-guide-study-pills', 'aria-label': 'Session details' }, [
@@ -296,8 +311,8 @@ export const StudyGuideMapStudy = defineComponent({
           h('div', { class: 'study-guide-study-actions' }, [
             h('button', {
               type: 'button', class: 'card-primary-button', disabled: studyProblem.value !== null, onClick: start,
-            }, 'Start studying'),
-            h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('end') }, 'Back to editor'),
+            }, 'Start adventure'),
+            h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('edit') }, 'Edit map'),
           ]),
         ]);
       }
@@ -314,10 +329,16 @@ export const StudyGuideMapStudy = defineComponent({
             h('strong', topic.title || 'Untitled topic'),
             h('span', visitedCount.value + ' of ' + props.data.topics.length + ' visited'),
           ]),
-          h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('end') }, 'End studying'),
+          h('div', { class: 'study-guide-study-toolbar-actions' }, [
+            h('button', {
+              type: 'button', class: 'quiet-button', disabled: travelling.value,
+              onClick: () => { focused.value = !focused.value; },
+            }, focused.value ? 'View map' : 'View points'),
+            h('button', { type: 'button', class: 'quiet-button', onClick: returnToOverview }, 'End studying'),
+          ]),
         ]),
         h('div', { class: 'study-guide-study-layout' }, [
-          h('div', { ref: scroll, class: 'study-guide-study-map-scroll' }, [
+          h('div', { ref: scroll, class: 'study-guide-study-map-scroll', inert: focused.value }, [
             h('div', {
               class: 'study-guide-study-map',
               style: { width: MAP_WIDTH + 'px', height: MAP_HEIGHT + 'px' },
@@ -350,7 +371,14 @@ export const StudyGuideMapStudy = defineComponent({
               }) : null,
             ]),
           ]),
-          h('section', { class: 'study-guide-study-topic', 'aria-live': 'polite' }, [
+          h('section', {
+            class: ['study-guide-study-topic', { 'is-visible': focused.value && !travelling.value }],
+            'aria-hidden': !focused.value || travelling.value,
+            inert: !focused.value || travelling.value,
+            'aria-label': 'Current topic study points',
+            'aria-live': 'polite',
+          }, [
+            h('div', { class: 'study-guide-study-topic-inner' }, [
             travelling.value ? h('div', { class: 'study-guide-study-travelling' }, [
               h('strong', 'Following the path…'),
               h('p', 'Moving to the next stop.'),
@@ -373,6 +401,7 @@ export const StudyGuideMapStudy = defineComponent({
               }, 'All points revealed. This stop is visited.') : null,
               routeControls(topic),
             ],
+            ]),
           ]),
         ]),
       ]);
