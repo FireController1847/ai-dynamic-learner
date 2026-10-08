@@ -114,6 +114,20 @@ export const Calculator = defineComponent({
         onClick: action,
       }, label);
 
+    const fractionTemplateKey = () => h('button', {
+      type: 'button',
+      class: ['calculator-key', 'calculator-key--function', 'calculator-fraction-template-key'],
+      'aria-label': 'Fraction template',
+      title: 'Fraction template: enter a numerator over a denominator.',
+      onClick: () => calculator.inputFraction(),
+    }, [
+      h('span', { class: 'calculator-fraction-template-icon', 'aria-hidden': 'true' }, [
+        h('span', { class: 'calculator-fraction-template-box' }),
+        h('span', { class: 'calculator-fraction-template-bar' }),
+        h('span', { class: 'calculator-fraction-template-box' }),
+      ]),
+    ]);
+
     const stackedFraction = (fraction: FractionParts, compact = false) => h('span', {
       class: ['calculator-stacked-fraction', { 'is-compact': compact }],
       'aria-hidden': 'true',
@@ -533,8 +547,7 @@ export const Calculator = defineComponent({
                 'Comma: Separate function arguments, such as rnd(value, places).'),
             ]),
             h('div', { class: 'calculator-keypad calculator-basic-keypad', 'aria-label': 'Calculator keypad' }, [
-              key('n/d', () => calculator.inputFraction(), 'function', 'Fraction template',
-                'n/d: Enter a stacked MathPrint fraction. Use ▼ to move to the denominator.'),
+              fractionTemplateKey(),
               key('%', () => calculator.inputPostfix('%'), 'function', 'Percent'),
               key('CE', () => calculator.clearEntry(), 'function', 'Clear entry'),
               key('C', () => calculator.clearAll(), 'function', 'Clear expression',
