@@ -29,6 +29,7 @@ export const StudyGuideMapStudy = defineComponent({
     const travelTargetId = ref<string | null>(null);
     const scroll = ref<HTMLElement | null>(null);
     const topicHeading = ref<HTMLElement | null>(null);
+    const topicPanel = ref<HTMLElement | null>(null);
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const timers = new Set<number>();
 
@@ -103,7 +104,39 @@ export const StudyGuideMapStudy = defineComponent({
       const topic = current.value;
       if (!topic) return;
       revealedCount.value = 0;
+      topicPanel.value?.scrollTo({ top: 0, behavior: 'instant' });
       if (!points(topic).length) markVisited(topic.id);
+    }
+
+    function followRevealedPoint() {
+      nextTick(() => {
+        window.requestAnimationFrame(() => {
+          const panel = topicPanel.value;
+          if (!panel || !focused.value || travelling.value) return;
+          const bullets = panel.querySelectorAll<HTMLElement>('.study-guide-study-bullet');
+          const latest = bullets.item(bullets.length - 1);
+          if (!latest) return;
+
+          const viewport = panel.getBoundingClientRect();
+          const point = latest.getBoundingClientRect();
+          // Keep the freshly revealed point readable; include the next action
+          // when it fits, so learners can continue without manual scrolling.
+          const action = panel.querySelector<HTMLElement>(
+            '.study-guide-study-reveal, .study-guide-study-topic-inner > .card-primary-button, ' +
+            '.study-guide-study-branch button, .study-guide-study-backtrack button, .study-guide-study-finished button',
+          );
+          const actionBottom = action?.getBoundingClientRect().bottom ?? point.bottom;
+          const bottomOverflow = Math.max(0, Math.max(point.bottom, actionBottom) - (viewport.bottom - 24));
+          const keepPointVisible = Math.max(0, point.top - viewport.top - 20);
+          const delta = Math.min(bottomOverflow, keepPointVisible);
+          if (delta > 0) {
+            panel.scrollTo({
+              top: panel.scrollTop + delta,
+              behavior: reducedMotion.matches ? 'instant' : 'smooth',
+            });
+          }
+        });
+      });
     }
 
     function start() {
@@ -140,6 +173,7 @@ export const StudyGuideMapStudy = defineComponent({
       const count = currentPoints.value.length;
       if (revealedCount.value < count) revealedCount.value += 1;
       if (revealedCount.value >= count) markVisited(topic.id);
+      followRevealedPoint();
     }
 
     function travelTo(targetId: string, after: () => void) {
@@ -196,6 +230,7 @@ export const StudyGuideMapStudy = defineComponent({
           travelTargetId.value = null;
           travelling.value = false;
           revealedCount.value = points(topicById(props.data, ancestorId)).length;
+          topicPanel.value?.scrollTo({ top: 0, behavior: 'instant' });
           showTopic();
           return;
         }
@@ -380,6 +415,7 @@ export const StudyGuideMapStudy = defineComponent({
             ]),
           ]),
           h('section', {
+            ref: topicPanel,
             class: ['study-guide-study-topic', { 'is-visible': focused.value && !travelling.value }],
             'aria-hidden': !focused.value || travelling.value,
             inert: !focused.value || travelling.value,
