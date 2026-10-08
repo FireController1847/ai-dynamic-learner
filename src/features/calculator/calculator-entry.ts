@@ -22,6 +22,15 @@ export type MathPrintNode =
       denominatorEnd: number;
       numerator: MathPrintNode[];
       denominator: MathPrintNode[];
+    }
+  | {
+      kind: 'sqrt';
+      start: number;
+      end: number;
+      contentStart: number;
+      contentEnd: number;
+      complete: boolean;
+      content: MathPrintNode[];
     };
 
 export interface MathPrintTextToken {
@@ -110,6 +119,38 @@ export function lastOperandStart(expression: string) {
 
   while (index >= 0 && /[\d.]/.test(expression[index] ?? '')) index -= 1;
   return index + 1;
+}
+
+
+function sqrtSpanAt(source: string, start: number, limit = source.length) {
+  if (!source.startsWith('sqrt(', start)) return null;
+  const open = start + 4;
+  let depth = 1;
+
+  for (let index = open + 1; index < limit; index += 1) {
+    const character = source[index];
+    if (character === '(') depth += 1;
+    else if (character === ')') {
+      depth -= 1;
+      if (depth === 0) {
+        return {
+          start,
+          open,
+          close: index,
+          end: index + 1,
+          complete: true,
+        };
+      }
+    }
+  }
+
+  return {
+    start,
+    open,
+    close: limit,
+    end: limit,
+    complete: false,
+  };
 }
 
 function fractionSpanAt(source: string, start: number) {
@@ -220,6 +261,12 @@ function collectCursorPositions(nodes: MathPrintNode[], positions: number[]) {
     }
 
     positions.push(node.start);
+    if (node.kind === 'sqrt') {
+      positions.push(node.contentStart, node.contentEnd, node.end);
+      collectCursorPositions(node.content, positions);
+      continue;
+    }
+
     collectCursorPositions(node.numerator, positions);
     positions.push(node.numeratorStart, node.numeratorEnd);
     collectCursorPositions(node.denominator, positions);
@@ -272,6 +319,10 @@ function collectEditAtoms(nodes: MathPrintNode[], atoms: EditAtom[]) {
     }
 
     atoms.push({ start: node.start, end: node.end, replaceable: true });
+    if (node.kind === 'sqrt') {
+      collectEditAtoms(node.content, atoms);
+      continue;
+    }
     collectEditAtoms(node.numerator, atoms);
     collectEditAtoms(node.denominator, atoms);
   }
@@ -358,6 +409,31 @@ function parseRange(source: string, start: number, end: number): MathPrintNode[]
         continue;
       }
     }
+
+    if (source.startsWith('sqrt(', index)) {
+      const span = sqrtSpanAt(source, index, end);
+      if (span) {
+        if (textStart < index) {
+          nodes.push({ kind: 'text', text: source.slice(textStart, index), start: textStart, end: index });
+        }
+        const contentStart = span.open + 1;
+        const contentEnd = span.close;
+        nodes.push({
+          kind: 'sqrt',
+          start: span.start,
+          end: span.end,
+          contentStart,
+          contentEnd,
+          complete: span.complete,
+          content: parseRange(source, contentStart, contentEnd),
+        });
+        index = span.end;
+        textStart = index;
+        if (!span.complete) break;
+        continue;
+      }
+    }
+
     index += 1;
   }
 
