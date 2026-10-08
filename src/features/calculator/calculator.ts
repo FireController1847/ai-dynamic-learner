@@ -469,10 +469,10 @@ export const Calculator = defineComponent({
                 '10ˣ: Raise 10 to a power.'),
               key('eˣ', () => calculator.inputPowerFunction('e'), 'function', 'Euler’s number to a power',
                 'eˣ: Raise Euler’s number e to a power.'),
-              key('round', () => calculator.inputRound(), 'function', 'Round to decimal places',
-                'round: Wrap the current value, then enter how many decimal places to keep.'),
+              key('rnd', () => calculator.inputRound(), 'function', 'Round to decimal places',
+                'rnd: Wrap the current value, then enter how many decimal places to keep.'),
               key(',', () => calculator.inputComma(), 'function', 'Argument separator',
-                'Comma: Separate function arguments, such as round(value, places).'),
+                'Comma: Separate function arguments, such as rnd(value, places).'),
             ]),
             h('div', { class: 'calculator-keypad calculator-basic-keypad', 'aria-label': 'Calculator keypad' }, [
               key('n/d', () => calculator.inputFraction(), 'function', 'Fraction template',
