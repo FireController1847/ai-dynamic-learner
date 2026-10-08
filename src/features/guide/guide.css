@@ -149,6 +149,7 @@
 }
 .guide-study-stop.is-visited { border-color: var(--success); color: var(--text-color); opacity: 1; }
 .guide-study-stop.is-visited .guide-topic-number { background: var(--success); }
+.guide-study-stop.is-visited.is-skipped .guide-topic-number { background: var(--text-secondary); }
 .guide-traveler {
   position: absolute; z-index: 3; width: 14px; height: 14px; margin: -7px 0 0 -7px;
   border: 3px solid var(--page-background); border-radius: 50%; background: var(--brand);
