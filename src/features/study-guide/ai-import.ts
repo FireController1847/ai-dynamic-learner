@@ -1,4 +1,4 @@
-import { computed, defineComponent, h, nextTick, onBeforeUnmount, ref, type PropType } from 'vue';
+import { computed, defineComponent, h, nextTick, onBeforeUnmount, ref, Transition, type PropType } from 'vue';
 import { Icon } from '../../components/icon.ts';
 import { inputValue } from '../../core/dom.ts';
 import { isRecord } from '../../core/validation.ts';
@@ -504,6 +504,7 @@ export const StudyGuideAiImportWorkspace = defineComponent({
   },
   setup(props, { emit }) {
     const tab = ref<'prompt' | 'import'>('prompt');
+    const tabDirection = ref<'forward' | 'backward'>('forward');
     const detail = ref<PromptDetail>(DEFAULT_PROMPT_OPTIONS.detail);
     const coverage = ref<PromptCoverage>(DEFAULT_PROMPT_OPTIONS.coverage);
     const bulletStyle = ref<PromptBulletStyle>(DEFAULT_PROMPT_OPTIONS.bulletStyle);
@@ -514,8 +515,10 @@ export const StudyGuideAiImportWorkspace = defineComponent({
     const copyAnimating = ref(false);
     const handoff = ref<'idle' | 'waiting' | 'ready'>('idle');
     const jsonInput = ref<HTMLTextAreaElement | null>(null);
+    const responseReadyButton = ref<HTMLButtonElement | null>(null);
     const candidate = ref<SimpleStudyGuideImport | null>(null);
     let copyTimer: number | null = null;
+    let focusAfterCopy = false;
     const prompt = computed(() => studyGuideAiPrompt({
       detail: detail.value,
       coverage: coverage.value,
@@ -538,13 +541,15 @@ export const StudyGuideAiImportWorkspace = defineComponent({
         handoff.value = 'waiting';
         copyTimer = window.setTimeout(() => {
           copyTimer = null;
-          copyAnimating.value = false;
           copyStatus.value = '';
+          tabDirection.value = 'forward';
+          focusAfterCopy = true;
           tab.value = 'import';
           problem.value = '';
         }, 650);
       } catch {
         copyAnimating.value = false;
+        focusAfterCopy = false;
         handoff.value = 'idle';
         showPrompt.value = true;
         copyStatus.value = 'Copy failed. The prompt is shown below so you can copy it manually.';
@@ -568,8 +573,20 @@ export const StudyGuideAiImportWorkspace = defineComponent({
     }
 
     function selectTab(next: 'prompt' | 'import') {
+      if (tab.value === next) return;
+      clearCopyTimer();
+      copyAnimating.value = false;
+      focusAfterCopy = false;
+      tabDirection.value = next === 'import' ? 'forward' : 'backward';
       tab.value = next;
       problem.value = '';
+    }
+
+    function afterTabEntered() {
+      if (!focusAfterCopy || tab.value !== 'import') return;
+      focusAfterCopy = false;
+      copyAnimating.value = false;
+      responseReadyButton.value?.focus({ preventScroll: true });
     }
 
     const tabButton = (id: 'prompt' | 'import', label: string) => h('button', {
@@ -653,8 +670,10 @@ export const StudyGuideAiImportWorkspace = defineComponent({
           tabButton('prompt', 'AI Prompt'),
           tabButton('import', 'JSON Import'),
         ]),
-        tab.value === 'prompt'
-          ? h('section', { role: 'tabpanel', class: 'study-guide-ai-panel' }, [
+        h('div', { class: ['study-guide-ai-tab-frame', { 'is-backward': tabDirection.value === 'backward' }] }, [
+          h(Transition, { name: 'study-guide-ai-tab', mode: 'out-in', onAfterEnter: afterTabEntered }, {
+            default: () => tab.value === 'prompt'
+          ? h('section', { key: 'prompt', role: 'tabpanel', class: 'study-guide-ai-panel' }, [
             h('p', { class: 'study-guide-ai-help' },
               props.mode === 'map'
                 ? 'Give the AI the source material first. The prompt asks it for topic relationships and study content; Dynamic Learner assigns IDs and lays the map out after import.'
@@ -703,13 +722,14 @@ export const StudyGuideAiImportWorkspace = defineComponent({
               class: 'study-guide-ai-prompt-preview',
             }) : null,
           ])
-          : h('section', { role: 'tabpanel', class: 'study-guide-ai-panel' }, [
+          : h('section', { key: 'import', role: 'tabpanel', class: 'study-guide-ai-panel' }, [
             handoff.value === 'waiting'
               ? h('div', { class: 'study-guide-ai-handoff', role: 'status' }, [
                 h('strong', 'Prompt copied — send it to your AI.'),
                 h('p', 'Paste the copied prompt after your source material. Wait for the AI to finish generating its JSON response, then come back here.'),
                 h('button', {
                   type: 'button',
+                  ref: responseReadyButton,
                   class: 'card-primary-button',
                   onClick: responseReady,
                 }, 'My AI response is ready'),
@@ -758,6 +778,8 @@ export const StudyGuideAiImportWorkspace = defineComponent({
               ]),
             ] : null,
           ]),
+          }),
+        ]),
       ]),
     ]);
   },
