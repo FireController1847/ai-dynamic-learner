@@ -233,25 +233,27 @@
   vertical-align: middle;
 }
 .calculator-mathprint-radical {
-  display: inline-flex;
-  align-items: flex-start;
-  min-width: 0.72em;
+  display: inline-grid;
+  grid-template-columns: 0.66em minmax(0, auto);
+  align-items: stretch;
+  min-width: 0.88em;
   margin-inline: 0.04em;
   line-height: 1;
   vertical-align: middle;
 }
 .calculator-radical-symbol {
-  flex: 0 0 auto;
-  margin-right: -0.03em;
-  font-size: 1.08em;
-  line-height: 1.02;
+  align-self: stretch;
+  width: 0.66em;
+  height: 100%;
+  min-height: 0.94em;
+  overflow: visible;
 }
 .calculator-radical-content {
   display: inline-flex;
   align-items: center;
   min-width: 0.45em;
-  min-height: 0.82em;
-  padding: 0.05em 0.08em 0 0.05em;
+  min-height: 0.84em;
+  padding: 0.03em 0.08em 0 0.03em;
   border-top: max(1px, 0.045em) solid currentColor;
   line-height: 0.9;
 }
