@@ -604,11 +604,12 @@ export const GuideMapStudy = defineComponent({
                     'is-opened': opened.value.has(entry.id),
                     'is-unlocked': unlocked,
                     'is-target': entry.id === travelTargetId.value,
-                    'is-arrival-highlight': startPromptVisible.value && entry.id === props.data.startTopicId,
+                    'is-arrival-highlight': startPromptVisible.value && entry.id === startTopic(props.data)?.id,
                   'is-start-near-top': entry.y < 64,
                   }],
                   style: { left: entry.x + 'px', top: entry.y + 'px' },
-                  'aria-label': (unlocked ? 'Open ' : 'Locked: ') + (entry.title || 'Untitled topic') +
+                  'aria-label': (startPromptVisible.value && entry.id === startTopic(props.data)?.id
+                    ? 'Start here: ' : unlocked ? 'Open ' : 'Locked: ') + (entry.title || 'Untitled topic') +
                     (opened.value.has(entry.id) ? ', previously opened' : ''),
                   title: unlocked ? 'Open ' + (entry.title || 'Untitled topic') : 'Complete a connected stop to unlock',
                   onClick: () => openStop(entry.id),
