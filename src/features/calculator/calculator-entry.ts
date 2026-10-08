@@ -286,22 +286,20 @@ export function backspaceMathPrint(source: string, cursor: number) {
     return { source, cursor: context.numeratorEnd };
   }
   if (context?.field === 'numerator' && cursor === context.numeratorStart) {
-    return {
-      source: source.slice(0, context.start) + source.slice(context.close + 1),
-      cursor: context.start,
-    };
+    const next = source.slice(0, context.start) + source.slice(context.close + 1);
+    return { source: next, cursor: normaliseMathPrintCursor(next, context.start) };
   }
 
-  for (let index = 0; index < source.length; index += 1) {
-    const span = fractionSpanAt(source, index);
-    if (!span) continue;
-    if (span.close === cursor - 1) return { source, cursor: span.comma + 1 };
-    index = span.close;
-  }
+  const atoms = mathPrintEditAtoms(source)
+    .filter((atom) => atom.end <= cursor)
+    .sort((left, right) => right.end - left.end || (right.end - right.start) - (left.end - left.start));
+  const atom = atoms[0];
+  if (!atom) return { source, cursor };
 
+  const next = source.slice(0, atom.start) + source.slice(atom.end);
   return {
-    source: source.slice(0, cursor - 1) + source.slice(cursor),
-    cursor: cursor - 1,
+    source: next,
+    cursor: normaliseMathPrintCursor(next, atom.start),
   };
 }
 
