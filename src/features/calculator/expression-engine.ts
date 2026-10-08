@@ -22,6 +22,14 @@ function factorial(value: number) {
   return finite(result);
 }
 
+function roundTo(value: number, places: number) {
+  if (!Number.isInteger(places) || places < 0 || places > 15) {
+    throw new Error('Round requires 0 to 15 decimal places.');
+  }
+  const factor = 10 ** places;
+  return finite(Math.sign(value) * Math.round((Math.abs(value) + Number.EPSILON) * factor) / factor);
+}
+
 function toRadians(value: number, mode: AngleMode) {
   return mode === 'DEG' ? value * Math.PI / 180 : value;
 }
@@ -148,6 +156,14 @@ class Parser {
         if (!this.match(')')) throw new Error('Missing closing parenthesis.');
         if (denominator === 0) throw new Error('Cannot divide by zero.');
         return finite(numerator / denominator);
+      }
+
+      if (identifier === 'round') {
+        const value = this.parseExpression();
+        if (!this.match(',')) throw new Error('Round decimal places are missing.');
+        const places = this.parseExpression();
+        if (!this.match(')')) throw new Error('Missing closing parenthesis.');
+        return roundTo(value, places);
       }
 
       const value = this.parseExpression();
