@@ -20,7 +20,7 @@ export const GuideMapStudy = defineComponent({
   emits: { edit: () => true },
   setup(props, { emit }) {
     const saved = props.data.session;
-    const started = ref(Boolean(saved && !saved.paused && topicById(props.data, saved.currentId)));
+    const started = ref(Boolean(saved && saved.openedIds.length > 0 && !saved.paused && topicById(props.data, saved.currentId)));
     const visited = ref(new Set(saved?.visitedIds ?? []));
     const opened = ref(new Set(saved?.openedIds ?? []));
     const skipped = ref(new Set(saved?.skippedIds ?? []));
@@ -95,6 +95,12 @@ export const GuideMapStudy = defineComponent({
     }
 
     function saveSession() {
+      // Merely watching the map intro isn't study progress. Leave the adventure
+      // unstarted until the learner actually opens a stop.
+      if (!opened.value.size) {
+        delete props.data.session;
+        return;
+      }
       const id = currentId.value;
       if (!id) return;
       const session: MapStudySession = {
@@ -498,7 +504,8 @@ export const GuideMapStudy = defineComponent({
 
     return () => {
       if (!started.value) {
-        const paused = props.data.session !== undefined && topicById(props.data, props.data.session.currentId) !== null;
+        const paused = props.data.session !== undefined && props.data.session.openedIds.length > 0 &&
+          topicById(props.data, props.data.session.currentId) !== null;
         return h('section', { class: 'guide-study-intro', 'aria-label': 'Map study overview' }, [
           h('header', { class: 'guide-study-intro-header' }, [
             h('div', { class: 'guide-study-intro-art', 'aria-hidden': 'true' }, [
