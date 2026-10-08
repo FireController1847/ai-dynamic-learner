@@ -445,7 +445,7 @@ export const FillBlankSet = defineComponent({
         onKeydown: shortcuts,
       }, [
         h('div', { class: 'card-set fill-blank-set' }, [
-          !reviewResult.value && card ? h('section', { class: 'card-review-session', 'aria-label': 'Review status' }, [
+          !reviewResult.value && card ? h('section', { class: 'card-review-session', 'aria-label': 'Card session status' }, [
             h('div', { class: 'card-review-session-copy' }, [
               h('strong', reviewActive.value
                 ? sessionMode.value === 'view' ? 'Fill-in view' : 'Fill-in review'
@@ -662,7 +662,8 @@ export const FillBlankSet = defineComponent({
           ref: cardList, hidden: props.cardListCollapsed,
           onHide: () => { cardListResizing.value = false; emit('toggle-card-list'); },
           cards: orderedCards.value, selectedId: card?.id ?? null,
-          atLimit: atLimit.value, previewSide: 'front', maskBlanks: true,
+          atLimit: atLimit.value, previewSide: 'front',
+          maskBlanks: !(reviewActive.value && sessionMode.value === 'view'),
           orderLabel: reviewActive.value
             ? `${orderDescription} · ${sessionMode.value === 'view' ? 'view' : 'fill in the blanks'}`
             : 'Saved order',
