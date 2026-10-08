@@ -1,5 +1,5 @@
 import {
-  evaluateExpression, formatExpression, type AngleMode,
+  completeTrailingClosures, evaluateExpression, formatExpression, type AngleMode,
 } from './expression-engine.ts';
 import {
   backspaceMathPrint, createFractionTemplate, deleteMathPrintForward, endsValue, fractionContextAt,
@@ -101,21 +101,32 @@ export class CalculatorModel {
     this.historyIndex = null;
   }
 
+  recoverError() {
+    if (!this.hasError) return false;
+    this.hasError = false;
+    this.justEvaluated = false;
+    this.display = this.formatResult(this.displayValue);
+    return true;
+  }
+
   armInsert() {
-    if (this.hasError || this.justEvaluated) return;
+    if (this.justEvaluated) return;
+    this.recoverError();
     this.dismissHistory();
     this.insertArmed = true;
   }
 
   setCursor(position: number) {
-    if (this.hasError || this.justEvaluated) return;
+    if (this.justEvaluated) return;
+    this.recoverError();
     this.dismissHistory();
     this.cursor = normaliseMathPrintCursor(this.expression, position);
     this.insertArmed = false;
   }
 
   moveHorizontal(direction: 'left' | 'right') {
-    if (this.hasError || this.justEvaluated) return;
+    if (this.justEvaluated) return;
+    this.recoverError();
     this.dismissHistory();
     this.cursor = moveMathPrintCursor(this.expression, this.cursor, direction);
     this.insertArmed = false;
@@ -123,14 +134,7 @@ export class CalculatorModel {
 
   private prepareValue() {
     this.dismissHistory();
-    if (this.hasError) {
-      this.expression = '';
-      this.cursor = 0;
-      this.insertArmed = false;
-      this.showValue(0);
-      this.hasError = false;
-      this.justEvaluated = false;
-    }
+    this.recoverError();
     if (this.justEvaluated) {
       this.expression = '';
       this.cursor = 0;
@@ -170,7 +174,7 @@ export class CalculatorModel {
       return;
     }
     try {
-      this.showValue(evaluateExpression(this.expression, this.context()));
+      this.showValue(evaluateExpression(completeTrailingClosures(this.expression), this.context()));
       this.hasError = false;
     } catch {
       // Incomplete MathPrint templates and operators retain the last valid value.
@@ -197,11 +201,7 @@ export class CalculatorModel {
   clearEntry() {
     this.dismissHistory();
     this.insertArmed = false;
-    if (this.hasError) {
-      this.hasError = false;
-      this.refreshPreview();
-      return;
-    }
+    this.recoverError();
     if (this.justEvaluated) {
       this.expression = '';
       this.cursor = 0;
@@ -231,11 +231,7 @@ export class CalculatorModel {
   backspace() {
     this.dismissHistory();
     this.insertArmed = false;
-    if (this.hasError) {
-      this.hasError = false;
-      this.refreshPreview();
-      return;
-    }
+    this.recoverError();
     if (this.justEvaluated) {
       this.justEvaluated = false;
       this.cursor = this.expression.length;
@@ -250,7 +246,8 @@ export class CalculatorModel {
   deleteForward() {
     this.dismissHistory();
     this.insertArmed = false;
-    if (this.hasError || this.justEvaluated) return;
+    if (this.justEvaluated) return;
+    this.recoverError();
 
     const edited = deleteMathPrintForward(this.expression, this.cursor);
     this.expression = edited.source;
@@ -294,7 +291,7 @@ export class CalculatorModel {
   }
 
   chooseOperator(operator: Operator) {
-    if (this.hasError) return;
+    this.recoverError();
     this.dismissHistory();
 
     if (this.justEvaluated) {
@@ -359,7 +356,7 @@ export class CalculatorModel {
   }
 
   inputPostfix(operator: '!' | '%') {
-    if (this.hasError) return;
+    this.recoverError();
     this.dismissHistory();
     if (this.justEvaluated) {
       this.expression = 'ans';
@@ -370,7 +367,7 @@ export class CalculatorModel {
   }
 
   inputPowerShortcut(power: '2' | '-1') {
-    if (this.hasError) return;
+    this.recoverError();
     this.dismissHistory();
     if (this.justEvaluated) {
       this.expression = 'ans';
@@ -387,7 +384,7 @@ export class CalculatorModel {
   }
 
   toggleSign() {
-    if (this.hasError) return;
+    this.recoverError();
     this.dismissHistory();
     if (this.justEvaluated) {
       this.expression = 'ans';
@@ -419,7 +416,10 @@ export class CalculatorModel {
     if (!this.expression) return;
 
     try {
-      const result = normaliseNumber(evaluateExpression(this.expression, this.context()));
+      const result = normaliseNumber(evaluateExpression(
+        completeTrailingClosures(this.expression),
+        this.context(),
+      ));
       const source = this.expression;
       this.history.unshift({
         id: ++this.historyId,
@@ -439,7 +439,8 @@ export class CalculatorModel {
 
   moveVertical(direction: 'up' | 'down') {
     this.insertArmed = false;
-    if (!this.justEvaluated && !this.hasError) {
+    if (!this.justEvaluated) {
+      this.recoverError();
       const moved = moveFractionCursor(this.expression, this.cursor, direction);
       if (moved !== null) {
         this.cursor = moved;
