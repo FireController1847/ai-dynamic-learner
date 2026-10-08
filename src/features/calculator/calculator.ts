@@ -515,7 +515,7 @@ export const Calculator = defineComponent({
                 calculator.isBrowsingHistory() ? 'Recall selected history expression' : 'Evaluate expression'),
             ]),
             h('p', { class: 'calculator-keyboard-hint' },
-              'Keyboard: 0–9, operators, decimal point, comma, parentheses, !, %, Enter, Insert, Backspace, Delete, Escape, and arrow keys.'),
+              'Keyboard: normal typing inserts; Insert toggles overwrite mode. Supports 0–9, operators, decimal point, comma, parentheses, !, %, Enter, Backspace, Delete, Escape, and arrow keys.'),
           ]),
           h('aside', { class: 'calculator-history', 'aria-labelledby': 'calculator-history-title' }, [
             h('div', { class: 'calculator-history-header' }, [
