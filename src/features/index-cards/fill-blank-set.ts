@@ -663,7 +663,8 @@ export const FillBlankSet = defineComponent({
           onHide: () => { cardListResizing.value = false; emit('toggle-card-list'); },
           cards: orderedCards.value, selectedId: card?.id ?? null,
           atLimit: atLimit.value, previewSide: 'front',
-          maskBlanks: !(reviewActive.value && sessionMode.value === 'view'),
+          maskBlanks: true,
+          showBlankAnswers: reviewActive.value && sessionMode.value === 'view',
           orderLabel: reviewActive.value
             ? `${orderDescription} · ${sessionMode.value === 'view' ? 'view' : 'fill in the blanks'}`
             : 'Saved order',
