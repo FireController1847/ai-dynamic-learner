@@ -30,6 +30,7 @@ export const StudyGuideMapStudy = defineComponent({
     const scroll = ref<HTMLElement | null>(null);
     const topicHeading = ref<HTMLElement | null>(null);
     const topicPanel = ref<HTMLElement | null>(null);
+    const viewMapButton = ref<HTMLButtonElement | null>(null);
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const timers = new Set<number>();
 
@@ -91,6 +92,11 @@ export const StudyGuideMapStudy = defineComponent({
         focused.value = true;
         nextTick(() => { topicHeading.value?.focus({ preventScroll: true }); });
       });
+    }
+
+    function closeTopic() {
+      focused.value = false;
+      nextTick(() => { viewMapButton.value?.focus({ preventScroll: true }); });
     }
 
     function markVisited(id: string) {
@@ -231,7 +237,14 @@ export const StudyGuideMapStudy = defineComponent({
           travelling.value = false;
           revealedCount.value = points(topicById(props.data, ancestorId)).length;
           topicPanel.value?.scrollTo({ top: 0, behavior: 'instant' });
-          showTopic();
+          // A single remaining trail is not a choice: follow it without
+          // reopening the already studied stop or requiring another click.
+          const onward = connectedTopicIds(props.data, ancestorId).filter(id => !visited.value.has(id));
+          if (onward.length === 1) {
+            visitNext(onward[0]);
+          } else {
+            showTopic();
+          }
           return;
         }
         travelTargetId.value = targetId;
@@ -374,8 +387,8 @@ export const StudyGuideMapStudy = defineComponent({
           ]),
           h('div', { class: 'study-guide-study-toolbar-actions' }, [
             h('button', {
-              type: 'button', class: 'quiet-button', disabled: travelling.value,
-              onClick: () => { if (focused.value) focused.value = false; else showTopic(); },
+              ref: viewMapButton, type: 'button', class: 'quiet-button', disabled: travelling.value,
+              onClick: () => { if (focused.value) closeTopic(); else showTopic(); },
             }, focused.value ? 'View map' : 'View points'),
             h('button', { type: 'button', class: 'quiet-button', onClick: returnToOverview }, 'End studying'),
           ]),
@@ -428,7 +441,7 @@ export const StudyGuideMapStudy = defineComponent({
                 class: 'icon-button study-guide-study-close',
                 title: 'View map',
                 'aria-label': 'Close topic points and view map',
-                onClick: () => { focused.value = false; },
+                onClick: closeTopic,
               }, '×'),
             ]),
             h('div', { class: 'study-guide-study-topic-inner' }, [
