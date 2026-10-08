@@ -167,6 +167,55 @@ export const Calculator = defineComponent({
       return nodes.map((node) => {
         if (node.kind === 'text') return renderTextNode(node, cursor);
 
+        if (node.kind === 'sqrt') {
+          const contentActive = cursor !== null
+            && cursor >= node.contentStart && cursor <= node.contentEnd;
+          const content = renderMathNodes(node.content, contentActive ? cursor : null);
+
+          return h('span', {
+            class: ['calculator-mathprint-radical-wrap', {
+              'is-overwrite-cursor': cursor === node.start && calculator.overwriteMode,
+            }],
+          }, [
+            cursor === node.start && !calculator.overwriteMode
+              ? h('span', { class: 'calculator-entry-caret', 'aria-hidden': 'true' })
+              : null,
+            h('span', {
+              class: ['calculator-mathprint-radical', { 'is-editable': cursor !== null }],
+              onPointerdown: cursor === null ? undefined : (event: PointerEvent) => {
+                if (event.target !== event.currentTarget) return;
+                event.preventDefault();
+                event.stopPropagation();
+                calculator.setCursor(node.contentStart);
+              },
+            }, [
+              h('span', {
+                class: 'calculator-radical-symbol',
+                'aria-hidden': 'true',
+                onPointerdown: cursor === null ? undefined : (event: PointerEvent) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  calculator.setCursor(calculator.overwriteMode ? node.start : node.contentStart);
+                },
+              }, '√'),
+              h('span', {
+                class: ['calculator-radical-content', { 'is-active': contentActive }],
+                onPointerdown: cursor === null ? undefined : (event: PointerEvent) => {
+                  if (event.target !== event.currentTarget) return;
+                  event.preventDefault();
+                  event.stopPropagation();
+                  calculator.setCursor(node.contentEnd);
+                },
+              }, content.length ? content : contentActive
+                ? [h('span', { class: 'calculator-entry-caret', 'aria-hidden': 'true' })]
+                : [h('span', { class: 'calculator-mathprint-placeholder' }, '□')]),
+            ]),
+            cursor === node.end && node.end !== node.contentEnd
+              ? h('span', { class: 'calculator-entry-caret', 'aria-hidden': 'true' })
+              : null,
+          ]);
+        }
+
         const numeratorActive = cursor !== null
           && cursor >= node.numeratorStart && cursor <= node.numeratorEnd;
         const denominatorActive = cursor !== null
