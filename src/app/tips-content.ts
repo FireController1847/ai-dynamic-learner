@@ -648,7 +648,7 @@ export const tipsCatalog: TipsCatalog = {
         steps: [
           {
             title: 'Follow the map',
-            body: 'Start studying, reveal each topic one point at a time, and finish every stop. At a branch, choose which path to take next.',
+            body: 'Start an adventure, then choose unlocked stops on the map to open their notes. Finished stops unlock nearby paths. You can revisit opened stops, and your progress is saved when you leave.',
             target: ['.guide-study-intro', '.guide-study-session'],
             targetLabel: 'Map study',
             placement: 'top',
