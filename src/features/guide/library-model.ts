@@ -106,6 +106,7 @@ function mapData(value: unknown, ids: Set<string>): asserts value is MapGuideDat
       value.topics.length > MAX_TOPICS) throw new Error('A Guide map is invalid.');
 
   const topicIds = new Set<string>();
+  const topicBulletCounts = new Map<string, number>();
   for (const topic of value.topics) {
     if (!isRecord(topic) || !isValidId(topic.id) || ids.has(topic.id) ||
         Object.keys(topic).some(key => !['id','title','description','x','y','guide'].includes(key)) ||
@@ -115,6 +116,8 @@ function mapData(value: unknown, ids: Set<string>): asserts value is MapGuideDat
     ids.add(topic.id); topicIds.add(topic.id); text(topic.title, 'Topic title');
     if (Object.hasOwn(topic, 'description')) text(topic.description, 'Topic description');
     listData(topic.guide, ids);
+    topicBulletCounts.set(topic.id, topic.guide.sections.reduce((sum, section) =>
+      sum + section.bullets.filter(bullet => bullet.trim()).length, 0));
   }
 
   if (value.startTopicId !== null && (!isValidId(value.startTopicId) || !topicIds.has(value.startTopicId))) {
@@ -198,10 +201,7 @@ function mapData(value: unknown, ids: Set<string>): asserts value is MapGuideDat
       const revealed = Object.fromEntries(Object.entries(session.revealed)
         .filter(([id]) => topicIds.has(id))
         .map(([id, count]) => {
-          const topic = value.topics.find(entry => entry.id === id);
-          const max = topic?.guide.sections.reduce((sum, section) =>
-            sum + section.bullets.filter(bullet => bullet.trim()).length, 0) ?? 0;
-          return [id, Math.min(count as number, max)];
+          return [id, Math.min(count as number, topicBulletCounts.get(id) ?? 0)];
         }));
       value.session = { paused: session.paused, currentId, openedIds, visitedIds, skippedIds, revealed };
     }
