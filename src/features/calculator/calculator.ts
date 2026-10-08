@@ -237,7 +237,7 @@ export const Calculator = defineComponent({
                 },
               }, [
                 h('path', {
-                  d: 'M0.75 7.2 L3.1 7.2 L5.3 12.7 L10.4 0.9 L12 0.9',
+                  d: 'M0.75 7.4 L3 7.4 L5.2 12.9 L11.85 0.7',
                   fill: 'none',
                   stroke: 'currentColor',
                   'stroke-width': '1.45',
