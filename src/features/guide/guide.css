@@ -105,7 +105,21 @@
 .guide-study-stop {
   position: absolute; display: grid; grid-template-columns: 28px minmax(0,1fr); align-items: center;
   width: 160px; height: 56px; padding: 6px 10px; border: 1px solid var(--control-border); border-radius: 28px;
-  background: var(--surface-subtle); color: var(--text-secondary); opacity: .72;
+  background: var(--surface-subtle); color: var(--text-secondary); opacity: .45;
+  font: inherit; font-size: 13px; text-align: left;
+}
+.guide-study-stop.is-unlocked { cursor: pointer; opacity: 1; }
+.guide-study-stop.is-unlocked:hover { border-color: var(--brand); background: var(--surface-hover); }
+.guide-study-stop.is-opened { border-color: var(--control-border); }
+.guide-study-stop.is-unlocked:focus-visible { outline: 3px solid var(--brand); outline-offset: 3px; }
+.guide-study-stop:disabled { cursor: not-allowed; }
+.guide-study-stop.is-skipped .guide-topic-number { background: var(--text-secondary); }
+.guide-study-map-hint {
+  position: absolute; z-index: 3; bottom: 14px; left: 50%; max-width: calc(100% - 28px);
+  margin: 0; padding: 8px 14px; border: 1px solid var(--border-color);
+  border-radius: 999px; background: var(--page-background); color: var(--text-secondary);
+  box-shadow: var(--shadow-overlay); font-size: 12px; text-align: center;
+  pointer-events: none; transform: translateX(-50%);
 }
 .guide-study-stop.is-current, .guide-study-stop.is-target {
   border-color: var(--brand); background: var(--brand-tint); color: var(--text-color); opacity: 1;
