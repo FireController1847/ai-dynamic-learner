@@ -135,11 +135,14 @@ export const Calculator = defineComponent({
       const children: VNode[] = [];
 
       for (const token of tokens) {
-        if (cursor === token.start) {
+        if (cursor === token.start && calculator.insertArmed) {
           children.push(h('span', { class: 'calculator-entry-caret', 'aria-hidden': 'true' }));
         }
         children.push(h('span', {
-          class: ['calculator-entry-token', { 'is-editable': cursor !== null }],
+          class: ['calculator-entry-token', {
+            'is-editable': cursor !== null,
+            'is-overwrite-cursor': cursor === token.start && !calculator.insertArmed,
+          }],
           'data-cursor-start': token.start,
           'data-cursor-end': token.end,
           onPointerdown: cursor === null
@@ -220,8 +223,12 @@ export const Calculator = defineComponent({
               }, '□')]),
         ]);
 
-        return h('span', { class: 'calculator-mathprint-fraction-wrap' }, [
-          cursor === node.start
+        return h('span', {
+          class: ['calculator-mathprint-fraction-wrap', {
+            'is-overwrite-cursor': cursor === node.start && !calculator.insertArmed,
+          }],
+        }, [
+          cursor === node.start && calculator.insertArmed
             ? h('span', { class: 'calculator-entry-caret', 'aria-hidden': 'true' })
             : null,
           fraction,
