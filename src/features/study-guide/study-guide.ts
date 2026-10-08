@@ -35,6 +35,7 @@ function importedMapData(value:SimpleMapStudyGuideImport):MapGuideData{
       :generatedPositions.get(id)??{x:0,y:0};
     return{
       id,title:source.title,x:position.x,y:position.y,
+      ...(source.description ? { description: source.description } : {}),
       guide:{sections:source.sections.map(section=>{
         const result=createSection();result.title=section.title;result.bullets=[...section.bullets];return result;
       })}
