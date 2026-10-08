@@ -28,13 +28,14 @@
   padding: 12px;
 }
 .calculator-display,
+.calculator-edit-row,
 .calculator-mode-row,
 .calculator-memory,
 .calculator-keyboard-hint { grid-column: 1 / -1; }
 
 .calculator-display {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 34px;
+  grid-template-columns: minmax(0, 1fr) 66px;
   grid-template-rows: minmax(32px, auto) minmax(52px, auto);
   min-width: 0;
   min-height: clamp(94px, 15dvh, 116px);
@@ -142,6 +143,17 @@
   gap: 0;
   overflow-x: auto;
   scrollbar-width: none;
+  cursor: text;
+}
+.calculator-entry-token.is-editable,
+.calculator-mathprint-fraction.is-editable,
+.calculator-mathprint-fraction.is-editable .calculator-mathprint-part,
+.calculator-mathprint-fraction.is-editable .calculator-mathprint-bar,
+.calculator-mathprint-fraction.is-editable .calculator-mathprint-placeholder {
+  cursor: text;
+}
+.calculator-current-entry.is-insert-armed .calculator-entry-caret {
+  background: var(--brand);
 }
 .calculator-current-entry::-webkit-scrollbar { display: none; }
 .calculator-error-text {
@@ -154,21 +166,24 @@
   grid-column: 2;
   grid-row: 1 / 3;
   display: grid;
-  grid-template-rows: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
   border-left: 1px solid var(--control-border);
   background: color-mix(in srgb, var(--surface-subtle) 72%, transparent);
 }
 .calculator-history-arrow {
   min-width: 0;
+  min-height: 0;
   padding: 0;
   border: 0;
   color: var(--text-secondary);
   background: transparent;
-  font-size: 10px;
+  font-size: 9px;
 }
-.calculator-history-arrow + .calculator-history-arrow {
-  border-top: 1px solid var(--control-border);
-}
+.calculator-arrow-up { grid-column: 2; grid-row: 1; }
+.calculator-arrow-left { grid-column: 1; grid-row: 2; }
+.calculator-arrow-right { grid-column: 3; grid-row: 2; }
+.calculator-arrow-down { grid-column: 2; grid-row: 3; }
 .calculator-history-arrow:hover { color: var(--text-color); background: var(--surface-hover); }
 .calculator-history-arrow:active { background: var(--surface-pressed); }
 
@@ -190,6 +205,11 @@
   .calculator-entry-caret { animation: none; }
 }
 
+.calculator-mathprint-fraction-wrap {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
 .calculator-mathprint-fraction,
 .calculator-stacked-fraction {
   display: inline-grid;
@@ -244,6 +264,36 @@
 
 @media (forced-colors: active) {
   .calculator-lcd-row::before { display: none; }
+}
+
+.calculator-edit-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+.calculator-edit-key {
+  min-width: 0;
+  min-height: 30px;
+  padding: 4px 8px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+  background: var(--surface-workspace);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.calculator-edit-key:hover {
+  color: var(--text-color);
+  background: var(--surface-hover);
+}
+.calculator-edit-key:active {
+  background: var(--surface-pressed);
+}
+.calculator-edit-key.is-active {
+  color: var(--brand-text);
+  border-color: color-mix(in srgb, var(--brand) 30%, var(--control-border));
+  background: var(--brand-tint);
 }
 
 .calculator-mode-row {
@@ -493,6 +543,7 @@
 }
 
 @media (pointer: coarse) {
+  .calculator-edit-key,
   .calculator-memory-key { min-height: 44px; }
   .calculator-key { min-height: 44px; }
   .calculator-history-header .quiet-button { min-height: 44px; }
