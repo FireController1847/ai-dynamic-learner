@@ -33,6 +33,9 @@ export const GuideMapStudy = defineComponent({
     const topicHeading = ref<HTMLElement | null>(null);
     const topicPanel = ref<HTMLElement | null>(null);
     const viewMapButton = ref<HTMLButtonElement | null>(null);
+    const camera = ref<{ x: number; y: number; scale: number } | null>(null);
+    const cameraZooming = ref(false);
+    const arrivalHighlight = ref(false);
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const timers = new Set<number>();
 
@@ -63,6 +66,9 @@ export const GuideMapStudy = defineComponent({
       timers.clear();
       travelling.value = false;
       arriving.value = false;
+      camera.value = null;
+      cameraZooming.value = false;
+      arrivalHighlight.value = false;
       travelTargetId.value = null;
     }
 
@@ -162,12 +168,53 @@ export const GuideMapStudy = defineComponent({
       revealedCount.value = 0;
       started.value = true;
       prepareCurrent();
-      focusTopic(first.id, 'auto');
-      // Let the learner see the starting marker before the study sheet opens.
-      later(() => {
+
+      if (reducedMotion.matches) {
+        focusTopic(first.id, 'instant');
         arriving.value = false;
         showTopic();
-      }, reducedMotion.matches ? 0 : 900);
+        return;
+      }
+
+      nextTick(() => {
+        const container = scroll.value;
+        if (!container || !started.value || currentId.value !== first.id) return;
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+        if (!width || !height) {
+          arriving.value = false;
+          showTopic();
+          return;
+        }
+
+        // Preview the full map in the existing viewport before moving the camera.
+        // The destination is the exact scroll position of the normal 100% map:
+        // the animated camera can be swapped for native scrolling without a jump.
+        const scale = Math.min(1, width / MAP_WIDTH, height / MAP_HEIGHT);
+        const destinationX = Math.max(0, Math.min(MAP_WIDTH - width, first.x + MAP_TOPIC_WIDTH / 2 - width / 2));
+        const destinationY = Math.max(0, Math.min(MAP_HEIGHT - height, first.y + MAP_TOPIC_HEIGHT / 2 - height / 2));
+        container.scrollTo({ left: 0, top: 0, behavior: 'instant' });
+        camera.value = {
+          x: (width - MAP_WIDTH * scale) / 2,
+          y: (height - MAP_HEIGHT * scale) / 2,
+          scale,
+        };
+        later(() => {
+          cameraZooming.value = true;
+          camera.value = { x: -destinationX, y: -destinationY, scale: 1 };
+          later(() => {
+            container.scrollTo({ left: destinationX, top: destinationY, behavior: 'instant' });
+            cameraZooming.value = false;
+            camera.value = null;
+            arrivalHighlight.value = true;
+            later(() => {
+              arrivalHighlight.value = false;
+              arriving.value = false;
+              showTopic();
+            }, 680);
+          }, 1050);
+        }, 260);
+      });
     }
 
     function restart() {
@@ -422,10 +469,20 @@ export const GuideMapStudy = defineComponent({
           ]),
         ]),
         h('div', { class: 'guide-study-layout' }, [
-          h('div', { ref: scroll, class: 'guide-study-map-scroll', inert: focused.value }, [
+          h('div', {
+            ref: scroll,
+            class: ['guide-study-map-scroll', { 'is-cinematic': camera.value !== null }],
+            inert: focused.value,
+          }, [
             h('div', {
-              class: 'guide-study-map',
-              style: { width: MAP_WIDTH + 'px', height: MAP_HEIGHT + 'px' },
+              class: ['guide-study-map', { 'is-camera-zooming': cameraZooming.value }],
+              style: {
+                width: MAP_WIDTH + 'px',
+                height: MAP_HEIGHT + 'px',
+                ...(camera.value ? {
+                  transform: `translate(${camera.value.x}px, ${camera.value.y}px) scale(${camera.value.scale})`,
+                } : {}),
+              },
               'aria-label': 'Study route map',
             }, [
               h('svg', {
@@ -439,6 +496,7 @@ export const GuideMapStudy = defineComponent({
                   'is-current': entry.id === currentId.value,
                   'is-visited': visited.value.has(entry.id),
                   'is-target': entry.id === travelTargetId.value,
+                  'is-arrival-highlight': arrivalHighlight.value && entry.id === currentId.value,
                 }],
                 style: { left: entry.x + 'px', top: entry.y + 'px' },
               }, [
