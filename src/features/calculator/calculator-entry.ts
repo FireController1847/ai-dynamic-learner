@@ -24,6 +24,52 @@ export type MathPrintNode =
       denominator: MathPrintNode[];
     };
 
+export interface MathPrintTextToken {
+  raw: string;
+  display: string;
+  start: number;
+  end: number;
+}
+
+const DISPLAY_TOKENS: readonly [string, string][] = [
+  ['asin(', 'sin⁻¹('],
+  ['acos(', 'cos⁻¹('],
+  ['atan(', 'tan⁻¹('],
+  ['sqrt(', '√('],
+  ['^(-1)', '⁻¹'],
+  ['^(2)', '²'],
+  ['ans', 'Ans'],
+  ['pi', 'π'],
+  ['sin(', 'sin('],
+  ['cos(', 'cos('],
+  ['tan(', 'tan('],
+  ['log(', 'log('],
+  ['ln(', 'ln('],
+  ['abs(', 'abs('],
+];
+
+export function tokenizeMathPrintText(text: string, start: number): MathPrintTextToken[] {
+  const tokens: MathPrintTextToken[] = [];
+  let offset = 0;
+
+  while (offset < text.length) {
+    const matched = DISPLAY_TOKENS.find(([raw]) => text.startsWith(raw, offset));
+    if (matched) {
+      const [raw, display] = matched;
+      tokens.push({ raw, display, start: start + offset, end: start + offset + raw.length });
+      offset += raw.length;
+      continue;
+    }
+
+    const raw = text[offset];
+    const display = raw === '*' ? '×' : raw === '/' ? '÷' : raw === '-' ? '−' : raw;
+    tokens.push({ raw, display, start: start + offset, end: start + offset + 1 });
+    offset += 1;
+  }
+
+  return tokens;
+}
+
 export function endsValue(expression: string) {
   return /[\d)!%]$/.test(expression) || /(?:pi|e|ans)$/.test(expression);
 }
@@ -137,6 +183,99 @@ export function moveFractionCursor(source: string, cursor: number, direction: 'u
   if (direction === 'up' && context.field === 'denominator') return context.numeratorEnd;
   if (direction === 'right') return context.close + 1;
   return null;
+}
+
+
+function collectCursorPositions(nodes: MathPrintNode[], positions: number[]) {
+  for (const node of nodes) {
+    if (node.kind === 'text') {
+      for (const token of tokenizeMathPrintText(node.text, node.start)) {
+        positions.push(token.start, token.end);
+      }
+      continue;
+    }
+
+    positions.push(node.start);
+    collectCursorPositions(node.numerator, positions);
+    positions.push(node.numeratorStart, node.numeratorEnd);
+    collectCursorPositions(node.denominator, positions);
+    positions.push(node.denominatorStart, node.denominatorEnd, node.end);
+  }
+}
+
+export function mathPrintCursorPositions(source: string) {
+  const positions = [0, source.length];
+  collectCursorPositions(parseMathPrint(source), positions);
+  return [...new Set(positions)]
+    .filter((position) => position >= 0 && position <= source.length)
+    .sort((left, right) => left - right);
+}
+
+export function normaliseMathPrintCursor(source: string, cursor: number) {
+  const positions = mathPrintCursorPositions(source);
+  return positions.reduce((nearest, position) =>
+    Math.abs(position - cursor) < Math.abs(nearest - cursor) ? position : nearest, positions[0] ?? 0);
+}
+
+export function moveMathPrintCursor(source: string, cursor: number, direction: 'left' | 'right') {
+  const positions = mathPrintCursorPositions(source);
+  const current = normaliseMathPrintCursor(source, cursor);
+  const index = Math.max(0, positions.indexOf(current));
+  if (direction === 'left') return positions[Math.max(0, index - 1)] ?? 0;
+  return positions[Math.min(positions.length - 1, index + 1)] ?? source.length;
+}
+
+interface EditAtom {
+  start: number;
+  end: number;
+  replaceable: boolean;
+}
+
+function collectEditAtoms(nodes: MathPrintNode[], atoms: EditAtom[]) {
+  for (const node of nodes) {
+    if (node.kind === 'text') {
+      for (const token of tokenizeMathPrintText(node.text, node.start)) {
+        atoms.push({
+          start: token.start,
+          end: token.end,
+          replaceable: !token.raw.endsWith('(') && token.raw !== '^(-1)' && token.raw !== '^(2)',
+        });
+      }
+      continue;
+    }
+
+    atoms.push({ start: node.start, end: node.end, replaceable: true });
+    collectEditAtoms(node.numerator, atoms);
+    collectEditAtoms(node.denominator, atoms);
+  }
+}
+
+function mathPrintEditAtoms(source: string) {
+  const atoms: EditAtom[] = [];
+  collectEditAtoms(parseMathPrint(source), atoms);
+  return atoms.sort((left, right) => left.start - right.start || right.end - left.end);
+}
+
+export function overwriteRangeAtCursor(source: string, cursor: number) {
+  const atom = mathPrintEditAtoms(source)
+    .find((candidate) => candidate.start === cursor && candidate.replaceable);
+  return atom ? { start: atom.start, end: atom.end } : null;
+}
+
+export function deleteMathPrintForward(source: string, cursor: number) {
+  if (cursor >= source.length) return { source, cursor };
+
+  const atom = mathPrintEditAtoms(source)
+    .find((candidate) => candidate.start >= cursor);
+
+  if (!atom) return { source, cursor };
+  return {
+    source: source.slice(0, atom.start) + source.slice(atom.end),
+    cursor: normaliseMathPrintCursor(
+      source.slice(0, atom.start) + source.slice(atom.end),
+      atom.start,
+    ),
+  };
 }
 
 export function backspaceMathPrint(source: string, cursor: number) {
