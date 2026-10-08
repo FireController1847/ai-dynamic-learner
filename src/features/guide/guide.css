@@ -146,8 +146,16 @@
 .guide-study-topic-heading h3 { margin: 4px 0 0; font-size: clamp(22px, 3vw, 28px); line-height: 1.25; }
 .guide-study-topic-description { max-width: 68ch; margin: 14px 0 0; color: var(--text-secondary); font-size: 15px; line-height: 1.65; }
 .guide-study-points { display: grid; gap: 14px; padding-block: 16px; }
-.guide-study-reveal { justify-self: start; width: fit-content; min-height: 44px; padding: 8px 18px; border-color: color-mix(in srgb, var(--brand) 35%, var(--border-color)); border-radius: var(--radius); background: var(--brand-tint); color: var(--brand-text); font-weight: 600; }
-.guide-study-reveal:hover { border-color: var(--brand); background: var(--surface-hover); }
+.guide-study-reveal-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.guide-study-action {
+  width: fit-content; max-width: 100%; min-height: 44px; padding: 8px 16px;
+  border: 1px solid color-mix(in srgb, var(--brand) 35%, var(--border-color));
+  border-radius: var(--radius); background: var(--brand-tint); color: var(--brand-text);
+  font-size: 14px; font-weight: 600; line-height: 1.4; text-align: left;
+}
+.guide-study-action:hover { border-color: var(--brand); background: var(--surface-hover); }
+.guide-study-skip { border-color: var(--border-color); background: transparent; color: var(--text-secondary); font-weight: 500; }
+.guide-study-skip:hover { border-color: var(--control-border); color: var(--text-color); background: var(--surface-hover); }
 .guide-study-section h4 { margin: 0 0 8px; font-size: 16px; }
 .guide-study-section ul { margin: 0; padding-left: 22px; }
 .guide-study-section li { font-size: 16px; line-height: 1.65; }
