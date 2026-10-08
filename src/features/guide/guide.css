@@ -96,7 +96,9 @@
 .guide-study-toolbar span { color: var(--text-secondary); font-size: 12px; }
 .guide-study-layout { position: relative; flex: 1; min-height: 0; overflow: hidden; }
 .guide-study-map-scroll { position: absolute; inset: 0; min-width: 0; min-height: 0; overflow: auto; background: var(--surface-workspace); }
-.guide-study-map { position: relative; background: var(--page-background); }
+.guide-study-map-scroll.is-cinematic { overflow: hidden; }
+.guide-study-map { position: relative; background: var(--page-background); transform-origin: 0 0; }
+.guide-study-map.is-camera-zooming { transition: transform 1050ms cubic-bezier(.22, 1, .36, 1); }
 .guide-study-route { position: absolute; inset: 0; pointer-events: none; }
 .guide-study-route line { stroke: var(--control-border); stroke-width: 5; transition: stroke var(--motion-normal); }
 .guide-study-route line.is-travelling { stroke: var(--brand); }
@@ -107,6 +109,29 @@
 }
 .guide-study-stop.is-current, .guide-study-stop.is-target {
   border-color: var(--brand); background: var(--brand-tint); color: var(--text-color); opacity: 1;
+}
+.guide-study-stop.is-arrival-highlight {
+  z-index: 4; border-color: var(--brand); background: var(--brand-tint); opacity: 1;
+  animation: guide-start-glow 680ms var(--ease-out);
+}
+.guide-study-stop.is-arrival-highlight::before {
+  content: 'START HERE'; position: absolute; bottom: calc(100% + 12px); left: 50%;
+  padding: 3px 9px; border-radius: 999px; background: var(--brand); color: var(--on-accent);
+  font-size: 11px; font-weight: 700; letter-spacing: .04em; white-space: nowrap;
+  transform: translateX(-50%);
+}
+.guide-study-stop.is-arrival-highlight::after {
+  content: ''; position: absolute; inset: -9px; border: 2px solid var(--brand);
+  border-radius: 36px; pointer-events: none; animation: guide-arrival-ring 680ms var(--ease-out) both;
+}
+@keyframes guide-arrival-ring {
+  from { opacity: 0; transform: scale(.9); }
+  30% { opacity: 1; }
+  to { opacity: 0; transform: scale(1.28); }
+}
+@keyframes guide-start-glow {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  35% { box-shadow: 0 0 0 8px var(--brand-tint); }
 }
 .guide-study-stop.is-visited { border-color: var(--success); color: var(--text-color); opacity: 1; }
 .guide-study-stop.is-visited .guide-topic-number { background: var(--success); }
@@ -186,7 +211,8 @@
   .guide-study-topic { padding: 24px 16px max(210px, 42vh); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .guide-traveler, .guide-study-route line, .guide-connection-prompt, .guide-study-topic { transition: none; }
+  .guide-traveler, .guide-study-route line, .guide-connection-prompt, .guide-study-topic, .guide-study-map.is-camera-zooming { transition: none; }
+  .guide-study-stop.is-arrival-highlight, .guide-study-stop.is-arrival-highlight::after { animation: none; }
   .guide-study-topic { transform: none; }
   .guide-study-bullet, .guide-route line.is-invalid { animation: none; }
   .guide-route line.is-invalid { opacity: 1; }
