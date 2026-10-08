@@ -26,7 +26,7 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'calculator', label: 'Calculator', path: '/calculator/', icon: 'calculator',
     group: 'helpers',
-    version: '1.8.1',
+    version: '1.8.2',
     image: 'assets/app-icons/calculator.png',
     description: 'A scientific calculator for expressions and functions.',
     metadata: {
