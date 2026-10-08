@@ -38,7 +38,8 @@ export const Calculator = defineComponent({
       if (button && (event.key === 'Enter' || event.key === ' ')) return;
 
       if (/^\d$/.test(event.key)) calculator.inputDigit(event.key);
-      else if (event.key === '.' || event.key === ',') calculator.inputDecimal();
+      else if (event.key === '.') calculator.inputDecimal();
+      else if (event.key === ',') calculator.inputComma();
       else if (['+', '-', '*', '/', '^'].includes(event.key)) calculator.chooseOperator(event.key as Operator);
       else if (event.key === '(') calculator.inputParenthesis(true);
       else if (event.key === ')') calculator.inputParenthesis(false);
@@ -122,12 +123,10 @@ export const Calculator = defineComponent({
       h('span', { class: 'calculator-fraction-denominator' }, String(fraction.denominator)),
     ]);
 
-    function placeCursorFromToken(event: PointerEvent, start: number, end: number) {
+    function placeCursorFromToken(event: PointerEvent, start: number) {
       event.preventDefault();
       event.stopPropagation();
-      const target = event.currentTarget as HTMLElement;
-      const bounds = target.getBoundingClientRect();
-      calculator.setCursor(event.clientX < bounds.left + bounds.width / 2 ? start : end);
+      calculator.setCursor(start);
     }
 
     function renderTextNode(node: Extract<MathPrintNode, { kind: 'text' }>, cursor: number | null) {
@@ -147,7 +146,7 @@ export const Calculator = defineComponent({
           'data-cursor-end': token.end,
           onPointerdown: cursor === null
             ? undefined
-            : (event: PointerEvent) => placeCursorFromToken(event, token.start, token.end),
+            : (event: PointerEvent) => placeCursorFromToken(event, token.start),
         }, token.display));
       }
 
@@ -472,6 +471,8 @@ export const Calculator = defineComponent({
                 'eˣ: Raise Euler’s number e to a power.'),
               key('round', () => calculator.inputRound(), 'function', 'Round to decimal places',
                 'round: Wrap the current value, then enter how many decimal places to keep.'),
+              key(',', () => calculator.inputComma(), 'function', 'Argument separator',
+                'Comma: Separate function arguments, such as round(value, places).'),
             ]),
             h('div', { class: 'calculator-keypad calculator-basic-keypad', 'aria-label': 'Calculator keypad' }, [
               key('n/d', () => calculator.inputFraction(), 'function', 'Fraction template',
@@ -505,7 +506,7 @@ export const Calculator = defineComponent({
                 calculator.isBrowsingHistory() ? 'Recall selected history expression' : 'Evaluate expression'),
             ]),
             h('p', { class: 'calculator-keyboard-hint' },
-              'Keyboard: 0–9, operators, parentheses, !, %, Enter, Insert, Backspace, Delete, Escape, and arrow keys.'),
+              'Keyboard: 0–9, operators, decimal point, comma, parentheses, !, %, Enter, Insert, Backspace, Delete, Escape, and arrow keys.'),
           ]),
           h('aside', { class: 'calculator-history', 'aria-labelledby': 'calculator-history-title' }, [
             h('div', { class: 'calculator-history-header' }, [
