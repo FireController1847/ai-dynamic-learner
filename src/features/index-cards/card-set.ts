@@ -1,3 +1,4 @@
+import { useStudySession } from '../../components/use-study-session.ts';
 import type { CardSet as CardSetModel } from './tree-model.ts';
 import type { Card, CardSide } from './card-model.ts';
 import type { ReviewOrder, ReviewSettings } from './review-setup.ts';
@@ -34,6 +35,7 @@ export const CardSet = defineComponent({
     const reviewOrder = ref<ReviewOrder>('forward');
     const reviewSetupOpen = ref(false);
     const reviewActive = ref(false);
+    useStudySession(reviewActive);
     const reviewNotice = ref('');
     const reviewGrades = reactive(new Map<string, boolean>());
     const reviewResult = ref<{ correct: number; total: number } | null>(null);

@@ -1,5 +1,7 @@
 import { ref, watch } from 'vue';
 import { emptyWorkspace, parseWorkspace, MAX_BACKUP_BYTES, type Workspace } from './workspace-format.ts';
+import { downloadText } from '../core/file-download.ts';
+import { useBackupReminders } from './backup-reminders.ts';
 export type { Workspace } from './workspace-format.ts';
 export type WorkspaceController = ReturnType<typeof useWorkspace>;
 const STORAGE_KEY = 'dynamic-learner.workspace.v1';
@@ -9,14 +11,20 @@ export function useWorkspace() {
   const storageProblem = ref('');
   const revision = ref(0);
   let protectStoredCopy = false;
+  let savedWorkspacePresent = false;
 
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved !== null) state.value = parseWorkspace(saved);
+    if (saved !== null) {
+      state.value = parseWorkspace(saved);
+      savedWorkspacePresent = true;
+    }
   } catch {
     protectStoredCopy = true;
     storageProblem.value = 'The saved workspace could not be loaded. The stored copy has been left untouched. Download your work before leaving, or upload a valid backup to restore saving.';
   }
+
+  const backup = useBackupReminders(state, savedWorkspacePresent);
 
   function save() {
     if (protectStoredCopy) return;
@@ -43,22 +51,19 @@ export function useWorkspace() {
     protectStoredCopy = false;
     state.value = replacement;
     revision.value += 1;
+    backup.workspaceRestored();
     save();
   }
 
-  function downloadBackup() {
+  async function downloadBackup(): Promise<void> {
     const text = JSON.stringify(state.value);
-    // Keep exported files within the same limits as imports.
+    // Validate the exact full-workspace payload before initiating the download.
     parseWorkspace(text);
-    const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `dynamic-learner-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
-    document.body.append(link);
-    link.click();
-    link.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    const filename = `dynamic-learner-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+    await downloadText(filename, text, 'application/json');
+    // Browser download APIs cannot confirm that the file was actually saved.
+    await backup.recordExport(text, Date.now());
   }
 
-  return { state, revision, storageProblem, readBackup, replaceWorkspace, downloadBackup };
+  return { state, revision, storageProblem, readBackup, replaceWorkspace, downloadBackup, backup };
 }

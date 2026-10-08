@@ -1,3 +1,4 @@
+import { useStudySession } from '../../components/use-study-session.ts';
 import { computed, defineComponent, h, nextTick, onBeforeUnmount, onDeactivated, ref, type PropType } from 'vue';
 import { GuideTypeIcon } from './guide-type-icon.ts';
 import { connectedTopicIds, mapStudyProblem, startTopic, topicById } from './map-graph.ts';
@@ -20,6 +21,7 @@ export const StudyGuideMapStudy = defineComponent({
   emits: { end: () => true },
   setup(props, { emit }) {
     const started = ref(false);
+    useStudySession(started);
     const visited = ref(new Set<string>());
     const currentId = ref<string | null>(null);
     const path = ref<string[]>([]);
