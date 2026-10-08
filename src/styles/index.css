@@ -54,4 +54,5 @@
 @import '../features/knowledge-check/knowledge-check.css';
 @import '../features/knowledge-check/ai-creation.css';
 @import '../features/knowledge-check/knowledge-set.css';
+@import '../features/knowledge-check/review-motion.css';
 @import './mobile.css';

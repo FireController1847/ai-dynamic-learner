@@ -130,7 +130,8 @@ export const KnowledgeSession = defineComponent({
       if (showAnswer && question.explanation) content.push(h('p', question.explanation));
       if (celebrating.value === question.id) {
         content.push(...[0, 1, 2].map(index => h('span', {
-          class: 'knowledge-success-spark', 'aria-hidden': 'true', style: { '--spark-index': index },
+          class: 'knowledge-success-spark', 'aria-hidden': 'true',
+          style: { right: `${14 + index * 16}px`, animationDelay: `${index * 55}ms` },
         }, index === 1 ? '✧' : '✦')));
       }
       return h('div', { class: ['knowledge-feedback', correct ? 'is-correct' : 'is-incorrect',
@@ -221,7 +222,7 @@ export const KnowledgeSession = defineComponent({
             scoredCount.value ? h('p', `${Math.round(score.value / scoredCount.value * 100)}% correct`) : null,
             expired.value ? h('p', { role: 'status' }, 'Time ran out. Your entered answers were submitted automatically.') : null]),
           showAnswers ? questions.value.map((entry, index) => h('article', { class: 'knowledge-result', key: entry.id,
-            style: { '--review-index': Math.min(index, 8) } }, [
+            style: { '--review-delay': `${Math.min(index, 8) * 42 + 100}ms` } }, [
             h('h4', `${index + 1}. ${entry.type === 'fill-in-the-blanks' ? maskFillBlankAnswers(entry.prompt) : entry.prompt}`),
             questionScored(entry) ? [responseSummary(entry), feedback(entry)] :
               h('p', { class: 'knowledge-muted' }, 'Statement · Not scored'),
@@ -276,7 +277,7 @@ export const KnowledgeSession = defineComponent({
                 'is-correct': showFeedback && !quizRetrying && choice === question.answer,
                 'is-incorrect': showFeedback && textResponse(question) === choice && choice !== question.answer &&
                   (!quizRetrying || feedbackResponse(question) === choice),
-              }], key: index, style: { '--review-index': index } }, [
+              }], key: index, style: { '--review-delay': `${Math.min(index, 6) * 34}ms` } }, [
                 h('input', { type: 'radio', name: `response-${question.id}`, checked: textResponse(question) === choice,
                   onChange: () => response(question, choice) }), h('span', choice),
                 h('span', { class: 'knowledge-choice-marker', 'aria-hidden': 'true' }, textResponse(question) === choice ? '✓' : ''),

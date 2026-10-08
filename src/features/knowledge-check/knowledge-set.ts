@@ -11,7 +11,8 @@ import { KnowledgeSession } from './knowledge-session.ts';
 import { SessionSetup } from './session-setup.ts';
 import { settingsForMode, type SessionSettings } from './session-settings.ts';
 import { questionReady } from './question-model.ts';
-import { defineComponent, h, onDeactivated, ref, type PropType } from 'vue';
+import { enterReviewPanel, leaveReviewPanel, restoreReviewPanel } from './review-motion.ts';
+import { defineComponent, h, onDeactivated, ref, Transition, type PropType } from 'vue';
 
 export const KnowledgeSet = defineComponent({
   name: 'KnowledgeSet',
@@ -41,6 +42,32 @@ export const KnowledgeSet = defineComponent({
         building.value = false; revision.value += 1; message.value = '';
       } catch (error) { message.value = error instanceof Error ? error.message : String(error); }
     }
+    function renderWorkspaceView() {
+      if (building.value) return h(CheckBuilder, {
+        key: `builder-${revision.value}`, item: props.item, onSave: save,
+        onCancel: () => { building.value = false; message.value = ''; },
+      });
+      if (!mode.value) return h(ModePicker, {
+        key: 'mode-picker', setName: props.item.name, onChoose: chooseMode, onBuild: openBuilder,
+      });
+      if (!sessionSettings.value) return h(SessionSetup, {
+        key: `setup-${revision.value}-${mode.value}`,
+        item: props.item,
+        mode: mode.value,
+        questionCount: props.item.questions.filter(questionReady).length,
+        onBack: () => { mode.value = null; },
+        onContinue: (settings: SessionSettings) => { sessionSettings.value = settings; },
+      });
+      return h(KnowledgeSession, {
+        key: `session-${revision.value}-${mode.value}`, item: props.item, mode: mode.value, settings: sessionSettings.value,
+        onBack: () => {
+          if (mode.value === 'test') mode.value = null;
+          else sessionSettings.value = null;
+        },
+        onBuild: openBuilder,
+      });
+    }
+
     return () => h('div', { class: 'knowledge-set-workspace' }, [
       h('header', { class: 'knowledge-set-toolbar' }, [
         h('label', { class: 'knowledge-mode-control' }, ['Mode', h('select', {
@@ -52,26 +79,13 @@ export const KnowledgeSet = defineComponent({
         h('button', { type: 'button', class: 'quiet-button', disabled: building.value,
           onClick: openBuilder }, 'Build questions'),
       ]),
-      building.value ? h(CheckBuilder, { key: `builder-${revision.value}`, item: props.item, onSave: save,
-        onCancel: () => { building.value = false; message.value = ''; } }) : null,
-      !building.value && !mode.value ? h(ModePicker, { setName: props.item.name,
-        onChoose: chooseMode, onBuild: openBuilder }) : null,
-      !building.value && mode.value && !sessionSettings.value ? h(SessionSetup, {
-        key: `setup-${revision.value}-${mode.value}`,
-        item: props.item,
-        mode: mode.value,
-        questionCount: props.item.questions.filter(questionReady).length,
-        onBack: () => { mode.value = null; },
-        onContinue: (settings: SessionSettings) => { sessionSettings.value = settings; },
-      }) : null,
-      !building.value && mode.value && sessionSettings.value ? h(KnowledgeSession, {
-        key: `${revision.value}-${mode.value}`, item: props.item, mode: mode.value, settings: sessionSettings.value,
-        onBack: () => {
-          if (mode.value === 'test') mode.value = null;
-          else sessionSettings.value = null;
-        },
-        onBuild: openBuilder,
-      }) : null,
+      h(Transition, {
+        name: 'knowledge-workspace-view',
+        mode: 'out-in',
+        onBeforeLeave: leaveReviewPanel,
+        onLeaveCancelled: restoreReviewPanel,
+        onAfterEnter: enterReviewPanel,
+      }, { default: renderWorkspaceView }),
       message.value ? h('p', { class: 'knowledge-message', role: 'alert' }, message.value) : null,
     ]);
   },
