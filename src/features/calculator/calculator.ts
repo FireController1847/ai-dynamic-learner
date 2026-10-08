@@ -26,6 +26,7 @@ export const Calculator = defineComponent({
     const calculator = reactive(new CalculatorModel(savedDecimalPlaces()));
     const scientificOpen = ref(false);
     const settingsOpen = ref(false);
+    const clearHistoryArmed = ref(false);
     const settingsButton = ref<HTMLButtonElement | null>(null);
     let listening = false;
 
@@ -36,6 +37,8 @@ export const Calculator = defineComponent({
       const button = target?.closest('button');
       if (button && !button.closest('.calculator-page')) return;
       if (button && (event.key === 'Enter' || event.key === ' ')) return;
+
+      clearHistoryArmed.value = false;
 
       if (/^\d$/.test(event.key)) calculator.inputDigit(event.key);
       else if (event.key === '.') calculator.inputDecimal();
@@ -80,6 +83,17 @@ export const Calculator = defineComponent({
       settingsOpen.value = false;
       await nextTick();
       settingsButton.value?.focus();
+    }
+
+    function pressClear() {
+      if (clearHistoryArmed.value) {
+        calculator.clearHistory();
+        clearHistoryArmed.value = false;
+        return;
+      }
+
+      calculator.clearAll();
+      clearHistoryArmed.value = true;
     }
 
     onActivated(startListening);
@@ -127,6 +141,14 @@ export const Calculator = defineComponent({
         h('span', { class: 'calculator-fraction-template-box' }),
       ]),
     ]);
+
+    const clearKey = () => h('button', {
+      type: 'button',
+      class: ['calculator-key', 'calculator-key--function', 'calculator-clear-key'],
+      'aria-label': 'Clear calculator',
+      title: 'C: Clear the current entry. Press C twice in a row to clear history.',
+      onClick: pressClear,
+    }, 'C');
 
     const stackedFraction = (fraction: FractionParts, compact = false) => h('span', {
       class: ['calculator-stacked-fraction', { 'is-compact': compact }],
@@ -203,15 +225,27 @@ export const Calculator = defineComponent({
                 calculator.setCursor(node.contentStart);
               },
             }, [
-              h('span', {
+              h('svg', {
                 class: 'calculator-radical-symbol',
+                viewBox: '0 0 12 14',
+                preserveAspectRatio: 'none',
                 'aria-hidden': 'true',
                 onPointerdown: cursor === null ? undefined : (event: PointerEvent) => {
                   event.preventDefault();
                   event.stopPropagation();
                   calculator.setCursor(calculator.overwriteMode ? node.start : node.contentStart);
                 },
-              }, '√'),
+              }, [
+                h('path', {
+                  d: 'M0.75 7.2 L3.1 7.2 L5.3 12.7 L10.4 0.9 L12 0.9',
+                  fill: 'none',
+                  stroke: 'currentColor',
+                  'stroke-width': '1.45',
+                  'stroke-linecap': 'square',
+                  'stroke-linejoin': 'miter',
+                  'vector-effect': 'non-scaling-stroke',
+                }),
+              ]),
               h('span', {
                 class: ['calculator-radical-content', { 'is-active': contentActive }],
                 onPointerdown: cursor === null ? undefined : (event: PointerEvent) => {
@@ -339,7 +373,14 @@ export const Calculator = defineComponent({
       const historyEntry = calculator.visibleHistoryEntry();
       const displayFraction = calculator.displayFractionParts();
 
-      return h('section', { class: 'calculator-page', 'aria-label': props.title }, [
+      return h('section', {
+        class: 'calculator-page',
+        'aria-label': props.title,
+        onPointerdown: (event: PointerEvent) => {
+          const target = event.target instanceof Element ? event.target : null;
+          if (!target?.closest('.calculator-clear-key')) clearHistoryArmed.value = false;
+        },
+      }, [
         h('div', { class: 'calculator-layout' }, [
           h('div', { class: 'calculator-machine' }, [
             h('div', { class: 'calculator-display', 'aria-live': 'polite', 'aria-atomic': 'true' }, [
@@ -550,8 +591,7 @@ export const Calculator = defineComponent({
               fractionTemplateKey(),
               key('%', () => calculator.inputPostfix('%'), 'function', 'Percent'),
               key('CE', () => calculator.clearEntry(), 'function', 'Clear entry'),
-              key('C', () => calculator.clearAll(), 'function', 'Clear expression',
-                'C: Clear the entry and reset fraction result mode to decimal.'),
+              clearKey(),
 
               key('7', () => calculator.inputDigit('7')),
               key('8', () => calculator.inputDigit('8')),
