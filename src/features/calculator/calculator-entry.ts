@@ -36,7 +36,7 @@ const DISPLAY_TOKENS: readonly [string, string][] = [
   ['acos(', 'cos⁻¹('],
   ['atan(', 'tan⁻¹('],
   ['sqrt(', '√('],
-  ['round(', 'round('],
+  ['round(', 'rnd('],
   ['^(-1)', '⁻¹'],
   ['^(2)', '²'],
   ['ans', 'Ans'],
