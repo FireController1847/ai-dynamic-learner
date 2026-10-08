@@ -25,11 +25,14 @@ function importedMapData(value:SimpleMapStudyGuideImport):MapGuideData{
     if(!from||!to)throw new Error('The imported Study Guide has an invalid topic connection.');
     return{id:createId(),from,to};
   });
-  const positions=layoutMapTopics([...ids.values()],connections,startTopicId);
+  const generatedPositions=layoutMapTopics([...ids.values()],connections,startTopicId);
+  const useSuggestedPositions=value.topics.every(topic=>topic.position!==undefined);
   const topics=value.topics.map(source=>{
     const id=ids.get(source.key);
     if(!id)throw new Error('The imported Study Guide has an invalid topic.');
-    const position=positions.get(id)??{x:0,y:0};
+    const position=useSuggestedPositions&&source.position
+      ?{x:source.position[0],y:source.position[1]}
+      :generatedPositions.get(id)??{x:0,y:0};
     return{
       id,title:source.title,x:position.x,y:position.y,
       guide:{sections:source.sections.map(section=>{
