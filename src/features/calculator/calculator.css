@@ -152,7 +152,7 @@
 .calculator-mathprint-fraction.is-editable .calculator-mathprint-placeholder {
   cursor: text;
 }
-.calculator-current-entry.is-insert-armed .calculator-entry-caret {
+.calculator-current-entry:not(.is-overwrite-mode) .calculator-entry-caret {
   background: var(--brand);
 }
 .calculator-entry-token.is-overwrite-cursor {
