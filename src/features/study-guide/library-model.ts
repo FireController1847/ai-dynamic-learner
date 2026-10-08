@@ -5,7 +5,7 @@ import { isRecord } from '../../core/validation.ts';
 export type StudyGuideMode = 'list' | 'map';
 export interface GuideSection { id: string; title: string; bullets: string[] }
 export interface ListGuideData { sections: GuideSection[] }
-export interface MapTopic { id: string; title: string; x: number; y: number; guide: ListGuideData }
+export interface MapTopic { id: string; title: string; description?: string; x: number; y: number; guide: ListGuideData }
 export interface MapConnection { id: string; from: string; to: string }
 export interface MapGuideData { topics: MapTopic[]; connections: MapConnection[]; startTopicId: string | null }
 export type GuideItem =
@@ -95,11 +95,13 @@ function mapData(value: unknown, ids: Set<string>): asserts value is MapGuideDat
   const topicIds = new Set<string>();
   for (const topic of value.topics) {
     if (!isRecord(topic) || !isValidId(topic.id) || ids.has(topic.id) ||
-        Object.keys(topic).some(key => !['id','title','x','y','guide'].includes(key)) ||
+        Object.keys(topic).some(key => !['id','title','description','x','y','guide'].includes(key)) ||
         typeof topic.x !== 'number' || !Number.isInteger(topic.x) || topic.x < 0 || topic.x > MAP_MAX_X || topic.x % MAP_GRID !== 0 ||
         typeof topic.y !== 'number' || !Number.isInteger(topic.y) || topic.y < 0 || topic.y > MAP_MAX_Y || topic.y % MAP_GRID !== 0)
       throw new Error('A Study Guide map topic is invalid.');
-    ids.add(topic.id); topicIds.add(topic.id); text(topic.title, 'Topic title'); listData(topic.guide, ids);
+    ids.add(topic.id); topicIds.add(topic.id); text(topic.title, 'Topic title');
+    if (Object.hasOwn(topic, 'description')) text(topic.description, 'Topic description');
+    listData(topic.guide, ids);
   }
 
   if (value.startTopicId !== null && (!isValidId(value.startTopicId) || !topicIds.has(value.startTopicId))) {
