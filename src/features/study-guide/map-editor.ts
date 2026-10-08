@@ -259,6 +259,21 @@ export const StudyGuideMapEditor = defineComponent({
                 }, 'Delete topic'),
               ]),
             ]),
+            h('label', { class: 'study-guide-topic-description-field' }, [
+              h('span', 'Stop description (optional)'),
+              h('textarea', {
+                value: selectedTopic.description ?? '',
+                rows: 3,
+                maxlength: MAX_TEXT_LENGTH,
+                placeholder: 'Why is this stop part of the journey? What will it introduce?',
+                'aria-label': 'Stop description (optional)',
+                onInput: (event: Event) => {
+                  const description = inputValue(event);
+                  if (description) selectedTopic.description = description;
+                  else delete selectedTopic.description;
+                },
+              }),
+            ]),
             h('section', { class: 'study-guide-connections', 'aria-labelledby': 'study-guide-connections-title' }, [
               h('div', { class: 'study-guide-connections-heading' }, [
                 h('h3', { id: 'study-guide-connections-title' }, 'Connections'),
