@@ -394,14 +394,17 @@ export const StudyGuideMapStudy = defineComponent({
               h('div', { class: 'study-guide-study-topic-heading' }, [
                 h('span', currentVisited ? 'Visited' : 'Current stop'),
                 h('h3', { ref: topicHeading, tabindex: -1 }, topic.title || 'Untitled topic'),
+                topic.description?.trim()
+                  ? h('p', { class: 'study-guide-study-topic-description' }, topic.description.trim())
+                  : null,
               ]),
               currentPoints.value.length
                 ? h('div', { class: 'study-guide-study-points' }, [
                     ...revealedContent(topic),
                     !currentVisited ? h('button', {
-                      type: 'button', class: 'card-primary-button',
+                      type: 'button', class: 'quiet-button study-guide-study-reveal',
                       onClick: revealNext,
-                    }, revealedCount.value ? 'Reveal next point' : 'Reveal first point') : null,
+                    }, revealedCount.value ? 'Reveal next point →' : 'Reveal first point →') : null,
                   ])
                 : h('p', { class: 'study-guide-study-empty-topic' }, 'This topic has no bullet points. It counts as visited when you arrive.'),
               currentVisited && !complete.value ? h('p', {
