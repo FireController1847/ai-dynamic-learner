@@ -33,7 +33,7 @@ export class CalculatorModel {
   angleMode: AngleMode = 'DEG';
   lastAnswer = 0;
   justEvaluated = false;
-  insertArmed = false;
+  overwriteMode = false;
   decimalPlaces: DecimalPlaces;
   displayMode: 'decimal' | 'fraction' = 'decimal';
   private displayValue = 0;
@@ -109,11 +109,11 @@ export class CalculatorModel {
     return true;
   }
 
-  armInsert() {
+  toggleOverwriteMode() {
     if (this.justEvaluated) return;
     this.recoverError();
     this.dismissHistory();
-    this.insertArmed = true;
+    this.overwriteMode = !this.overwriteMode;
   }
 
   setCursor(position: number) {
@@ -121,7 +121,6 @@ export class CalculatorModel {
     this.recoverError();
     this.dismissHistory();
     this.cursor = normaliseMathPrintCursor(this.expression, position);
-    this.insertArmed = false;
   }
 
   moveHorizontal(direction: 'left' | 'right') {
@@ -129,7 +128,6 @@ export class CalculatorModel {
     this.recoverError();
     this.dismissHistory();
     this.cursor = moveMathPrintCursor(this.expression, this.cursor, direction);
-    this.insertArmed = false;
   }
 
   private prepareValue() {
@@ -142,8 +140,10 @@ export class CalculatorModel {
     }
   }
 
-  private insert(text: string) {
-    const overwrite = this.insertArmed ? null : overwriteRangeAtCursor(this.expression, this.cursor);
+  private insert(text: string, forceInsert = false) {
+    const overwrite = this.overwriteMode && !forceInsert
+      ? overwriteRangeAtCursor(this.expression, this.cursor)
+      : null;
     const replacedLength = overwrite ? overwrite.end - overwrite.start : 0;
     if (this.expression.length - replacedLength + text.length > MAX_EXPRESSION_LENGTH) return false;
 
@@ -157,7 +157,6 @@ export class CalculatorModel {
       this.cursor += text.length;
     }
 
-    this.insertArmed = false;
     this.refreshPreview();
     return true;
   }
@@ -192,7 +191,7 @@ export class CalculatorModel {
     this.expression = '';
     this.cursor = 0;
     this.historyIndex = null;
-    this.insertArmed = false;
+    this.overwriteMode = false;
     this.showValue(0);
     this.hasError = false;
     this.justEvaluated = false;
@@ -200,7 +199,6 @@ export class CalculatorModel {
 
   clearEntry() {
     this.dismissHistory();
-    this.insertArmed = false;
     this.recoverError();
     if (this.justEvaluated) {
       this.expression = '';
@@ -230,7 +228,6 @@ export class CalculatorModel {
 
   backspace() {
     this.dismissHistory();
-    this.insertArmed = false;
     this.recoverError();
     if (this.justEvaluated) {
       this.justEvaluated = false;
@@ -245,7 +242,6 @@ export class CalculatorModel {
 
   deleteForward() {
     this.dismissHistory();
-    this.insertArmed = false;
     if (this.justEvaluated) return;
     this.recoverError();
 
@@ -287,15 +283,14 @@ export class CalculatorModel {
 
     if (this.expression[this.cursor] === ',') {
       this.cursor += 1;
-      this.insertArmed = false;
+      this.overwriteMode = false;
       return;
     }
 
     const before = this.expression.slice(0, this.cursor);
     if (!endsValue(before) || before.endsWith(',')) return;
 
-    this.insertArmed = true;
-    this.insert(',');
+    this.insert(',', true);
   }
 
   inputFraction() {
@@ -304,7 +299,6 @@ export class CalculatorModel {
     if (template.source.length > MAX_EXPRESSION_LENGTH) return;
     this.expression = template.source;
     this.cursor = template.cursor;
-    this.insertArmed = false;
     this.refreshPreview();
   }
 
@@ -314,7 +308,6 @@ export class CalculatorModel {
     if (template.source.length > MAX_EXPRESSION_LENGTH) return;
     this.expression = template.source;
     this.cursor = template.cursor;
-    this.insertArmed = false;
     this.refreshPreview();
   }
 
@@ -350,13 +343,8 @@ export class CalculatorModel {
         this.insert('-');
         return;
       }
-      if (this.insertArmed) {
-        this.insert(operator);
-        return;
-      }
       this.expression = this.expression.slice(0, this.cursor - 1)
         + operator + this.expression.slice(this.cursor);
-      this.insertArmed = false;
       this.refreshPreview();
       return;
     }
@@ -466,7 +454,6 @@ export class CalculatorModel {
   }
 
   moveVertical(direction: 'up' | 'down') {
-    this.insertArmed = false;
     if (!this.justEvaluated) {
       this.recoverError();
       const moved = moveFractionCursor(this.expression, this.cursor, direction);
@@ -506,7 +493,6 @@ export class CalculatorModel {
     this.expression = entry.source;
     this.cursor = entry.source.length;
     this.historyIndex = null;
-    this.insertArmed = false;
     this.hasError = false;
     this.justEvaluated = false;
     this.refreshPreview();
