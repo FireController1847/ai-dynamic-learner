@@ -280,6 +280,24 @@ export class CalculatorModel {
     if (!currentNumber.includes('.')) this.insert('.');
   }
 
+  inputComma() {
+    this.dismissHistory();
+    this.recoverError();
+    if (this.justEvaluated) return;
+
+    if (this.expression[this.cursor] === ',') {
+      this.cursor += 1;
+      this.insertArmed = false;
+      return;
+    }
+
+    const before = this.expression.slice(0, this.cursor);
+    if (!endsValue(before) || before.endsWith(',')) return;
+
+    this.insertArmed = true;
+    this.insert(',');
+  }
+
   inputFraction() {
     this.prepareValue();
     const template = createFractionTemplate(this.expression, this.cursor);
