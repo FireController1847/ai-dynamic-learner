@@ -363,6 +363,61 @@ function collectCursorPositions(nodes: MathPrintNode[], positions: number[]) {
   }
 }
 
+
+interface StructuredExit {
+  source: string;
+  cursor: number;
+}
+
+function collectStructuredExitNodes(
+  nodes: MathPrintNode[],
+  cursor: number,
+  matches: Array<Extract<MathPrintNode, { kind: 'power' | 'sqrt' }>>,
+) {
+  for (const node of nodes) {
+    if (node.kind === 'text' || node.kind === 'fraction') {
+      if (node.kind === 'fraction') {
+        collectStructuredExitNodes(node.numerator, cursor, matches);
+        collectStructuredExitNodes(node.denominator, cursor, matches);
+      }
+      continue;
+    }
+
+    if (cursor === node.contentEnd && node.contentStart < node.contentEnd) matches.push(node);
+    collectStructuredExitNodes(node.content, cursor, matches);
+  }
+}
+
+export function exitMathPrintStructure(source: string, cursor: number): StructuredExit | null {
+  const matches: Array<Extract<MathPrintNode, { kind: 'power' | 'sqrt' }>> = [];
+  collectStructuredExitNodes(parseMathPrint(source), cursor, matches);
+  const node = matches.sort((left, right) =>
+    (left.end - left.start) - (right.end - right.start))[0];
+
+  if (!node) return null;
+
+  if (node.end > node.contentEnd) {
+    return { source, cursor: node.end };
+  }
+
+  if (node.kind === 'sqrt') {
+    const next = source.slice(0, node.end) + ')' + source.slice(node.end);
+    return { source: next, cursor: node.end + 1 };
+  }
+
+  if (source[node.start + 1] === '(') {
+    const next = source.slice(0, node.end) + ')' + source.slice(node.end);
+    return { source: next, cursor: node.end + 1 };
+  }
+
+  const next = source.slice(0, node.contentStart)
+    + '('
+    + source.slice(node.contentStart, node.contentEnd)
+    + ')'
+    + source.slice(node.contentEnd);
+  return { source: next, cursor: node.contentEnd + 2 };
+}
+
 export function mathPrintCursorPositions(source: string) {
   const positions = [0, source.length];
   collectCursorPositions(parseMathPrint(source), positions);
