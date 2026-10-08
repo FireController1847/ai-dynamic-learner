@@ -387,20 +387,49 @@ function parseMapImport(value: unknown): SimpleMapStudyGuideImport {
   const keys = new Set<string>();
   const topics = value.topics.map((topic, topicIndex): SimpleMapStudyGuideImportTopic => {
     if (!isRecord(topic) ||
-        Object.keys(topic).some((key) => !['key', 'title', 'sections'].includes(key)) ||
+        Object.keys(topic).some((key) => !['key', 'title', 'position', 'sections'].includes(key)) ||
         typeof topic.key !== 'string' || !topic.key.trim() || topic.key.trim().length > MAX_TEXT_LENGTH ||
-        typeof topic.title !== 'string' || !topic.title.trim() || topic.title.trim().length > MAX_TEXT_LENGTH) {
-      throw new Error(`Topic ${topicIndex + 1} is empty, too long, or invalid.`);
+        typeof topic.title !== 'string' || !topic.title.trim() || topic.title.trim().length > MAX_TEXT_LENGTH ||
+        (Object.hasOwn(topic, 'position') && (
+          !Array.isArray(topic.position) || topic.position.length !== 2 ||
+          !topic.position.every(value => typeof value === 'number' && Number.isInteger(value)) ||
+          topic.position[0] < 0 || topic.position[0] > MAP_MAX_X || topic.position[0] % MAP_GRID !== 0 ||
+          topic.position[1] < 0 || topic.position[1] > MAP_MAX_Y || topic.position[1] % MAP_GRID !== 0
+        ))) {
+      throw new Error(`Topic ${topicIndex + 1} is empty, too long, or has an invalid map position.`);
     }
     const key = topic.key.trim();
     if (keys.has(key)) throw new Error(`Topic key "${key}" is duplicated.`);
     keys.add(key);
+    const position = Array.isArray(topic.position)
+      ? [topic.position[0] as number, topic.position[1] as number] as const
+      : undefined;
     return {
       key,
       title: topic.title.trim(),
+      position,
       sections: parseImportSections(topic.sections, { count: 0 }, `Topic ${topicIndex + 1}`),
     };
   });
+
+  const positionedTopics = topics.filter(topic => topic.position !== undefined);
+  if (positionedTopics.length !== 0 && positionedTopics.length !== topics.length) {
+    throw new Error('Map-mode AI positions must be provided for every topic or omitted for every topic.');
+  }
+  for (let firstIndex = 0; firstIndex < positionedTopics.length; firstIndex += 1) {
+    const first = positionedTopics[firstIndex];
+    if (!first?.position) continue;
+    for (let secondIndex = firstIndex + 1; secondIndex < positionedTopics.length; secondIndex += 1) {
+      const second = positionedTopics[secondIndex];
+      if (!second?.position) continue;
+      const overlaps =
+        first.position[0] < second.position[0] + MAP_TOPIC_WIDTH &&
+        first.position[0] + MAP_TOPIC_WIDTH > second.position[0] &&
+        first.position[1] < second.position[1] + MAP_TOPIC_HEIGHT &&
+        first.position[1] + MAP_TOPIC_HEIGHT > second.position[1];
+      if (overlaps) throw new Error(`Map topics "${first.title}" and "${second.title}" overlap.`);
+    }
+  }
 
   const startTopic = value.startTopic.trim();
   if (!keys.has(startTopic)) throw new Error('The starting topic does not match a topic key.');
