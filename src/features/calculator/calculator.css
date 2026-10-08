@@ -431,6 +431,29 @@
   transform: scale(0.98);
 }
 .calculator-key--function { background: var(--surface-workspace); font-weight: 500; }
+.calculator-fraction-template-key {
+  display: grid;
+  place-items: center;
+}
+.calculator-fraction-template-icon {
+  display: inline-grid;
+  grid-template-rows: 0.58em 1px 0.58em;
+  align-items: center;
+  justify-items: center;
+  width: 1.15em;
+  height: 1.35em;
+}
+.calculator-fraction-template-box {
+  width: 0.52em;
+  height: 0.44em;
+  border: 1px solid currentColor;
+  border-radius: 1px;
+}
+.calculator-fraction-template-bar {
+  width: 100%;
+  border-top: 1px solid currentColor;
+}
+
 .calculator-key--operator {
   color: var(--brand-text);
   background: var(--brand-tint);
