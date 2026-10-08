@@ -245,7 +245,7 @@ export const tipsCatalog: TipsCatalog = {
   'knowledge-check': knowledgeCheckTips,
 
   'index-cards': {
-    version: 6,
+    version: 7,
     sections: [
       {
         id: 'library',
@@ -354,7 +354,7 @@ export const tipsCatalog: TipsCatalog = {
       {
         id: 'fill-in-the-blanks',
         title: 'Fill in the Blanks',
-        description: 'Learn how to make and review fill-in-the-blank cards.',
+        description: 'Learn how to make, review, and view fill-in-the-blank cards.',
         when: '.fill-blank-set',
         prepare: 'fill-blank',
         steps: [
@@ -380,17 +380,25 @@ export const tipsCatalog: TipsCatalog = {
             placement: 'bottom',
           },
           {
-            title: 'Start a review',
-            body: 'Review lets you practice the missing words.',
+            title: 'Review or view',
+            body: 'Review tests the missing words. View shows the completed answers as you browse.',
             target: '.card-review-button',
-            targetLabel: 'Review button',
+            targetLabel: 'Review or view button',
             placement: 'bottom',
             nextAction: { prepare: 'enable-review', click: '.card-review-button' },
           },
           {
+            title: 'Choose a session',
+            body: 'Use Review to practice, or View when you just want the answers visible.',
+            target: '.fill-blank-session-mode-choices',
+            targetLabel: 'Session mode',
+            placement: 'right',
+            blockTarget: true,
+          },
+          {
             title: 'Choose the card order',
-            body: 'Study from first to last, last to first, or mix the cards up.',
-            target: '.review-setup .review-choices',
+            body: 'Go first to last, last to first, or mix the cards up.',
+            target: '.fill-blank-review-order-choices',
             targetLabel: 'Card order',
             placement: 'right',
             blockTarget: true,
