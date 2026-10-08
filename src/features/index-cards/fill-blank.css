@@ -209,6 +209,18 @@
   pointer-events: none;
 }
 
+.fill-blank-view-answer {
+  display: inline-block;
+  min-width: 4ch;
+  padding: 0 0.18em;
+  border-bottom: 1px solid color-mix(in srgb, var(--paper-ink) 70%, transparent);
+  color: var(--paper-ink);
+  font-weight: 600;
+  line-height: calc(var(--rule-spacing) - 0.8cqw);
+  text-align: center;
+  vertical-align: baseline;
+}
+
 /* Review back after Verify. The entire card flips here; individual answers
    then settle in with a short secondary reveal. */
 .fill-blank-results {
@@ -415,6 +427,10 @@
     minmax(96px, 0.8fr)
     minmax(0, 1fr);
   width: min(100%, 620px);
+}
+.fill-blank-view-controls {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: min(100%, 360px);
 }
 .fill-blank-verify-button:disabled { cursor: not-allowed; }
 
