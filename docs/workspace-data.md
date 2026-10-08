@@ -37,7 +37,7 @@ Each feature owns its saved model and runtime validation:
 - Index Cards: `src/features/index-cards/tree-model.ts` / card and display models. The optional app-level `settings.answerStrictness` applies to every Fill-in-the-Blanks set. Older workspaces without it behave as level 4. Workspaces saved during the short-lived per-set strictness implementation are migrated on load: one consistent legacy value is promoted to the app setting; conflicting legacy values fall back to level 4, and the obsolete per-set fields are removed.
 - Word Search: `src/features/word-search/library-model.ts` plus puzzle/game/display models.
 - Crossword: `src/features/crossword/library-model.ts` plus puzzle/game/display models.
-- Guide: `src/features/guide/library-model.ts`.
+- Guide: `src/features/guide/library-model.ts`. Each Map guide can optionally save a resumable adventure with the current stop, opened/completed/skipped stop IDs, per-stop revealed bullet counts, and paused status. This progress travels with workspace backups; old maps without it start fresh.
 - Review: `src/features/knowledge-check/library-model.ts`, question/options models. Statement items persist in the same ordered question array but carry only display text and are non-scorable. Review set options persist independent Short Answer and Fill-in-the-Blanks strictness levels, shared Quiz/Test assessment defaults (question order, optional question limit, and multiple-choice choice shuffling), Quiz attempts per question, and Test-only time/result settings. Older saved sets normalize missing strictness fields to level 4 and other missing fields to compatible defaults.
 
 Do not duplicate feature schemas in `workspace-format.ts`; it coordinates them.
@@ -56,7 +56,9 @@ Do not duplicate feature schemas in `workspace-format.ts`; it coordinates them.
 
 Backups contain authored user content and saved feature preferences. They do **not** automatically contain transient/browser UI state.
 
-Examples normally outside backups: active dialog, current review/study progress, temporary shuffle order, current side of a card, selected navigation tab, theme preference, Tips completion, panel widths/collapse state, and other local UI conveniences.
+Examples normally outside backups: active dialog, most review/study progress, temporary shuffle order, current side of a card, selected navigation tab, theme preference, Tips completion, panel widths/collapse state, and other local UI conveniences.
+
+**Exception:** Guide Map adventures intentionally save the session in the guide model, including opened stops and reveal counts. The camera animation and whether the floating notes panel is currently visible remain transient; reopening a saved adventure shows the map without replaying its cinematic introduction.
 
 If a feature intentionally persists a presentation option as part of its model (for example paper/display settings), that option travels with backups and must be validated.
 
