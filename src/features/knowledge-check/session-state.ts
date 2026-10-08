@@ -12,6 +12,7 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
   const options = computed(() => settings);
   const position = ref(0);
   const responses = ref<Record<string, QuestionResponse>>({});
+  const feedbackResponses = ref<Record<string, QuestionResponse>>({});
   const checked = ref(new Set<string>());
   const revealed = ref(new Set<string>());
   const hints = ref(new Set<string>());
@@ -55,6 +56,7 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
   }
   function start() {
     responses.value = {}; checked.value = new Set(); revealed.value = new Set(); hints.value = new Set(); attempts.value = {};
+    feedbackResponses.value = {};
     studyChecks.value = 0; studyCorrectChecks.value = 0;
     questions.value = prepareSessionQuestions(availableQuestions.value, settings);
     position.value = 0; submitted.value = false; expired.value = false; ended.value = false; clearCelebration();
@@ -64,6 +66,7 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
   function end() {
     started.value = false; submitted.value = false; deadline.value = null; ended.value = true; clearCelebration();
     responses.value = {}; checked.value = new Set(); revealed.value = new Set(); hints.value = new Set(); attempts.value = {};
+    feedbackResponses.value = {};
     studyChecks.value = 0; studyCorrectChecks.value = 0; questions.value = []; position.value = 0;
   }
   function leave(): boolean {
@@ -80,6 +83,8 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
     if (!questionScored(question)) return;
     const response = responses.value[question.id];
     if (question.type !== 'fill-in-the-blanks' && !questionResponseAnswered(question, response)) return;
+    // Retry feedback describes the last check, never a newly selected answer.
+    feedbackResponses.value[question.id] = Array.isArray(response) ? [...response] : response ?? '';
     const nextAttempt = (attempts.value[question.id] ?? 0) + 1;
     attempts.value[question.id] = nextAttempt;
     const correct = answerCorrect(
@@ -87,6 +92,12 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
       response ?? (question.type === 'fill-in-the-blanks' ? [] : ''),
       answerStrictnessForQuestion(settings, question.type),
     );
+
+    clearCelebration();
+    if (correct && mode !== 'test') {
+      celebrating.value = question.id;
+      celebrationTimer = window.setTimeout(clearCelebration, 900);
+    }
 
     if (mode === 'study') {
       checked.value.add(question.id);
@@ -97,10 +108,6 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
 
     if (mode === 'quiz') {
       if (correct || nextAttempt >= options.value.quizAttempts) checked.value.add(question.id);
-      if (correct) {
-        clearCelebration(); celebrating.value = question.id;
-        celebrationTimer = window.setTimeout(clearCelebration, 900);
-      }
       return;
     }
 
@@ -128,7 +135,7 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
   onMounted(attach); onActivated(attach);
   onDeactivated(() => { if (active.value || (mode === 'study' && started.value)) end(); detach(); });
   onBeforeUnmount(detach);
-  return { questions, questionCount, options, position, responses, checked, revealed, hints, submitted, started, expired, ended,
+  return { questions, questionCount, options, position, responses, feedbackResponses, checked, revealed, hints, submitted, started, expired, ended,
     active, answered, resolved, score, scoredCount, remaining, celebrating, attempts, studyChecks, studyCorrectChecks,
     start, end, check, submit, leave, tick };
 }
