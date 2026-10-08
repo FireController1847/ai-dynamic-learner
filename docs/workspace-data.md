@@ -70,3 +70,11 @@ Workspace replacement revalidates a copy, clears protected-storage mode only aft
 Download emits the current validated workspace as JSON with a timestamped filename. Upload reads a file, validates it, and replaces the entire workspace only after user review/confirmation in the UI.
 
 Keep import/export behavior centralized; features should not invent separate whole-workspace formats.
+
+## Backup reminder tracking
+
+`dynamic-learner.backup-reminders.v1` is a separate browser-local preference/history key, not part of the workspace contract or the JSON export. It stores the last initiated backup-download time, a SHA-256 fingerprint of the exported authored workspace, the start of the current unbacked-activity period, snooze state, and reminder frequency (default 3 days; off is allowed).
+
+The reminder service compares the current workspace with that exported snapshot. Navigation selection alone does not count as new authored work. An imported workspace is always flagged as needing a fresh backup even if its content matches an earlier download. The browser cannot confirm that a generated download was saved, so UI wording describes downloads as *started*, never as verified backups. Empty workspaces do not trigger reminders.
+
+First-time work starts the clock when saved content appears; already-stored work without metadata gets a quiet immediate reminder instead of a fabricated export date. Urgency rises after 1, 2, and 3 configured intervals. Dismissal lasts the current session; snoozing lasts 24 hours without changing backup history. Study/review sessions suppress the banner; the overdue header indicator remains available.
