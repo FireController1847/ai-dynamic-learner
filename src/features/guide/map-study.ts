@@ -530,7 +530,7 @@ export const GuideMapStudy = defineComponent({
               }, 'Resume adventure'),
               h('button', {
                 type: 'button', class: 'quiet-button', disabled: studyProblem.value !== null,
-                onClick: () => start(true),
+                onClick: () => start(false),
               }, 'Start over'),
             ] : h('button', {
               type: 'button', class: 'card-primary-button', disabled: studyProblem.value !== null,
