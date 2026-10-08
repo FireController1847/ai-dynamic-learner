@@ -36,6 +36,7 @@ const DISPLAY_TOKENS: readonly [string, string][] = [
   ['acos(', 'cos⁻¹('],
   ['atan(', 'tan⁻¹('],
   ['sqrt(', '√('],
+  ['round(', 'round('],
   ['^(-1)', '⁻¹'],
   ['^(2)', '²'],
   ['ans', 'Ans'],
@@ -172,6 +173,29 @@ export function createFractionTemplate(source: string, cursor: number) {
   return {
     source: `${before}${template}${after}`,
     cursor: before.length + 5,
+  };
+}
+
+
+export function createRoundTemplate(source: string, cursor: number) {
+  const before = source.slice(0, cursor);
+  const after = source.slice(cursor);
+
+  if (endsValue(before)) {
+    const start = lastOperandStart(before);
+    const value = before.slice(start);
+    const prefix = before.slice(0, start);
+    const template = `round(${value},)`;
+    return {
+      source: `${prefix}${template}${after}`,
+      cursor: prefix.length + 7 + value.length,
+    };
+  }
+
+  const template = 'round(,)';
+  return {
+    source: `${before}${template}${after}`,
+    cursor: before.length + 6,
   };
 }
 
