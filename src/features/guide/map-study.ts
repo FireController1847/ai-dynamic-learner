@@ -3,7 +3,7 @@ import { GuideTypeIcon } from './guide-type-icon.ts';
 import { connectedTopicIds, mapStudyProblem, startTopic, topicById } from './map-graph.ts';
 import {
   MAP_HEIGHT, MAP_TOPIC_HEIGHT, MAP_TOPIC_WIDTH, MAP_WIDTH, type GuideSection,
-  type MapGuideData, type MapTopic,
+  type MapGuideData, type MapStudySession, type MapTopic,
 } from './library-model.ts';
 
 interface StudyPoint {
@@ -19,12 +19,15 @@ export const GuideMapStudy = defineComponent({
   },
   emits: { edit: () => true },
   setup(props, { emit }) {
-    const started = ref(false);
-    const visited = ref(new Set<string>());
-    const skipped = ref(new Set<string>());
-    const currentId = ref<string | null>(null);
+    const saved = props.data.session;
+    const started = ref(Boolean(saved && !saved.paused && topicById(props.data, saved.currentId)));
+    const visited = ref(new Set(saved?.visitedIds ?? []));
+    const opened = ref(new Set(saved?.openedIds ?? []));
+    const skipped = ref(new Set(saved?.skippedIds ?? []));
+    const revealedByTopic = ref<Record<string, number>>({ ...saved?.revealed });
+    const currentId = ref<string | null>(saved?.currentId ?? null);
     const path = ref<string[]>([]);
-    const revealedCount = ref(0);
+    const revealedCount = ref(currentId.value ? revealedByTopic.value[currentId.value] ?? 0 : 0);
     const travelling = ref(false);
     const arriving = ref(false);
     const focused = ref(false);
@@ -60,6 +63,49 @@ export const GuideMapStudy = defineComponent({
     const available = computed(() => currentId.value
       ? connectedTopicIds(props.data, currentId.value).filter(id => !visited.value.has(id))
       : []);
+
+    function pathTo(targetId: string): string[] {
+      const first = startTopic(props.data);
+      if (!first) return [targetId];
+      const reached = new Set<string>([first.id]);
+      const queue: { id: string; route: string[] }[] = [{ id: first.id, route: [first.id] }];
+      while (queue.length) {
+        const next = queue.shift();
+        if (!next) break;
+        if (next.id === targetId) return next.route;
+        for (const neighbor of connectedTopicIds(props.data, next.id)) {
+          if (reached.has(neighbor)) continue;
+          reached.add(neighbor);
+          queue.push({ id: neighbor, route: [...next.route, neighbor] });
+        }
+      }
+      return [targetId];
+    }
+    path.value = currentId.value ? pathTo(currentId.value) : [];
+
+    function isUnlocked(id: string): boolean {
+      if (!started.value || arriving.value || travelling.value) return false;
+      return id === currentId.value || opened.value.has(id) ||
+        connectedTopicIds(props.data, id).some(neighbor => visited.value.has(neighbor));
+    }
+
+    function saveSession() {
+      const id = currentId.value;
+      if (!id) return;
+      const session: MapStudySession = {
+        paused: !started.value,
+        currentId: id,
+        openedIds: [...opened.value],
+        visitedIds: [...visited.value],
+        skippedIds: [...skipped.value],
+        revealed: { ...revealedByTopic.value },
+      };
+      props.data.session = session;
+    }
+
+    if (started.value && currentId.value) {
+      nextTick(() => { if (currentId.value) focusTopic(currentId.value, 'instant'); });
+    }
 
     function clearTimers() {
       for (const timer of timers) window.clearTimeout(timer);
@@ -118,7 +164,7 @@ export const GuideMapStudy = defineComponent({
     function prepareCurrent() {
       const topic = current.value;
       if (!topic) return;
-      revealedCount.value = 0;
+      revealedCount.value = revealedByTopic.value[topic.id] ?? 0;
       topicPanel.value?.scrollTo({ top: 0, behavior: 'instant' });
       if (!points(topic).length) markVisited(topic.id);
     }
@@ -154,25 +200,27 @@ export const GuideMapStudy = defineComponent({
       });
     }
 
-    function start() {
+    function start(animate = true) {
       clearTimers();
       if (studyProblem.value) return;
       const first = startTopic(props.data);
       if (!first) return;
       visited.value = new Set();
+      opened.value = new Set();
       skipped.value = new Set();
+      revealedByTopic.value = {};
       focused.value = false;
-      arriving.value = true;
+      arriving.value = animate && !reducedMotion.matches;
       currentId.value = first.id;
       path.value = [first.id];
       revealedCount.value = 0;
       started.value = true;
       prepareCurrent();
+      saveSession();
 
-      if (reducedMotion.matches) {
+      if (!animate || reducedMotion.matches) {
         focusTopic(first.id, 'instant');
         arriving.value = false;
-        showTopic();
         return;
       }
 
@@ -183,7 +231,6 @@ export const GuideMapStudy = defineComponent({
         const height = container.clientHeight;
         if (!width || !height) {
           arriving.value = false;
-          showTopic();
           return;
         }
 
@@ -210,7 +257,6 @@ export const GuideMapStudy = defineComponent({
             later(() => {
               arrivalHighlight.value = false;
               arriving.value = false;
-              showTopic();
             }, 680);
           }, 1050);
         }, 260);
@@ -220,14 +266,23 @@ export const GuideMapStudy = defineComponent({
     function restart() {
       focused.value = false;
       started.value = false;
-      nextTick(start);
+      nextTick(() => start(false));
+    }
+
+    function resumeAdventure() {
+      clearTimers();
+      started.value = true;
+      focused.value = false;
+      arriving.value = false;
+      saveSession();
+      if (currentId.value) focusTopic(currentId.value, 'instant');
     }
 
     function returnToOverview() {
       clearTimers();
       focused.value = false;
       started.value = false;
-      currentId.value = null;
+      saveSession();
     }
 
     function revealNext() {
@@ -235,7 +290,9 @@ export const GuideMapStudy = defineComponent({
       if (!topic || visited.value.has(topic.id)) return;
       const count = currentPoints.value.length;
       if (revealedCount.value < count) revealedCount.value += 1;
+      revealedByTopic.value = { ...revealedByTopic.value, [topic.id]: revealedCount.value };
       if (revealedCount.value >= count) markVisited(topic.id);
+      saveSession();
       followRevealedPoint();
     }
 
@@ -244,6 +301,7 @@ export const GuideMapStudy = defineComponent({
       if (!topic || visited.value.has(topic.id) || travelling.value || arriving.value) return;
       skipped.value = new Set([...skipped.value, topic.id]);
       markVisited(topic.id);
+      saveSession();
       // Skipping isn't revealing the remaining content. Carry on automatically
       // when there is one route, or backtrack from a finished dead-end.
       if (available.value.length === 1) {
@@ -254,7 +312,7 @@ export const GuideMapStudy = defineComponent({
       // Multiple routes still require the learner to choose one.
     }
 
-    function travelTo(targetId: string, after: () => void) {
+    function travelTo(targetId: string, after: () => void, openAfter = false) {
       if (travelling.value) return;
       const duration = reducedMotion.matches ? 0 : 520;
       focused.value = false;
@@ -266,16 +324,42 @@ export const GuideMapStudy = defineComponent({
         travelTargetId.value = null;
         travelling.value = false;
         after();
-        showTopic();
+        if (openAfter) showTopic();
       }, duration);
     }
 
     function visitNext(targetId: string) {
       if (!currentId.value || !available.value.includes(targetId)) return;
       travelTo(targetId, () => {
-        path.value = [...path.value, targetId];
+        path.value = pathTo(targetId);
         prepareCurrent();
+        saveSession();
       });
+    }
+
+    function openStop(id: string) {
+      if (!isUnlocked(id)) return;
+      if (id === currentId.value) {
+        opened.value = new Set([...opened.value, id]);
+        prepareCurrent();
+        saveSession();
+        showTopic();
+        return;
+      }
+      travelTo(id, () => {
+        path.value = pathTo(id);
+        opened.value = new Set([...opened.value, id]);
+        prepareCurrent();
+        saveSession();
+      }, true);
+    }
+
+    function resumeSkippedStop() {
+      const id = currentId.value;
+      if (!id || !skipped.value.has(id)) return;
+      skipped.value = new Set([...skipped.value].filter(entry => entry !== id));
+      visited.value = new Set([...visited.value].filter(entry => entry !== id));
+      saveSession();
     }
 
     function backtrackPlan(): { route: string[]; ancestorId: string } | null {
@@ -312,11 +396,8 @@ export const GuideMapStudy = defineComponent({
           // A single remaining trail is not a choice: follow it without
           // reopening the already studied stop or requiring another click.
           const onward = connectedTopicIds(props.data, ancestorId).filter(id => !visited.value.has(id));
-          if (onward.length === 1) {
-            visitNext(onward[0]);
-          } else {
-            showTopic();
-          }
+          saveSession();
+          if (onward.length === 1) visitNext(onward[0]);
           return;
         }
         travelTargetId.value = targetId;
