@@ -67,9 +67,9 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'index-cards', label: 'Index Cards', path: '/index-cards/', icon: 'cards',
     group: 'applications',
-    version: '1.16.0',
+    version: '1.17.0',
     image: 'assets/app-icons/index-cards.png',
-    description: 'Create flash cards or fill-in-the-blanks sets and review them at your own pace.',
+    description: 'Create flash cards or fill-in-the-blanks sets, then review or view them at your own pace.',
   },
   {
     id: 'word-search', label: 'Word Search', path: '/word-search/', icon: 'word-search',
