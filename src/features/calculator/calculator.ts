@@ -1,7 +1,8 @@
 import { Icon } from '../../components/icon.ts';
 import { clearPreference, readNumberPreference, writeNumberPreference } from '../../core/ui-preferences.ts';
-import { formatExpression } from './expression-engine.ts';
-import { parseMathPrint, type MathPrintNode } from './calculator-entry.ts';
+import {
+  parseMathPrint, tokenizeMathPrintText, type MathPrintNode,
+} from './calculator-entry.ts';
 import { CalculatorSettings } from './calculator-settings.ts';
 import { CalculatorModel, type HistoryEntry, type Operator } from './calculator-model.ts';
 import type { DecimalPlaces, FractionParts } from './calculator-format.ts';
@@ -45,10 +46,12 @@ export const Calculator = defineComponent({
       else if (event.key === '%') calculator.inputPostfix('%');
       else if (event.key === 'Enter' || event.key === '=') calculator.equals();
       else if (event.key === 'Backspace') calculator.backspace();
-      else if (event.key === 'Delete') calculator.clearEntry();
+      else if (event.key === 'Delete') calculator.deleteForward();
+      else if (event.key === 'Insert') calculator.armInsert();
       else if (event.key === 'Escape') calculator.clearAll();
       else if (event.key === 'ArrowUp') calculator.moveVertical('up');
       else if (event.key === 'ArrowDown') calculator.moveVertical('down');
+      else if (event.key === 'ArrowLeft') calculator.moveLeft();
       else if (event.key === 'ArrowRight') calculator.moveRight();
       else return;
       event.preventDefault();
@@ -119,16 +122,35 @@ export const Calculator = defineComponent({
       h('span', { class: 'calculator-fraction-denominator' }, String(fraction.denominator)),
     ]);
 
+    function placeCursorFromToken(event: PointerEvent, start: number, end: number) {
+      event.preventDefault();
+      event.stopPropagation();
+      const target = event.currentTarget as HTMLElement;
+      const bounds = target.getBoundingClientRect();
+      calculator.setCursor(event.clientX < bounds.left + bounds.width / 2 ? start : end);
+    }
+
     function renderTextNode(node: Extract<MathPrintNode, { kind: 'text' }>, cursor: number | null) {
-      if (cursor === null || cursor < node.start || cursor > node.end) {
-        return h('span', formatExpression(node.text));
+      const tokens = tokenizeMathPrintText(node.text, node.start);
+      const children: VNode[] = [];
+
+      for (const token of tokens) {
+        if (cursor === token.start) {
+          children.push(h('span', { class: 'calculator-entry-caret', 'aria-hidden': 'true' }));
+        }
+        children.push(h('span', {
+          class: 'calculator-entry-token',
+          'data-cursor-start': token.start,
+          'data-cursor-end': token.end,
+          onPointerdown: (event: PointerEvent) => placeCursorFromToken(event, token.start, token.end),
+        }, token.display));
       }
-      const offset = cursor - node.start;
-      return h('span', [
-        formatExpression(node.text.slice(0, offset)),
-        h('span', { class: 'calculator-entry-caret', 'aria-hidden': 'true' }),
-        formatExpression(node.text.slice(offset)),
-      ]);
+
+      if (cursor === node.end) {
+        children.push(h('span', { class: 'calculator-entry-caret', 'aria-hidden': 'true' }));
+      }
+
+      return h('span', { class: 'calculator-entry-text' }, children);
     }
 
     function renderMathNodes(nodes: MathPrintNode[], cursor: number | null): VNode[] {
@@ -143,18 +165,67 @@ export const Calculator = defineComponent({
         const numerator = renderMathNodes(node.numerator, numeratorActive ? cursor : null);
         const denominator = renderMathNodes(node.denominator, denominatorActive ? cursor : null);
 
-        return h('span', { class: 'calculator-mathprint-fraction' }, [
+        const fraction = h('span', {
+          class: 'calculator-mathprint-fraction',
+          onPointerdown: (event: PointerEvent) => {
+            if (event.target !== event.currentTarget) return;
+            calculator.setCursor(node.denominatorStart);
+          },
+        }, [
           h('span', {
             class: ['calculator-mathprint-part', { 'is-active': numeratorActive }],
+            onPointerdown: (event: PointerEvent) => {
+              if (event.target !== event.currentTarget) return;
+              event.preventDefault();
+              event.stopPropagation();
+              calculator.setCursor(node.numeratorEnd);
+            },
           }, numerator.length ? numerator : numeratorActive
             ? [h('span', { class: 'calculator-entry-caret', 'aria-hidden': 'true' })]
-            : [h('span', { class: 'calculator-mathprint-placeholder' }, '□')]),
-          h('span', { class: 'calculator-mathprint-bar' }),
+            : [h('span', {
+                class: 'calculator-mathprint-placeholder',
+                onPointerdown: (event: PointerEvent) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  calculator.setCursor(node.numeratorStart);
+                },
+              }, '□')]),
+          h('span', {
+            class: 'calculator-mathprint-bar',
+            onPointerdown: (event: PointerEvent) => {
+              event.preventDefault();
+              event.stopPropagation();
+              calculator.setCursor(node.denominatorStart);
+            },
+          }),
           h('span', {
             class: ['calculator-mathprint-part', { 'is-active': denominatorActive }],
+            onPointerdown: (event: PointerEvent) => {
+              if (event.target !== event.currentTarget) return;
+              event.preventDefault();
+              event.stopPropagation();
+              calculator.setCursor(node.denominatorEnd);
+            },
           }, denominator.length ? denominator : denominatorActive
             ? [h('span', { class: 'calculator-entry-caret', 'aria-hidden': 'true' })]
-            : [h('span', { class: 'calculator-mathprint-placeholder' }, '□')]),
+            : [h('span', {
+                class: 'calculator-mathprint-placeholder',
+                onPointerdown: (event: PointerEvent) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  calculator.setCursor(node.denominatorStart);
+                },
+              }, '□')]),
+        ]);
+
+        return h('span', { class: 'calculator-mathprint-fraction-wrap' }, [
+          cursor === node.start
+            ? h('span', { class: 'calculator-entry-caret', 'aria-hidden': 'true' })
+            : null,
+          fraction,
+          cursor === node.end
+            ? h('span', { class: 'calculator-entry-caret', 'aria-hidden': 'true' })
+            : null,
         ]);
       });
     }
@@ -225,25 +296,67 @@ export const Calculator = defineComponent({
                         : `Calculator result: ${calculator.display}`,
                     }, displayFraction ? stackedFraction(displayFraction) : calculator.display)]
                   : [h('div', {
-                      class: 'calculator-current-entry',
+                      class: ['calculator-current-entry', {
+                        'is-insert-armed': calculator.insertArmed,
+                      }],
                       'aria-label': calculator.formattedExpression() || 'Empty calculator entry',
+                      onPointerdown: (event: PointerEvent) => {
+                        if (event.target === event.currentTarget) calculator.setCursor(calculator.expression.length);
+                      },
                     }, renderMathPrint(calculator.expression, calculator.cursor))]),
-              h('div', { class: 'calculator-history-arrows', 'aria-label': 'Calculator history navigation' }, [
+              h('div', { class: 'calculator-history-arrows', 'aria-label': 'Calculator cursor and history navigation' }, [
                 h('button', {
                   type: 'button',
-                  class: 'calculator-history-arrow',
+                  class: 'calculator-history-arrow calculator-arrow-up',
                   title: 'Move up in a fraction template or browse older calculations',
                   'aria-label': 'Up',
                   onClick: () => calculator.moveVertical('up'),
                 }, '▲'),
                 h('button', {
                   type: 'button',
-                  class: 'calculator-history-arrow',
+                  class: 'calculator-history-arrow calculator-arrow-left',
+                  title: 'Move cursor left',
+                  'aria-label': 'Left',
+                  onClick: () => calculator.moveLeft(),
+                }, '◀'),
+                h('button', {
+                  type: 'button',
+                  class: 'calculator-history-arrow calculator-arrow-right',
+                  title: 'Move cursor right',
+                  'aria-label': 'Right',
+                  onClick: () => calculator.moveRight(),
+                }, '▶'),
+                h('button', {
+                  type: 'button',
+                  class: 'calculator-history-arrow calculator-arrow-down',
                   title: 'Move down in a fraction template or browse newer calculations',
                   'aria-label': 'Down',
                   onClick: () => calculator.moveVertical('down'),
                 }, '▼'),
               ]),
+            ]),
+            h('div', { class: 'calculator-edit-row', 'aria-label': 'Calculator editing controls' }, [
+              h('button', {
+                type: 'button',
+                class: ['calculator-edit-key', { 'is-active': calculator.insertArmed }],
+                'aria-pressed': calculator.insertArmed,
+                title: calculator.insertArmed
+                  ? 'INS armed: the next character will be inserted at the cursor.'
+                  : 'INS: Insert the next character at the cursor instead of replacing.',
+                onClick: () => calculator.armInsert(),
+              }, 'INS'),
+              h('button', {
+                type: 'button',
+                class: 'calculator-edit-key',
+                title: 'BCK: Delete the item immediately left of the cursor.',
+                onClick: () => calculator.backspace(),
+              }, 'BCK'),
+              h('button', {
+                type: 'button',
+                class: 'calculator-edit-key',
+                title: 'DEL: Delete the item at the cursor.',
+                onClick: () => calculator.deleteForward(),
+              }, 'DEL'),
             ]),
             h('div', { class: 'calculator-mode-row' }, [
               h('button', {
@@ -346,10 +459,10 @@ export const Calculator = defineComponent({
             h('div', { class: 'calculator-keypad calculator-basic-keypad', 'aria-label': 'Calculator keypad' }, [
               key('n/d', () => calculator.inputFraction(), 'function', 'Fraction template',
                 'n/d: Enter a stacked MathPrint fraction. Use ▼ to move to the denominator.'),
+              key('%', () => calculator.inputPostfix('%'), 'function', 'Percent'),
               key('CE', () => calculator.clearEntry(), 'function', 'Clear entry'),
               key('C', () => calculator.clearAll(), 'function', 'Clear expression',
                 'C: Clear the entry and reset fraction result mode to decimal.'),
-              key('⌫', () => calculator.backspace(), 'function', 'Backspace'),
 
               key('7', () => calculator.inputDigit('7')),
               key('8', () => calculator.inputDigit('8')),
@@ -375,7 +488,7 @@ export const Calculator = defineComponent({
                 calculator.isBrowsingHistory() ? 'Recall selected history expression' : 'Evaluate expression'),
             ]),
             h('p', { class: 'calculator-keyboard-hint' },
-              'Keyboard: 0–9, operators, parentheses, !, %, Enter, Backspace, Delete, Escape, and arrow keys.'),
+              'Keyboard: 0–9, operators, parentheses, !, %, Enter, Insert, Backspace, Delete, Escape, and arrow keys.'),
           ]),
           h('aside', { class: 'calculator-history', 'aria-labelledby': 'calculator-history-title' }, [
             h('div', { class: 'calculator-history-header' }, [
