@@ -126,6 +126,7 @@ export class CalculatorModel {
     if (this.hasError) {
       this.expression = '';
       this.cursor = 0;
+      this.insertArmed = false;
       this.showValue(0);
       this.hasError = false;
       this.justEvaluated = false;
@@ -324,8 +325,13 @@ export class CalculatorModel {
         this.insert('-');
         return;
       }
+      if (this.insertArmed) {
+        this.insert(operator);
+        return;
+      }
       this.expression = this.expression.slice(0, this.cursor - 1)
         + operator + this.expression.slice(this.cursor);
+      this.insertArmed = false;
       this.refreshPreview();
       return;
     }
@@ -432,6 +438,7 @@ export class CalculatorModel {
   }
 
   moveVertical(direction: 'up' | 'down') {
+    this.insertArmed = false;
     if (!this.justEvaluated && !this.hasError) {
       const moved = moveFractionCursor(this.expression, this.cursor, direction);
       if (moved !== null) {
