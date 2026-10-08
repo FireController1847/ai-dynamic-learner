@@ -422,6 +422,15 @@ export const StudyGuideMapStudy = defineComponent({
             'aria-label': 'Current topic study points',
             'aria-live': 'polite',
           }, [
+            h('div', { class: 'study-guide-study-close-row' }, [
+              h('button', {
+                type: 'button',
+                class: 'icon-button study-guide-study-close',
+                title: 'View map',
+                'aria-label': 'Close topic points and view map',
+                onClick: () => { focused.value = false; },
+              }, '×'),
+            ]),
             h('div', { class: 'study-guide-study-topic-inner' }, [
             travelling.value ? h('div', { class: 'study-guide-study-travelling' }, [
               h('strong', 'Following the path…'),
