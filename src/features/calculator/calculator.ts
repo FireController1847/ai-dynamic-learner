@@ -296,7 +296,13 @@ export const Calculator = defineComponent({
                   'is-fraction': Boolean(displayFraction),
                 }],
               }, calculator.hasError
-                ? [h('span', { class: 'calculator-error-text' }, calculator.display)]
+                ? [h('button', {
+                    type: 'button',
+                    class: 'calculator-error-text',
+                    title: 'Return to the expression and edit it',
+                    'aria-label': `${calculator.display}. Return to the expression and edit it`,
+                    onClick: () => calculator.recoverError(),
+                  }, calculator.display)]
                 : calculator.justEvaluated
                   ? [h('output', {
                       class: 'calculator-current-result',
