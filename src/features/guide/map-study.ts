@@ -562,7 +562,11 @@ export const GuideMapStudy = defineComponent({
                 else if (currentId.value) openStop(currentId.value);
               },
             }, focused.value ? 'View map' : 'View points'),
-            h('button', { type: 'button', class: 'quiet-button', onClick: returnToOverview }, 'End studying'),
+            h('button', {
+              type: 'button', class: 'quiet-button',
+              title: 'Leave the adventure. Your progress is saved.',
+              onClick: returnToOverview,
+            }, 'Save & exit'),
           ]),
         ]),
         h('div', { class: 'guide-study-layout' }, [
