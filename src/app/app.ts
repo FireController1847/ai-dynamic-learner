@@ -51,6 +51,8 @@ const App = defineComponent({
     const statisticsButton = ref<HTMLButtonElement | null>(null);
     const backupMessage = ref('');
     const backupBusy = ref(false);
+    const recoveryBusy = ref(false);
+    const confirmReload = ref(false);
     async function backUpNow() {
       if (backupBusy.value) return;
       backupBusy.value = true;
@@ -64,6 +66,37 @@ const App = defineComponent({
         backupBusy.value = false;
       }
     }
+    async function saveUnsavedDraft() {
+      if (recoveryBusy.value) return;
+      recoveryBusy.value = true;
+      backupMessage.value = '';
+      try {
+        await workspace.downloadLocalDraft();
+        backupMessage.value = 'Unsaved workspace draft download started. Confirm the file was saved before reloading.';
+      } catch (error) {
+        backupMessage.value = error instanceof Error ? error.message : 'The draft could not be downloaded.';
+      } finally {
+        recoveryBusy.value = false;
+      }
+    }
+
+    async function discardAndReload() {
+      if (recoveryBusy.value) return;
+      recoveryBusy.value = true;
+      backupMessage.value = '';
+      try {
+        await workspace.reloadSavedWorkspace();
+        if (!workspace.needsReconcile.value) {
+          confirmReload.value = false;
+          backupMessage.value = 'Loaded the latest saved workspace from IndexedDB.';
+        }
+      } catch (error) {
+        backupMessage.value = error instanceof Error ? error.message : 'Saved data could not be loaded.';
+      } finally {
+        recoveryBusy.value = false;
+      }
+    }
+
     const sidebarOpen = ref(false);
     const menuButton = ref<HTMLButtonElement | null>(null);
     const tipsExperience = ref<TipsHandle | null>(null);
@@ -191,6 +224,31 @@ const App = defineComponent({
       workspace.storageProblem.value ? h('p', {
         class: 'workspace-storage-warning', role: 'alert',
       }, workspace.storageProblem.value) : null,
+      workspace.needsReconcile.value ? h('section', {
+        class: 'workspace-storage-warning', role: 'alert', 'aria-label': 'Unsaved workspace changes',
+      }, [
+        h('p', 'Some changes in this tab may not be saved. Download your on-screen draft before replacing it with stored data.'),
+        h('div', { class: 'workspace-actions' }, [
+          h('button', {
+            type: 'button', class: 'quiet-button', disabled: recoveryBusy.value,
+            onClick: () => { void saveUnsavedDraft(); },
+          }, recoveryBusy.value ? 'Working…' : 'Download unsaved draft'),
+          h('button', {
+            type: 'button', class: 'quiet-button', disabled: recoveryBusy.value,
+            onClick: () => {
+              if (!confirmReload.value) confirmReload.value = true;
+              else void discardAndReload();
+            },
+          }, confirmReload.value ? 'Discard draft and reload' : 'Reload saved workspace'),
+          confirmReload.value ? h('button', {
+            type: 'button', class: 'quiet-button', disabled: recoveryBusy.value,
+            onClick: () => { confirmReload.value = false; },
+          }, 'Cancel') : null,
+        ]),
+        confirmReload.value
+          ? h('p', 'Reloading discards unsaved changes in this tab. Make sure your draft has been downloaded.')
+          : null,
+      ]) : null,
       workspace.backup.problem.value ? h('p', {
         class: 'workspace-storage-warning', role: 'alert',
       }, workspace.backup.problem.value) : null,
