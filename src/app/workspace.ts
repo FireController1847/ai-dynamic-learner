@@ -107,7 +107,11 @@ export function useWorkspace() {
         queueRemoteRefresh();
         return;
       }
-      if (result.replaced && document.activeElement instanceof HTMLElement &&
+      // A restore may have happened between reading the change journal and
+      // loading the snapshot. Trust the validated snapshot's identity, not
+      // an earlier notification, when deciding whether to replace the view.
+      const replaced = snapshot.workspaceId !== api.workspaceIdentity();
+      if (replaced && document.activeElement instanceof HTMLElement &&
           document.activeElement.matches('input,textarea,[contenteditable="true"]')) {
         needsReconcile.value = true;
         remotePending = true;
@@ -117,8 +121,8 @@ export function useWorkspace() {
       observer?.stop();
       // Revisions and content were captured together. Adopt only once the
       // local editor has been verified clean and its observer stopped.
-      if (result.replaced) api.adoptWorkspaceSnapshot(snapshot.workspaceId);
-      if (result.replaced) {
+      if (replaced) api.adoptWorkspaceSnapshot(snapshot.workspaceId);
+      if (replaced) {
         state.value = snapshot.workspace;
         revision.value += 1;
       } else {
