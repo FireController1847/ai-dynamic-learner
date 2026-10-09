@@ -29,6 +29,7 @@ export function useWorkspace() {
   const api = new WorkspaceDataApi();
   let observer: Awaited<ReturnType<typeof observeWorkspace>> | null = null;
   let unsubscribeRemote: (() => void) | null = null;
+  let remoteRefreshTimer: number | undefined;
   let refreshing = false;
   let lastSequence = 0;
   let disposed = false;
@@ -91,7 +92,15 @@ export function useWorkspace() {
       catch { /* The Data API already handled source storage failures. */ }
       backup.workspaceLoaded(meta.authoredRevision, populated(loaded), legacyPresent);
       ready.value = true;
-      unsubscribeRemote = api.subscribeRemote(() => { void syncOtherTabs(); });
+      unsubscribeRemote = api.subscribeRemote(() => {
+        // Rebuild once after a burst of edits in another tab, rather than
+        // reconstructing every document for each remote keystroke.
+        if (remoteRefreshTimer !== undefined) clearTimeout(remoteRefreshTimer);
+        remoteRefreshTimer = window.setTimeout(() => {
+          remoteRefreshTimer = undefined;
+          void syncOtherTabs();
+        }, 650);
+      });
     } catch (error) {
       storageProblem.value = 'Your workspace could not be loaded safely: ' + errorMessage(error) +
         ' The previous localStorage copy has not been erased. Do not clear this site’s data.';
@@ -158,6 +167,7 @@ export function useWorkspace() {
   document.addEventListener('visibilitychange', onVisibility);
   onBeforeUnmount(() => {
     disposed = true;
+    if (remoteRefreshTimer !== undefined) clearTimeout(remoteRefreshTimer);
     observer?.stop();
     unsubscribeRemote?.();
     api.close();
