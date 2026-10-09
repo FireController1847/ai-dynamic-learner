@@ -424,7 +424,7 @@ export class WorkspaceDataApi {
    * transaction. Otherwise an edit from another tab between two reads might
    * cause us to incorrectly mark newer content as backed up.
    */
-  async exportSnapshot(): Promise<{ json: string; authoredRevision: number }> {
+  async exportSnapshot(): Promise<{ json: string; workspaceId: string; authoredRevision: number }> {
     const workspaceId = this.active();
     const snapshots = await this.store.snapshot<IndexedRow>(
       [...WORKSPACE_RECORD_STORES, 'control', 'workspaceMeta'], workspaceId);
@@ -441,7 +441,7 @@ export class WorkspaceDataApi {
         (snapshots.get(store) ?? []) as T[],
     };
     const workspace = await hydrateWorkspace(reader, workspaceId);
-    return { json: JSON.stringify(workspace), authoredRevision: meta.authoredRevision };
+    return { json: JSON.stringify(workspace), workspaceId, authoredRevision: meta.authoredRevision };
   }
 
   async exportWorkspaceJson(): Promise<string> {
