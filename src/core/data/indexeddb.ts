@@ -104,9 +104,16 @@ export function openDataDatabase(): Promise<IDBDatabase> {
         }
       }
     };
-    request.onblocked = () => reject(new DataApiError('upgrade-blocked', 'Close other Dynamic Learner tabs to finish the database upgrade.'));
+    let blocked = false;
+    request.onblocked = () => {
+      blocked = true;
+      reject(new DataApiError('upgrade-blocked', 'Close other Dynamic Learner tabs to finish the database upgrade.'));
+    };
     request.onerror = () => reject(request.error ?? new DataApiError('unavailable', 'Unable to open IndexedDB.'));
-    request.onsuccess = () => resolve(request.result);
+    request.onsuccess = () => {
+      if (blocked) request.result.close(); // Avoid leaking an open handle after a rejected upgrade.
+      else resolve(request.result);
+    };
   });
 }
 
