@@ -113,14 +113,9 @@ export function createEntryCommands(api: Pick<WorkspaceDataApi, 'read' | 'list' 
         if (row.store === 'collections') return row.value.parentId === id;
         return row.value.id === id || row.value.setId === id;
       });
-      const contentIds = rows.filter(row => row.store === 'indexCards' || row.store === 'reviewQuestions')
-        .map(row => String(row.value.id));
-      if (contentIds.length) {
-        const childStore = app === 'index-cards' ? 'indexCards' : 'reviewQuestions';
-        const existing = await api.list<IndexedRow>(childStore,
-          row => typeof row.id === 'string' && contentIds.includes(row.id));
-        if (existing.length) throw new DataApiError('conflict', 'One of the imported entry IDs already exists.');
-      }
+      // Child IDs are unique within a set, as enforced by feature validators.
+      // Across unrelated sets they are intentionally scoped by the composite
+      // [workspaceId, setId, id] key; reusing one is not a conflict.
       const nextSiblings = [...siblings];
       nextSiblings.splice(position, 0, id);
       const operations: DataOperation[] = [
