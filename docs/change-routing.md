@@ -13,9 +13,8 @@ Use this as a starting-file index, not a feature specification. Follow imports o
 | Tips content | `src/app/tips-content.ts` and feature-specific Tips adapters |
 | Tips engine/UI | `packages/tips/` |
 | Shared buttons/dialogs | `src/styles/base.css`, `src/components/use-dialog.ts`, `popup-dialog.ts` |
-| Shared AI prompt/import tabs, handoff, and animation | `src/components/ai-prompt-exchange.ts`, `src/styles/ai-prompt-exchange.css` |
+| Guide AI prompt/import tabs, handoff, and animation | `src/components/ai-prompt-exchange.ts`, `src/styles/ai-prompt-exchange.css` |
 | Shared GFM rendering / typography | `src/components/markdown-renderer.ts`, `markdown-content.ts`, `src/styles/markdown-content.css`; Notebook keeps its heading/outline adapter |
-| Shared AI category discovery/history | `src/components/ai-category-picker.ts`, `src/core/ai-study-categories.ts`, `ai-category-history.ts`, `ai-json.ts` |
 | Answer strictness control | `src/components/answer-strictness-field.ts` |
 | Delete confirmation | `src/components/delete-confirmation.ts`, `src/styles/delete-confirmation.css` |
 | Shared tree behavior | `src/core/tree.ts` plus the calling feature model |
@@ -37,15 +36,12 @@ Use this as a starting-file index, not a feature specification. Follow imports o
 | Todo task behavior | `task-editor.ts`, `task-model.ts`, `todo-list.css` |
 | Index Cards composition/library | `src/features/index-cards/index-cards.ts`, `directory-tree.ts`, `tree-model.ts` |
 | Flash Cards | `card-set.ts`, `card-paper.ts`, `card-model.ts` |
-| Index Cards AI category flow | `ai-category-step.ts` plus the shared AI category picker/history |
-| Index Cards AI/JSON card creation | `ai-import.ts`, `ai-import-format.ts`, `fill-blank-ai-format.ts`, `ai-import.css`, `set-builder.ts`, `index-cards.ts`, `directory-tree.ts` |
 | Fill in the Blanks | `fill-blank-set.ts`, `fill-blank-paper.ts`, `fill-blank-editor.ts`, `fill-blank-model.ts` |
 | Index Cards review | `review-setup.ts`, `review-result.ts`, `card-set.ts`, `fill-blank-set.ts` |
 | Index Cards list / panel sizing | `card-list.ts`, `card-list.css`, `index-cards.ts`, `index-cards.css` |
 | Index Cards settings | `display-options.ts`, `display-settings.ts`, `tree-model.ts`, `display-settings.css` |
 | Word Search library/setup | `src/features/word-search/word-search.ts`, `library.ts`, `library-model.ts`, `puzzle-form.ts` |
 | Word Search generation/play | `puzzle-generator.ts`, `game-model.ts`, `puzzle-game.ts`, `puzzle-grid.ts` |
-| Word Search / Crossword category AI | `src/features/puzzle-ai/puzzle-ai.ts`, `puzzle-ai-format.ts`, `puzzle-ai.css`, plus their respective library toolbars |
 | Word Search appearance | `display-options.ts`, `display-settings.ts`, `grid-sizing.ts`, `word-outline.ts` |
 | Crossword library/setup | `src/features/crossword/crossword.ts`, `library.ts`, `library-model.ts`, `puzzle-form.ts` |
 | Crossword generation/play | `puzzle-generator.ts`, `puzzle-model.ts`, `game-model.ts`, `puzzle-game.ts`, `puzzle-grid.ts` |
@@ -60,5 +56,4 @@ Use this as a starting-file index, not a feature specification. Follow imports o
 | Review Markdown context | `context-editor.ts`, `question-model.ts`, `knowledge-session.ts`, shared Markdown components |
 | Review Study/Quiz/Test | `knowledge-set.ts`, `session-setup.ts`, `session-settings.ts`, `session-intro.ts`, `session-state.ts`, `knowledge-session.ts`, `review-motion.ts`, `review-motion.css` |
 | Review imports | `import-knowledge-set.ts`, `index-cards-import-picker.ts`, `fill-blank-import-resolution.ts`, `import-index-cards.ts` |
-| Review AI creation / question mix | `ai-creation.ts`, `ai-creation.css`, `ai-import-format.ts`, `ai-question-mix.ts`, `knowledge-check.ts`, `library.ts` |
 | Responsive/touch overrides | `src/styles/mobile.css` plus the owning feature stylesheet |
