@@ -17,7 +17,7 @@ import { tipsCatalog } from './tips-content.ts';
 import { Icon } from '../components/icon.ts';
 import { AppIcon } from './app-icon.ts';
 
-import { defineComponent, type PropType, computed, createApp, h, KeepAlive, nextTick, ref } from 'vue';
+import { defineComponent, type PropType, computed, createApp, h, KeepAlive, nextTick, ref, watch } from 'vue';
 
 initializeTheme();
 
@@ -53,6 +53,10 @@ const App = defineComponent({
     const backupBusy = ref(false);
     const recoveryBusy = ref(false);
     const confirmReload = ref(false);
+    // Never reuse a previous confirmation for a later, unrelated conflict.
+    watch(() => workspace.needsReconcile.value, needed => {
+      if (!needed) confirmReload.value = false;
+    });
     async function backUpNow() {
       if (backupBusy.value) return;
       backupBusy.value = true;
