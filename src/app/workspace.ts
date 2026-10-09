@@ -104,7 +104,17 @@ export function useWorkspace() {
         queueRemoteRefresh();
         return;
       }
+      if (result.replaced && document.activeElement instanceof HTMLElement &&
+          document.activeElement.matches('input,textarea,[contenteditable="true"]')) {
+        needsReconcile.value = true;
+        remotePending = true;
+        storageProblem.value = 'Another tab restored a different workspace. Download your current draft before loading it.';
+        return;
+      }
       observer?.stop();
+      // Revisions and content were captured together. Adopt only once the
+      // local editor has been verified clean and its observer stopped.
+      if (result.replaced) api.adoptWorkspaceSnapshot(snapshot.workspaceId);
       if (result.replaced) {
         state.value = snapshot.workspace;
         revision.value += 1;
@@ -232,6 +242,7 @@ export function useWorkspace() {
       // Drain it before reading the saved state or installing a new observer.
       await previousObserver?.settle();
       const snapshot = await api.initialSnapshot(true);
+      api.adoptWorkspaceSnapshot(snapshot.workspaceId);
       state.value = snapshot.workspace;
       revision.value++;
       lastSequence = snapshot.revisions.commitSequence;
