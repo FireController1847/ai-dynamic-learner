@@ -161,7 +161,9 @@ export function createTodoCommands(api: Pick<WorkspaceDataApi, 'read' | 'list' |
       if (members.revision !== input.expectedCollectionRevision) fail('conflict', 'The task order changed in another tab.');
       const row = await api.read<IndexedRow>('todoTasks', [ws(), input.listId, input.sectionId, input.id]);
       if (!row || row.revision !== input.expectedRevision ||
-          !members.value.children.includes(input.id)) fail('conflict', 'The task changed in another tab.');
+          !members.value.children.includes(input.id)) {
+        throw new DataApiError('conflict', 'The task changed in another tab.');
+      }
       const remaining = members.value.children.filter(id => id !== input.id);
       return api.commit([
         put('collections', [ws(), 'todo-list:tasks', key],
@@ -327,7 +329,7 @@ export function createTodoCommands(api: Pick<WorkspaceDataApi, 'read' | 'list' |
           const taskCollection = await collection('todo-list:tasks', taskKey);
           for (const taskId of taskCollection.value.children) {
             const task = await api.read<IndexedRow>('todoTasks', [workspaceId, input.id, sectionId, taskId]);
-            if (!task) fail('validation', 'A Todo List task is missing.');
+            if (!task) throw new DataApiError('validation', 'A Todo List task is missing.');
             operations.push(del('todoTasks', [workspaceId, input.id, sectionId, taskId], task.revision));
           }
           operations.push(
