@@ -149,10 +149,12 @@ export const Calculator = defineComponent({
     const clearKey = () => h('button', {
       type: 'button',
       class: ['calculator-key', 'calculator-key--function', 'calculator-clear-key'],
-      'aria-label': 'Clear calculator',
-      title: 'C: Clear the current entry. Press C twice in a row to clear history.',
+      'aria-label': clearHistoryArmed.value ? 'Clear history' : 'Clear calculator',
+      title: clearHistoryArmed.value
+        ? 'CL: Clear calculation history.'
+        : 'C: Clear the current entry. Press C twice in a row to clear history.',
       onClick: pressClear,
-    }, 'C');
+    }, clearHistoryArmed.value ? 'CL' : 'C');
 
     const stackedFraction = (fraction: FractionParts, compact = false) => h('span', {
       class: ['calculator-stacked-fraction', { 'is-compact': compact }],
