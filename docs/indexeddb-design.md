@@ -1,10 +1,10 @@
 # IndexedDB persistence — physical design proposal
 
-> **Status: implementation in progress.** The schema, transaction provider, staging/activation, and model converter are implemented in `src/core/data/indexeddb.ts` and `src/app/data/`; the application has **not yet switched its live workspace from localStorage to IndexedDB**. Some high-level operations and cross-tab editor UI remain future work. Read with [Unified Data API](data-api-design.md). The feature validators remain the source of truth.
+> **Status: IndexedDB cutover integrated on this draft PR, not yet browser-validated.** The schema, transaction provider, staging/activation, model mapping and compatibility observer are implemented. `src/app/workspace.ts` now uses IndexedDB as the live persistence provider. Direct feature command integration and polished same-record conflict resolution UX remain future work. Read with [Unified Data API](data-api-design.md).
 
 ## Selected storage model
 
-Use one same-origin IndexedDB database named `dynamic-learner-data`, starting at **IDB schema version 1**. Store **individual semantic records** rather than one JSON workspace or one giant item blob. No IndexedDB structure is exposed to feature UI.
+Use one same-origin IndexedDB database named `dynamic-learner-data`, currently at **IDB schema version 2**. Store **individual semantic records** rather than one JSON workspace or one giant item blob. No IndexedDB structure is exposed to feature UI.
 
 - IndexedDB is the local working database. Persistent data is stored using structured clone, not `JSON.stringify`.
 - Every record is scoped by a stable local `workspaceId`. This permits safe staged restore and, later, separate local/account workspaces without key collisions.
@@ -16,10 +16,11 @@ Use one same-origin IndexedDB database named `dynamic-learner-data`, starting at
 ### Logical layout
 
 ```text
-dynamic-learner-data (IDB schema v1)
+dynamic-learner-data (IDB schema v2)
   control                 (active workspace pointer; local-wide state)
   workspaceMeta           (workspace identity; revisions and cutover marker)
   libraryNodes            (ordered groups/leaf metadata across library apps)
+  collections             (parent/sibling order revisions across tabs)
   featureState            (saved feature-level display/settings/selection)
   notebookDocuments       (one document body/data per record)
   todoLists               (one list's metadata per record)
