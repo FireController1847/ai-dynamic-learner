@@ -114,6 +114,7 @@ export class IndexedDataStore {
   private database: IDBDatabase | null = null;
   private channel: BroadcastChannel | null = null;
   private readonly listeners = new Set<(change: DataChange) => void>();
+  private readonly remoteListeners = new Set<(change: DataChange) => void>();
   private closed = false;
 
   async open(): Promise<void> {
@@ -150,8 +151,14 @@ export class IndexedDataStore {
     return () => this.listeners.delete(listener);
   }
 
+  subscribeRemote(listener: (change: DataChange) => void): () => void {
+    this.remoteListeners.add(listener);
+    return () => this.remoteListeners.delete(listener);
+  }
+
   private publish(change: DataChange, broadcast: boolean) {
     for (const listener of this.listeners) listener(change);
+    if (!broadcast) for (const listener of this.remoteListeners) listener(change);
     if (broadcast) this.channel?.postMessage(change);
   }
 
@@ -347,5 +354,6 @@ export class IndexedDataStore {
     this.database?.close();
     this.database = null;
     this.listeners.clear();
+    this.remoteListeners.clear();
   }
 }
