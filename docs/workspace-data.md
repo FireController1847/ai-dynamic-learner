@@ -73,6 +73,10 @@ If a feature intentionally persists a presentation option as part of its model (
 
 ## Storage failure behavior
 
+When a record save or cross-tab reconciliation fails, the app preserves the visible in-memory workspace and offers **Download unsaved draft**. The user can then explicitly confirm **Discard draft and reload** to load the latest committed IndexedDB workspace; it never silently merges or overwrites simultaneous edits to the same record. Another tab upgrading the IndexedDB schema produces a warning advising a draft download and page reload.
+
+
+
 If the legacy JSON cannot be parsed or IndexedDB fails to initialize, editing is blocked; the existing saved copy is never erased. A valid user-confirmed upload may recover a failed initialization by staging and activating a verified replacement without deleting the previous copy. After cutover, individual record writes commit through IndexedDB transactions. A failed save retains the in-memory user work and exposes an emergency backup path, without claiming it was saved to IndexedDB.
 
 Backup replacement validates the entire workspace first, stages and independently verifies all records under a new workspace ID, then atomically switches the active-workspace pointer. Stale tabs' writes against the previous workspace are rejected.
