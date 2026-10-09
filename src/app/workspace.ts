@@ -82,6 +82,18 @@ export function useWorkspace() {
     }
   }
 
+  function watchRemoteChanges() {
+    if (unsubscribeRemote) return;
+    unsubscribeRemote = api.subscribeRemote(() => {
+      // Debounce a burst of remote edits rather than reloading per keystroke.
+      if (remoteRefreshTimer !== undefined) clearTimeout(remoteRefreshTimer);
+      remoteRefreshTimer = window.setTimeout(() => {
+        remoteRefreshTimer = undefined;
+        void syncOtherTabs();
+      }, 650);
+    });
+  }
+
   async function initialize() {
     try {
       await api.ready();
@@ -96,15 +108,7 @@ export function useWorkspace() {
       catch { /* The Data API already handled source storage failures. */ }
       backup.workspaceLoaded(snapshot.revisions.authoredRevision, populated(snapshot.workspace), legacyPresent);
       ready.value = true;
-      unsubscribeRemote = api.subscribeRemote(() => {
-        // Rebuild once after a burst of edits in another tab, rather than
-        // reconstructing every document for each remote keystroke.
-        if (remoteRefreshTimer !== undefined) clearTimeout(remoteRefreshTimer);
-        remoteRefreshTimer = window.setTimeout(() => {
-          remoteRefreshTimer = undefined;
-          void syncOtherTabs();
-        }, 650);
-      });
+      watchRemoteChanges();
     } catch (error) {
       storageProblem.value = 'Your workspace could not be loaded safely: ' + errorMessage(error) +
         ' The previous localStorage copy has not been erased. Do not clear this site’s data.';
@@ -119,7 +123,7 @@ export function useWorkspace() {
   }
 
   async function replaceWorkspace(value: unknown): Promise<void> {
-    if (!ready.value) throw new Error('The workspace database is not ready.');
+    if (!ready.value && !storageProblem.value) throw new Error('The workspace is still loading.');
     const replacement = validateWorkspaceValue(value);
     ready.value = false; // Unmount editors before asynchronous staging begins.
     let replacedSafely = false;
@@ -136,6 +140,7 @@ export function useWorkspace() {
       backup.workspaceRestored(snapshot.revisions.authoredRevision, populated(snapshot.workspace));
       storageProblem.value = '';
       replacedSafely = true;
+      watchRemoteChanges();
     } finally {
       // If staging/activation or watcher setup fails, do not reopen an
       // editable workspace that may no longer be attached to persistence.
