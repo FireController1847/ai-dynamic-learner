@@ -35,7 +35,7 @@ export async function observeWorkspace(
   state: Ref<Workspace>,
   api: WorkspaceDataApi,
   problem: (message: string) => void,
-  updated: (authoredRevision: number) => void,
+  updated: (authoredRevision: number, commitSequence: number) => void,
   initialRecords: Awaited<ReturnType<WorkspaceDataApi['initialSnapshot']>>['records'],
 ): Promise<{ flush(): Promise<void>; stop(): void }> {
   const workspaceId = api.workspaceIdentity();
@@ -141,7 +141,7 @@ export async function observeWorkspace(
         });
       }
     }
-    updated(commit.authoredRevision);
+    updated(commit.authoredRevision, commit.commitSequence);
   };
 
   function put(store: DataStoreName, key: IDBValidKey, value: Plain): RowPut {
