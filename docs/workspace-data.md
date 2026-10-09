@@ -23,7 +23,7 @@ interface Workspace {
 }
 ```
 
-The legacy browser-local key `dynamic-learner.workspace.v1` is used only as a read-only migration/recovery source. IndexedDB `dynamic-learner-data` is authoritative after successful staged migration. The 32 MiB cap applies to uploaded JSON backups, **not** to ongoing IndexedDB writes; compressed backup support and a revised import limit remain separate work.
+The legacy browser-local key `dynamic-learner.workspace.v1` is used only as a read-only migration/recovery source. IndexedDB `dynamic-learner-data` is authoritative after successful staged migration. The 128 MiB cap applies to uploaded JSON backups, **not** to ongoing IndexedDB writes; compressed backup support and a revised import limit remain separate work.
 
 Uploaded or persisted data is untrusted: parse as `unknown`, reject unsupported top-level fields/version/format, then delegate to feature validators before replacing live state. Invalid replacement never partially mutates the current workspace.
 
