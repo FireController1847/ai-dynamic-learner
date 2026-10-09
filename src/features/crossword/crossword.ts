@@ -11,6 +11,8 @@ import { useLibrarySelection } from '../../components/use-library-selection.ts';
 import { usePersistedPanelResize } from '../../components/use-persisted-panel-resize.ts';
 import { CrosswordLibrary } from './library.ts';
 import { PuzzleForm, PuzzleSummary } from './puzzle-form.ts';
+import { PuzzleAiCreation } from '../puzzle-ai/puzzle-ai.ts';
+import type { PuzzleAiResult } from '../puzzle-ai/puzzle-ai-format.ts';
 import { PuzzleGame } from './puzzle-game.ts';
 import { DisplaySettings } from './display-settings.ts';
 import { resolvedDisplayOptions } from './display-options.ts';
@@ -33,10 +35,12 @@ export const Crossword = defineComponent({
   },
   setup(props) {
     const setupTarget = ref<SetupTarget | null>(null);
+    const aiTarget = ref<SetupTarget | null>(null);
+    const aiError = ref('');
     const selectedId = useLibrarySelection({
       firstId: () => firstEntry(props.model.items)?.id ?? null,
       hasItem: (id) => findItem(props.model.items, id) !== null,
-      enabled: () => setupTarget.value === null,
+      enabled: () => setupTarget.value === null && aiTarget.value === null,
       onAutoSelect: (id) => {
         library.value?.reveal(id);
         if (libraryOverlay.value) libraryCollapsed.value = true;
@@ -79,7 +83,7 @@ export const Crossword = defineComponent({
     const selection = computed(() => findItem(props.model.items, selectedId.value));
     useStatisticsVisits('crossword', () => selection.value?.item.id ?? null, () => setupTarget.value === null);
 
-    onDeactivated(() => { settingsOpen.value = false; });
+    onDeactivated(() => { settingsOpen.value = false; aiTarget.value = null; });
 
     function updateLibraryLayout(event: MediaQueryListEvent) {
       libraryOverlay.value = event.matches;
@@ -110,11 +114,13 @@ export const Crossword = defineComponent({
 
     function selectItem(id: string | null) {
       selectedId.value = id;
+      aiTarget.value = null;
       setupTarget.value = null;
       message.value = '';
     }
 
     function openNewCrossword(target: SetupTarget) {
+      aiTarget.value = null;
       setupTarget.value = target;
       setupVersion.value += 1;
       message.value = '';
@@ -215,7 +221,42 @@ export const Crossword = defineComponent({
       ]);
     }
 
+    function openAiCreation(target: SetupTarget) {
+      setupTarget.value = null;
+      aiTarget.value = target;
+      aiError.value = '';
+      message.value = '';
+      if (libraryOverlay.value) libraryCollapsed.value = true;
+    }
+
+    function createFromAi(value: PuzzleAiResult) {
+      const target = aiTarget.value;
+      if (!target || value.kind !== 'crossword') return;
+      try {
+        const item = saveCrossword(props.model.items, target, value.title, value.puzzle);
+        selectedId.value = item.id;
+        aiTarget.value = null;
+        aiError.value = '';
+        library.value?.reveal(item.id);
+        message.value = 'Created ' + item.name + ' with AI.';
+        nextTick(() => workspaceHeading.value?.focus());
+      } catch (error) {
+        aiError.value = error instanceof Error ? error.message : String(error);
+      }
+    }
+
     function detail() {
+      if (aiTarget.value) return h('section', {
+        class: 'crossword-detail', 'aria-label': 'Crossword AI creation',
+        inert: libraryOverlay.value && !libraryCollapsed.value,
+      }, [
+        h(PuzzleAiCreation, {
+          kind: 'crossword', destination: aiTarget.value.parentName,
+          onCancel: () => { aiTarget.value = null; aiError.value = ''; },
+          onCreate: createFromAi,
+        }),
+        aiError.value ? h('p', { class: 'crossword-error', role: 'alert' }, aiError.value) : null,
+      ]);
       if (setupTarget.value) {
         const editingItem = findItem(props.model.items, setupTarget.value.itemId)?.item;
         return h('section', {
@@ -326,6 +367,7 @@ export const Crossword = defineComponent({
           onSelect: selectItem,
           onOpenItem: () => { if (libraryOverlay.value) setLibraryCollapsed(true); },
           onNewCrossword: openNewCrossword,
+          onOpenAi: openAiCreation,
         }, {
           footer: () => h('button', {
             type: 'button',
