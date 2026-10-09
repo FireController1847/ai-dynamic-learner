@@ -1,8 +1,29 @@
 .puzzle-ai-workspace { min-width: 0; }
-.puzzle-ai-options { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 12px 0; }
-.puzzle-ai-options input { width: 84px; min-height: 40px; }
-.puzzle-ai-options .study-ai-muted { width: 100%; margin: 0; }
+.puzzle-ai-setup { display: grid; gap: 20px; width: 100%; max-width: 800px; }
+.puzzle-ai-setup-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.puzzle-ai-setting { display: grid; align-content: start; gap: 8px; min-width: 0; }
+.puzzle-ai-setting > span:first-child { font-weight: 600; }
+.puzzle-ai-setting input, .puzzle-ai-setting select, .puzzle-ai-setting textarea {
+  width: 100%; min-width: 0; max-width: 100%; min-height: 40px;
+}
+.puzzle-ai-setting textarea { min-height: 84px; resize: vertical; }
+.puzzle-ai-choice-group { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.puzzle-ai-choice-group legend { width: 100%; margin-bottom: 10px; font-weight: 600; }
+.puzzle-ai-choice { display: flex; align-items: flex-start; gap: 10px; min-width: 0; min-height: 68px; padding: 12px;
+  border: 1px solid var(--control-border); border-radius: var(--radius);
+  background: var(--page-background); cursor: pointer;
+}
+.puzzle-ai-choice.is-selected { border-color: var(--brand); background: var(--brand-tint); }
+.puzzle-ai-choice:focus-within { outline: 2px solid var(--brand); outline-offset: 2px; }
+.puzzle-ai-choice input { flex: none; margin: 4px 0 0; accent-color: var(--brand); }
+.puzzle-ai-choice > span { display: grid; gap: 4px; min-width: 0; }
+.puzzle-ai-choice .study-ai-muted { display: block; }
 .puzzle-ai-preview-list { display: grid; gap: 10px; max-height: 340px; overflow: auto; padding-left: 24px; margin: 12px 0 20px; }
 .puzzle-ai-preview-list li { padding-left: 4px; }
 .puzzle-ai-preview-list strong { display: block; }
 .puzzle-ai-preview-list span { display: block; color: var(--text-secondary); white-space: pre-wrap; }
+@media (max-width: 620px) {
+  .puzzle-ai-setup-grid { grid-template-columns: minmax(0, 1fr); }
+  .puzzle-ai-choice-group { grid-template-columns: minmax(0, 1fr); }
+  .puzzle-ai-choice { min-height: 48px; }
+}
