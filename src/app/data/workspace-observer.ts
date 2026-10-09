@@ -36,10 +36,11 @@ export async function observeWorkspace(
   api: WorkspaceDataApi,
   problem: (message: string) => void,
   updated: (authoredRevision: number) => void,
+  initialRecords: Awaited<ReturnType<WorkspaceDataApi['initialSnapshot']>>['records'],
 ): Promise<{ flush(): Promise<void>; stop(): void }> {
   const workspaceId = api.workspaceIdentity();
   const known = new Map<string, KnownRow>();
-  for (const record of await api.persistedRows()) {
+  for (const record of initialRecords) {
     const value = { ...record.value };
     delete value.revision;
     const id = token(record.store, record.key);
