@@ -17,10 +17,11 @@ export const KnowledgeSession = defineComponent({
     item: { type: Object as PropType<CheckItem>, required: true },
     mode: { type: String as PropType<CheckModeId>, required: true },
     settings: { type: Object as PropType<import('./session-settings.ts').SessionSettings>, required: true },
+    statisticsEnabled: { type: Boolean, default: true },
   },
   emits: { back: () => true, build: () => true },
   setup(props, { emit }) {
-    const state = useKnowledgeSession(props.item, props.mode, props.settings);
+    const state = useKnowledgeSession(props.item, props.mode, props.settings, props.statisticsEnabled);
     const { questions, questionCount, options, position, responses, feedbackResponses, checked, revealed, hints, submitted, started, expired, ended,
       answered, resolved, score, scoredCount, remaining, celebrating, attempts, studyChecks, studyCorrectChecks,
       start, end, check, submit, tick } = state;
@@ -31,8 +32,10 @@ export const KnowledgeSession = defineComponent({
     function moveQuestion(next: number, wrap = false) {
       tick();
       if (submitted.value || next < 0 || next >= questions.value.length) return;
+      if (wrap) state.finishStudyPass();
       backward.value = next < position.value && !wrap;
       position.value = next;
+      if (wrap) state.resetStudyPass();
     }
 
     function reveal(id: string, content: ReturnType<typeof h> | null) {

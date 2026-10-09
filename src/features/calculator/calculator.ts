@@ -1,3 +1,4 @@
+import { useStatistics, useStatisticsVisits } from '../../components/statistics-context.ts';
 import { Icon } from '../../components/icon.ts';
 import { clearPreference, readNumberPreference, writeNumberPreference } from '../../core/ui-preferences.ts';
 import {
@@ -8,7 +9,7 @@ import { CalculatorModel, type HistoryEntry, type Operator } from './calculator-
 import type { DecimalPlaces, FractionParts } from './calculator-format.ts';
 
 import {
-  defineComponent, h, nextTick, onActivated, onBeforeUnmount, onDeactivated, reactive, ref,
+  defineComponent, h, nextTick, onActivated, onBeforeUnmount, onDeactivated, reactive, ref, watch,
   type VNode,
 } from 'vue';
 
@@ -24,6 +25,9 @@ export const Calculator = defineComponent({
   props: { title: { type: String, required: true } },
   setup(props) {
     const calculator = reactive(new CalculatorModel(savedDecimalPlaces()));
+    const statistics = useStatistics();
+    useStatisticsVisits('calculator', () => null, () => true, 'views', () => 'calculator');
+    watch(() => calculator.history[0], entry => { if (entry) statistics?.record('calculator', null, 'calculations'); });
     const scientificOpen = ref(false);
     const settingsOpen = ref(false);
     const clearHistoryArmed = ref(false);

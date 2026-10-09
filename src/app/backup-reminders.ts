@@ -6,7 +6,7 @@ import {
   REMINDER_INTERVALS, type BackupMetadata,
 } from './backup-reminder-policy.ts';
 
-const NOT_CONTENT = new Set(['lastSelectedDocumentId', 'lastSelectedSetId', 'lastSelectedPuzzleId', 'lastSelectedListId']);
+const NOT_CONTENT = new Set(['lastSelectedDocumentId', 'lastSelectedSetId', 'lastSelectedPuzzleId', 'lastSelectedListId', 'statistics']);
 const SNOOZE_MS = 24 * 60 * 60 * 1000;
 const FINGERPRINT_DELAY_MS = 700;
 

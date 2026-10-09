@@ -23,6 +23,7 @@ Use this as a starting-file index, not a feature specification. Follow imports o
 | Fill-in-the-blanks parsing | `src/core/fill-blank.ts` |
 | Leave warnings | `src/core/leave-guards.ts` |
 | Workspace save/load/backups | `src/app/workspace.ts`, `workspace-format.ts`, `workspace-tools.ts` |
+| Workspace / library statistics | `src/core/statistics.ts`, `src/components/statistics-context.ts`, `entry-statistics.ts`, `global-statistics.ts`, `src/styles/statistics.css`; activity events live in their owning feature/session modules |
 | Backup reminders / study suppression | `src/app/backup-reminders.ts`, `backup-reminder-policy.ts`, `backup-reminder-ui.ts`, `src/core/study-activity.ts`, `src/components/use-study-session.ts` |
 | GitHub Pages / route output | `webpack.config.mts`, `build/site-config.mts`, `build/page-metadata.mts`, `.github/workflows/deploy-pages.yml` |
 | Calculator | `src/features/calculator/` |

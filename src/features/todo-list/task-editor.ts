@@ -2,6 +2,8 @@ import { computed, defineComponent, h, nextTick, onBeforeUnmount, onDeactivated,
 import { todoDisplayStyles, type TodoDisplay } from './display-options.ts';
 import { DeleteConfirmation } from '../../components/delete-confirmation.ts';
 import { inputValue } from '../../core/dom.ts';
+import { useStatistics } from '../../components/statistics-context.ts';
+import { EntryStatistics } from '../../components/entry-statistics.ts';
 import type { SectionSort, TodoListRecord } from './library-model.ts';
 import { MAX_SECTIONS, MAX_TASKS, MAX_TASK_TEXT, isMeaningfulTask, isTodoListComplete, newSection, newTask, orderedTasks, sectionPriority, priorityNumber, formatPriority, type TodoSection, type TodoTask } from './task-model.ts';
 
@@ -39,6 +41,7 @@ export const TodoTaskEditor = defineComponent({
     const count = computed(() => sections.value.reduce((sum, section) => sum + section.tasks.filter(task => !task.skipped && (task.text.trim() || task.done)).length, 0));
     const storedCount = computed(() => sections.value.reduce((sum, section) => sum + section.tasks.length, 0));
     const completed = computed(() => sections.value.reduce((sum, section) => sum + section.tasks.filter(task => task.done && !task.skipped).length, 0));
+    const statistics = useStatistics();
     const skipped = computed(() => sections.value.reduce((sum, section) => sum + section.tasks.filter(task => task.skipped).length, 0));
     const root = ref<HTMLElement | null>(null);
     const fields = new Map<string, HTMLTextAreaElement>();
@@ -254,6 +257,7 @@ export const TodoTaskEditor = defineComponent({
               if (event.target instanceof HTMLInputElement) {
                 task.done = event.target.checked;
                 if (task.done) {
+                  statistics?.record('todo-list', props.item.id, 'tasksCompleted');
                   task.skipped = false; celebrateTask(task.id);
                   message.value = 'Task completed. Nice work.';
                 } else {
@@ -382,6 +386,7 @@ export const TodoTaskEditor = defineComponent({
         h('p', {
           class: ['todo-editor-progress', { 'is-complete': listComplete.value, 'is-celebrating': celebratingList.value }],
         }, `${completed.value}/${count.value} done${skipped.value ? ` · ${skipped.value} skipped` : ''}`),
+        h(EntryStatistics, { app: 'todo-list', id: props.item.id }),
         undo.value ? h('button', { type: 'button', class: 'quiet-button', disabled: storedCount.value >= MAX_TASKS, onClick: restoreTask }, 'Undo remove') : null,
         h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('clone') }, 'Clone list'),
       ]),

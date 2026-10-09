@@ -6,10 +6,12 @@ import type { IndexCards } from '../features/index-cards/tree-model.ts';
 import type { WordSearch } from '../features/word-search/library-model.ts';
 import type { Crossword } from '../features/crossword/library-model.ts';
 import { validateTodoLists, type TodoLists } from '../features/todo-list/library-model.ts';
+import { emptyStatistics, validateStatistics, type StatisticsData } from '../core/statistics.ts';
 
 export interface Workspace {
   format: 'dynamic-learner';
   version: 1;
+  statistics?: StatisticsData;
   features: { notebook: Notebook; 'todo-list': TodoLists; 'index-cards': IndexCards; 'word-search': WordSearch; crossword: Crossword; 'guide': GuideModel; 'knowledge-check': KnowledgeCheck };
 }
 
@@ -24,6 +26,7 @@ export function emptyWorkspace(): Workspace {
   return {
     format: 'dynamic-learner',
     version: 1,
+    statistics: emptyStatistics(),
     features: {
       notebook: { items: [] },
       'todo-list': { items: [] },
@@ -42,7 +45,7 @@ export function parseWorkspace(text: string): Workspace {
   try { value = JSON.parse(text); }
   catch { throw new Error('This file is not valid JSON.'); }
   if (!isRecord(value) || value.format !== 'dynamic-learner' || value.version !== 1 ||
-      Object.keys(value).some((key) => !['format', 'version', 'features'].includes(key)) ||
+      Object.keys(value).some((key) => !['format', 'version', 'features', 'statistics'].includes(key)) ||
       !isRecord(value.features) || !value.features['index-cards'] ||
       Object.keys(value.features).some((key) => !['notebook', 'todo-list', 'index-cards', 'word-search', 'crossword', 'guide', 'study-guide', 'knowledge-check'].includes(key))) {
     throw new Error('This is not a supported Dynamic Learner workspace backup (version 1).');
@@ -65,7 +68,10 @@ export function parseWorkspace(text: string): Workspace {
   validateWordSearch(wordSearch);
   validateTodoLists(todoLists);
   validateCrossword(crossword);
+  const statistics = Object.hasOwn(value, 'statistics') ? value.statistics : emptyStatistics();
+  validateStatistics(statistics);
   return { format: 'dynamic-learner', version: 1,
+    statistics,
     features: { notebook, 'todo-list': todoLists, 'index-cards': indexCards, 'word-search': wordSearch, crossword, 'guide': guide, 'knowledge-check': knowledgeCheck } };
 
 }

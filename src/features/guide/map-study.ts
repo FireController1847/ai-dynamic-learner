@@ -1,4 +1,5 @@
 import { useStudySession } from '../../components/use-study-session.ts';
+import { useStatistics } from '../../components/statistics-context.ts';
 import { computed, defineComponent, h, nextTick, onBeforeUnmount, onDeactivated, ref, type PropType } from 'vue';
 import { GuideTypeIcon } from './guide-type-icon.ts';
 import { connectedTopicIds, mapStudyProblem, startTopic, topicById } from './map-graph.ts';
@@ -18,10 +19,13 @@ export const GuideMapStudy = defineComponent({
   props: {
     data: { type: Object as PropType<MapGuideData>, required: true },
     guideName: { type: String, required: true },
+    statisticsId: { type: String, required: true },
   },
   emits: { edit: () => true },
   setup(props, { emit }) {
     const saved = props.data.session;
+    const statistics = useStatistics();
+    let completionRecorded = Boolean(saved && saved.visitedIds.length === props.data.topics.length);
     const started = ref(Boolean(saved && saved.openedIds.length > 0 && !saved.paused && topicById(props.data, saved.currentId)));
     useStudySession(started);
     const visited = ref(new Set(saved?.visitedIds ?? []));
@@ -172,6 +176,10 @@ export const GuideMapStudy = defineComponent({
       const next = new Set(visited.value);
       next.add(id);
       visited.value = next;
+      if (complete.value && !completionRecorded) {
+        statistics?.record('guide', props.statisticsId, 'adventuresCompleted');
+        completionRecorded = true;
+      }
     }
 
     function prepareCurrent() {
@@ -218,6 +226,8 @@ export const GuideMapStudy = defineComponent({
       if (studyProblem.value) return;
       const first = startTopic(props.data);
       if (!first) return;
+      statistics?.record('guide', props.statisticsId, 'adventuresStarted');
+      completionRecorded = false;
       visited.value = new Set();
       opened.value = new Set();
       skipped.value = new Set();

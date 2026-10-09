@@ -5,6 +5,8 @@ import { features } from '../features/feature-registry.ts';
 import { NavigationDrawer } from './navigation-drawer.ts';
 import { pageHref, useNavigation } from './navigation.ts';
 import { useWorkspace } from './workspace.ts';
+import { provideStatistics } from '../components/statistics-context.ts';
+import { GlobalStatistics } from '../components/global-statistics.ts';
 import { WorkspaceTools } from './workspace-tools.ts';
 import { BackupReminderBanner } from './backup-reminder-ui.ts';
 import { ThemeMenu, type ThemeMenuHandle } from './theme-menu.ts';
@@ -32,6 +34,19 @@ const App = defineComponent({
   name: 'App',
   setup() {
     const workspace = useWorkspace();
+    provideStatistics({
+      data: () => workspace.state.value.statistics,
+      setData: data => { workspace.state.value.statistics = data; },
+      inventory: () => {
+        const models = workspace.state.value.features;
+        return { notebook: models.notebook.items, 'todo-list': models['todo-list'].items,
+          'index-cards': models['index-cards'].items, 'word-search': models['word-search'].items,
+          crossword: models.crossword.items, guide: models.guide.items,
+          'knowledge-check': models['knowledge-check'].items, calculator: [] };
+      },
+    });
+    const statisticsOpen = ref(false);
+    const statisticsButton = ref<HTMLButtonElement | null>(null);
     const backupMessage = ref('');
     const backupBusy = ref(false);
     async function backUpNow() {
@@ -111,6 +126,11 @@ const App = defineComponent({
             : h(Icon, { name: 'document' }),
         h('h1', activeFeature.value?.label ?? (currentPath.value === '/' ? appConfig.name : 'Page not found')),
         h('div', { class: 'app-header-actions' }, [
+          h('button', {
+            ref: statisticsButton, type: 'button', class: 'quiet-button app-header-action',
+            title: 'Workspace statistics', 'aria-label': 'Open workspace statistics', 'aria-haspopup': 'dialog',
+            onClick: () => { statisticsOpen.value = true; },
+          }, [h(Icon, { name: 'statistics' }), h('span', { class: 'app-header-action-label' }, 'Statistics')]),
           workspace.backup.showIndicator.value ? h('button', {
             type: 'button',
             class: ['quiet-button', 'app-header-action', 'backup-indicator', {
@@ -196,6 +216,10 @@ const App = defineComponent({
           }),
         ]),
       ]),
+      statisticsOpen.value ? h(GlobalStatistics, {
+        apps: features.map(feature => ({ id: feature.id, label: feature.label })), returnFocus: statisticsButton.value,
+        onClose: () => { statisticsOpen.value = false; },
+      }) : null,
       activeFeature.value ? h('span', {
         class: 'app-version',
       }, `v${activeFeature.value.version}`) : null,

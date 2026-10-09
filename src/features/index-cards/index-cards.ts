@@ -1,3 +1,5 @@
+import { EntryStatistics } from '../../components/entry-statistics.ts';
+import { useStatisticsVisits } from '../../components/statistics-context.ts';
 import type { DirectoryTreeHandle } from './directory-tree.ts';
 import type { LibraryItem, SetTarget } from './tree-model.ts';
 import type { SetModeId } from './set-modes.ts';
@@ -104,6 +106,8 @@ export const IndexCards = defineComponent({
       settingsButton.value?.focus();
     }
     const selection = computed(() => findItem(props.model.items, selectedId.value));
+    useStatisticsVisits('index-cards', () => selection.value?.item.id ?? null, () => creationTarget.value === null && aiTarget.value === null &&
+      selection.value?.item.id !== tutorialReviewSetId.value && selection.value?.item.id !== tutorialFillBlankReviewSetId.value);
     const selectedMode = computed<SetModeId>(() =>
       selection.value?.item.kind === 'set' ? selection.value.item.mode ?? 'flash-cards' : 'flash-cards');
     const activeDisplay = computed(() => displayForMode(displayOptions.value, selectedMode.value));
@@ -481,6 +485,7 @@ export const IndexCards = defineComponent({
             open: selection.value.item.kind === 'group',
           }, [
           h('summary', { class: 'organization-summary' }, 'Location and order'),
+          selection.value.item.kind === 'group' ? h(EntryStatistics, { app: 'index-cards', id: selection.value.item.id }) : null,
           h('div', { class: 'item-location' }, [
             h('label', { for: 'index-cards-parent' }, 'Move to group'),
             h('select', {

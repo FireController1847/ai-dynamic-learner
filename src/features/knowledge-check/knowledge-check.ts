@@ -1,3 +1,5 @@
+import { EntryStatistics } from '../../components/entry-statistics.ts';
+import { useStatisticsVisits } from '../../components/statistics-context.ts';
 import type { KnowledgeCheck as FeatureModel, CheckTarget, LibraryItem } from './library-model.ts';
 import type { IndexCards as IndexCardsModel } from '../index-cards/tree-model.ts';
 import type { KnowledgeCheckLibraryHandle } from './library.ts';
@@ -158,6 +160,7 @@ export const KnowledgeCheck = defineComponent({
     });
 
     const selection = computed(() => findItem(props.model.items, selectedId.value));
+    useStatisticsVisits('knowledge-check', () => selection.value?.item.id ?? null, () => setupTarget.value === null && importTarget.value === null && aiTarget.value === null && selection.value?.item.id !== tutorialSetId.value);
 
     function updateLibraryLayout(event: MediaQueryListEvent) {
       libraryOverlay.value = event.matches;
@@ -317,6 +320,7 @@ export const KnowledgeCheck = defineComponent({
         open: item.kind === 'group',
       }, [
         h('summary', { class: 'organization-summary' }, 'Location and order'),
+        item.kind === 'group' ? h(EntryStatistics, { app: 'knowledge-check', id: item.id }) : null,
         h('div', { class: 'knowledge-check-location' }, [
           h('label', { for: 'knowledge-check-parent' }, 'Move to group'),
           h('select', {
@@ -420,6 +424,7 @@ export const KnowledgeCheck = defineComponent({
           h('p', 'Knowledge set'),
         ]),
         h(KnowledgeSet, { key: item.id, item, initialBuilder: item.id === tutorialBuilderId.value,
+          statisticsEnabled: item.id !== tutorialSetId.value,
           initialMode: item.id === tutorialSetId.value ? item.mode ?? null : null }),
         organizationControls(item),
         h('p', { class: 'visually-hidden', role: 'status' }, message.value),

@@ -10,6 +10,7 @@ Workspace persistence is owned by `src/app/workspace.ts` and `workspace-format.t
 interface Workspace {
   format: 'dynamic-learner';
   version: 1;
+  statistics?: StatisticsData;
   features: {
     notebook: Notebook;
     'todo-list': TodoLists;
@@ -53,6 +54,12 @@ Do not duplicate feature schemas in `workspace-format.ts`; it coordinates them.
 - A new incompatible top-level format requires a new workspace version plus an explicit migration strategy.
 
 ## Saved vs transient state
+
+Statistics are durable workspace data, included in JSON backups. The optional `statistics` field contains a version-1 ledger with an ISO `startedAt`, per-app counters, and per-entry counters/last-activity timestamps keyed by canonical library IDs. Old backups without it normalize to empty statistics; malformed counters, unknown fields/apps/metrics, invalid IDs/timestamps, and oversized entry ledgers are rejected before replacement. Counters are non-negative safe integers. Deleting an entry removes its detailed row while retaining lifetime app/global totals; group totals roll up current descendants without double-counting global activity.
+
+Tracking starts with this feature; earlier activity is not fabricated. Opening visible library content increments an open count, including returning to an app or restoring it after reload; rerenders, edits, flips, and opening Statistics do not count as another entry visit. Index Cards counts card visits separately from completed review passes. Study passes count when every question has been visited and the learner loops or ends/leaves the session. Quiz/Test counts increment once on submission (including timeout), not on abandoned sessions; assessed question/correct totals ignore Statements. Puzzle and adventure completions increment once per run, without recounting already completed restored sessions. Todo counts explicit task-completion actions. Calculator counts successful history additions. Known tutorial review sessions do not contribute learning counters.
+
+Statistics-only changes are excluded from authored-work fingerprints used by backup reminders, while remaining part of a downloaded backup. Upload replaces the complete ledger with the uploaded workspace's history; it does not merge or duplicate counts.
 
 Backups contain authored user content and saved feature preferences. They do **not** automatically contain transient/browser UI state.
 

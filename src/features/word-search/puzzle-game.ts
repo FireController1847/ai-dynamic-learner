@@ -1,3 +1,4 @@
+import { useStatistics } from '../../components/statistics-context.ts';
 import type { ConfiguredWordSearch, BoardRotation } from './library-model.ts';
 import type { DisplayOptions } from './display-options.ts';
 import type { PuzzleGridHandle, SelectionAttempt, WordCelebration } from './puzzle-grid.ts';
@@ -8,7 +9,7 @@ import { PuzzleGrid } from './puzzle-grid.ts';
 import { Icon } from '../../components/icon.ts';
 import { defaultDisplayOptions, displayStyles } from './display-options.ts';
 
-import { defineComponent, type PropType, computed, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref } from 'vue';
+import { defineComponent, type PropType, computed, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue';
 
 export const PuzzleGame = defineComponent({
   name: 'PuzzleGame',
@@ -52,6 +53,14 @@ export const PuzzleGame = defineComponent({
     const foundWords = computed(() => new Set(game.value?.found.map(({ word }) => word) ?? []));
     const hintMode = computed(() => (props.item.puzzle.studyMode ?? 'words') === 'hints');
     const complete = computed(() => foundWords.value.size === props.item.puzzle.words.length);
+    const statistics = useStatistics();
+    let completionRecorded = complete.value;
+    watch(complete, value => {
+      if (value && !completionRecorded) {
+        completionRecorded = true;
+        statistics?.record('word-search', props.item.id, 'gamesCompleted');
+      }
+    }, { flush: 'sync' });
     onBeforeUnmount(() => {
       controller?.abort();
       clearAttempt();
@@ -80,6 +89,8 @@ export const PuzzleGame = defineComponent({
       try {
         const result = await generatePuzzle(props.item.puzzle, request.signal);
         if (!result || request.signal.aborted) return;
+        completionRecorded = false;
+        statistics?.record('word-search', props.item.id, 'gamesStarted');
         props.item.game = result;
         gridVersion.value += 1;
         revealed.value = false;
@@ -184,6 +195,8 @@ export const PuzzleGame = defineComponent({
       pending.value = null;
       if (action === 'new') await generate();
       else if (game.value) {
+        completionRecorded = false;
+        statistics?.record('word-search', props.item.id, 'gamesStarted');
         game.value.found = [];
         revealed.value = false;
         revealedWords.value = new Set<string>();

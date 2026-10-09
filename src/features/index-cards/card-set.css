@@ -44,7 +44,7 @@
 .card-review-session-copy { flex: 1 1 140px; }
 .card-review-session-copy strong { font-size: 14px; font-weight: 600; }
 .card-review-session-copy p { margin: 2px 0 0; color: var(--text-secondary); font-size: 12px; line-height: 16px; }
-.card-review-session-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.card-review-session-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .ruled-card-stack {
   position: relative;
   isolation: isolate;

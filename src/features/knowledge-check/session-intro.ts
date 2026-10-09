@@ -1,5 +1,6 @@
 import { defineComponent, h, type PropType } from 'vue';
 import { Icon } from '../../components/icon.ts';
+import { EntryStatistics } from '../../components/entry-statistics.ts';
 import { CHECK_MODES, type CheckModeId } from './check-types.ts';
 import type { CheckItem } from './library-model.ts';
 import { defaultSetOptions } from './set-options.ts';
@@ -58,6 +59,8 @@ export const SessionIntro = defineComponent({
         h('div', { class: 'knowledge-intro-actions' }, [
           h('button', { type: 'button', class: 'quiet-button',
             onClick: () => emit('back') }, 'Back'),
+          h(EntryStatistics, { app: 'knowledge-check', id: props.item.id,
+            metric: study ? 'studyPasses' : test ? 'tests' : 'quizzes' }),
           h('button', { type: 'button', class: 'card-primary-button', disabled: !props.count,
             onClick: () => emit('start') }, [
             study ? 'Start studying' : `Start ${mode.label.toLowerCase()}`,

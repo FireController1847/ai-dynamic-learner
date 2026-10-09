@@ -56,6 +56,8 @@ Reusable packages live under `packages/`. Tips owns guided-tutorial UI; `@dynami
 
 ## Persistence
 
+Workspace statistics use one optional top-level `statistics` ledger validated in `src/core/statistics.ts`. The app provides the live library inventory and statistics context; features record semantic activity events without importing the app layer. Entry counters use canonical library IDs, groups aggregate their current descendants, and global app totals retain activity when entries are deleted. `EntryStatistics` presents compact inline progress notes beside feature-specific actions; `GlobalStatistics` is available from the app header on every route.
+
 The workspace is browser-local. `src/app/workspace.ts` owns localStorage, import/export, and replacement; `workspace-format.ts` owns the top-level backup contract and delegates feature validation to feature models. See `workspace-data.md`.
 
 Browser-local presentation state that is not part of user content (for example theme choice, panel widths, Tips state, or transient review state) stays outside workspace backups unless explicitly promoted into the saved contract.
