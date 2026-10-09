@@ -206,9 +206,13 @@ export function useWorkspace() {
     if (refreshing || disposed) return;
     refreshing = true;
     ready.value = false;
-    observer?.stop();
+    const previousObserver = observer;
+    previousObserver?.stop();
     observer = null;
     try {
+      // A command already inside IndexedDB can still finish after stop().
+      // Drain it before reading the saved state or installing a new observer.
+      await previousObserver?.settle();
       const snapshot = await api.initialSnapshot(true);
       state.value = snapshot.workspace;
       revision.value++;
