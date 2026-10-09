@@ -8,20 +8,19 @@ export const SetBuilder = defineComponent({
   name: 'IndexCardsSetBuilder',
   props: {
     destination: { type: String, required: true },
-    ai: Boolean,
   },
   emits: { 'create': (_mode: SetModeId) => true, 'cancel': () => true },
   setup(props, { emit }) {
     const heading = ref<HTMLElement | null>(null);
-    onMounted(() => { if (props.ai) heading.value?.focus(); });
+    onMounted(() => heading.value?.focus());
     return () => h('section', {
       class: 'index-cards-builder',
       'aria-labelledby': 'index-cards-builder-title',
     }, [
       h('header', { class: 'index-cards-builder-intro' }, [
-        h('p', { class: 'index-cards-builder-eyebrow' }, props.ai ? 'Create with AI' : 'New set'),
+        h('p', { class: 'index-cards-builder-eyebrow' }, 'New set'),
         h('h2', { id: 'index-cards-builder-title', ref: heading, tabindex: -1 }, 'Choose a study mode'),
-        h('p', `Saved in ${props.destination}. ${props.ai ? 'Choose the kind of cards your AI should create.' : 'Choose how you want to study this set.'}`),
+        h('p', `Saved in ${props.destination}. Choose how you want to study this set.`),
       ]),
       h('div', { class: 'index-cards-mode-grid' }, SET_MODES.map((mode) =>
         h('button', {
