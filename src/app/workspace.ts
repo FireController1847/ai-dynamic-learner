@@ -124,6 +124,7 @@ export function useWorkspace() {
     if (!ready.value) throw new Error('The workspace database is not ready.');
     const replacement = validateWorkspaceValue(value);
     ready.value = false; // Unmount editors before asynchronous staging begins.
+    let replacedSafely = false;
     try {
       await nextTick();
       await observer?.flush();
@@ -136,8 +137,11 @@ export function useWorkspace() {
       await startObserver();
       backup.workspaceRestored(meta.authoredRevision, populated(replacement));
       storageProblem.value = '';
+      replacedSafely = true;
     } finally {
-      ready.value = true;
+      // If staging/activation or watcher setup fails, do not reopen an
+      // editable workspace that may no longer be attached to persistence.
+      ready.value = replacedSafely;
     }
   }
 
