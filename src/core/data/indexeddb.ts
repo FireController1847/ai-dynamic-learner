@@ -182,13 +182,22 @@ export class IndexedDataStore {
    * Read every requested store from one snapshot transaction. Separate
    * readonly transactions can observe different commits from other tabs.
    */
-  async snapshot<T>(stores: readonly DataStoreName[]): Promise<Map<DataStoreName, T[]>> {
+  async snapshot<T>(stores: readonly DataStoreName[], workspaceId?: string): Promise<Map<DataStoreName, T[]>> {
     const names = [...new Set(stores)];
     const tx = this.db().transaction(names, 'readonly');
     const completion = transactionDone(tx);
     const data = new Map<DataStoreName, T[]>();
     const results = names.map(async name => {
-      const records = await requestResult(tx.objectStore(name).getAll());
+      const keyPath: string | readonly string[] = definitions[name].key;
+      let range: IDBKeyRange | undefined;
+      if (workspaceId && keyPath === 'workspaceId') {
+        range = IDBKeyRange.only(workspaceId);
+      } else if (workspaceId && Array.isArray(keyPath) && keyPath[0] === 'workspaceId') {
+        // IndexedDB string keys sort before array keys, so this bounds
+        // every composite key beginning with the requested workspaceId.
+        range = IDBKeyRange.bound([workspaceId], [workspaceId, []]);
+      }
+      const records = await requestResult(tx.objectStore(name).getAll(range));
       data.set(name, records as T[]);
     });
     await Promise.all([...results, completion]);
