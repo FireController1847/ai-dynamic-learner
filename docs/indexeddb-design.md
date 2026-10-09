@@ -42,7 +42,7 @@ dynamic-learner-data (IDB schema v2)
   changeJournal           (small committed invalidation history)
 ```
 
-The division is intentional: Todo List is a **flat date-oriented library**, not the generic nested group hierarchy. Calculator has no persistent content store; its activity goes into statistics.
+The division is intentional: Todo List is a **flat date-oriented library**, not the generic nested group hierarchy. `collections` also serializes same-parent list/reorder/delete/insert operations across tabs; ordinary document text updates do not touch those records. Calculator has no persistent content store; its activity goes into statistics.
 
 ## Exact keys, indexes and payload mapping
 
@@ -53,6 +53,7 @@ The division is intentional: Todo List is a **flat date-oriented library**, not 
 | `control` | `key`, singleton `'local'` | `activeWorkspaceId`; guard against writes by obsolete tabs after restore; app metadata | none |
 | `workspaceMeta` | `id` | `createdAt`, `commitSequence`, `authoredRevision`, `lastExportedAuthoredRevision`, `restoreEpoch`, `legacyMigration` | none |
 | `libraryNodes` | `[workspaceId,app,id]` | `kind`, `name`, `parentKey`, `position`, `revision` for Notebook, Index Cards, Word Search, Crossword, Guide, Review | `[workspaceId,app,parentKey,position]` |
+| `collections` | `[workspaceId,app,parentId]` | Ordered sibling ID list, `revision`; common parents, Todo sections/tasks, Index Card sets and Review questions use independent collection revisions so competing structural edits conflict | none |
 | `featureState` | `[workspaceId,app]` | Existing optional persisted `display`, `settings`, `lastSelected...` fields, presence preserved; `revision` | none |
 | `notebookDocuments` | `[workspaceId,id]` | `type` = Markdown/Lined/Graph, entire type-owned `data`, `revision`; no other documents' content | none |
 | `todoLists` | `[workspaceId,id]` | `name`, `createdAt`, optional `sectionSort`, `position`, `revision` | `[workspaceId,position]`; date index optional |
