@@ -74,7 +74,8 @@ export const WordSearch = defineComponent({
     const settingsOpen = ref(false);
     const displayOptions = computed(() => resolvedDisplayOptions(props.model.display));
     let settingsTrigger: HTMLElement | null = null;
-    onDeactivated(() => { settingsOpen.value = false; aiTarget.value = null; });
+    onDeactivated(() => { settingsOpen.value = false;
+});
 
     function openSettings(trigger: EventTarget | null) {
       settingsTrigger = trigger instanceof HTMLElement ? trigger : null;
