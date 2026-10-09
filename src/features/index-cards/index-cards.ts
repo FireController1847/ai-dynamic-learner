@@ -368,7 +368,6 @@ export const IndexCards = defineComponent({
           onDblclick: resetLibraryWidth,
         }) : null,
         h('section', {
-          'data-ai-scroll-region': '',
           class: ['index-cards-detail', { 'is-set': !creationTarget.value && selection.value?.item.kind === 'set' }],
           'aria-label': creationTarget.value ? 'Choose an Index Cards mode' : selection.value ? 'Selected item' : 'Index Cards getting started',
           inert: libraryOverlay.value && !libraryCollapsed.value,
