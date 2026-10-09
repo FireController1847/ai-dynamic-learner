@@ -396,7 +396,11 @@ export class WorkspaceDataApi {
   async restoreWorkspace(payload: unknown): Promise<void> {
     // Reuse the same runtime validators as the existing JSON upload path.
     const parsed = parseWorkspace(JSON.stringify(payload));
-    const previous = this.active();
+    // Explicit user-confirmed recovery is allowed when the legacy source was
+    // unreadable or a prior active workspace failed validation. No old data
+    // is deleted; only a successfully verified new pointer is activated.
+    await this.store.open();
+    const previous = await this.store.activeWorkspaceId();
     const stagedId = createId();
     await this.store.stageRows(workspaceRows(stagedId, parsed));
     const hydrated = await hydrateWorkspace(this.store, stagedId);
