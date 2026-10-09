@@ -37,7 +37,7 @@ export async function observeWorkspace(
   problem: (message: string) => void,
   updated: (authoredRevision: number, commitSequence: number) => void,
   initialRecords: Awaited<ReturnType<WorkspaceDataApi['initialSnapshot']>>['records'],
-): Promise<{ flush(): Promise<void>; stop(): void }> {
+): Promise<{ flush(): Promise<void>; stop(): void; hasPendingChanges(): boolean; hasFailed(): boolean }> {
   const workspaceId = api.workspaceIdentity();
   const known = new Map<string, KnownRow>();
   for (const record of initialRecords) {
@@ -51,6 +51,7 @@ export async function observeWorkspace(
   let failed = false;
   let initializing = true;
   let chain: Promise<void> = Promise.resolve();
+  let queuedActions = 0;
   let structuralTimer: number | undefined;
   let statisticsTimer: number | undefined;
   let lastStructure = '';
@@ -61,6 +62,7 @@ export async function observeWorkspace(
   const pending = new Set<string>();
 
   const scheduleAction = (action: () => Promise<void>) => {
+    queuedActions++;
     chain = chain.then(async () => {
       if (!closed && !failed) await action();
     }).catch(error => {
@@ -68,7 +70,7 @@ export async function observeWorkspace(
       const message = error instanceof Error ? error.message : String(error);
       problem('Saving to IndexedDB stopped: ' + message +
         ' Your unsaved changes remain on screen. Download a backup before reloading.');
-    });
+    }).finally(() => { queuedActions--; });
   };
 
   const apply = async (rows: readonly (RowPut | null)[], removeMissing = false,
@@ -453,5 +455,10 @@ export async function observeWorkspace(
     timers.clear();
     pending.clear();
   }
-  return { flush, stop };
+  return {
+    flush, stop,
+    hasPendingChanges: () => failed || queuedActions > 0 || pending.size > 0 ||
+      timers.size > 0 || statisticsTimer !== undefined || structuralTimer !== undefined,
+    hasFailed: () => failed,
+  };
 }
