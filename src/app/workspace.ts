@@ -35,6 +35,7 @@ export function useWorkspace() {
   let studyActive = false;
   let lastSequence = 0;
   let remotePending = false;
+  let remoteGeneration = 0;
   let disposed = false;
 
   const updateBackup = (authoredRevision: number, commitSequence: number) => {
@@ -64,6 +65,7 @@ export function useWorkspace() {
       return;
     }
     refreshing = true;
+    const generationAtStart = remoteGeneration;
     try {
       await nextTick();
       await observer?.flush();
@@ -86,19 +88,27 @@ export function useWorkspace() {
         ' Keep a backup of any unsaved edits before reloading.';
     } finally {
       refreshing = false;
+      // A tab can commit again while a complete workspace snapshot is being
+      // read or rendered. Never clear the newly arrived invalidation.
+      if (remoteGeneration !== generationAtStart && !disposed) queueRemoteRefresh();
     }
+  }
+
+  function queueRemoteRefresh() {
+    if (remoteRefreshTimer !== undefined) clearTimeout(remoteRefreshTimer);
+    remoteRefreshTimer = window.setTimeout(() => {
+      remoteRefreshTimer = undefined;
+      void syncOtherTabs();
+    }, 650);
   }
 
   function watchRemoteChanges() {
     if (unsubscribeRemote) return;
     unsubscribeRemote = api.subscribeRemote(() => {
+      remoteGeneration += 1;
       remotePending = true;
       // Debounce a burst of remote edits rather than reloading per keystroke.
-      if (remoteRefreshTimer !== undefined) clearTimeout(remoteRefreshTimer);
-      remoteRefreshTimer = window.setTimeout(() => {
-        remoteRefreshTimer = undefined;
-        void syncOtherTabs();
-      }, 650);
+      queueRemoteRefresh();
     });
   }
 
