@@ -3,6 +3,10 @@ import { DataApiError, type DataCommit, type DataOperation, type IndexedRow } fr
 import { emptyWorkspace, validateWorkspaceValue } from '../workspace-format.ts';
 import { workspaceRows } from './workspace-mapping.ts';
 import { GROUPED_APPS, type GroupedApp } from './library-commands.ts';
+import { MAX_DOCUMENTS } from '../../features/notebook/library-model.ts';
+import { MAX_WORD_SEARCHES } from '../../features/word-search/library-model.ts';
+import { MAX_CROSSWORDS } from '../../features/crossword/library-model.ts';
+import { MAX_CARDS } from '../../features/index-cards/card-model.ts';
 import type { WorkspaceDataApi } from './data-api.ts';
 
 /**
@@ -71,6 +75,30 @@ export function createEntryCommands(api: Pick<WorkspaceDataApi, 'read' | 'list' 
       if (position > siblings.length) throw new DataApiError('validation', 'Invalid insertion position.');
       const count = (await api.list<IndexedRow>('libraryNodes', row => row.app === app)).length;
       if (count >= 5000) throw new DataApiError('validation', 'The library has reached its item limit.');
+
+      // App-level quotas apply across *all* saved entries, not just the one
+      // temporary entry validated below. Import/create operations must not
+      // exceed those limits by adding another individually valid record.
+      const quotas: Partial<Record<GroupedApp, number>> = {
+        notebook: MAX_DOCUMENTS,
+        'word-search': MAX_WORD_SEARCHES,
+        crossword: MAX_CROSSWORDS,
+      };
+      const quota = quotas[app];
+      if (quota !== undefined) {
+        const existing = await api.list<IndexedRow>('libraryNodes',
+          row => row.app === app && row.kind !== 'group');
+        if (existing.length >= quota) {
+          throw new DataApiError('validation', 'The application has reached its saved-entry limit.');
+        }
+      }
+      if (app === 'index-cards') {
+        const existing = await api.list<IndexedRow>('indexCards', () => true);
+        const imported = Array.isArray(payload.cards) ? payload.cards.length : 0;
+        if (existing.length + imported > MAX_CARDS) {
+          throw new DataApiError('validation', 'The Index Cards workspace has reached its card limit.');
+        }
+      }
 
       const id = createId();
       const draft = emptyWorkspace();
