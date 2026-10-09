@@ -93,7 +93,18 @@ export async function observeWorkspace(
       }
     }
     if (!operations.length) return;
-    const commit = await api.commit(operations, [...new Set(operations.map(op => op.store))], authored);
+    const contentChange = operations.some(op => {
+      if (op.store.startsWith('statistics')) return false;
+      if (op.store !== 'featureState') return true;
+      if (op.type !== 'put') return true;
+      const previous = known.get(token(op.store, op.key));
+      if (!previous) return true;
+      const withoutSelection = (value: Plain) => Object.fromEntries(
+        Object.entries(value).filter(([key]) => !key.startsWith('lastSelected')));
+      return JSON.stringify(withoutSelection(asObject(JSON.parse(previous.serialized)))) !==
+        JSON.stringify(withoutSelection(op.value));
+    });
+    const commit = await api.commit(operations, [...new Set(operations.map(op => op.store))], authored && contentChange);
     for (const change of touched) {
       if (change.next === null) known.delete(change.id);
       else {
@@ -125,7 +136,7 @@ export async function observeWorkspace(
       const row = pending.get(id);
       pending.delete(id);
       // Missing optional records are reconciled by structural mapping.
-      if (row) scheduleAction(() => apply([row]));
+      if (row) scheduleAction(() => apply([row], false, binding.authored));
       else queueStructure();
     }, KEY_DELAY_MS));
   }
