@@ -130,7 +130,9 @@ export function workspaceRows(workspaceId: string, workspace: Workspace): DataRo
 
   if (workspace.statistics) {
     const stats = workspace.statistics;
-    scoped('statisticsMeta', [workspaceId], { version: stats.version, startedAt: stats.startedAt });
+    // statisticsMeta uses the scalar workspaceId key (not [workspaceId]).
+    // Keep migration, structural reconciliation and optimistic revisions aligned.
+    add('statisticsMeta', workspaceId, { workspaceId, version: stats.version, startedAt: stats.startedAt });
     for (const [app, record] of Object.entries(stats.apps)) {
       if (!record) continue;
       scoped('statisticsApps', [workspaceId, app], { app, counts: copy(record.counts) });
