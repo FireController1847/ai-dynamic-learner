@@ -79,7 +79,8 @@ export const Crossword = defineComponent({
     const selection = computed(() => findItem(props.model.items, selectedId.value));
     useStatisticsVisits('crossword', () => selection.value?.item.id ?? null, () => setupTarget.value === null);
 
-    onDeactivated(() => { settingsOpen.value = false; aiTarget.value = null; });
+    onDeactivated(() => { settingsOpen.value = false;
+});
 
     function updateLibraryLayout(event: MediaQueryListEvent) {
       libraryOverlay.value = event.matches;
