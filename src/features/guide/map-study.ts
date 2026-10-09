@@ -698,10 +698,11 @@ export const GuideMapStudy = defineComponent({
               currentPoints.value.length
                 ? h('div', { class: 'guide-study-points' }, [
                     ...revealedContent(topic),
-                    !skipped.value.has(topic.id) &&
-                    (revealedCount.value < currentPoints.value.length || revealedCount.value > 0)
+                    (!skipped.value.has(topic.id) && revealedCount.value < currentPoints.value.length) ||
+                    revealedCount.value > 0 ||
+                    (!currentVisited && !skipped.value.has(topic.id))
                       ? h('div', { class: 'guide-study-reveal-actions' }, [
-                          revealedCount.value < currentPoints.value.length ? h('button', {
+                          !skipped.value.has(topic.id) && revealedCount.value < currentPoints.value.length ? h('button', {
                             type: 'button', class: 'quiet-button guide-study-action guide-study-reveal',
                             onClick: revealNext,
                           }, revealedCount.value ? 'Reveal next point →' : 'Reveal first point →') : null,
@@ -709,7 +710,7 @@ export const GuideMapStudy = defineComponent({
                             type: 'button', class: 'quiet-button guide-study-action guide-study-reset',
                             onClick: resetRevealedPoints,
                           }, 'Reset revealed points') : null,
-                          !currentVisited ? h('button', {
+                          !currentVisited && !skipped.value.has(topic.id) ? h('button', {
                             type: 'button', class: 'quiet-button guide-study-action guide-study-skip',
                             onClick: skipSection,
                           }, 'Skip section') : null,
