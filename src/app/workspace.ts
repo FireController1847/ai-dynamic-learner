@@ -161,10 +161,19 @@ export function useWorkspace() {
     backup.recordExport(snapshot.authoredRevision, Date.now());
   }
 
+  const flushOnHide = () => {
+    // Best effort only: browsers may terminate a tab without allowing any
+    // asynchronous work, so autosaves must happen well before pagehide.
+    void observer?.flush().catch(error => {
+      storageProblem.value = 'Recent changes may not have been saved: ' + errorMessage(error);
+    });
+  };
   const onVisibility = () => {
     if (document.visibilityState === 'visible') void syncOtherTabs();
+    else flushOnHide();
   };
   document.addEventListener('visibilitychange', onVisibility);
+  window.addEventListener('pagehide', flushOnHide);
   onBeforeUnmount(() => {
     disposed = true;
     if (remoteRefreshTimer !== undefined) clearTimeout(remoteRefreshTimer);
@@ -172,6 +181,7 @@ export function useWorkspace() {
     unsubscribeRemote?.();
     api.close();
     document.removeEventListener('visibilitychange', onVisibility);
+    window.removeEventListener('pagehide', flushOnHide);
   });
 
   return { state, ready, revision, storageProblem, readBackup, replaceWorkspace, downloadBackup, backup };
