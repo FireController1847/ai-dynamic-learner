@@ -246,6 +246,7 @@ export const PuzzleAiCreation = defineComponent({
           key: 'categories',
           label: label.value,
           destination: props.destination,
+          totalSteps: 3,
           initialCategories: categories.value,
           onBack: () => emit('cancel'),
           onCancel: () => emit('cancel'),
