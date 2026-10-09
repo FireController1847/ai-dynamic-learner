@@ -145,12 +145,10 @@ export function createLibraryCommands(api: Pick<WorkspaceDataApi, 'read' | 'list
       validateApp(app);
       validateParent(parentId);
       const collection = await getCollection(app, parentId);
+      // Promise.all preserves the collection's canonical order; sorting with
+      // indexOf for every sibling would turn large folders into O(n²) work.
       const nodes = await siblingNodes(app, parentId, collection.value.children);
-      return {
-        revision: collection.revision,
-        items: nodes.sort((a, b) =>
-          collection.value.children.indexOf(a.value.id) - collection.value.children.indexOf(b.value.id)),
-      };
+      return { revision: collection.revision, items: nodes };
     },
 
     createGroup: async (input: {
