@@ -47,7 +47,8 @@ export type DataCommit = DataChange;
 export type DataOperation =
   | { store: DataStoreName; type: 'put'; key: IDBValidKey; value: IndexedRow; expectedRevision: number | null }
   | { store: DataStoreName; type: 'delete'; key: IDBValidKey; expectedRevision: number | null }
-  | { store: DataStoreName; type: 'assert'; key: IDBValidKey; expectedRevision: number | null };
+  | { store: DataStoreName; type: 'assert'; key: IDBValidKey; expectedRevision: number | null }
+  | { store: DataStoreName; type: 'exists'; key: IDBValidKey };
 
 export class DataApiError extends Error {
   readonly code: 'conflict' | 'unavailable' | 'upgrade-blocked' | 'not-found' | 'validation';
@@ -284,6 +285,14 @@ export class IndexedDataStore {
           const req = store.get(operation.key);
           req.onsuccess = () => {
             const existing = req.result as IndexedRow | undefined;
+            if (operation.type === 'exists') {
+              if (!existing) {
+                abort(new DataApiError('not-found', 'The parent entry was removed in another tab.'));
+                return;
+              }
+              run(index + 1);
+              return;
+            }
             const actualRevision = existing?.revision ?? null;
             if (actualRevision !== operation.expectedRevision) {
               abort(new DataApiError('conflict', 'The record changed in another tab. Reload before saving.'));
