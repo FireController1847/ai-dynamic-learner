@@ -8,6 +8,7 @@ import {
 import { hydrateWorkspace, workspaceRows, WORKSPACE_RECORD_STORES } from './workspace-mapping.ts';
 import { createLibraryCommands } from './library-commands.ts';
 import { createEntryCommands } from './entry-commands.ts';
+import { createTodoCommands } from './todo-commands.ts';
 import type { DocumentTypeId, DocumentDataByType } from '../../features/notebook/document-types.ts';
 import { validateDocumentData } from '../../features/notebook/document-types.ts';
 import type { Card } from '../../features/index-cards/card-model.ts';
@@ -204,6 +205,7 @@ export class WorkspaceDataApi {
 
   /** Typed structural operations shared by all grouped library applications. */
   readonly library = { ...createLibraryCommands(this), ...createEntryCommands(this) };
+  readonly todo = createTodoCommands(this);
 
   /** Unlike the legacy deep watcher, this writes only the active document body. */
   readonly notebook = {
