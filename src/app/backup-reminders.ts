@@ -1,135 +1,99 @@
-import { computed, onBeforeUnmount, ref, watch, type Ref } from 'vue';
-import type { Workspace } from './workspace-format.ts';
+import { computed, onBeforeUnmount, ref } from 'vue';
 import { subscribeStudySessions } from '../core/study-activity.ts';
 import {
   BACKUP_REMINDER_KEY, defaultBackupMetadata, parseBackupMetadata, reminderStage,
   REMINDER_INTERVALS, type BackupMetadata,
 } from './backup-reminder-policy.ts';
 
-const NOT_CONTENT = new Set(['lastSelectedDocumentId', 'lastSelectedSetId', 'lastSelectedPuzzleId', 'lastSelectedListId', 'statistics']);
 const SNOOZE_MS = 24 * 60 * 60 * 1000;
-const FINGERPRINT_DELAY_MS = 700;
 
-function hasUserData(workspace: Workspace): boolean {
-  return Object.values(workspace.features).some(feature => feature.items.length > 0);
-}
-
-async function fingerprint(workspace: Workspace): Promise<string> {
-  // Selection is a UI convenience, not a meaningful modification to authored work.
-  const canonical = JSON.stringify(workspace, (key: string, value: unknown) =>
-    NOT_CONTENT.has(key) ? undefined : value);
-  const data = new TextEncoder().encode(canonical);
-  const digest = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
-}
-
-export function useBackupReminders(state: Ref<Workspace>, savedWorkspacePresent: boolean) {
-  const saved = (() => {
-    try { return localStorage.getItem(BACKUP_REMINDER_KEY); }
+/**
+ * Backup reminders use committed authored revisions, not a deep watcher that
+ * repeatedly JSON-serializes every document after a keystroke.
+ * Reminders are browser-local preferences, not part of the workspace backup.
+ */
+export function useBackupReminders() {
+  const original = (() => {
+    try { return parseBackupMetadata(localStorage.getItem(BACKUP_REMINDER_KEY)); }
     catch { return null; }
   })();
-  const restored = parseBackupMetadata(saved);
-  const initial = restored ?? defaultBackupMetadata();
-  const metadata = ref<BackupMetadata>({ ...initial });
+  const metadata = ref<BackupMetadata>({ ...(original ?? defaultBackupMetadata()) });
   const problem = ref('');
-  const hasData = ref(hasUserData(state.value));
-  const changed = ref(hasData.value);
+  const hasData = ref(false);
+  const authoredRevision = ref(0);
+  const processing = ref(true);
   const activeStudy = ref(false);
   const dismissedThisSession = ref(false);
   const now = ref(Date.now());
-  const processing = ref(true);
-  let generation = 0;
-  let fingerprintTimer: number | undefined;
-  let tickTimer: number | undefined;
 
   function writeMetadata() {
     try {
       localStorage.setItem(BACKUP_REMINDER_KEY, JSON.stringify(metadata.value));
       problem.value = '';
     } catch {
-      problem.value = 'Backup reminder tracking could not be saved in this browser. Keep a copy of your downloaded backup.';
+      problem.value = 'Backup reminder tracking could not be saved. Keep your downloaded backup somewhere safe.';
     }
   }
 
-  if (!restored && hasData.value && savedWorkspacePresent) {
-    // Historical browser data has no known export history. Do not invent one.
-    metadata.value.unbackedImport = true;
-    metadata.value.firstUnbackedAt = now.value;
+  const changed = computed(() => hasData.value && (
+    metadata.value.unbackedImport ||
+    metadata.value.exportedAuthoredRevision === null ||
+    metadata.value.exportedAuthoredRevision !== authoredRevision.value
+  ));
+
+  function ensureUnbackedClock() {
+    const next = changed.value ? metadata.value.firstUnbackedAt ?? Date.now() : null;
+    if (next === metadata.value.firstUnbackedAt) return;
+    metadata.value.firstUnbackedAt = next;
     writeMetadata();
   }
 
-  function refreshFingerprint(delay = FINGERPRINT_DELAY_MS) {
-    generation += 1;
-    const version = generation;
-    if (fingerprintTimer !== undefined) window.clearTimeout(fingerprintTimer);
-    hasData.value = hasUserData(state.value);
-    if (!hasData.value) {
-      processing.value = false;
-      changed.value = false;
-      if (metadata.value.firstUnbackedAt !== null) {
-        metadata.value.firstUnbackedAt = null;
-        writeMetadata();
-      }
-      return;
+  function workspaceLoaded(revision: number, populated: boolean, migratedFromLegacy: boolean) {
+    authoredRevision.value = revision;
+    hasData.value = populated;
+    processing.value = false;
+    // Fingerprints from older builds cannot be compared to the new revision
+    // ledger. Err on the side of a new backup, never assert prior safety.
+    if (populated && migratedFromLegacy && metadata.value.exportedAuthoredRevision === null) {
+      metadata.value.unbackedImport = true;
     }
-    processing.value = true;
-    fingerprintTimer = window.setTimeout(() => {
-      fingerprintTimer = undefined;
-      void fingerprint(state.value).then(hash => {
-        if (version !== generation) return;
-        const dirty = metadata.value.unbackedImport || hash !== metadata.value.exportedFingerprint;
-        changed.value = dirty;
-        processing.value = false;
-        const next = dirty ? metadata.value.firstUnbackedAt ?? Date.now() : null;
-        if (metadata.value.firstUnbackedAt !== next) {
-          metadata.value.firstUnbackedAt = next;
-          writeMetadata();
-        }
-      }).catch(() => {
-        if (version !== generation) return;
-        // If comparison fails, err on the side of reminding rather than assuming safety.
-        processing.value = false;
-        changed.value = true;
-        if (metadata.value.firstUnbackedAt === null) {
-          metadata.value.firstUnbackedAt = Date.now();
-          writeMetadata();
-        }
-        problem.value = 'Backup changes could not be checked. Please download a fresh backup.';
-      });
-    }, delay);
+    ensureUnbackedClock();
   }
 
-  watch(state, () => refreshFingerprint(), { deep: true });
-  refreshFingerprint(0);
-
-  async function recordExport(text: string, initiatedAt: number): Promise<void> {
-    try {
-      const exported = JSON.parse(text) as Workspace;
-      const hash = await fingerprint(exported);
-      metadata.value = {
-        ...metadata.value,
-        lastExportAt: initiatedAt,
-        exportedFingerprint: hash,
-        firstUnbackedAt: null,
-        unbackedImport: false,
-        snoozedUntil: null,
-      };
-      dismissedThisSession.value = false;
-      writeMetadata();
-      refreshFingerprint(0); // New edits made during export remain unbacked.
-    } catch {
-      problem.value = 'The download started, but its tracking record could not be updated. Keep the downloaded file safe.';
-    }
+  function workspaceChanged(revision: number, populated: boolean) {
+    authoredRevision.value = revision;
+    hasData.value = populated;
+    processing.value = false;
+    ensureUnbackedClock();
   }
 
-  function workspaceRestored() {
-    // Importing is not an export, even if its content matches a prior snapshot.
+  function recordExport(exportedRevision: number, initiatedAt: number) {
+    if (!Number.isSafeInteger(exportedRevision) || exportedRevision < 0) {
+      throw new Error('The exported workspace revision is invalid.');
+    }
+    metadata.value = {
+      ...metadata.value,
+      lastExportAt: initiatedAt,
+      exportedFingerprint: null,
+      exportedAuthoredRevision: exportedRevision,
+      firstUnbackedAt: null,
+      unbackedImport: false,
+      snoozedUntil: null,
+    };
+    dismissedThisSession.value = false;
+    writeMetadata();
+    // Other tabs may have committed a newer revision during this export.
+    ensureUnbackedClock();
+  }
+
+  function workspaceRestored(revision: number, populated: boolean) {
+    authoredRevision.value = revision;
+    hasData.value = populated;
     metadata.value.unbackedImport = true;
     metadata.value.firstUnbackedAt = Date.now();
     metadata.value.snoozedUntil = null;
     dismissedThisSession.value = false;
     writeMetadata();
-    refreshFingerprint(0);
   }
 
   function interval(days: number | null) {
@@ -138,7 +102,6 @@ export function useBackupReminders(state: Ref<Workspace>, savedWorkspacePresent:
     dismissedThisSession.value = false;
     writeMetadata();
   }
-
   function dismiss() { dismissedThisSession.value = true; }
   function snooze() {
     metadata.value.snoozedUntil = Date.now() + SNOOZE_MS;
@@ -146,16 +109,18 @@ export function useBackupReminders(state: Ref<Workspace>, savedWorkspacePresent:
     writeMetadata();
   }
 
-  const stage = computed(() => reminderStage(metadata.value, now.value, hasData.value && changed.value));
-  const legacy = computed(() => hasData.value && metadata.value.unbackedImport);
-  const needsAttention = computed(() => hasData.value && changed.value && metadata.value.intervalDays !== null &&
+  const stage = computed(() => reminderStage(metadata.value, now.value, changed.value));
+  const legacy = computed(() => changed.value && metadata.value.unbackedImport);
+  const needsAttention = computed(() => changed.value && metadata.value.intervalDays !== null &&
     (legacy.value || stage.value !== 0));
   const showBanner = computed(() => needsAttention.value && !processing.value && !activeStudy.value &&
-    !dismissedThisSession.value && (metadata.value.snoozedUntil === null || now.value >= metadata.value.snoozedUntil));
+    !dismissedThisSession.value &&
+    (metadata.value.snoozedUntil === null || now.value >= metadata.value.snoozedUntil));
   const showIndicator = computed(() => needsAttention.value && (legacy.value || stage.value === 3));
   const status = computed(() => {
+    if (processing.value) return 'Checking your saved workspace.';
     if (!hasData.value) return 'No saved work to back up yet.';
-    if (!changed.value && !processing.value) return 'Your work has not changed since the last backup download.';
+    if (!changed.value) return 'Your work has not changed since the last backup download.';
     if (metadata.value.lastExportAt === null) return 'No backup download is recorded for this browser.';
     return 'Your workspace has changes since the last backup download.';
   });
@@ -163,19 +128,18 @@ export function useBackupReminders(state: Ref<Workspace>, savedWorkspacePresent:
   function onStorage(event: StorageEvent) {
     if (event.key !== BACKUP_REMINDER_KEY) return;
     const incoming = parseBackupMetadata(event.newValue);
-    if (!incoming) return;
-    metadata.value = incoming;
-    refreshFingerprint(0);
+    if (incoming) {
+      metadata.value = incoming;
+      ensureUnbackedClock();
+    }
   }
   window.addEventListener('storage', onStorage);
   const stopActivity = subscribeStudySessions(active => { activeStudy.value = active; });
   const checkTime = () => { now.value = Date.now(); };
   document.addEventListener('visibilitychange', checkTime);
-  tickTimer = window.setInterval(checkTime, 60_000);
+  const tickTimer = window.setInterval(checkTime, 60_000);
   onBeforeUnmount(() => {
-    generation += 1;
-    if (fingerprintTimer !== undefined) window.clearTimeout(fingerprintTimer);
-    if (tickTimer !== undefined) window.clearInterval(tickTimer);
+    window.clearInterval(tickTimer);
     document.removeEventListener('visibilitychange', checkTime);
     window.removeEventListener('storage', onStorage);
     stopActivity();
@@ -183,7 +147,8 @@ export function useBackupReminders(state: Ref<Workspace>, savedWorkspacePresent:
 
   return {
     metadata, problem, changed, hasData, processing, stage, legacy, needsAttention,
-    showBanner, showIndicator, status, recordExport, workspaceRestored, interval, dismiss, snooze,
+    showBanner, showIndicator, status, recordExport, workspaceRestored, workspaceLoaded,
+    workspaceChanged, interval, dismiss, snooze,
   };
 }
 export type BackupReminders = ReturnType<typeof useBackupReminders>;
