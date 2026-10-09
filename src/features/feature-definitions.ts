@@ -74,14 +74,14 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'word-search', label: 'Word Search', path: '/word-search/', icon: 'word-search',
     group: 'applications',
-    version: '1.6.0',
+    version: '1.7.0',
     image: 'assets/app-icons/word-search.png',
     description: 'Create your own word searches, find every word, and pick up where you left off.'
   },
   {
     id: 'crossword', label: 'Crossword', path: '/crossword/', icon: 'crossword',
     group: 'applications',
-    version: '1.2.0',
+    version: '1.3.0',
     image: 'assets/app-icons/crossword.png',
     description: 'Create your own crosswords, solve the clues, and pick up where you left off.',
     metadata: {
