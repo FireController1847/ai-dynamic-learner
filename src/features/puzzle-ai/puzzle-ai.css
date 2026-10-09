@@ -1,0 +1,8 @@
+.puzzle-ai-workspace { min-width: 0; }
+.puzzle-ai-options { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 12px 0; }
+.puzzle-ai-options input { width: 84px; min-height: 40px; }
+.puzzle-ai-options .study-ai-muted { width: 100%; margin: 0; }
+.puzzle-ai-preview-list { display: grid; gap: 10px; max-height: 340px; overflow: auto; padding-left: 24px; margin: 12px 0 20px; }
+.puzzle-ai-preview-list li { padding-left: 4px; }
+.puzzle-ai-preview-list strong { display: block; }
+.puzzle-ai-preview-list span { display: block; color: var(--text-secondary); white-space: pre-wrap; }
