@@ -213,10 +213,18 @@ const App = defineComponent({
           }],
           tabindex: -1,
         }, [
-          currentPath.value === '/' ? h(HomePage, { onNavigate: navigate }) : null,
-          h(KeepAlive, { key: workspace.revision.value }, {
-            default: () => activeFeature.value?.render(workspace.state.value.features) ?? null,
-          }),
+          !workspace.ready.value
+            ? h('section', { class: 'workspace-loading', role: 'status' }, [
+              h('h2', 'Workspace unavailable'),
+              h('p', workspace.storageProblem.value || 'Opening and checking your saved workspace…'),
+              h('p', 'Editing is disabled until the saved data has been loaded safely.'),
+            ])
+            : [
+              currentPath.value === '/' ? h(HomePage, { onNavigate: navigate }) : null,
+              h(KeepAlive, { key: workspace.revision.value }, {
+                default: () => activeFeature.value?.render(workspace.state.value.features) ?? null,
+              }),
+            ],
         ]),
       ]),
       statisticsOpen.value ? h(GlobalStatistics, {
