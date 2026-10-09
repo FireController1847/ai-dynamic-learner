@@ -1,6 +1,6 @@
 # Unified Data API — architecture proposal
 
-> **Status: design only (RFC).** This file specifies proposed behavior; none of its interfaces, paths, or migrations exist yet. Review alongside [IndexedDB design](indexeddb-design.md) before implementing.
+> **Status: implementation in progress.** The initial browser database, workspace mapping, and typed repository are implemented in `src/core/data/indexeddb.ts` and `src/app/data/`. **They are not connected to live Vue feature editing yet; `src/app/workspace.ts` and its localStorage watcher remain authoritative.** The contracts in this document describe the full target, including commands and UI cutover still to implement. Review alongside [IndexedDB design](indexeddb-design.md).
 
 ## Why this change
 
