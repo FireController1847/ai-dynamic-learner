@@ -59,7 +59,9 @@ export type DataOperation =
   | { store: DataStoreName; type: 'put'; key: IDBValidKey; value: IndexedRow; expectedRevision: number | null }
   | { store: DataStoreName; type: 'delete'; key: IDBValidKey; expectedRevision: number | null }
   | { store: DataStoreName; type: 'assert'; key: IDBValidKey; expectedRevision: number | null }
-  | { store: DataStoreName; type: 'exists'; key: IDBValidKey };
+  | { store: DataStoreName; type: 'exists'; key: IDBValidKey }
+  | { store: 'statisticsApps' | 'statisticsEntries'; type: 'increment';
+      key: IDBValidKey; value: IndexedRow; delta: Record<string, number> };
 
 export class DataApiError extends Error {
   readonly code: 'conflict' | 'unavailable' | 'upgrade-blocked' | 'not-found' | 'validation';
@@ -294,7 +296,7 @@ export class IndexedDataStore {
       const key = operation.key;
       const scoped = Array.isArray(key) ? key[0] === workspaceId : key === workspaceId;
       if (!scoped) throw new DataApiError('validation', 'The mutation references a different workspace.');
-      if (operation.type === 'put' && operation.value.workspaceId !== workspaceId) {
+      if ((operation.type === 'put' || operation.type === 'increment') && operation.value.workspaceId !== workspaceId) {
         throw new DataApiError('validation', 'A mutation cannot change the record workspace.');
       }
     }
@@ -345,6 +347,33 @@ export class IndexedDataStore {
               return;
             }
             const actualRevision = existing?.revision ?? null;
+            if (operation.type === 'increment') {
+              const previousCounts = existing?.counts && typeof existing.counts === 'object' &&
+                !Array.isArray(existing.counts) ? existing.counts as Record<string, unknown> : {};
+              const counts: Record<string, number> = { ...previousCounts } as Record<string, number>;
+              for (const [metric, amount] of Object.entries(operation.delta)) {
+                if (!Number.isSafeInteger(amount) || amount < 0) {
+                  abort(new DataApiError('validation', 'Statistics changes must be nonnegative whole numbers.'));
+                  return;
+                }
+                const previous = counts[metric] ?? 0;
+                if (!Number.isSafeInteger(previous) || previous < 0) {
+                  abort(new DataApiError('validation', 'Existing statistics are invalid.'));
+                  return;
+                }
+                counts[metric] = Math.min(Number.MAX_SAFE_INTEGER, previous + amount);
+              }
+              const incoming = operation.value.lastActivityAt;
+              const earlier = existing?.lastActivityAt;
+              const lastActivityAt = typeof incoming === 'string' && typeof earlier === 'string'
+                ? (incoming > earlier ? incoming : earlier)
+                : (incoming ?? earlier);
+              store.put({ ...(existing ?? {}), ...operation.value, counts,
+                ...(lastActivityAt !== undefined ? { lastActivityAt } : {}),
+                revision: (actualRevision ?? 0) + 1 });
+              run(index + 1);
+              return;
+            }
             if (actualRevision !== operation.expectedRevision) {
               abort(new DataApiError('conflict', 'The record changed in another tab. Reload before saving.'));
               return;
