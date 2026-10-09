@@ -165,6 +165,25 @@ export class IndexedDataStore {
     return control?.activeWorkspaceId ?? null;
   }
 
+  async workspaceRevisions(workspaceId: string): Promise<{ commitSequence: number; authoredRevision: number } | null> {
+    const meta = await this.get<{ commitSequence: number; authoredRevision: number }>('workspaceMeta', workspaceId);
+    return meta ? { commitSequence: meta.commitSequence, authoredRevision: meta.authoredRevision } : null;
+  }
+
+  /** Recover missed messages by reading the durable bounded change journal. */
+  async changesAfter(workspaceId: string, sequence: number): Promise<DataChange[] | null> {
+    const meta = await this.workspaceRevisions(workspaceId);
+    if (!meta) throw new DataApiError('not-found', 'Workspace metadata is missing.');
+    if (meta.commitSequence <= sequence) return [];
+    const events = await this.all<{
+      commitSequence: number; scopes: string[]; authored: boolean;
+    }>('changeJournal', IDBKeyRange.bound([workspaceId, sequence + 1], [workspaceId, '\uffff']));
+    if (events.length === 0 || events[0]?.commitSequence !== sequence + 1 ||
+        events.at(-1)?.commitSequence !== meta.commitSequence) return null;
+    return events.map(event => ({ workspaceId, commitSequence: event.commitSequence,
+      authoredRevision: meta.authoredRevision, scopes: event.scopes }));
+  }
+
   /**
    * Stages rows into an inactive workspace in short transactions. No pointers
    * change here. The caller validates hydration before calling activate().
@@ -255,6 +274,8 @@ export class IndexedDataStore {
             tx.objectStore('changeJournal').put({
               workspaceId, commitSequence, scopes, createdAt: Date.now(), authored: options.authored,
             });
+            // Bound on-disk history without scanning the whole journal.
+            if (commitSequence > 1000) tx.objectStore('changeJournal').delete([workspaceId, commitSequence - 1000]);
             result = { workspaceId, commitSequence, authoredRevision, scopes };
             return;
           }
