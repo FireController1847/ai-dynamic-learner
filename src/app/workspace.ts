@@ -108,25 +108,46 @@ export function useWorkspace() {
   async function replaceWorkspace(value: unknown): Promise<void> {
     if (!ready.value) throw new Error('The workspace database is not ready.');
     const replacement = validateWorkspaceValue(value);
-    await nextTick();
-    await observer?.flush();
-    await api.restoreWorkspace(replacement);
-    observer?.stop();
-    state.value = replacement;
-    revision.value += 1;
-    const meta = await api.revisions();
-    lastSequence = meta.commitSequence;
-    await startObserver();
-    backup.workspaceRestored(meta.authoredRevision, populated(replacement));
-    storageProblem.value = '';
+    ready.value = false; // Unmount editors before asynchronous staging begins.
+    try {
+      await nextTick();
+      await observer?.flush();
+      await api.restoreWorkspace(replacement);
+      observer?.stop();
+      state.value = replacement;
+      revision.value += 1;
+      const meta = await api.revisions();
+      lastSequence = meta.commitSequence;
+      await startObserver();
+      backup.workspaceRestored(meta.authoredRevision, populated(replacement));
+      storageProblem.value = '';
+    } finally {
+      ready.value = true;
+    }
   }
 
   async function downloadBackup(): Promise<void> {
-    if (!ready.value) throw new Error('The workspace database is not ready.');
-    await nextTick();
-    await observer?.flush();
-    const snapshot = await api.exportSnapshot();
     const filename = `dynamic-learner-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+    if (!ready.value) {
+      // Even an unreadable legacy workspace must remain recoverable as bytes.
+      const legacy = localStorage.getItem('dynamic-learner.workspace.v1');
+      if (!legacy) throw new Error('The workspace has not loaded and no recovery copy is available.');
+      await downloadText(filename, legacy, 'application/json', { deferPaint: false });
+      return;
+    }
+    await nextTick();
+    try {
+      await observer?.flush();
+    } catch {
+      // A failed IDB write must never disable the user's emergency escape.
+      // Export the live in-memory content, including unsaved edits, but DO NOT
+      // record it as a database snapshot or clear the backup reminder.
+      const json = JSON.stringify(state.value);
+      validateWorkspaceValue(JSON.parse(json) as unknown);
+      await downloadText(filename, json, 'application/json', { deferPaint: false });
+      return;
+    }
+    const snapshot = await api.exportSnapshot();
     await downloadText(filename, snapshot.json, 'application/json', { deferPaint: false });
     backup.recordExport(snapshot.authoredRevision, Date.now());
   }
