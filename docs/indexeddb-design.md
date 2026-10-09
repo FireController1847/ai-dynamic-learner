@@ -1,6 +1,6 @@
 # IndexedDB persistence — physical design proposal
 
-> **Status: design only (RFC).** No object stores, connection code, migrations or runtime changes are added by this PR. Read with [Unified Data API](data-api-design.md). The feature validators in current `main` remain the source of truth for user data.
+> **Status: implementation in progress.** The schema, transaction provider, staging/activation, and model converter are implemented in `src/core/data/indexeddb.ts` and `src/app/data/`; the application has **not yet switched its live workspace from localStorage to IndexedDB**. Some high-level operations and cross-tab editor UI remain future work. Read with [Unified Data API](data-api-design.md). The feature validators remain the source of truth.
 
 ## Selected storage model
 
