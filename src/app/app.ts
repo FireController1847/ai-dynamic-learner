@@ -21,6 +21,8 @@ import { defineComponent, type PropType, computed, createApp, h, KeepAlive, next
 
 initializeTheme();
 
+const TIPS_ENABLED = false;
+
 const homeTipsFeature = Object.freeze({ id: 'home', label: appConfig.name });
 
 const navigationItems = features.filter((feature) => !feature.hidden).map((item) => ({
@@ -71,6 +73,7 @@ const App = defineComponent({
     const { currentPath, navigate } = useNavigation(onNavigate);
     const activeFeature = computed(() => features.find((feature) => feature.path === currentPath.value));
     const tipsFeature = computed(() => {
+      if (!TIPS_ENABLED) return null;
       const feature = activeFeature.value ?? (currentPath.value === '/' ? homeTipsFeature : null);
       return feature && tipsCatalog[feature.id]?.sections.length ? feature : null;
     });
@@ -179,12 +182,12 @@ const App = defineComponent({
         footer: () => h(WorkspaceTools, { workspace }),
       }),
       h(ThemeMenu, { ref: themeMenu }),
-      h(TipsExperience, {
+      TIPS_ENABLED ? h(TipsExperience, {
         ref: tipsExperience,
         feature: tipsFeature.value,
         catalog: tipsCatalog,
         storageKey: 'dynamic-learner.tips.v1',
-      }),
+      }) : null,
       workspace.storageProblem.value ? h('p', {
         class: 'workspace-storage-warning', role: 'alert',
       }, workspace.storageProblem.value) : null,
