@@ -2,8 +2,8 @@ import { parseAiImportJson } from '../../core/ai-json.ts';
 import { categoryScopedPrompt, type AiCardScope } from '../../core/ai-study-categories.ts';
 import { isRecord } from '../../core/validation.ts';
 import {
-  GRID_SIZES, MAX_HINT_LENGTH, MAX_WORD_LENGTH, MAX_WORDS, MIN_WORDS,
-  validatePuzzle as validateWordSearch, type Puzzle as WordSearchPuzzle,
+  MAX_HINT_LENGTH, MAX_WORD_LENGTH, MAX_WORDS, MIN_WORDS,
+  validatePuzzle as validateWordSearch, type Difficulty, type GridSize, type Puzzle as WordSearchPuzzle, type StudyMode,
 } from '../word-search/puzzle-model.ts';
 import {
   MAX_ANSWER_LENGTH, MAX_CLUE_LENGTH, MAX_ENTRIES, MIN_ENTRIES,
@@ -16,9 +16,35 @@ export type PuzzleAiResult =
   | { kind: 'crossword'; title: string; puzzle: CrosswordPuzzle };
 
 export const puzzleAiLimits = {
-  'word-search': { initial: 12, min: MIN_WORDS, max: 24 },
-  crossword: { initial: 10, min: MIN_ENTRIES, max: 20 },
+  'word-search': { initial: 12, min: MIN_WORDS, max: MAX_WORDS },
+  crossword: { initial: 10, min: MIN_ENTRIES, max: MAX_ENTRIES },
 } as const;
+
+export interface PuzzleAiOptions {
+  count: number;
+  size: GridSize;
+  difficulty: Difficulty;
+  studyMode: StudyMode;
+  clueDifficulty: Difficulty;
+  instructions: string;
+}
+
+export function defaultPuzzleAiOptions(kind: PuzzleAiKind): PuzzleAiOptions {
+  return {
+    count: puzzleAiLimits[kind].initial,
+    size: 15,
+    difficulty: 'medium',
+    studyMode: 'hints',
+    clueDifficulty: 'medium',
+    instructions: '',
+  };
+}
+
+const CLUE_DIFFICULTY: Record<Difficulty, string> = {
+  easy: 'Use direct, approachable definitions without giving away the answer.',
+  medium: 'Use specific but moderately challenging clues that reward recall.',
+  hard: 'Use less direct but unambiguous clues that require more thought, without obscure trivia or misleading wordplay.',
+};
 
 // Puzzle creators intentionally support some phrases entered by hand. AI imports
 // are narrower: rejecting separators here prevents silently merging multiple words.
@@ -33,22 +59,32 @@ function singleWord(value: string, label: string, maximum: number): string {
   return word.toUpperCase();
 }
 
-export function puzzleAiPrompt(kind: PuzzleAiKind, scope: AiCardScope, count: number): string {
+export function puzzleAiPrompt(kind: PuzzleAiKind, scope: AiCardScope, options: PuzzleAiOptions): string {
+  const { count } = options;
   const format = kind === 'word-search' ? 'dynamic-learner-word-search' : 'dynamic-learner-crossword';
   const example = kind === 'word-search'
-    ? '"words": [{ "word": "CONCEPT", "hint": "A short clue about the term" }]'
+    ? options.studyMode === 'hints'
+      ? '"words": [{ "word": "CONCEPT", "hint": "A short clue about the term" }]'
+      : '"words": [{ "word": "CONCEPT" }]'
     : '"entries": [{ "answer": "CONCEPT", "clue": "A specific clue that does not use the answer" }]';
   const instructions = kind === 'word-search'
-    ? `Choose up to ${count} DISTINCT, meaningful SINGLE WORDS, each 2–${MAX_WORD_LENGTH} English letters A–Z. A phrase, multiword term or invented run-together word is NOT one word.
-Provide one accurate, concise, non-spoiling hint for EACH word (at most ${MAX_HINT_LENGTH} characters).
-Favor memorable standalone vocabulary over generic filler. Word Search uses hint-based play and builds the letter grid itself.`
+    ? `Choose up to ${count} DISTINCT, meaningful SINGLE WORDS, each 2–${Math.min(MAX_WORD_LENGTH, options.size)} English letters A–Z. No word may exceed ${options.size} letters because the learner selected a ${options.size}×${options.size} grid. A phrase, multiword term or invented run-together word is NOT one word.
+${options.studyMode === 'hints'
+      ? `Provide one accurate, concise, non-spoiling "hint" for EACH word (at most ${MAX_HINT_LENGTH} characters). The puzzle will hide the answers behind hints.`
+      : 'The learner selected Show word list. OMIT the "hint" field from every word; answers will be displayed directly in the sidebar.'}
+Favor memorable standalone vocabulary over generic filler. The application builds the letter grid with ${options.difficulty} difficulty; do not generate a grid.`
     : `Choose up to ${count} DISTINCT, meaningful SINGLE-WORD answers, each 2–${MAX_ANSWER_LENGTH} English letters A–Z. Never submit a phrase or run words together.
-Provide a specific, accurate clue for EACH answer (at most ${MAX_CLUE_LENGTH} characters). Never include the answer itself in its clue.
+Clue difficulty: ${options.clueDifficulty}. ${CLUE_DIFFICULTY[options.clueDifficulty]}
+Provide one accurate clue for EACH answer (at most ${MAX_CLUE_LENGTH} characters). Never include the answer itself in its clue.
 VERY IMPORTANT: every answer must intersect with other answers through shared letters, directly or through a chain; avoid rare letter combinations and disconnected groups.
 The Crossword generator determines its own grid, crossings, and clue numbering. DO NOT generate a grid, coordinates or Across/Down values.`;
   const body = `Using the source material I supplied immediately before this instruction, create ONE focused Dynamic Learner ${kind === 'word-search' ? 'Word Search' : 'Crossword'} puzzle.
 
 ${instructions}
+
+The learner has already configured the puzzle settings in Dynamic Learner. Do not include settings in the JSON. ${kind === 'word-search'
+    ? `Grid: ${options.size}×${options.size}; difficulty: ${options.difficulty}; study display: ${options.studyMode === 'hints' ? 'descriptive hints' : 'word list'}.`
+    : `Grid: generated automatically; clue difficulty: ${options.clueDifficulty}.`}
 
 STRICT SINGLE-WORD RULES FOR EVERY ANSWER:
 - Each "word" or "answer" value must be ONE naturally occurring standalone word, written using only A–Z. No spaces, hyphens, apostrophes, ampersands, digits, or other punctuation.
@@ -75,7 +111,8 @@ The example is a STRUCTURAL TEMPLATE, not puzzle content. Output ${puzzleAiLimit
   return categoryScopedPrompt(body, scope, kind === 'word-search' ? 'word-search terms and hints' : 'crossword answers and clues');
 }
 
-export function parsePuzzleAiImport(json: string, kind: PuzzleAiKind, scope: AiCardScope, limit: number): PuzzleAiResult {
+export function parsePuzzleAiImport(json: string, kind: PuzzleAiKind, scope: AiCardScope, options: PuzzleAiOptions): PuzzleAiResult {
+  const limit = options.count;
   const value = parseAiImportJson(json);
   const format = kind === 'word-search' ? 'dynamic-learner-word-search' : 'dynamic-learner-crossword';
   const field = kind === 'word-search' ? 'words' : 'entries';
@@ -92,19 +129,26 @@ export function parsePuzzleAiImport(json: string, kind: PuzzleAiKind, scope: AiC
     const hints: Record<string, string> = {};
     for (const [index, item] of items.entries()) {
       if (!isRecord(item) || Object.keys(item).some(k => !['word', 'hint'].includes(k)) ||
-          typeof item.word !== 'string' || typeof item.hint !== 'string' ||
-          !item.hint.trim() || item.hint.length > MAX_HINT_LENGTH) {
-        throw new Error(`Word ${index + 1} needs an answer and a concise nonempty hint.`);
+          typeof item.word !== 'string' ||
+          (item.hint !== undefined && (typeof item.hint !== 'string' || item.hint.length > MAX_HINT_LENGTH))) {
+        throw new Error(`Word ${index + 1} needs one valid word and, when supplied, a concise hint.`);
       }
-      const word = singleWord(item.word, `Word ${index + 1}`, MAX_WORD_LENGTH);
+      if (options.studyMode === 'hints' && (typeof item.hint !== 'string' || !item.hint.trim())) {
+        throw new Error(`Word ${index + 1} needs a descriptive hint in hint study mode.`);
+      }
+      const word = singleWord(item.word, `Word ${index + 1}`, Math.min(MAX_WORD_LENGTH, options.size));
       if (used.has(word)) throw new Error(`The answer ${word} is repeated.`);
-      used.add(word); words.push(word); hints[word] = item.hint.trim();
+      used.add(word);
+      words.push(word);
+      if (typeof item.hint === 'string' && item.hint.trim()) hints[word] = item.hint.trim();
     }
-    const longest = Math.max(...words.map(word => word.length));
-    const desiredSize = words.length <= 10 ? 15 : words.length <= 18 ? 20 : 24;
-    const size = GRID_SIZES.find(n => n >= Math.max(longest, desiredSize)) ?? 24;
-    const puzzle = { words, hints, studyMode: 'hints' as const, difficulty: 'medium' as const,
-      size: size as WordSearchPuzzle['size'], instructions: `Find the terms from ${scope.category.title}.` };
+    const puzzle: WordSearchPuzzle = {
+      words, hints,
+      studyMode: options.studyMode,
+      difficulty: options.difficulty,
+      size: options.size,
+      instructions: options.instructions.trim(),
+    };
     validateWordSearch(puzzle);
     return { kind, title: value.title.trim(), puzzle };
   }
@@ -120,7 +164,7 @@ export function parsePuzzleAiImport(json: string, kind: PuzzleAiKind, scope: AiC
     if (used.has(answer)) throw new Error(`The answer ${answer} is repeated.`);
     used.add(answer); entries.push({ answer, clue: item.clue.trim() });
   }
-  const puzzle = { entries, instructions: `Solve the clues from ${scope.category.title}.` };
+  const puzzle: CrosswordPuzzle = { entries, instructions: options.instructions.trim() };
   validatePuzzleForGeneration(puzzle);
   return { kind, title: value.title.trim(), puzzle };
 }
