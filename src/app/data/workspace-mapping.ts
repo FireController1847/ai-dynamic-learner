@@ -32,6 +32,9 @@ export function workspaceRows(workspaceId: string, workspace: Workspace): DataRo
   }
 
   function library(app: string, items: readonly Record<string, unknown>[], parentKey = '@root'): void {
+    scoped('collections', [workspaceId, app, parentKey], {
+      app, parentId: parentKey, children: items.map(item => item.id),
+    });
     items.forEach((item, position) => {
       const { id, kind, name } = item;
       if (typeof id !== 'string' || typeof kind !== 'string' || typeof name !== 'string') {
@@ -51,6 +54,9 @@ export function workspaceRows(workspaceId: string, workspace: Workspace): DataRo
           id, ...(Object.hasOwn(item, 'mode') ? { mode: item.mode } : {}),
         });
         const cards = item.cards as Record<string, unknown>[];
+        scoped('collections', [workspaceId, 'index-cards:cards', id], {
+          app: 'index-cards:cards', parentId: id, children: cards.map(card => card.id),
+        });
         cards.forEach((card, cardPosition) => {
           const cardId = String(card.id);
           scoped('indexCards', [workspaceId, id, cardId], { setId: id, ...copy(card), position: cardPosition });
@@ -78,6 +84,10 @@ export function workspaceRows(workspaceId: string, workspace: Workspace): DataRo
           id, ...(Object.hasOwn(item, 'mode') ? { mode: item.mode } : {}),
           ...(Object.hasOwn(item, 'options') ? { options: copy(item.options) } : {}),
         });
+        scoped('collections', [workspaceId, 'knowledge-check:questions', id], {
+          app: 'knowledge-check:questions', parentId: id,
+          children: (item.questions as Record<string, unknown>[]).map(question => question.id),
+        });
         (item.questions as Record<string, unknown>[]).forEach((question, questionPosition) => {
           const questionId = String(question.id);
           scoped('reviewQuestions', [workspaceId, id, questionId], {
@@ -92,13 +102,23 @@ export function workspaceRows(workspaceId: string, workspace: Workspace): DataRo
     library(app, features[app].items as unknown as Record<string, unknown>[]);
   }
 
+  scoped('collections', [workspaceId, 'todo-list', '@root'], {
+    app: 'todo-list', parentId: '@root', children: features['todo-list'].items.map(item => item.id),
+  });
   features['todo-list'].items.forEach((list, position) => {
     const { sections, ...fields } = list;
     scoped('todoLists', [workspaceId, list.id], { ...copy(fields), position, hasSections: Object.hasOwn(list, 'sections') });
+    if (sections) scoped('collections', [workspaceId, 'todo-list:sections', list.id], {
+      app: 'todo-list:sections', parentId: list.id, children: sections.map(section => section.id),
+    });
     sections?.forEach((section, sectionPosition) => {
       const { tasks, ...sectionFields } = section;
       scoped('todoSections', [workspaceId, list.id, section.id], {
         listId: list.id, ...copy(sectionFields), position: sectionPosition,
+      });
+      scoped('collections', [workspaceId, 'todo-list:tasks', list.id + '/' + section.id], {
+        app: 'todo-list:tasks', parentId: list.id + '/' + section.id,
+        children: tasks.map(task => task.id),
       });
       tasks.forEach((task, taskPosition) => {
         scoped('todoTasks', [workspaceId, list.id, section.id, task.id], {
