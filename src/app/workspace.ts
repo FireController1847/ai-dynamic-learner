@@ -85,10 +85,12 @@ export function useWorkspace() {
         remotePending = false;
         return;
       }
-      // Replacing the whole workspace is not a normal cross-tab edit.
-      // Do not adopt a new active pointer while this tab has a focused draft.
-      if (result.replaced && document.activeElement instanceof HTMLElement &&
-          document.activeElement.matches('input,textarea,[contenteditable="true"]')) {
+      // Restoring a workspace is different from editing a shared record.
+      // Never adopt that new pointer while a focused or pending local draft
+      // belongs to the previous workspace.
+      if (result.replaced && (observer?.hasPendingChanges() ||
+          (document.activeElement instanceof HTMLElement &&
+            document.activeElement.matches('input,textarea,[contenteditable="true"]')))) {
         needsReconcile.value = true;
         remotePending = true;
         storageProblem.value = 'Another tab restored a different workspace. Download your current draft before loading it.';
