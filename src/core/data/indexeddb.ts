@@ -46,7 +46,8 @@ export type DataChange = {
 export type DataCommit = DataChange;
 export type DataOperation =
   | { store: DataStoreName; type: 'put'; key: IDBValidKey; value: IndexedRow; expectedRevision: number | null }
-  | { store: DataStoreName; type: 'delete'; key: IDBValidKey; expectedRevision: number | null };
+  | { store: DataStoreName; type: 'delete'; key: IDBValidKey; expectedRevision: number | null }
+  | { store: DataStoreName; type: 'assert'; key: IDBValidKey; expectedRevision: number | null };
 
 export class DataApiError extends Error {
   readonly code: 'conflict' | 'unavailable' | 'upgrade-blocked' | 'not-found' | 'validation';
@@ -215,6 +216,17 @@ export class IndexedDataStore {
   async commit(workspaceId: string, operations: readonly DataOperation[],
     options: { authored: boolean; scopes: readonly string[] }): Promise<DataCommit> {
     if (!operations.length) throw new DataApiError('validation', 'A transaction needs at least one operation.');
+    for (const operation of operations) {
+      if (['control', 'workspaceMeta', 'changeJournal'].includes(operation.store)) {
+        throw new DataApiError('validation', 'Internal database control records cannot be modified by entity commands.');
+      }
+      const key = operation.key;
+      const scoped = Array.isArray(key) ? key[0] === workspaceId : key === workspaceId;
+      if (!scoped) throw new DataApiError('validation', 'The mutation references a different workspace.');
+      if (operation.type === 'put' && operation.value.workspaceId !== workspaceId) {
+        throw new DataApiError('validation', 'A mutation cannot change the record workspace.');
+      }
+    }
     const stores: DataStoreName[] = [...new Set<DataStoreName>(
       ['control', 'workspaceMeta', 'changeJournal', ...operations.map(operation => operation.store)]
     )];
@@ -257,7 +269,7 @@ export class IndexedDataStore {
               return;
             }
             if (operation.type === 'delete') store.delete(operation.key);
-            else store.put({ ...operation.value, revision: (actualRevision ?? 0) + 1 });
+            else if (operation.type === 'put') store.put({ ...operation.value, revision: (actualRevision ?? 0) + 1 });
             run(index + 1);
           };
         };
