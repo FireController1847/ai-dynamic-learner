@@ -21,6 +21,7 @@ import { LibraryEmptyState } from '../../components/library-empty-state.ts';
 import { useLibrarySelection } from '../../components/use-library-selection.ts';
 import { usePersistedPanelResize } from '../../components/use-persisted-panel-resize.ts';
 import { canMove, countCards, createItem, deleteItem, findItem, firstEntry, groupOptions, insertSet, moveItem } from './tree-model.ts';
+import { createCard } from './card-model.ts';
 import { clearPreference, readNumberPreference, writeNumberPreference } from '../../core/ui-preferences.ts';
 
 import { defineComponent, type PropType, computed, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue';
@@ -99,7 +100,7 @@ export const IndexCards = defineComponent({
       settingsButton.value?.focus();
     }
     const selection = computed(() => findItem(props.model.items, selectedId.value));
-    useStatisticsVisits('index-cards', () => selection.value?.item.id ?? null, () => creationTarget.value === null && aiTarget.value === null &&
+    useStatisticsVisits('index-cards', () => selection.value?.item.id ?? null, () => creationTarget.value === null &&
       selection.value?.item.id !== tutorialReviewSetId.value && selection.value?.item.id !== tutorialFillBlankReviewSetId.value);
     const selectedMode = computed<SetModeId>(() =>
       selection.value?.item.kind === 'set' ? selection.value.item.mode ?? 'flash-cards' : 'flash-cards');
