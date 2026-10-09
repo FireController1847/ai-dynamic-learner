@@ -51,7 +51,7 @@ export const SessionIntro = defineComponent({
           h('p', study ? 'Try an answer before checking. Use explanations as hints, reveal an answer when stuck, and retry as often as you like. The Study score is only a running practice statistic.' :
             test ? 'Answer independently. Revisit and change responses before submitting; feedback stays hidden during the Test.' :
               `Check each answer for immediate feedback. You have up to ${settings.quizAttempts} ${settings.quizAttempts === 1 ? 'attempt' : 'attempts'} per question; a correct answer or the final allowed attempt locks it before you move on.`),
-          settings.shuffleChoices && !study ? h('p', 'Multiple-choice answer choices will be shuffled for this session.') : null,
+          settings.shuffleChoices && !study ? h('p', 'Multiple-choice and dropdown choices will be shuffled for this session.') : null,
           test ? h('p', settings.timeLimitMinutes !== null ? 'The clock starts only when you press Start test. When time runs out, your current answers are submitted.' : 'There is no clock. Submit when you are ready.') : null,
           test ? h('p', settings.showTestAnswers ? 'Results include your score and a review of correct/wrong answers.' : 'This Test shows your score only; answers and explanations remain hidden.') : null,
         ]),

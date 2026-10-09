@@ -2,7 +2,9 @@ import { defaultSetOptions, validateSetOptions, type SetOptions } from './set-op
 import { SetOptionsEditor } from './set-options-editor.ts';
 import type { CheckItem } from './library-model.ts';
 import { MAX_NAME_LENGTH } from './library-model.ts';
-import { createQuestion, questionDisplayPrompt, questionHasContent, questionProblem, questionsForSave, MAX_QUESTIONS, MAX_TEXT, QUESTION_TYPES, type Question, type QuestionType } from './question-model.ts';
+import { cloneQuestion, createQuestion, questionDisplayPrompt, questionHasContent, questionProblem, questionsForSave, MAX_QUESTIONS, MAX_TEXT, QUESTION_TYPES, type Question, type QuestionType } from './question-model.ts';
+import { DropdownEditor } from './dropdown-editor.ts';
+import { QuestionContextEditor } from './context-editor.ts';
 import { ReviewFillBlankEditor } from './fill-blank-editor.ts';
 import { restoreFillBlankAnswers } from '../../core/fill-blank.ts';
 import { inputValue } from '../../core/dom.ts';
@@ -19,7 +21,7 @@ export const CheckBuilder = defineComponent({
   emits: { save: (_name: string, _questions: Question[], _options: SetOptions) => true, cancel: () => true },
   setup(props, { emit }) {
     const name = ref(props.item?.name ?? 'New knowledge set');
-    const questions = ref<Question[]>(props.item?.questions.map((question) => ({ ...question, choices: [...question.choices] })) ?? []);
+    const questions = ref<Question[]>(props.item?.questions.map(cloneQuestion) ?? []);
     const selected = ref(0);
     const tab = ref<'questions' | 'options'>('questions');
     const options = ref<SetOptions>({ ...defaultSetOptions(), ...props.item?.options });
@@ -63,6 +65,8 @@ export const CheckBuilder = defineComponent({
       }
       const replacement = createQuestion(type as QuestionType);
       Object.assign(question, { type: replacement.type, answer: replacement.answer, choices: replacement.choices });
+      delete question.matches;
+      if (replacement.matches) question.matches = replacement.matches;
       if (replacement.type === 'statement') question.explanation = '';
       message.value = '';
     }
@@ -115,8 +119,7 @@ export const CheckBuilder = defineComponent({
                   onClick: () => { if (!canLeaveQuestion()) return; const index = selected.value; questions.value.splice(index, 1);
                     questions.value.splice(index + direction, 0, question); selected.value += direction; } }, direction < 0 ? 'Move up' : 'Move down')),
                 h('button', { type: 'button', class: 'icon-button delete-button', 'aria-label': 'Delete question', title: 'Delete question',
-                  onClick: () => { if (question.prompt.trim() || question.explanation.trim() ||
-                    (question.type !== 'true-false' && question.answer.trim()) || question.choices.some((choice) => choice.trim())) pendingDelete.value = question;
+                  onClick: () => { if (questionHasContent(question)) pendingDelete.value = question;
                     else removeQuestion(question); } }, [h(Icon, { name: 'trash' })]),
               ])]),
             h('label', { class: 'knowledge-field' }, ['Question type', h('select', {
@@ -125,7 +128,8 @@ export const CheckBuilder = defineComponent({
             question.type === 'fill-in-the-blanks'
               ? h(ReviewFillBlankEditor, { question, onMessage: (value: string) => { message.value = value; } })
               : textField(question.type === 'statement' ? 'Statement' : 'Question', 'prompt', question),
-            question.type === 'statement' ? null : question.type === 'multiple-choice' ? h('fieldset', { class: 'knowledge-choice-editor' }, [
+            h(QuestionContextEditor, { key: question.id, question }),
+            question.type === 'statement' ? null : question.type === 'dropdown' ? h(DropdownEditor, { question }) : question.type === 'multiple-choice' ? h('fieldset', { class: 'knowledge-choice-editor' }, [
               h('legend', 'Answer choices'),
               h('p', { class: 'knowledge-muted' }, 'Choose the correct answer.'),
               ...question.choices.map((choice, index) => h('div', { class: 'knowledge-choice-row', key: index }, [

@@ -3,7 +3,8 @@ import { categoryScopedPrompt, type AiCardScope } from '../../core/ai-study-cate
 import { parseFillBlankTemplate } from '../../core/fill-blank.ts';
 import { isRecord } from '../../core/validation.ts';
 import { MAX_NAME_LENGTH } from './library-model.ts';
-import { createQuestion, MAX_TEXT, questionReady, validateQuestions, type Question } from './question-model.ts';
+import { createQuestion, MAX_TEXT, MAX_QUESTION_CONTEXT, questionReady, validateQuestions, type Question } from './question-model.ts';
+import { MAX_DROPDOWN_CHOICES, MAX_DROPDOWN_ROWS, validateDropdownMatches } from './dropdown-model.ts';
 import { AI_QUESTION_TYPES, allocateQuestions, questionTypeLabel, type QuestionWeights } from './ai-question-mix.ts';
 
 export const REVIEW_AI_FORMAT = 'dynamic-learner-review';
@@ -17,6 +18,8 @@ export function reviewAiPrompt(preferences: ReviewAiPreferences, scope: AiCardSc
     'true-false': { type: 'true-false', prompt: 'The chemical symbol for gold is Au.', answer: 'True' },
     'fill-in-the-blanks': { type: 'fill-in-the-blanks', prompt: 'The chemical symbol for gold is {{Au}}.' },
     'short-answer': { type: 'short-answer', prompt: 'What is the chemical symbol for gold?', answer: 'Au' },
+    dropdown: { type: 'dropdown', prompt: 'Match each element to its symbol.', choices: ['Au', 'Ag', 'Fe'],
+      matches: [{ label: 'Gold', answer: 'Au' }, { label: 'Silver', answer: 'Ag' }] },
     statement: { type: 'statement', prompt: 'Gold has the chemical symbol Au.' },
   };
   const prompt = `Using the original source material supplied earlier in this conversation, construct a Dynamic Learner Review knowledge set.
@@ -33,17 +36,26 @@ Question quality:
 - True/false: one clear factual claim, with answer exactly "True" or "False". Include both outcomes when useful, without ambiguous qualifiers or trick statements.
 - Fill in the blanks: {{answer}} markers inside concise, contextual statements. Almost always one word per blank; 2–3 only for an indivisible term. For separate items use {{letters}} and {{numbers}} or {{letters}} or {{numbers}}, preserving the source meaning. Keep meaningful context visible; several related blanks are welcome. Keep terminology and blank boundaries consistent throughout, never alternating a full term like "nullword" with "null" for the same concept.
 - Short answer, ONLY when enabled: a specific quick-recall question with an answer of 1–5 words, not an essay or a list.
+- Dropdown, ONLY when enabled: one matching question with a shared list of 2–${MAX_DROPDOWN_CHOICES} distinct choices and 1–${MAX_DROPDOWN_ROWS} labeled rows in "matches". Each row has "label" and "answer"; its answer must exactly match one choice. Keep rows related and labels distinct. Choices may be reused when factually appropriate. The entire matching question counts as one item in the requested mix.
 - Statement, ONLY when enabled: a concise authored fact or transition with no answer, choices, or explanation; it is not scored.
 - Make every item self-contained, accurate, and based on the source. Avoid duplicates and unsupported facts. Do not include citations, URLs, source markers, IDs, session settings, or other application data.
 - An optional explanation may give one short clarifying sentence for a scored question. It must not be present on a Statement.
+- Keep "prompt" as the concise main question/title in plain text. When useful, add an optional "context" string with GitHub-flavored Markdown: passages, tables, lists, task lists, links, strikethrough, or fenced code. This is supporting material shown separately from the title, not an answer key or feedback. Omit filler context. Do not use raw HTML.
+- Keep choices, answers, and matching-row labels as plain text. For Fill in the Blanks, {{answer}} markers belong only in "prompt"; Markdown context is separate background material and must not replace the blank-aware prompt.
+
+Vary the presentation across the knowledge set:
+- Intentionally mix concise standalone questions with questions that use meaningful Markdown context. For medium or large sets, include several context-based questions when the material supports them; do not make every question the same simple recall format. This is a flexible writing goal, not another percentage quota.
+- Use small GFM tables for comparisons, classifications, timelines, or data interpretation; brief passages or scenarios for application questions; lists for processes or related facts; and fenced code blocks for code-reading questions when relevant to the subject.
+- Make the context useful to answering the question: ask the learner to interpret, compare, infer, or apply something in it. Do not add a decorative table or simply repeat the question beneath its title.
+- Base all context on the source's information and concepts. Do not invent unsupported factual claims or include a labeled answer key. Keep context compact, preserve the requested question-type mix, and leave some questions without context. If the source does not benefit from added context, prioritize clarity over forcing variety.
 
 Return ONLY one JSON code block using this structure:
 \`\`\`json
 ${JSON.stringify({ format: REVIEW_AI_FORMAT, version: 1, title: 'Short knowledge set title', description: 'Brief scope of this knowledge set.', questions: AI_QUESTION_TYPES.filter(type => counts[type] > 0).map(type => examples[type]) }, null, 2)}
 \`\`\`
 
-These are format examples only; use the requested counts and source content, not these example facts. Title: 1–${MAX_NAME_LENGTH} characters. Description: at most ${MAX_TEXT} characters. Prompt, answer, explanation, and each choice: at most ${MAX_TEXT} characters of plain text.
-Use only type/prompt/choices/answer/optional explanation on multiple choice; omit choices on true/false and short answer. On fill in the blanks use type/prompt/optional explanation, with answers embedded in {{markers}}. On statements use only type/prompt.`;
+These are format examples only; use the requested counts and source content, not these example facts. Title: 1–${MAX_NAME_LENGTH} characters. Description: at most ${MAX_TEXT} characters. Prompt, answer, explanation, and each choice: at most ${MAX_TEXT} characters of plain text. Optional context: at most ${MAX_QUESTION_CONTEXT} characters of Markdown, encoded as a JSON string (escape newlines inside strings).
+Use only type/prompt/choices/answer/optional explanation on multiple choice; omit choices on true/false and short answer. On Dropdown use type/prompt/choices/matches/optional explanation, with correct answers inside the matching rows and no top-level answer. On fill in the blanks use type/prompt/optional explanation, with answers embedded in {{markers}}. On statements use only type/prompt. Any of these types may also include the optional context field.`;
   return scope ? categoryScopedPrompt(prompt, scope, 'Review questions') : prompt;
 }
 
@@ -64,25 +76,33 @@ export function parseReviewAiImport(text: string, preferences: ReviewAiPreferenc
       throw new Error(`Item ${index + 1} needs a supported type and a non-empty prompt.`);
     }
     const type = AI_QUESTION_TYPES.find(type => type === entry.type)!;
-    const fields = type === 'statement' ? ['type', 'prompt'] : type === 'fill-in-the-blanks' ? ['type', 'prompt', 'explanation'] :
+    const fields = type === 'statement' ? ['type', 'prompt'] : type === 'dropdown' ? ['type', 'prompt', 'choices', 'matches', 'explanation'] : type === 'fill-in-the-blanks' ? ['type', 'prompt', 'explanation'] :
       type === 'multiple-choice' ? ['type', 'prompt', 'answer', 'choices', 'explanation'] : ['type', 'prompt', 'answer', 'explanation'];
+    fields.push('context');
     if (Object.keys(entry).some(key => !fields.includes(key)) ||
+        (Object.hasOwn(entry, 'context') && (typeof entry.context !== 'string' || entry.context.length > MAX_QUESTION_CONTEXT)) ||
         (Object.hasOwn(entry, 'explanation') && (typeof entry.explanation !== 'string' || entry.explanation.length > MAX_TEXT))) {
       throw new Error(`Item ${index + 1} contains unsupported fields or an invalid explanation.`);
     }
     const question = createQuestion(type);
     question.prompt = entry.prompt.trim();
     question.explanation = typeof entry.explanation === 'string' ? entry.explanation.trim() : '';
-    if (type !== 'statement' && type !== 'fill-in-the-blanks') {
+    if (typeof entry.context === 'string') question.context = entry.context.trim();
+    if (type !== 'statement' && type !== 'fill-in-the-blanks' && type !== 'dropdown') {
       if (typeof entry.answer !== 'string' || !entry.answer.trim() || entry.answer.length > MAX_TEXT) throw new Error(`Item ${index + 1} needs a short correct answer.`);
       question.answer = entry.answer.trim();
     }
-    if (type === 'multiple-choice') {
-      if (!Array.isArray(entry.choices) || entry.choices.length < 2 || entry.choices.length > 8 ||
+    if (type === 'multiple-choice' || type === 'dropdown') {
+      const limit = type === 'dropdown' ? MAX_DROPDOWN_CHOICES : 8;
+      if (!Array.isArray(entry.choices) || entry.choices.length < 2 || entry.choices.length > limit ||
           entry.choices.some(choice => typeof choice !== 'string' || !choice.trim() || choice.length > MAX_TEXT)) {
-        throw new Error(`Item ${index + 1} needs 2–8 non-empty answer choices.`);
+        throw new Error(`Item ${index + 1} needs 2–${limit} non-empty answer choices.`);
       }
       question.choices = entry.choices.map((choice: string) => choice.trim());
+    }
+    if (type === 'dropdown') {
+      validateDropdownMatches(entry.matches, MAX_TEXT);
+      question.matches = entry.matches.map(row => ({ label: row.label.trim(), answer: row.answer.trim() }));
     }
     if (type === 'fill-in-the-blanks') {
       const template = parseFillBlankTemplate(question.prompt);

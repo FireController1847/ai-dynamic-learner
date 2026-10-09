@@ -10,6 +10,8 @@ Node.js 24+ runs build tooling. `npm start` launches webpack-dev-server, `npm ru
 
 Markdown preview uses Marked plus DOMPurify. Sanitization stays explicit; generated preview HTML must not become an unchecked route to Vue props, handlers, styles, or arbitrary DOM behavior.
 
+`src/components/markdown-renderer.ts` owns the shared synchronous GFM parser, DOMPurify allowlist, and safe DOM-to-VNode conversion. `MarkdownContent` gives independent rendered regions unique heading IDs; `src/styles/markdown-content.css` owns shared Markdown typography. Notebook retains an adapter for its existing outline heading IDs and paper presentation. Review stores optional question context as Markdown source and renders it separately from the plain-text question title and answer controls.
+
 ## Layers
 
 | Layer | Owns | May import |

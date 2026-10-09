@@ -224,3 +224,26 @@
 .knowledge-session-choice strong { font-weight: 600; }
 .knowledge-session-choice-description { display: block; margin-top: 2px; color: var(--text-secondary); font-size: 12px; line-height: 16px; }
 .knowledge-session-setup-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 24px; }
+
+.knowledge-dropdown-rows { margin:0 0 20px;padding:0;border:0;min-width:0; }
+.knowledge-dropdown-rows legend { font-weight:600;margin-bottom:12px; }
+.knowledge-dropdown-row { display:grid;grid-template-columns:minmax(0,1fr) minmax(160px,1fr);align-items:center;gap:16px;padding:16px 0;border-bottom:1px solid var(--border-color); }
+.knowledge-dropdown-row strong { overflow-wrap:anywhere; }
+.knowledge-dropdown-row select { width:100%;min-width:0; }
+.knowledge-dropdown-editor-row { display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;align-items:center;gap:12px; }
+.knowledge-dropdown-editor-row .knowledge-field { min-width:0; }
+.knowledge-dropdown-row select { transition:border-color var(--motion-fast),background-color var(--motion-fast); }
+@media(max-width:600px) { .knowledge-dropdown-row { grid-template-columns:1fr;gap:8px; } .knowledge-dropdown-editor-row { grid-template-columns:minmax(0,1fr) auto; } .knowledge-dropdown-editor-row .knowledge-field { grid-column:1; } .knowledge-dropdown-editor-row>button { grid-column:2;grid-row:1/3; } }
+@media(pointer:coarse) { .knowledge-dropdown-row select { min-height:44px;font-size:16px; } }
+@media(prefers-reduced-motion:reduce) { .knowledge-dropdown-row select { transition:none; } }
+
+.knowledge-question-context { margin:0 0 24px;font-size:14px;line-height:1.6;text-align:left; }
+.knowledge-question-context :is(h1,h2,h3,h4,h5,h6) { margin:1em 0 .5em;line-height:1.4;white-space:normal; }
+.knowledge-question-context h1 { font-size:1.3em; }
+.knowledge-question-context h2 { font-size:1.2em; }
+.knowledge-question-context :is(h3,h4,h5,h6) { font-size:1.1em; }
+.knowledge-context-editor { margin-bottom:20px; }
+.knowledge-context-editor>.knowledge-muted { margin-top:-8px; }
+.knowledge-context-preview { padding:12px;border:1px solid var(--border-color);border-radius:var(--radius);background:var(--page-background); }
+.knowledge-context-preview summary { cursor:pointer;font-size:12px;color:var(--text-secondary); }
+.knowledge-context-preview .knowledge-question-context { margin:12px 0 0; }

@@ -14,6 +14,7 @@ Use this as a starting-file index, not a feature specification. Follow imports o
 | Tips engine/UI | `packages/tips/` |
 | Shared buttons/dialogs | `src/styles/base.css`, `src/components/use-dialog.ts`, `popup-dialog.ts` |
 | Shared AI prompt/import tabs, handoff, and animation | `src/components/ai-prompt-exchange.ts`, `src/styles/ai-prompt-exchange.css` |
+| Shared GFM rendering / typography | `src/components/markdown-renderer.ts`, `markdown-content.ts`, `src/styles/markdown-content.css`; Notebook keeps its heading/outline adapter |
 | Shared AI category discovery/history | `src/components/ai-category-picker.ts`, `src/core/ai-study-categories.ts`, `ai-category-history.ts`, `ai-json.ts` |
 | Answer strictness control | `src/components/answer-strictness-field.ts` |
 | Delete confirmation | `src/components/delete-confirmation.ts`, `src/styles/delete-confirmation.css` |
@@ -55,6 +56,8 @@ Use this as a starting-file index, not a feature specification. Follow imports o
 | Guide Map | `map-editor.ts`, `map-graph.ts`, `map-study.ts`, `map-presentation.ts`, `guide.css` |
 | Review library/model | `src/features/knowledge-check/knowledge-check.ts`, `library.ts`, `library-model.ts` |
 | Review authoring | `check-builder.ts`, `question-model.ts`, `fill-blank-editor.ts`, `set-options*.ts` |
+| Review Dropdown matching | `dropdown-model.ts`, `dropdown-editor.ts`, `question-model.ts`, `knowledge-session.ts`, `session-settings.ts` |
+| Review Markdown context | `context-editor.ts`, `question-model.ts`, `knowledge-session.ts`, shared Markdown components |
 | Review Study/Quiz/Test | `knowledge-set.ts`, `session-setup.ts`, `session-settings.ts`, `session-intro.ts`, `session-state.ts`, `knowledge-session.ts`, `review-motion.ts`, `review-motion.css` |
 | Review imports | `import-knowledge-set.ts`, `index-cards-import-picker.ts`, `fill-blank-import-resolution.ts`, `import-index-cards.ts` |
 | Review AI creation / question mix | `ai-creation.ts`, `ai-creation.css`, `ai-import-format.ts`, `ai-question-mix.ts`, `knowledge-check.ts`, `library.ts` |

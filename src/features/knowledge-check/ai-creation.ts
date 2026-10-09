@@ -1,12 +1,13 @@
 import { computed, defineComponent, h, onMounted, ref, Transition } from 'vue';
 import { AiCategoryPicker } from '../../components/ai-category-picker.ts';
 import { AiPromptExchange } from '../../components/ai-prompt-exchange.ts';
+import { MarkdownContent } from '../../components/markdown-content.ts';
 import { MAX_AI_IMPORT_LENGTH } from '../../core/ai-json.ts';
 import type { AiCardCategories, AiCardScope } from '../../core/ai-study-categories.ts';
 import { inputValue } from '../../core/dom.ts';
 import { parseFillBlankTemplate } from '../../core/fill-blank.ts';
 import { parseReviewAiImport, reviewAiPrompt, type ReviewAiImport, type ReviewAiPreferences } from './ai-import-format.ts';
-import { AI_QUESTION_TYPES, allocateQuestions, DEFAULT_AI_WEIGHTS, questionMixProblem, questionTypeLabel } from './ai-question-mix.ts';
+import { AI_QUESTION_TYPES, allocateQuestions, DEFAULT_AI_WEIGHTS, questionMixProblem, questionTypeLabel, rebalanceQuestionWeights } from './ai-question-mix.ts';
 import { MAX_QUESTIONS, questionDisplayPrompt, type Question } from './question-model.ts';
 
 export const ReviewAiCreation = defineComponent({
@@ -43,10 +44,13 @@ export const ReviewAiCreation = defineComponent({
       catch (error) { problem.value = error instanceof Error ? error.message : String(error); }
     }
     function previewQuestion(question: Question, index: number) {
-      const answers = question.type === 'fill-in-the-blanks' ? parseFillBlankTemplate(question.prompt).answers : [question.answer];
+      const answers = question.type === 'dropdown' ? (question.matches ?? []).map(row => `${row.label}: ${row.answer}`) :
+        question.type === 'fill-in-the-blanks' ? parseFillBlankTemplate(question.prompt).answers : [question.answer];
       return h('li', { key: question.id }, [
         h('span', { class: 'study-ai-muted' }, `${index + 1} · ${questionTypeLabel(question.type)}`),
         h('strong', questionDisplayPrompt(question)),
+        question.context?.trim() ? h(MarkdownContent, { text: question.context, class: 'knowledge-question-context' }) : null,
+        question.type === 'dropdown' ? h('ul', (question.matches ?? []).map(row => h('li', row.label))) : null,
         question.choices.length ? h('ul', question.choices.map(choice => h('li', choice))) : null,
         question.type !== 'statement' ? h('details', [h('summary', 'Reveal answer'),
           h('p', answers.join(' · ')), question.explanation ? h('p', question.explanation) : null]) : null,
@@ -85,11 +89,16 @@ export const ReviewAiCreation = defineComponent({
             ...AI_QUESTION_TYPES.map(type => h('label', { class: 'review-ai-weight', key: type }, [
               h('span', questionTypeLabel(type)),
               h('input', { type: 'number', min: 0, max: 100, step: 1, value: preferences.value.weights[type], 'aria-label': `${questionTypeLabel(type)} percentage`,
-                onInput: (event: Event) => { preferences.value.weights[type] = Number(inputValue(event)); } }),
+                onInput: (event: Event) => {
+                  const text = inputValue(event).trim();
+                  preferences.value.weights = rebalanceQuestionWeights(preferences.value.weights, type, text ? Number(text) : Number.NaN);
+                  // Restore empty/invalid/clamped input even when its value didn't change.
+                  if (event.target instanceof HTMLInputElement) event.target.value = String(preferences.value.weights[type]);
+                } }),
               h('span', '%'), h('span', { class: 'study-ai-muted' }, counts.value ? `${counts.value[type]} items` : '—'),
             ])),
           ]),
-          h('p', { role: 'status', class: mixProblem.value ? 'study-ai-error' : 'study-ai-muted' }, `Total: ${Number.isFinite(total.value) ? total.value : '—'}%. ${mixProblem.value || 'Counts above show the rounded mix. Types at 0% are excluded.'}`),
+          h('p', { role: 'status', class: mixProblem.value ? 'study-ai-error' : 'study-ai-muted' }, `Total: ${total.value}%. ${mixProblem.value || 'Changes are balanced evenly across the other types. Types at 0% are excluded.'}`),
           h('p', { class: 'study-ai-muted' }, 'Statements are not scored. You can still import an Index Cards set using the Library’s existing Import knowledge set action.'),
           h('div', { class: 'study-ai-actions' }, [
             h('button', { type: 'button', class: 'quiet-button', onClick: () => { preferences.value.weights = { ...DEFAULT_AI_WEIGHTS }; } }, 'Reset percentages'),
