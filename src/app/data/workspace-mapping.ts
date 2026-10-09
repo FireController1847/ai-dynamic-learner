@@ -94,7 +94,7 @@ export function workspaceRows(workspaceId: string, workspace: Workspace): DataRo
 
   features['todo-list'].items.forEach((list, position) => {
     const { sections, ...fields } = list;
-    scoped('todoLists', [workspaceId, list.id], { ...copy(fields), position });
+    scoped('todoLists', [workspaceId, list.id], { ...copy(fields), position, hasSections: Object.hasOwn(list, 'sections') });
     sections?.forEach((section, sectionPosition) => {
       const { tasks, ...sectionFields } = section;
       scoped('todoSections', [workspaceId, list.id, section.id], {
@@ -223,12 +223,12 @@ export async function hydrateWorkspace(store: IndexedDataStore, workspaceId: str
   const lists = getRows('todoLists').sort(ordering);
   featureModels['todo-list']!.items = lists.map(list => {
     const sections = getRows('todoSections').filter(s => s.listId === list.id).sort(ordering);
-    return { ...unwrap(list, ['position']),
-      ...(sections.length ? { sections: sections.map(section => ({
+    return { ...unwrap(list, ['position', 'hasSections']),
+      ...(list.hasSections ? { sections: sections.map(section => ({
         ...unwrap(section, ['listId', 'position']),
         tasks: getRows('todoTasks').filter(task => task.listId === list.id && task.sectionId === section.id)
           .sort(ordering).map(task => unwrap(task, ['listId', 'sectionId', 'position'])),
-      })) } : (getRows('todoSections').some(s => s.listId === list.id) ? { sections: [] } : {})),
+      })) } : {}),
     };
   });
 
