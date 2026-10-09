@@ -158,7 +158,7 @@ function indexed(rows: readonly Stored[]): Map<string, IndexedRow> {
 const ordering = (a: Stored, b: Stored) => (a.position ?? 0) - (b.position ?? 0);
 
 export const WORKSPACE_RECORD_STORES: readonly DataStoreName[] = [
-    'featureState', 'libraryNodes', 'notebookDocuments', 'indexCardSets', 'indexCards',
+    'featureState', 'libraryNodes', 'collections', 'notebookDocuments', 'indexCardSets', 'indexCards',
     'wordSearches', 'wordSearchGames', 'crosswords', 'crosswordGames', 'guides', 'guideSessions',
     'reviewSets', 'reviewQuestions', 'todoLists', 'todoSections', 'todoTasks',
     'statisticsMeta', 'statisticsApps', 'statisticsEntries',
@@ -254,6 +254,109 @@ export async function hydrateWorkspace(store: Pick<IndexedDataStore, 'all'> & Pa
     }
     if (reachable.size !== nodes.length) throw new Error('Saved library content is orphaned or cyclic.');
     featureModels[app]!.items = root;
+  }
+
+  // Validate ownership before rebuilding a JSON backup. Otherwise a dangling
+  // content row (from a failed old write or a bug) is silently omitted on
+  // export and appears permanently lost once that backup is restored.
+  const leafIds = (app: string) => new Set(groups
+    .filter(row => row.app === app && row.kind !== 'group').map(row => row.id));
+  const verifyContents = (store: DataStoreName, app: string, required: boolean) => {
+    const owners = leafIds(app);
+    const seen = new Set<string>();
+    for (const row of getRows(store)) {
+      const id = row.id;
+      if (!id || !owners.has(id) || seen.has(id)) {
+        throw new Error('Saved ' + store + ' contains an orphaned or duplicate record.');
+      }
+      seen.add(id);
+    }
+    if (required && owners.size !== seen.size) {
+      throw new Error('Saved ' + app + ' content is missing from ' + store + '.');
+    }
+  };
+  verifyContents('notebookDocuments', 'notebook', true);
+  verifyContents('indexCardSets', 'index-cards', true);
+  verifyContents('wordSearches', 'word-search', true);
+  verifyContents('wordSearchGames', 'word-search', false);
+  verifyContents('crosswords', 'crossword', true);
+  verifyContents('crosswordGames', 'crossword', false);
+  verifyContents('guides', 'guide', true);
+  verifyContents('guideSessions', 'guide', false);
+  verifyContents('reviewSets', 'knowledge-check', true);
+
+  for (const [app, store] of [['index-cards', 'indexCards'],
+    ['knowledge-check', 'reviewQuestions']] as const) {
+    const ownerIds = leafIds(app);
+    const childIds = new Set<string>();
+    for (const row of getRows(store)) {
+      const id = row.id, parent = row.setId;
+      if (!id || typeof parent !== 'string' || !ownerIds.has(parent) || childIds.has(id)) {
+        throw new Error('Saved ' + store + ' contains an orphaned or duplicate child.');
+      }
+      childIds.add(id);
+    }
+  }
+
+  const expectedCollections = new Map<string, string[]>();
+  function recordOrder(app: string, parentId: string, ids: string[]) {
+    const key = JSON.stringify([app, parentId]);
+    if (expectedCollections.has(key)) throw new Error('Duplicate saved collection.');
+    expectedCollections.set(key, ids);
+  }
+  for (const app of LIBRARY_APPS) {
+    const nodes = groups.filter(row => row.app === app);
+    const parents = new Set([ '@root',
+      ...nodes.filter(row => row.kind === 'group').map(row => row.id!) ]);
+    for (const parent of parents) {
+      recordOrder(app, parent, nodes.filter(node => node.parentKey === parent)
+        .sort(ordering).map(node => node.id!));
+    }
+  }
+  for (const row of getRows('indexCardSets')) {
+    recordOrder('index-cards:cards', row.id!,
+      getRows('indexCards').filter(card => card.setId === row.id).sort(ordering).map(card => card.id!));
+  }
+  for (const row of getRows('reviewSets')) {
+    recordOrder('knowledge-check:questions', row.id!,
+      getRows('reviewQuestions').filter(q => q.setId === row.id).sort(ordering).map(q => q.id!));
+  }
+  const todoRows = getRows('todoLists');
+  recordOrder('todo-list', '@root', todoRows.sort(ordering).map(list => list.id!));
+  for (const list of todoRows) {
+    const sections = getRows('todoSections').filter(section => section.listId === list.id).sort(ordering);
+    if (list.hasSections) {
+      recordOrder('todo-list:sections', list.id!, sections.map(section => section.id!));
+    } else if (sections.length) {
+      throw new Error('A Todo List has sections despite lacking a section collection.');
+    }
+    for (const section of sections) {
+      const tasks = getRows('todoTasks').filter(task =>
+        task.listId === list.id && task.sectionId === section.id).sort(ordering);
+      recordOrder('todo-list:tasks', list.id + '/' + section.id, tasks.map(task => task.id!));
+    }
+  }
+  for (const section of getRows('todoSections')) {
+    if (!todoRows.some(list => list.id === section.listId)) throw new Error('An orphaned Todo section was found.');
+  }
+  for (const task of getRows('todoTasks')) {
+    if (!getRows('todoSections').some(section =>
+      section.listId === task.listId && section.id === task.sectionId)) {
+      throw new Error('An orphaned Todo task was found.');
+    }
+  }
+  const actualCollections = getRows('collections');
+  if (actualCollections.length !== expectedCollections.size) {
+    throw new Error('The database is missing saved library ordering records.');
+  }
+  for (const collection of actualCollections) {
+    if (typeof collection.app !== 'string' || typeof collection.parentId !== 'string' ||
+        !Array.isArray(collection.children)) throw new Error('Invalid library collection.');
+    const expected = expectedCollections.get(JSON.stringify([collection.app, collection.parentId]));
+    if (!expected || expected.length !== collection.children.length ||
+        expected.some((id, i) => id !== collection.children![i])) {
+      throw new Error('Saved collection ordering does not match its content.');
+    }
   }
 
   const lists = getRows('todoLists').sort(ordering);
