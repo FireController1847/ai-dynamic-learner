@@ -137,7 +137,7 @@ function indexed(rows: readonly Stored[]): Map<string, IndexedRow> {
 }
 const ordering = (a: Stored, b: Stored) => (a.position ?? 0) - (b.position ?? 0);
 
-export async function hydrateWorkspace(store: IndexedDataStore, workspaceId: string): Promise<Workspace> {
+export async function hydrateWorkspace(store: Pick<IndexedDataStore, 'all'>, workspaceId: string): Promise<Workspace> {
   const stores: DataStoreName[] = [
     'featureState', 'libraryNodes', 'notebookDocuments', 'indexCardSets', 'indexCards',
     'wordSearches', 'wordSearchGames', 'crosswords', 'crosswordGames', 'guides', 'guideSessions',
