@@ -20,7 +20,8 @@ import { validateIndexCards } from '../features/index-cards/tree-model.ts';
 import { validateWordSearch } from '../features/word-search/library-model.ts';
 import { validateCrossword } from '../features/crossword/library-model.ts';
 
-export const MAX_BACKUP_BYTES = 32 * 1024 * 1024;
+// Limit import file size independently of IndexedDB's live storage quota.
+export const MAX_BACKUP_BYTES = 128 * 1024 * 1024;
 
 export function emptyWorkspace(): Workspace {
   return {
@@ -40,10 +41,15 @@ export function emptyWorkspace(): Workspace {
 }
 
 export function parseWorkspace(text: string): Workspace {
-  if (new Blob([text]).size > MAX_BACKUP_BYTES) throw new Error('Backups must be smaller than 32 MB.');
+  if (new Blob([text]).size > MAX_BACKUP_BYTES) throw new Error('Backups must be smaller than 128 MiB.');
   let value: unknown;
   try { value = JSON.parse(text); }
   catch { throw new Error('This file is not valid JSON.'); }
+  return validateWorkspaceValue(value);
+}
+
+/** Validate an in-memory IDB snapshot without imposing the legacy JSON file-size limit. */
+export function validateWorkspaceValue(value: unknown): Workspace {
   if (!isRecord(value) || value.format !== 'dynamic-learner' || value.version !== 1 ||
       Object.keys(value).some((key) => !['format', 'version', 'features', 'statistics'].includes(key)) ||
       !isRecord(value.features) || !value.features['index-cards'] ||
