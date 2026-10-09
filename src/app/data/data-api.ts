@@ -93,6 +93,10 @@ export class WorkspaceDataApi {
     return this.store.subscribe(listener);
   }
 
+  subscribeRemote(listener: DataListener): () => void {
+    return this.store.subscribeRemote(listener);
+  }
+
   async workspace(): Promise<Workspace> {
     return hydrateWorkspace(this.store, this.active());
   }
