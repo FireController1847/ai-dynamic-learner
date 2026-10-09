@@ -103,6 +103,46 @@ export class WorkspaceDataApi {
   workspaceIdentity(): string { return this.active(); }
 
   /**
+   * Hydrate the UI and capture optimistic revisions from one IDB snapshot.
+   * Separate queries could let another tab write after hydration but before
+   * we record the initial compare-and-swap revisions.
+   */
+  async initialSnapshot(): Promise<{
+    workspace: Workspace;
+    revisions: { commitSequence: number; authoredRevision: number };
+    records: Array<{ store: DataStoreName; key: IDBValidKey; value: IndexedRow; revision: number }>;
+  }> {
+    const workspaceId = this.active();
+    const stores: DataStoreName[] = [
+      ...WORKSPACE_RECORD_STORES, 'collections', 'control', 'workspaceMeta',
+    ];
+    const snapshot = await this.store.snapshot<IndexedRow>(stores, workspaceId);
+    if (snapshot.get('control')?.[0]?.activeWorkspaceId !== workspaceId) {
+      throw new DataApiError('conflict', 'The workspace changed while it was being loaded. Reload this tab.');
+    }
+    const meta = snapshot.get('workspaceMeta')?.find(value => value.id === workspaceId);
+    if (typeof meta?.commitSequence !== 'number' || typeof meta.authoredRevision !== 'number') {
+      throw new DataApiError('unavailable', 'Workspace revision metadata is missing.');
+    }
+    const reader = { all: async <T>(store: DataStoreName): Promise<T[]> =>
+      (snapshot.get(store) ?? []) as T[] };
+    const workspace = await hydrateWorkspace(reader, workspaceId);
+    const records = stores.filter(store => !['control', 'workspaceMeta'].includes(store))
+      .flatMap(store => (snapshot.get(store) ?? []).filter(value => value.workspaceId === workspaceId)
+        .map(value => ({
+          store, key: dataPrimaryKey(store, value), value,
+          revision: typeof value.revision === 'number' ? value.revision : 0,
+        })));
+    return {
+      workspace,
+      revisions: { commitSequence: meta.commitSequence, authoredRevision: meta.authoredRevision },
+      records,
+    };
+  }
+
+
+
+  /**
    * Bootstrap record revisions once for the legacy Vue compatibility bridge.
    * Ordinary edits must never use this workspace-wide snapshot.
    */
