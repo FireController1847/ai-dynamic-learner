@@ -44,6 +44,11 @@ export function parseWorkspace(text: string): Workspace {
   let value: unknown;
   try { value = JSON.parse(text); }
   catch { throw new Error('This file is not valid JSON.'); }
+  return validateWorkspaceValue(value);
+}
+
+/** Validate an in-memory IDB snapshot without imposing the legacy JSON file-size limit. */
+export function validateWorkspaceValue(value: unknown): Workspace {
   if (!isRecord(value) || value.format !== 'dynamic-learner' || value.version !== 1 ||
       Object.keys(value).some((key) => !['format', 'version', 'features', 'statistics'].includes(key)) ||
       !isRecord(value.features) || !value.features['index-cards'] ||
