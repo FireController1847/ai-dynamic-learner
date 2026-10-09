@@ -42,9 +42,20 @@ function canonical(value: unknown): string {
 export class WorkspaceDataApi {
   private readonly store = new IndexedDataStore();
   private workspaceId: string | null = null;
+  private initialization: Promise<void> | null = null;
 
-  async ready(): Promise<void> {
-    if (this.workspaceId) return;
+  ready(): Promise<void> {
+    if (this.workspaceId) return Promise.resolve();
+    if (!this.initialization) {
+      this.initialization = this.initialize().catch(error => {
+        this.initialization = null;
+        throw error;
+      });
+    }
+    return this.initialization;
+  }
+
+  private async initialize(): Promise<void> {
     await this.store.open();
     let workspaceId = await this.store.activeWorkspaceId();
     if (!workspaceId) {
@@ -84,6 +95,29 @@ export class WorkspaceDataApi {
 
   async workspace(): Promise<Workspace> {
     return hydrateWorkspace(this.store, this.active());
+  }
+
+  /** Refresh a tab after a missed BroadcastChannel message or page resume.
+   * A null journal result means the consumer should reload affected views.
+   */
+  async refresh(lastSeenCommitSequence: number): Promise<{
+    replaced: boolean;
+    events: DataChange[] | null;
+  }> {
+    const current = await this.store.activeWorkspaceId();
+    if (!current) throw new DataApiError('unavailable', 'The active workspace could not be found.');
+    if (current !== this.workspaceId) {
+      await hydrateWorkspace(this.store, current);
+      this.workspaceId = current;
+      return { replaced: true, events: null };
+    }
+    return { replaced: false, events: await this.store.changesAfter(current, lastSeenCommitSequence) };
+  }
+
+  async revisions(): Promise<{ commitSequence: number; authoredRevision: number }> {
+    const result = await this.store.workspaceRevisions(this.active());
+    if (!result) throw new DataApiError('unavailable', 'The active workspace metadata is missing.');
+    return result;
   }
 
   async read<T extends IndexedRow>(store: DataStoreName, key: IDBValidKey): Promise<Versioned<T> | null> {
@@ -304,5 +338,5 @@ export class WorkspaceDataApi {
     return JSON.stringify(await this.workspace());
   }
 
-  close() { this.store.close(); this.workspaceId = null; }
+  close() { this.store.close(); this.workspaceId = null; this.initialization = null; }
 }
