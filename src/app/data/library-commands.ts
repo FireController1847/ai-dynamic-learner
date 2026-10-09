@@ -222,6 +222,7 @@ export function createLibraryCommands(api: Pick<WorkspaceDataApi, 'read' | 'list
       if (ancestors.some(parent => parent.value.id === id)) {
         throw invalid('A group cannot be moved inside itself or its descendants.');
       }
+      const subtreeChecks: DataOperation[] = [];
       if (node.value.kind === 'group') {
         let maxRelative = 1;
         const descend = async (groupId: string, depth: number, seen: Set<string>) => {
@@ -229,6 +230,11 @@ export function createLibraryCommands(api: Pick<WorkspaceDataApi, 'read' | 'list
           seen.add(groupId);
           maxRelative = Math.max(maxRelative, depth);
           const collection = await getCollection(app, groupId);
+          // The depth calculation is only valid for this exact descendant
+          // structure. Concurrent additions/moves must invalidate the move,
+          // otherwise a deep subgroup could exceed the max depth afterward.
+          subtreeChecks.push(assertRev('collections',
+            [api.workspaceIdentity(), app, groupId], collection.revision));
           for (const childId of collection.value.children) {
             const child = await getNode(app, childId);
             if (child.value.parentKey !== groupId) throw invalid('Invalid group ownership.');
@@ -249,6 +255,7 @@ export function createLibraryCommands(api: Pick<WorkspaceDataApi, 'read' | 'list
       targetIds.splice(position, 0, id);
       const ops: DataOperation[] = [
         ...ancestors.map(parent => assertRev('libraryNodes', [ws, app, parent.value.id], parent.revision)),
+        ...subtreeChecks,
         put('libraryNodes', [ws, app, id],
           { ...node.value, parentKey: targetParentId, position }, node.revision),
       ];
