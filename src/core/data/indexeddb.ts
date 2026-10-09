@@ -49,8 +49,10 @@ export type DataOperation =
   | { store: DataStoreName; type: 'delete'; key: IDBValidKey; expectedRevision: number | null };
 
 export class DataApiError extends Error {
-  constructor(public readonly code: 'conflict' | 'unavailable' | 'upgrade-blocked' | 'not-found' | 'validation', message: string) {
+  readonly code: 'conflict' | 'unavailable' | 'upgrade-blocked' | 'not-found' | 'validation';
+  constructor(code: 'conflict' | 'unavailable' | 'upgrade-blocked' | 'not-found' | 'validation', message: string) {
     super(message);
+    this.code = code;
     this.name = 'DataApiError';
   }
 }
@@ -172,7 +174,7 @@ export class IndexedDataStore {
       const stores = [...new Set(batch.map(row => row.store))];
       const tx = this.db().transaction(stores, 'readwrite');
       const completion = transactionDone(tx);
-      for (const operation of batch) tx.objectStore(operation.store).put(operation.value);
+      for (const operation of batch) tx.objectStore(operation.store).put({ ...operation.value, revision: 1 });
       await completion;
     }
   }
