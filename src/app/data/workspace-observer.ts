@@ -54,7 +54,7 @@ export async function observeWorkspace(
   let lastStructure = '';
   const bindings = new Map<string, Binding>();
   const timers = new Map<string, number>();
-  const pending = new Map<string, RowPut | null>();
+  const pending = new Set<string>();
 
   const scheduleAction = (action: () => Promise<void>) => {
     chain = chain.then(async () => {
@@ -131,15 +131,16 @@ export async function observeWorkspace(
     // The structural transaction captures this record's latest state too.
     // Do not later replay an older row snapshot after a reorder.
     if (structuralTimer !== undefined) return;
-    pending.set(id, binding.build());
+    pending.add(id);
     const existing = timers.get(id);
     if (existing !== undefined) clearTimeout(existing);
     timers.set(id, window.setTimeout(() => {
       timers.delete(id);
-      const row = pending.get(id);
-      pending.delete(id);
-      // Missing optional records are reconciled by structural mapping.
-      if (row) scheduleAction(() => apply([row], false, binding.authored));
+      if (!pending.delete(id)) return;
+      // Build the changed record after the debounce, not on every keypress.
+      const current = bindings.get(id);
+      const row = current?.build();
+      if (row) scheduleAction(() => apply([row], false, current?.authored ?? true));
       else queueStructure();
     }, KEY_DELAY_MS));
   }
@@ -363,8 +364,9 @@ export async function observeWorkspace(
     }
     for (const [id, timer] of timers) {
       clearTimeout(timer);
-      const row = pending.get(id);
-      if (row) scheduleAction(() => apply([row], false, bindings.get(id)?.authored ?? true));
+      const current = bindings.get(id);
+      const row = pending.has(id) ? current?.build() : null;
+      if (row) scheduleAction(() => apply([row], false, current?.authored ?? true));
     }
     timers.clear();
     pending.clear();
