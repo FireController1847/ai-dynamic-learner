@@ -137,18 +137,20 @@ function indexed(rows: readonly Stored[]): Map<string, IndexedRow> {
 }
 const ordering = (a: Stored, b: Stored) => (a.position ?? 0) - (b.position ?? 0);
 
-export async function hydrateWorkspace(store: Pick<IndexedDataStore, 'all'>, workspaceId: string): Promise<Workspace> {
+export async function hydrateWorkspace(store: Pick<IndexedDataStore, 'all'> & Partial<Pick<IndexedDataStore, 'snapshot'>>, workspaceId: string): Promise<Workspace> {
   const stores: DataStoreName[] = [
     'featureState', 'libraryNodes', 'notebookDocuments', 'indexCardSets', 'indexCards',
     'wordSearches', 'wordSearchGames', 'crosswords', 'crosswordGames', 'guides', 'guideSessions',
     'reviewSets', 'reviewQuestions', 'todoLists', 'todoSections', 'todoTasks',
     'statisticsMeta', 'statisticsApps', 'statisticsEntries',
   ];
-  const data = new Map<DataStoreName, Stored[]>();
-  await Promise.all(stores.map(async name => {
-    const rows = await store.all<Stored>(name);
-    data.set(name, rows.filter(row => row.workspaceId === workspaceId));
-  }));
+  const snapshot = store.snapshot
+    ? await store.snapshot<Stored>(stores)
+    : new Map<DataStoreName, Stored[]>(await Promise.all(stores.map(async name =>
+        [name, await store.all<Stored>(name)] as [DataStoreName, Stored[]])));
+  const data = new Map<DataStoreName, Stored[]>(stores.map(name => [
+    name, (snapshot.get(name) ?? []).filter(row => row.workspaceId === workspaceId),
+  ]));
   const getRows = (name: DataStoreName): Stored[] => data.get(name) ?? [];
   const byId = (name: DataStoreName) => indexed(getRows(name));
   const documents = byId('notebookDocuments');
