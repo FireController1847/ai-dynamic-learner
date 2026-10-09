@@ -208,12 +208,6 @@ export class WorkspaceDataApi {
     }], { authored, scopes: [scope] });
   }
 
-  private async remove(store: DataStoreName, key: IDBValidKey, expectedRevision: number, scope: string): Promise<DataCommit> {
-    return this.store.commit(this.active(), [{
-      store, key, type: 'delete', expectedRevision,
-    }], { authored: true, scopes: [scope] });
-  }
-
   /** Typed structural operations shared by all grouped library applications. */
   readonly library = { ...createLibraryCommands(this), ...createEntryCommands(this) };
   readonly todo = createTodoCommands(this);
@@ -405,7 +399,50 @@ export class WorkspaceDataApi {
   }
 
   async deleteCard(setId: string, cardId: string, expectedRevision: number): Promise<DataCommit> {
-    return this.remove('indexCards', [this.active(), setId, cardId], expectedRevision, 'index-cards:' + setId);
+    if (![setId, cardId].every(isValidId) || !Number.isSafeInteger(expectedRevision) ||
+        expectedRevision < 1) {
+      throw new DataApiError('validation', 'Invalid card identity or revision.');
+    }
+    const workspaceId = this.active();
+    const set = await this.read<IndexedRow>('indexCardSets', [workspaceId, setId]);
+    const order = await this.read<IndexedRow & { children: string[] }>(
+      'collections', [workspaceId, 'index-cards:cards', setId]);
+    const card = await this.read<IndexedRow>('indexCards', [workspaceId, setId, cardId]);
+    if (!set || !order || !card) {
+      throw new DataApiError('not-found', 'The card or its parent set no longer exists.');
+    }
+    if (card.revision !== expectedRevision) {
+      throw new DataApiError('conflict', 'The card changed in another tab.');
+    }
+    const children = order.value.children;
+    if (!Array.isArray(children) || new Set(children).size !== children.length ||
+        children.some(id => !isValidId(id)) || !children.includes(cardId)) {
+      throw new DataApiError('validation', 'The saved card order is inconsistent.');
+    }
+    const remaining = children.filter(id => id !== cardId);
+    const operations: DataOperation[] = [
+      { store: 'indexCardSets', type: 'assert', key: [workspaceId, setId],
+        expectedRevision: set.revision },
+      { store: 'collections', type: 'put',
+        key: [workspaceId, 'index-cards:cards', setId],
+        value: { ...order.value, children: remaining }, expectedRevision: order.revision },
+      { store: 'indexCards', type: 'delete',
+        key: [workspaceId, setId, cardId], expectedRevision },
+    ];
+    // Sibling positions and collection membership must change atomically:
+    // otherwise the next hydration or backup could reject the entire set.
+    for (let position = 0; position < remaining.length; position++) {
+      const id = remaining[position]!;
+      const sibling = await this.read<IndexedRow>('indexCards', [workspaceId, setId, id]);
+      if (!sibling) throw new DataApiError('validation', 'A card in the saved order is missing.');
+      if (sibling.value.position !== position) {
+        operations.push({
+          store: 'indexCards', type: 'put', key: [workspaceId, setId, id],
+          value: { ...sibling.value, position }, expectedRevision: sibling.revision,
+        });
+      }
+    }
+    return this.commit(operations, ['index-cards:' + setId, 'library-structure']);
   }
 
   /**
