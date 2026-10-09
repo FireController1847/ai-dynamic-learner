@@ -159,11 +159,20 @@ export function useWorkspace() {
   async function downloadBackup(): Promise<void> {
     const filename = `dynamic-learner-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
     if (!ready.value) {
-      // Even an unreadable legacy workspace must remain recoverable as bytes.
-      const legacy = localStorage.getItem('dynamic-learner.workspace.v1');
-      if (!legacy) throw new Error('The workspace has not loaded and no recovery copy is available.');
-      await downloadText(filename, legacy, 'application/json', { deferPaint: false });
-      return;
+      // A failed reattachment after a restore may leave valid new records.
+      // Prefer those over the much older read-only legacy migration copy.
+      try {
+        const snapshot = await api.exportSnapshot();
+        await downloadText(filename, snapshot.json, 'application/json', { deferPaint: false });
+        return;
+      } catch {
+        // If IndexedDB itself is inaccessible, preserve the original bytes
+        // even when the legacy data is malformed. Do not clear site data.
+        const legacy = localStorage.getItem('dynamic-learner.workspace.v1');
+        if (!legacy) throw new Error('The workspace is unavailable and no recovery copy could be read.');
+        await downloadText(filename, legacy, 'application/json', { deferPaint: false });
+        return;
+      }
     }
     await nextTick();
     try {
