@@ -21,6 +21,7 @@ export function useBackupReminders() {
   const problem = ref('');
   const hasData = ref(false);
   const authoredRevision = ref(0);
+  const workspaceId = ref<string | null>(null);
   const processing = ref(true);
   const activeStudy = ref(false);
   const dismissedThisSession = ref(false);
@@ -37,6 +38,7 @@ export function useBackupReminders() {
 
   const changed = computed(() => hasData.value && (
     metadata.value.unbackedImport ||
+    metadata.value.exportedWorkspaceId !== workspaceId.value ||
     metadata.value.exportedAuthoredRevision === null ||
     metadata.value.exportedAuthoredRevision !== authoredRevision.value
   ));
@@ -48,26 +50,29 @@ export function useBackupReminders() {
     writeMetadata();
   }
 
-  function workspaceLoaded(revision: number, populated: boolean, migratedFromLegacy: boolean) {
+  function workspaceLoaded(id: string, revision: number, populated: boolean, migratedFromLegacy: boolean) {
+    workspaceId.value = id;
     authoredRevision.value = revision;
     hasData.value = populated;
     processing.value = false;
     // Fingerprints from older builds cannot be compared to the new revision
     // ledger. Err on the side of a new backup, never assert prior safety.
-    if (populated && migratedFromLegacy && metadata.value.exportedAuthoredRevision === null) {
+    if (populated && (metadata.value.exportedWorkspaceId !== id ||
+        (migratedFromLegacy && metadata.value.exportedAuthoredRevision === null))) {
       metadata.value.unbackedImport = true;
     }
     ensureUnbackedClock();
   }
 
-  function workspaceChanged(revision: number, populated: boolean) {
+  function workspaceChanged(id: string, revision: number, populated: boolean) {
+    workspaceId.value = id;
     authoredRevision.value = revision;
     hasData.value = populated;
     processing.value = false;
     ensureUnbackedClock();
   }
 
-  function recordExport(exportedRevision: number, initiatedAt: number) {
+  function recordExport(exportedId: string, exportedRevision: number, initiatedAt: number) {
     if (!Number.isSafeInteger(exportedRevision) || exportedRevision < 0) {
       throw new Error('The exported workspace revision is invalid.');
     }
@@ -76,6 +81,7 @@ export function useBackupReminders() {
       lastExportAt: initiatedAt,
       exportedFingerprint: null,
       exportedAuthoredRevision: exportedRevision,
+      exportedWorkspaceId: exportedId,
       firstUnbackedAt: null,
       unbackedImport: false,
       snoozedUntil: null,
@@ -86,7 +92,8 @@ export function useBackupReminders() {
     ensureUnbackedClock();
   }
 
-  function workspaceRestored(revision: number, populated: boolean) {
+  function workspaceRestored(id: string, revision: number, populated: boolean) {
+    workspaceId.value = id;
     authoredRevision.value = revision;
     hasData.value = populated;
     metadata.value.unbackedImport = true;
