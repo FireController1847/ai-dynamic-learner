@@ -107,12 +107,16 @@ export class WorkspaceDataApi {
    * Separate queries could let another tab write after hydration but before
    * we record the initial compare-and-swap revisions.
    */
-  async initialSnapshot(): Promise<{
+  async initialSnapshot(followActivePointer = false): Promise<{
     workspace: Workspace;
     revisions: { commitSequence: number; authoredRevision: number };
     records: Array<{ store: DataStoreName; key: IDBValidKey; value: IndexedRow; revision: number }>;
   }> {
-    const workspaceId = this.active();
+    // Only cross-tab refresh is allowed to follow a new active-workspace
+    // pointer. A failed refresh must leave the old in-memory view recoverable.
+    const workspaceId = followActivePointer
+      ? await this.store.activeWorkspaceId() : this.active();
+    if (!workspaceId) throw new DataApiError('not-found', 'The active workspace is missing.');
     const stores: DataStoreName[] = [
       ...WORKSPACE_RECORD_STORES, 'collections', 'control', 'workspaceMeta',
     ];
@@ -133,6 +137,9 @@ export class WorkspaceDataApi {
           store, key: dataPrimaryKey(store, value), value,
           revision: typeof value.revision === 'number' ? value.revision : 0,
         })));
+    // Adopt the new pointer only after its complete content has been
+    // hydrated and validated from the same consistent snapshot.
+    if (followActivePointer) this.workspaceId = workspaceId;
     return {
       workspace,
       revisions: { commitSequence: meta.commitSequence, authoredRevision: meta.authoredRevision },
@@ -176,8 +183,9 @@ export class WorkspaceDataApi {
     const current = await this.store.activeWorkspaceId();
     if (!current) throw new DataApiError('unavailable', 'The active workspace could not be found.');
     if (current !== this.workspaceId) {
-      await hydrateWorkspace(this.store, current);
-      this.workspaceId = current;
+      // The caller must load/validate and explicitly adopt the replacement.
+      // Mutating this.workspaceId here would strand a failed refresh and let
+      // old commit sequences hide the pending replacement.
       return { replaced: true, events: null };
     }
     return { replaced: false, events: await this.store.changesAfter(current, lastSeenCommitSequence) };
