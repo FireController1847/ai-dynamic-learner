@@ -313,8 +313,8 @@ export function useWorkspace() {
     if (wasActive && !active) void syncOtherTabs();
   });
 
-  // An active editor deliberately defers a remote reload. Try again after
-  // focus moves away, even if the other tab sends no further broadcasts.
+  // If a snapshot arrived during unsaved typing, retry as focus moves away
+  // without requiring the other tab to issue another notification.
   const onFocusOut = () => {
     if (!remotePending) return;
     // A Save button's click handler can run after the focused input blurs.
