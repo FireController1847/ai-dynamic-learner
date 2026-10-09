@@ -306,8 +306,17 @@ export class IndexedDataStore {
       const key = operation.key;
       const scoped = Array.isArray(key) ? key[0] === workspaceId : key === workspaceId;
       if (!scoped) throw new DataApiError('validation', 'The mutation references a different workspace.');
-      if ((operation.type === 'put' || operation.type === 'increment') && operation.value.workspaceId !== workspaceId) {
-        throw new DataApiError('validation', 'A mutation cannot change the record workspace.');
+      if (operation.type === 'put' || operation.type === 'increment') {
+        if (operation.value.workspaceId !== workspaceId) {
+          throw new DataApiError('validation', 'A mutation cannot change the record workspace.');
+        }
+        // Object stores use inline keyPaths; put(value) derives its key from
+        // the value. Guard against checking one row's revision and silently
+        // writing a different row when a command supplies mismatched fields.
+        const embeddedKey = dataPrimaryKey(operation.store, operation.value);
+        if (JSON.stringify(embeddedKey) !== JSON.stringify(key)) {
+          throw new DataApiError('validation', 'A record primary key does not match its mutation target.');
+        }
       }
     }
     const stores: DataStoreName[] = [...new Set<DataStoreName>(
