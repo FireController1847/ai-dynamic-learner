@@ -43,6 +43,7 @@
 @import '../features/index-cards/card-list.css';
 @import '../features/index-cards/review-setup.css';
 @import '../features/index-cards/display-settings.css';
+@import '../features/puzzle-ai/puzzle-ai.css';
 @import '../features/word-search/word-search.css';
 @import '../features/word-search/puzzle-form.css';
 @import '../features/word-search/puzzle-game.css';
