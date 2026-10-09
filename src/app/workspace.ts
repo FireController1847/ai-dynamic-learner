@@ -4,6 +4,7 @@ import { downloadText } from '../core/file-download.ts';
 import { useBackupReminders } from './backup-reminders.ts';
 import { WorkspaceDataApi } from './data/data-api.ts';
 import { observeWorkspace } from './data/workspace-observer.ts';
+import { subscribeStudySessions } from '../core/study-activity.ts';
 
 export type { Workspace } from './workspace-format.ts';
 export type WorkspaceController = ReturnType<typeof useWorkspace>;
@@ -31,6 +32,7 @@ export function useWorkspace() {
   let unsubscribeRemote: (() => void) | null = null;
   let remoteRefreshTimer: number | undefined;
   let refreshing = false;
+  let studyActive = false;
   let lastSequence = 0;
   let disposed = false;
 
@@ -47,6 +49,10 @@ export function useWorkspace() {
 
   async function syncOtherTabs() {
     if (!ready.value || refreshing || disposed) return;
+    if (studyActive) {
+      storageProblem.value = 'Another tab changed saved data. Updates will load after your current study session ends.';
+      return;
+    }
     // Do not tear down a currently focused editor; the record CAS checks
     // prevent a stale edit from silently overwriting the newer database row.
     const focus = document.activeElement;
@@ -161,6 +167,12 @@ export function useWorkspace() {
     backup.recordExport(snapshot.authoredRevision, Date.now());
   }
 
+  const stopStudySubscription = subscribeStudySessions(active => {
+    const wasActive = studyActive;
+    studyActive = active;
+    if (wasActive && !active) void syncOtherTabs();
+  });
+
   const flushOnHide = () => {
     // Best effort only: browsers may terminate a tab without allowing any
     // asynchronous work, so autosaves must happen well before pagehide.
@@ -179,6 +191,7 @@ export function useWorkspace() {
     if (remoteRefreshTimer !== undefined) clearTimeout(remoteRefreshTimer);
     observer?.stop();
     unsubscribeRemote?.();
+    stopStudySubscription();
     api.close();
     document.removeEventListener('visibilitychange', onVisibility);
     window.removeEventListener('pagehide', flushOnHide);
