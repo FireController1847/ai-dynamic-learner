@@ -4,7 +4,7 @@ The source validators are canonical. This document records only the durable back
 
 ## Top-level contract
 
-Workspace persistence is owned by `src/app/workspace.ts` and `workspace-format.ts`.
+The live workspace is stored as granular records in IndexedDB (`src/core/data/indexeddb.ts`), coordinated by `src/app/data/data-api.ts` and the transitional `src/app/data/workspace-observer.ts`. `workspace-format.ts` remains the portable JSON v1 interchange contract.
 
 ```ts
 interface Workspace {
@@ -23,7 +23,7 @@ interface Workspace {
 }
 ```
 
-The browser-local key is `dynamic-learner.workspace.v1`. JSON backups and saved workspace data are limited to 32 MiB.
+The legacy browser-local key `dynamic-learner.workspace.v1` is used only as a read-only migration/recovery source. IndexedDB `dynamic-learner-data` is authoritative after successful staged migration. The 32 MiB cap applies to uploaded JSON backups, **not** to ongoing IndexedDB writes; compressed backup support and a revised import limit remain separate work.
 
 Uploaded or persisted data is untrusted: parse as `unknown`, reject unsupported top-level fields/version/format, then delegate to feature validators before replacing live state. Invalid replacement never partially mutates the current workspace.
 
@@ -73,21 +73,21 @@ If a feature intentionally persists a presentation option as part of its model (
 
 ## Storage failure behavior
 
-If the existing saved workspace cannot be parsed, leave that stored copy untouched and warn the user. If saving later fails because browser storage is unavailable/full, keep the live in-memory state and tell the user to download a backup.
+If the legacy JSON cannot be parsed or IndexedDB fails to initialize, editing is blocked; the existing saved copy is never erased. After cutover, individual record writes commit through IndexedDB transactions. A failed save retains the in-memory user work and exposes an emergency backup path, without claiming it was saved to IndexedDB.
 
-Workspace replacement revalidates a copy, clears protected-storage mode only after validation succeeds, increments the workspace revision, and then saves.
+Backup replacement validates the entire workspace first, stages and independently verifies all records under a new workspace ID, then atomically switches the active-workspace pointer. Stale tabs' writes against the previous workspace are rejected.
 
 ## Backup UI
 
-Download emits the current validated workspace as JSON with a timestamped filename. Upload reads a file, validates it, and replaces the entire workspace only after user review/confirmation in the UI.
+Download captures a consistent IndexedDB snapshot and emits the validated v1 workspace as timestamped JSON; in-memory emergency export is available if a record save fails. Upload reads and validates JSON, stages it, and replaces the active workspace only after user review/confirmation in the UI.
 
 Keep import/export behavior centralized; features should not invent separate whole-workspace formats.
 
 ## Backup reminder tracking
 
-`dynamic-learner.backup-reminders.v1` is a separate browser-local preference/history key, not part of the workspace contract or the JSON export. It stores the last initiated backup-download time, a SHA-256 fingerprint of the exported authored workspace, the start of the current unbacked-activity period, snooze state, and reminder frequency (default 3 days; off is allowed).
+`dynamic-learner.backup-reminders.v1` is a separate browser-local preference/history key, not part of the workspace contract or JSON export. It now stores the **last exported authored revision**, the last initiated backup-download time, the start of unbacked activity, snooze state and reminder frequency (default 3 days; off is allowed). Old SHA-256 fingerprint metadata is accepted for compatibility but no longer recomputed on ordinary edits.
 
-The reminder service compares the current workspace with that exported snapshot. Navigation selection alone does not count as new authored work. An imported workspace is always flagged as needing a fresh backup even if its content matches an earlier download. The browser cannot confirm that a generated download was saved, so UI wording describes downloads as *started*, never as verified backups. Empty workspaces do not trigger reminders.
+The reminder service compares committed authored revisions with the exact revision included in the exported snapshot. Statistics and navigation selection do not count as authored changes. An imported workspace is always flagged as needing a fresh backup even if its revision happens to match an earlier export. The browser cannot confirm that a generated download was saved, so UI wording describes downloads as *started*, never as verified backups. Empty workspaces do not trigger reminders.
 
 First-time work starts the clock when saved content appears; already-stored work without metadata gets a quiet immediate reminder instead of a fabricated export date. Urgency rises after 1, 2, and 3 configured intervals. Dismissal lasts the current session; snoozing lasts 24 hours without changing backup history. Study/review sessions suppress the banner; the overdue header indicator remains available.
 
