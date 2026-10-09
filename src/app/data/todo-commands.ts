@@ -171,6 +171,135 @@ export function createTodoCommands(api: Pick<WorkspaceDataApi, 'read' | 'list' |
       ], ['todo-list', 'todo-list:' + input.listId]);
     },
 
+    reorderList: async (input: {
+      id: string; position: number; expectedRevision: number; expectedCollectionRevision: number;
+    }): Promise<DataCommit> => {
+      const member = await list(input.id);
+      if (member.revision !== input.expectedRevision) fail('conflict', 'The list changed in another tab.');
+      const root = await collection('todo-list', '@root');
+      if (root.revision !== input.expectedCollectionRevision ||
+          !root.value.children.includes(input.id)) fail('conflict', 'The list order changed in another tab.');
+      const ids = root.value.children.filter(id => id !== input.id);
+      if (!Number.isSafeInteger(input.position) || input.position < 0 || input.position > ids.length) {
+        fail('validation', 'Invalid list position.');
+      }
+      ids.splice(input.position, 0, input.id);
+      if (ids.every((id, index) => id === root.value.children[index])) {
+        fail('validation', 'The list is already in that position.');
+      }
+      const workspaceId = ws();
+      return api.commit([
+        put('collections', [workspaceId, 'todo-list', '@root'], { ...root.value, children: ids }, root.revision),
+        put('todoLists', [workspaceId, input.id],
+          { ...member.value, position: input.position }, member.revision),
+        ...await (async () => {
+          const siblings = await children('todoLists', ids.filter(id => id !== input.id), [workspaceId]);
+          return siblings.flatMap(row => {
+            const position = ids.indexOf(String(row.value.id));
+            return position === row.value.position ? [] : [
+              put('todoLists', [workspaceId, String(row.value.id)],
+                { ...row.value, position }, row.revision),
+            ];
+          });
+        })(),
+      ], ['todo-list', 'todo-list:library']);
+    },
+
+    moveTask: async (input: {
+      listId: string; sectionId: string; targetSectionId: string; id: string; position: number;
+      expectedRevision: number; expectedSourceCollectionRevision: number;
+      expectedTargetCollectionRevision: number;
+    }): Promise<DataCommit> => {
+      const sourceSection = await section(input.listId, input.sectionId);
+      const destination = input.targetSectionId === input.sectionId
+        ? sourceSection : await section(input.listId, input.targetSectionId);
+      const sourceKey = input.listId + '/' + input.sectionId;
+      const targetKey = input.listId + '/' + input.targetSectionId;
+      const source = await collection('todo-list:tasks', sourceKey);
+      const target = targetKey === sourceKey ? source : await collection('todo-list:tasks', targetKey);
+      if (source.revision !== input.expectedSourceCollectionRevision ||
+          target.revision !== input.expectedTargetCollectionRevision) {
+        fail('conflict', 'The task order changed in another tab.');
+      }
+      const task = await api.read<IndexedRow>('todoTasks', [ws(), input.listId, input.sectionId, input.id]);
+      if (!task || task.revision !== input.expectedRevision ||
+          !source.value.children.includes(input.id)) fail('conflict', 'The task changed in another tab.');
+      const sourceIds = source.value.children.filter(id => id !== input.id);
+      const targetIds = targetKey === sourceKey ? sourceIds : [...target.value.children];
+      if (!Number.isSafeInteger(input.position) || input.position < 0 || input.position > targetIds.length) {
+        fail('validation', 'The requested task position is invalid.');
+      }
+      targetIds.splice(input.position, 0, input.id);
+      const workspaceId = ws();
+      const operations: DataOperation[] = [
+        { store: 'todoSections', type: 'assert',
+          key: [workspaceId, input.listId, input.sectionId], expectedRevision: sourceSection.revision },
+        ...(targetKey !== sourceKey ? [{
+          store: 'todoSections', type: 'assert',
+          key: [workspaceId, input.listId, input.targetSectionId],
+          expectedRevision: destination.revision,
+        } satisfies DataOperation] : []),
+      ];
+      if (targetKey === sourceKey) {
+        operations.push(
+          put('collections', [workspaceId, 'todo-list:tasks', sourceKey],
+            { ...source.value, children: targetIds }, source.revision),
+          put('todoTasks', [workspaceId, input.listId, input.sectionId, input.id],
+            { ...task.value, position: input.position }, task.revision),
+        );
+      } else {
+        operations.push(
+          put('collections', [workspaceId, 'todo-list:tasks', sourceKey],
+            { ...source.value, children: sourceIds }, source.revision),
+          put('collections', [workspaceId, 'todo-list:tasks', targetKey],
+            { ...target.value, children: targetIds }, target.revision),
+          del('todoTasks', [workspaceId, input.listId, input.sectionId, input.id], task.revision),
+          put('todoTasks', [workspaceId, input.listId, input.targetSectionId, input.id],
+            { ...task.value, sectionId: input.targetSectionId, position: input.position }, null),
+        );
+        operations.push(...await updatePositions('todoTasks', sourceIds,
+          [workspaceId, input.listId, input.sectionId]));
+      }
+      const siblings = await children('todoTasks', targetIds.filter(id => id !== input.id),
+        [workspaceId, input.listId, input.targetSectionId]);
+      for (const row of siblings) {
+        const position = targetIds.indexOf(String(row.value.id));
+        if (row.value.position !== position) operations.push(
+          put('todoTasks', [workspaceId, input.listId, input.targetSectionId, String(row.value.id)],
+            { ...row.value, position }, row.revision),
+        );
+      }
+      return api.commit(operations, ['todo-list', 'todo-list:' + input.listId]);
+    },
+
+    deleteSection: async (input: {
+      listId: string; id: string; expectedRevision: number; expectedCollectionRevision: number;
+    }): Promise<DataCommit> => {
+      const row = await section(input.listId, input.id);
+      if (row.revision !== input.expectedRevision) fail('conflict', 'The section changed in another tab.');
+      const members = await collection('todo-list:sections', input.listId);
+      if (members.revision !== input.expectedCollectionRevision ||
+          !members.value.children.includes(input.id)) fail('conflict', 'The section order changed in another tab.');
+      const remaining = members.value.children.filter(id => id !== input.id);
+      const workspaceId = ws(), taskKey = input.listId + '/' + input.id;
+      const taskCollection = await collection('todo-list:tasks', taskKey);
+      const operations: DataOperation[] = [
+        put('collections', [workspaceId, 'todo-list:sections', input.listId],
+          { ...members.value, children: remaining }, members.revision),
+        ...await updatePositions('todoSections', remaining, [workspaceId, input.listId]),
+      ];
+      for (const id of taskCollection.value.children) {
+        const task = await api.read<IndexedRow>('todoTasks', [workspaceId, input.listId, input.id, id]);
+        if (!task) fail('validation', 'A saved task was missing during section deletion.');
+        operations.push(del('todoTasks', [workspaceId, input.listId, input.id, id], task.revision));
+      }
+      operations.push(
+        del('collections', [workspaceId, 'todo-list:tasks', taskKey], taskCollection.revision),
+        del('todoSections', [workspaceId, input.listId, input.id], row.revision),
+      );
+      return api.commit(operations, ['todo-list', 'todo-list:' + input.listId]);
+    },
+
     deleteList: async (input: {
       id: string; expectedRevision: number; expectedCollectionRevision: number;
     }): Promise<DataCommit> => {
