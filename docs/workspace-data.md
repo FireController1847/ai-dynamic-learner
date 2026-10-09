@@ -85,7 +85,7 @@ Keep import/export behavior centralized; features should not invent separate who
 
 ## Backup reminder tracking
 
-`dynamic-learner.backup-reminders.v1` is a separate browser-local preference/history key, not part of the workspace contract or JSON export. It now stores the **last exported authored revision**, the last initiated backup-download time, the start of unbacked activity, snooze state and reminder frequency (default 3 days; off is allowed). Old SHA-256 fingerprint metadata is accepted for compatibility but no longer recomputed on ordinary edits.
+`dynamic-learner.backup-reminders.v1` is a separate browser-local preference/history key, not part of the workspace contract or JSON export. It now stores the **last exported workspace identity and authored revision**, the last initiated backup-download time, the start of unbacked activity, snooze state and reminder frequency (default 3 days; off is allowed). Old SHA-256 fingerprint metadata is accepted for compatibility but no longer recomputed on ordinary edits.
 
 The reminder service compares committed authored revisions with the exact revision included in the exported snapshot. Statistics and navigation selection do not count as authored changes. An imported workspace is always flagged as needing a fresh backup even if its revision happens to match an earlier export. The browser cannot confirm that a generated download was saved, so UI wording describes downloads as *started*, never as verified backups. Empty workspaces do not trigger reminders.
 
