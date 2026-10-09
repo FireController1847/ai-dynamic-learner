@@ -82,8 +82,28 @@ export async function observeWorkspace(
       const previous = known.get(id);
       const next = valueOf(row);
       if (next === previous?.serialized) continue;
-      const op: DataOperation = { ...row, expectedRevision: previous?.revision ?? null,
+      let op: DataOperation = { ...row, expectedRevision: previous?.revision ?? null,
         value: plain(row.value) };
+      if (row.store === 'statisticsApps' || row.store === 'statisticsEntries') {
+        const previousRow = previous ? asObject(JSON.parse(previous.serialized)) : {};
+        const oldCounts = asObject(previousRow.counts);
+        const nextCounts = asObject(row.value.counts);
+        const delta: Record<string, number> = {};
+        let additive = true;
+        for (const metric of new Set([...Object.keys(oldCounts), ...Object.keys(nextCounts)])) {
+          const before = typeof oldCounts[metric] === 'number' ? oldCounts[metric] : 0;
+          const after = typeof nextCounts[metric] === 'number' ? nextCounts[metric] : 0;
+          if (!Number.isSafeInteger(before) || !Number.isSafeInteger(after) || after < before) {
+            additive = false;
+            break;
+          }
+          if (after > before) delta[metric] = after - before;
+        }
+        if (additive) op = {
+          store: row.store, type: 'increment', key: row.key,
+          value: plain(row.value), delta,
+        };
+      }
       operations.push(op);
       touched.push({ id, next, op });
     }
