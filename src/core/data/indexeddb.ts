@@ -87,6 +87,79 @@ function transactionDone(transaction: IDBTransaction): Promise<void> {
   });
 }
 
+
+/**
+ * Schema v1 existed during the early preview of this PR without collection
+ * rows. Backfill them during the v2 upgrade transaction so a prior preview
+ * cannot appear corrupted or become an empty editable workspace.
+ */
+function backfillV1Collections(transaction: IDBTransaction): void {
+  const sources = [
+    'workspaceMeta', 'libraryNodes', 'indexCardSets', 'indexCards',
+    'reviewSets', 'reviewQuestions', 'todoLists', 'todoSections', 'todoTasks',
+  ] as const;
+  const data = new Map<string, IndexedRow[]>();
+  let outstanding = sources.length;
+  for (const source of sources) {
+    const request = transaction.objectStore(source).getAll();
+    request.onsuccess = () => {
+      data.set(source, request.result as IndexedRow[]);
+      if (--outstanding !== 0) return;
+      try {
+        const rows = (name: typeof sources[number], id: string) =>
+          (data.get(name) ?? []).filter(row => row.workspaceId === id);
+        const store = transaction.objectStore('collections');
+        const apps = ['notebook', 'index-cards', 'word-search', 'crossword',
+          'guide', 'knowledge-check'];
+        const write = (workspaceId: string, app: string, parentId: string, children: string[]) => {
+          store.put({ workspaceId, app, parentId, children, revision: 1 });
+        };
+        const ordered = (values: IndexedRow[]) => values.sort((left, right) =>
+          Number(left.position ?? 0) - Number(right.position ?? 0))
+          .map(row => String(row.id));
+        for (const meta of data.get('workspaceMeta') ?? []) {
+          if (typeof meta.id !== 'string') continue;
+          const workspaceId = meta.id;
+          const nodes = rows('libraryNodes', workspaceId);
+          for (const app of apps) {
+            const tree = nodes.filter(node => node.app === app);
+            const parents = ['@root', ...tree.filter(node => node.kind === 'group').map(node => String(node.id))];
+            for (const parent of parents) {
+              write(workspaceId, app, parent,
+                ordered(tree.filter(node => node.parentKey === parent)));
+            }
+          }
+          for (const entry of rows('indexCardSets', workspaceId)) {
+            write(workspaceId, 'index-cards:cards', String(entry.id),
+              ordered(rows('indexCards', workspaceId).filter(card => card.setId === entry.id)));
+          }
+          for (const entry of rows('reviewSets', workspaceId)) {
+            write(workspaceId, 'knowledge-check:questions', String(entry.id),
+              ordered(rows('reviewQuestions', workspaceId).filter(question => question.setId === entry.id)));
+          }
+          const lists = rows('todoLists', workspaceId);
+          const sections = rows('todoSections', workspaceId);
+          const tasks = rows('todoTasks', workspaceId);
+          write(workspaceId, 'todo-list', '@root', ordered(lists));
+          for (const list of lists) {
+            const listSections = sections.filter(section => section.listId === list.id);
+            if (list.hasSections || listSections.length) {
+              write(workspaceId, 'todo-list:sections', String(list.id), ordered(listSections));
+            }
+            for (const section of listSections) {
+              write(workspaceId, 'todo-list:tasks', String(list.id) + '/' + String(section.id),
+                ordered(tasks.filter(task => task.listId === list.id && task.sectionId === section.id)));
+            }
+          }
+        }
+      } catch (error) {
+        console.error('IndexedDB collection backfill failed; v1 database remains intact.', error);
+        transaction.abort();
+      }
+    };
+  }
+}
+
 export function openDataDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     if (!('indexedDB' in globalThis)) {
@@ -94,7 +167,7 @@ export function openDataDatabase(): Promise<IDBDatabase> {
       return;
     }
     const request = indexedDB.open(DATABASE_NAME, DATABASE_VERSION);
-    request.onupgradeneeded = () => {
+    request.onupgradeneeded = event => {
       const database = request.result;
       for (const [name, definition] of Object.entries(definitions)) {
         if (database.objectStoreNames.contains(name)) continue;
@@ -104,6 +177,9 @@ export function openDataDatabase(): Promise<IDBDatabase> {
             store.createIndex(index, keys as string[]);
           }
         }
+      }
+      if (event.oldVersion === 1 && request.transaction) {
+        backfillV1Collections(request.transaction);
       }
     };
     let blocked = false;
