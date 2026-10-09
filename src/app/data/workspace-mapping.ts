@@ -1,5 +1,5 @@
 import type { Workspace } from '../workspace-format.ts';
-import { parseWorkspace } from '../workspace-format.ts';
+import { validateWorkspaceValue } from '../workspace-format.ts';
 import type { DataOperation, DataStoreName, IndexedRow, IndexedDataStore } from '../../core/data/indexeddb.ts';
 
 /**
@@ -244,11 +244,11 @@ export async function hydrateWorkspace(store: IndexedDataStore, workspaceId: str
   } : undefined;
 
   // Reuse the authoritative compatibility validators, including migrations for
-  // historical optional fields. The complete JSON exists here only on hydration
-  // and during explicit backup/recovery, never as an edit-time storage value.
-  return parseWorkspace(JSON.stringify({
+  // historical optional fields. No full JSON serialization is needed to read
+  // the database; export constructs it only when the user requests a backup.
+  return validateWorkspaceValue({
     format: 'dynamic-learner', version: 1,
     ...(statistics ? { statistics } : {}),
     features: featureModels,
-  }));
+  });
 }
