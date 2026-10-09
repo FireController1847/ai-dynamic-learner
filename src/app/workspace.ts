@@ -85,6 +85,15 @@ export function useWorkspace() {
         remotePending = false;
         return;
       }
+      // Replacing the whole workspace is not a normal cross-tab edit.
+      // Do not adopt a new active pointer while this tab has a focused draft.
+      if (result.replaced && document.activeElement instanceof HTMLElement &&
+          document.activeElement.matches('input,textarea,[contenteditable="true"]')) {
+        needsReconcile.value = true;
+        remotePending = true;
+        storageProblem.value = 'Another tab restored a different workspace. Download your current draft before loading it.';
+        return;
+      }
       const snapshot = await api.initialSnapshot(true);
       // A keystroke can occur while IndexedDB is reading a snapshot. Never
       // replace data that has since become dirty or is still in flight.
@@ -92,18 +101,6 @@ export function useWorkspace() {
         remotePending = true;
         queueRemoteRefresh();
         return;
-      }
-      if (result.replaced) {
-        // Restores are a different workspace, not edits to merge. Preserve
-        // unsaved local drafts instead of joining unrelated workspaces.
-        const focused = document.activeElement instanceof HTMLElement &&
-          document.activeElement.matches('input,textarea,[contenteditable="true"]');
-        if (focused) {
-          needsReconcile.value = true;
-          remotePending = true;
-          storageProblem.value = 'Another tab restored a different workspace. Download your current draft before loading it.';
-          return;
-        }
       }
       observer?.stop();
       if (result.replaced) {
