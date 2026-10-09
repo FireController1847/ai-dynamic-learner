@@ -200,9 +200,11 @@ export function useWorkspace() {
   // focus moves away, even if the other tab sends no further broadcasts.
   const onFocusOut = () => {
     if (!remotePending) return;
-    queueMicrotask(() => {
+    // A Save button's click handler can run after the focused input blurs.
+    // Let it finish before reconciling and potentially remounting editors.
+    window.setTimeout(() => {
       if (!disposed && remotePending) void syncOtherTabs();
-    });
+    }, 250);
   };
   document.addEventListener('focusout', onFocusOut);
 
