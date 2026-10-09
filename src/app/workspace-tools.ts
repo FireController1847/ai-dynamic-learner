@@ -59,14 +59,20 @@ export const WorkspaceTools = defineComponent({
       }
     }
 
-    function replace() {
-      if (!pending.value) return;
+    async function replace() {
+      if (!pending.value || busy.value) return;
+      if (!requestLeave()) return;
+      busy.value = true;
+      error.value = '';
       try {
-        if (!requestLeave()) return;
-        props.workspace.replaceWorkspace(pending.value.data);
+        await props.workspace.replaceWorkspace(pending.value.data);
         pending.value = null;
         message.value = 'Workspace restored.';
-      } catch (problem) { error.value = (problem instanceof Error ? problem.message : String(problem)); }
+      } catch (problem) {
+        error.value = problem instanceof Error ? problem.message : String(problem);
+      } finally {
+        busy.value = false;
+      }
     }
 
     return () => h('section', { class: 'workspace-tools', 'aria-label': 'Workspace backups' }, [
@@ -116,7 +122,7 @@ export const WorkspaceTools = defineComponent({
         h('p', `Replace this workspace with “${pending.value.name}”? This backup contains ${countNotebookItems(pending.value.data.features.notebook.items)} Notebook groups and documents with ${countDocuments(pending.value.data.features.notebook.items)} documents, ${countIndexCardItems(pending.value.data.features['index-cards'].items)} Index Cards groups and sets with ${countCards(pending.value.data.features['index-cards'].items)} cards, plus ${countWordSearchItems(pending.value.data.features['word-search'].items)} Word Search library items with ${countWordSearches(pending.value.data.features['word-search'].items)} word searches, ${countCrosswordItems(pending.value.data.features.crossword.items)} Crossword library items with ${countCrosswords(pending.value.data.features.crossword.items)} crosswords, and ${pending.value.data.features['todo-list'].items.length} todo lists (including archived lists). This backup also contains ${countKnowledgeCheckItems(pending.value.data.features['knowledge-check'].items)} Review library items with ${countChecks(pending.value.data.features['knowledge-check'].items)} knowledge sets. Current data will be replaced, not merged.`),
         h('p', 'Download a backup first if you want to keep the current workspace.'),
         h('div', { class: 'workspace-actions' }, [
-          h('button', { type: 'button', class: 'quiet-button', onClick: replace }, 'Replace workspace'),
+          h('button', { type: 'button', class: 'quiet-button', onClick: () => { void replace(); }, disabled: busy.value }, busy.value ? 'Restoring…' : 'Replace workspace'),
           h('button', {
             type: 'button', class: 'quiet-button', onClick: () => { pending.value = null; },
           }, 'Cancel'),
