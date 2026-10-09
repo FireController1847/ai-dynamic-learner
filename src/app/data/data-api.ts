@@ -149,30 +149,6 @@ export class WorkspaceDataApi {
 
 
 
-  /**
-   * Bootstrap record revisions once for the legacy Vue compatibility bridge.
-   * Ordinary edits must never use this workspace-wide snapshot.
-   */
-  async persistedRows(): Promise<Array<{
-    store: DataStoreName; key: IDBValidKey; value: IndexedRow; revision: number;
-  }>> {
-    const names: DataStoreName[] = [
-      'libraryNodes', 'collections', 'featureState', 'notebookDocuments', 'todoLists', 'todoSections', 'todoTasks',
-      'indexCardSets', 'indexCards', 'wordSearches', 'wordSearchGames', 'crosswords',
-      'crosswordGames', 'guides', 'guideSessions', 'reviewSets', 'reviewQuestions',
-      'statisticsMeta', 'statisticsApps', 'statisticsEntries',
-    ];
-    const workspaceId = this.active();
-    const snapshot = await this.store.snapshot<IndexedRow>(names, workspaceId);
-    return names.flatMap(store => (snapshot.get(store) ?? [])
-      .filter(value => value.workspaceId === workspaceId)
-      .map(value => ({
-        store, key: dataPrimaryKey(store, value), value,
-        revision: typeof value.revision === 'number' ? value.revision : 0,
-      })));
-  }
-
-
   /** Refresh a tab after a missed BroadcastChannel message or page resume.
    * A null journal result means the consumer should reload affected views.
    */
