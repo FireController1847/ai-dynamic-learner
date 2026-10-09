@@ -25,6 +25,7 @@ export function useWorkspace() {
   const state = ref<Workspace>(emptyWorkspace());
   const ready = ref(false);
   const storageProblem = ref('');
+  const needsReconcile = ref(false);
   const revision = ref(0);
   const backup = useBackupReminders();
   const api = new WorkspaceDataApi();
@@ -45,7 +46,11 @@ export function useWorkspace() {
     if (commitSequence !== lastSequence + 1) remotePending = true;
     else if (!remotePending) lastSequence = commitSequence;
   };
-  const savingProblem = (message: string) => { storageProblem.value = message; };
+  const savingProblem = (message: string) => {
+    storageProblem.value = message;
+    needsReconcile.value = true;
+    remotePending = true;
+  };
 
   async function startObserver(records: Awaited<ReturnType<WorkspaceDataApi['initialSnapshot']>>['records']) {
     observer = await observeWorkspace(state, api, savingProblem, updateBackup, records);
@@ -68,6 +73,12 @@ export function useWorkspace() {
     const generationAtStart = remoteGeneration;
     try {
       await nextTick();
+      // A failed observer is no longer accepting saves. Never replace its
+      // in-memory content in response to remote notifications.
+      if (observer?.hasFailed()) {
+        needsReconcile.value = true;
+        return;
+      }
       await observer?.flush();
       const result = await api.refresh(lastSequence);
       if (!result.replaced && result.events?.length === 0) {
@@ -80,12 +91,14 @@ export function useWorkspace() {
       revision.value += 1;
       lastSequence = snapshot.revisions.commitSequence;
       remotePending = false;
+      needsReconcile.value = false;
       await startObserver(snapshot.records);
       backup.workspaceChanged(api.workspaceIdentity(), snapshot.revisions.authoredRevision, populated(snapshot.workspace));
       storageProblem.value = '';
     } catch (error) {
+      needsReconcile.value = true;
       storageProblem.value = 'Changes from another tab could not be loaded safely: ' + errorMessage(error) +
-        ' Keep a backup of any unsaved edits before reloading.';
+        ' Download a copy of your on-screen work before loading the latest saved data.';
     } finally {
       refreshing = false;
       // A tab can commit again while a complete workspace snapshot is being
@@ -157,6 +170,8 @@ export function useWorkspace() {
       await startObserver(snapshot.records);
       backup.workspaceRestored(api.workspaceIdentity(), snapshot.revisions.authoredRevision, populated(snapshot.workspace));
       storageProblem.value = '';
+      needsReconcile.value = false;
+      remotePending = false;
       replacedSafely = true;
       watchRemoteChanges();
     } finally {
@@ -166,8 +181,53 @@ export function useWorkspace() {
     }
   }
 
+  /**
+   * Emergency export intentionally uses the current Vue draft rather than the
+   * last persisted snapshot. Do not advance backup reminder metadata.
+   */
+  async function downloadLocalDraft(): Promise<void> {
+    const json = JSON.stringify(state.value);
+    if (!json) throw new Error('No workspace draft is available for export.');
+    const filename = `dynamic-learner-unsaved-draft-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+    await downloadText(filename, json, 'application/json', { deferPaint: false });
+  }
+
+  /**
+   * Explicitly discard a conflicted draft after the user has had a chance to
+   * download it. This action never flushes the failed observer into the DB.
+   */
+  async function reloadSavedWorkspace(): Promise<void> {
+    if (refreshing || disposed) return;
+    refreshing = true;
+    ready.value = false;
+    observer?.stop();
+    observer = null;
+    try {
+      const snapshot = await api.initialSnapshot(true);
+      state.value = snapshot.workspace;
+      revision.value++;
+      lastSequence = snapshot.revisions.commitSequence;
+      remotePending = false;
+      await startObserver(snapshot.records);
+      backup.workspaceChanged(api.workspaceIdentity(), snapshot.revisions.authoredRevision, populated(snapshot.workspace));
+      storageProblem.value = '';
+      needsReconcile.value = false;
+      ready.value = true;
+    } catch (error) {
+      storageProblem.value = 'The saved workspace could not be reloaded: ' + errorMessage(error) +
+        ' The on-screen draft remains available for an emergency download.';
+      needsReconcile.value = true;
+    } finally {
+      refreshing = false;
+    }
+  }
+
   async function downloadBackup(): Promise<void> {
     const filename = `dynamic-learner-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+    if (!ready.value && needsReconcile.value) {
+      await downloadLocalDraft();
+      return;
+    }
     if (!ready.value) {
       // Recover from a valid IDB snapshot if possible, otherwise export the
       // read-only legacy bytes. A failed download itself must not silently
@@ -244,5 +304,6 @@ export function useWorkspace() {
     window.removeEventListener('pagehide', flushOnHide);
   });
 
-  return { state, ready, revision, storageProblem, readBackup, replaceWorkspace, downloadBackup, backup };
+  return { state, ready, revision, storageProblem, needsReconcile,
+    readBackup, replaceWorkspace, downloadBackup, downloadLocalDraft, reloadSavedWorkspace, backup };
 }
