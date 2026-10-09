@@ -4,6 +4,7 @@ import { downloadText } from '../core/file-download.ts';
 import { useBackupReminders } from './backup-reminders.ts';
 import { WorkspaceDataApi } from './data/data-api.ts';
 import { observeWorkspace } from './data/workspace-observer.ts';
+import { applyWorkspaceSnapshot } from './data/workspace-live-merge.ts';
 import { subscribeStudySessions } from '../core/study-activity.ts';
 
 export type { Workspace } from './workspace-format.ts';
@@ -64,17 +65,10 @@ export function useWorkspace() {
 
   async function syncOtherTabs() {
     if (!ready.value || refreshing || disposed) return;
-    if (studyActive) {
-      storageProblem.value = 'Another tab changed saved data. Updates will load after your current study session ends.';
-      return;
-    }
-    // Do not tear down a currently focused editor; the record CAS checks
-    // prevent a stale edit from silently overwriting the newer database row.
-    const focus = document.activeElement;
-    if (focus instanceof HTMLElement && focus.matches('input,textarea,[contenteditable="true"]')) {
-      storageProblem.value = 'Another tab changed this workspace. Finish editing and switch tabs or reload to see the latest changes.';
-      return;
-    }
+    // Study session state is transient; changing its question pool while a
+    // session is active could invalidate an in-progress answer. Synchronize
+    // automatically as soon as the session ends.
+    if (studyActive) return;
     refreshing = true;
     const generationAtStart = remoteGeneration;
     try {
@@ -92,9 +86,34 @@ export function useWorkspace() {
         return;
       }
       const snapshot = await api.initialSnapshot(true);
+      // A keystroke can occur while IndexedDB is reading a snapshot. Never
+      // replace data that has since become dirty or is still in flight.
+      if (observer?.hasPendingChanges()) {
+        remotePending = true;
+        queueRemoteRefresh();
+        return;
+      }
+      if (result.replaced) {
+        // Restores are a different workspace, not edits to merge. Preserve
+        // unsaved local drafts instead of joining unrelated workspaces.
+        const focused = document.activeElement instanceof HTMLElement &&
+          document.activeElement.matches('input,textarea,[contenteditable="true"]');
+        if (focused) {
+          needsReconcile.value = true;
+          remotePending = true;
+          storageProblem.value = 'Another tab restored a different workspace. Download your current draft before loading it.';
+          return;
+        }
+      }
       observer?.stop();
-      state.value = snapshot.workspace;
-      revision.value += 1;
+      if (result.replaced) {
+        state.value = snapshot.workspace;
+        revision.value += 1;
+      } else {
+        // The same workspace changed in another tab: update existing Vue
+        // objects without remounting editors or interrupting input focus.
+        applyWorkspaceSnapshot(state.value, snapshot.workspace);
+      }
       lastSequence = snapshot.revisions.commitSequence;
       remotePending = false;
       needsReconcile.value = false;
