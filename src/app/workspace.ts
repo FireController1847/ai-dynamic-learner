@@ -38,7 +38,7 @@ export function useWorkspace() {
   let disposed = false;
 
   const updateBackup = (authoredRevision: number, commitSequence: number) => {
-    backup.workspaceChanged(authoredRevision, populated(state.value));
+    backup.workspaceChanged(api.workspaceIdentity(), authoredRevision, populated(state.value));
     // Only advance past commits we actually observed. Looking up the latest
     // database sequence here can accidentally skip unseen remote edits.
     if (commitSequence !== lastSequence + 1) remotePending = true;
@@ -79,7 +79,7 @@ export function useWorkspace() {
       lastSequence = snapshot.revisions.commitSequence;
       remotePending = false;
       await startObserver(snapshot.records);
-      backup.workspaceChanged(snapshot.revisions.authoredRevision, populated(snapshot.workspace));
+      backup.workspaceChanged(api.workspaceIdentity(), snapshot.revisions.authoredRevision, populated(snapshot.workspace));
       storageProblem.value = '';
     } catch (error) {
       storageProblem.value = 'Changes from another tab could not be loaded safely: ' + errorMessage(error) +
@@ -114,7 +114,7 @@ export function useWorkspace() {
       let legacyPresent = false;
       try { legacyPresent = localStorage.getItem('dynamic-learner.workspace.v1') !== null; }
       catch { /* The Data API already handled source storage failures. */ }
-      backup.workspaceLoaded(snapshot.revisions.authoredRevision, populated(snapshot.workspace), legacyPresent);
+      backup.workspaceLoaded(api.workspaceIdentity(), snapshot.revisions.authoredRevision, populated(snapshot.workspace), legacyPresent);
       ready.value = true;
       watchRemoteChanges();
     } catch (error) {
@@ -145,7 +145,7 @@ export function useWorkspace() {
       revision.value += 1;
       lastSequence = snapshot.revisions.commitSequence;
       await startObserver(snapshot.records);
-      backup.workspaceRestored(snapshot.revisions.authoredRevision, populated(snapshot.workspace));
+      backup.workspaceRestored(api.workspaceIdentity(), snapshot.revisions.authoredRevision, populated(snapshot.workspace));
       storageProblem.value = '';
       replacedSafely = true;
       watchRemoteChanges();
@@ -188,7 +188,7 @@ export function useWorkspace() {
       validateWorkspaceValue(JSON.parse(json) as unknown);
     }
     await downloadText(filename, json, 'application/json', { deferPaint: false });
-    if (exportedRevision !== null) backup.recordExport(exportedRevision, Date.now());
+    if (exportedRevision !== null) backup.recordExport(api.workspaceIdentity(), exportedRevision, Date.now());
   }
 
   const stopStudySubscription = subscribeStudySessions(active => {
