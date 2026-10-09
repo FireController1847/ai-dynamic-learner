@@ -110,6 +110,32 @@ The exact names are reviewable, not promises of exported runtime symbols. The **
 - A write's optimistic display is not a durable-save indicator; use committed/dirty/failed states based on the returned transaction result.
 - Maintain a clear separation between persistent authored data, statistics/progress, selected-item conveniences, and transient UI state. Statistics may persist, but do not count as authored edits for backup reminders.
 
+### Implemented semantic commands (current PR)
+
+Beyond the initial record-level save APIs, the repository now exposes explicit
+grouped-library and Todo transaction families. These are available to future
+feature adapters; existing feature UI still operates through the temporary
+per-record Vue observer.
+
+- `data.library.createGroup`, `createEntry`, `renameItem`, `moveItem`, and
+  `deleteItem` support Notebook, Index Cards, Word Search, Crossword, Guide,
+  and Review. Entry creation uses existing feature validators, creates
+  dependent records atomically, and maintains revisioned sibling collections.
+  Deletion cascades through dependent cards, questions, game progress, map
+  sessions, child groups, and per-entry statistics.
+- `data.todo.createList`, `createSection`, `createTask`, `deleteTask`,
+  `deleteSection`, `deleteList`, `moveTask`, and `reorderList` provide
+  equivalent commands for Todo's flat list/section/task hierarchy.
+- The read/backup hydration layer rejects orphaned leaf payloads, missing
+  children, inconsistent collection ordering, dangling Todo records, and
+  orphaned statistics rather than silently omitting them from backups.
+- Callers supply revision preconditions. A command changes all related rows
+  in one transaction or rejects them together.
+
+Direct feature-owned calls, more targeted cross-tab hydration, and polished
+same-record conflict resolution UI remain later refinements. No browser-level
+acceptance runs have been performed.
+
 ### Concrete feature operation families
 
 | Domain | Minimum query/mutation families |
