@@ -27,7 +27,7 @@ function canonical(value: unknown): string {
     const object = value as Record<string, unknown>;
     return '{' + Object.keys(object).sort().map(key => JSON.stringify(key) + ':' + canonical(object[key])).join(',') + '}';
   }
-  return JSON.stringify(value);
+  return JSON.stringify(value) ?? 'null';
 }
 
 /**
@@ -97,7 +97,7 @@ export class WorkspaceDataApi {
   private async save(store: DataStoreName, key: IDBValidKey, value: IndexedRow,
     expectedRevision: number | null, scope: string, authored = true): Promise<DataCommit> {
     return this.store.commit(this.active(), [{
-      store, key, type: 'put', value, expectedRevision,
+      store, key, type: 'put', value: JSON.parse(JSON.stringify(value)) as IndexedRow, expectedRevision,
     }], { authored, scopes: [scope] });
   }
 
@@ -111,7 +111,7 @@ export class WorkspaceDataApi {
   readonly notebook = {
     getDocument: async (id: string) => {
       if (!isValidId(id)) throw new DataApiError('validation', 'Invalid document ID.');
-      return this.read<{ workspaceId: string; id: string; type: DocumentTypeId; data: DocumentDataByType[DocumentTypeId]; revision: number }>(
+      return this.read<IndexedRow & { workspaceId: string; id: string; type: DocumentTypeId; data: DocumentDataByType[DocumentTypeId]; revision: number }>(
         'notebookDocuments', [this.active(), id]);
     },
     saveDocument: async (id: string, type: DocumentTypeId, data: DocumentDataByType[DocumentTypeId], expectedRevision: number) => {
@@ -125,12 +125,13 @@ export class WorkspaceDataApi {
   readonly indexCards = {
     getCard: async (setId: string, id: string) =>
       this.read<IndexedRow & Card>('indexCards', [this.active(), setId, id]),
-    saveCard: async (setId: string, card: Card, expectedRevision: number) => {
+    saveCard: async (setId: string, card: Card, expectedRevision: number, position: number) => {
+      if (!Number.isSafeInteger(position) || position < 0) throw new DataApiError('validation', 'Invalid card position.');
       if (!isValidId(setId)) throw new DataApiError('validation', 'Invalid card set ID.');
       validateCards([card], new Set<string>());
       const workspaceId = this.active();
       return this.save('indexCards', [workspaceId, setId, card.id], {
-        workspaceId, setId, ...card,
+        workspaceId, setId, ...card, position,
       }, expectedRevision, 'index-cards:' + setId);
     },
   };
@@ -138,12 +139,13 @@ export class WorkspaceDataApi {
   readonly todoLists = {
     getTask: async (listId: string, sectionId: string, taskId: string) =>
       this.read<IndexedRow & TodoTask>('todoTasks', [this.active(), listId, sectionId, taskId]),
-    saveTask: async (listId: string, sectionId: string, task: TodoTask, expectedRevision: number) => {
+    saveTask: async (listId: string, sectionId: string, task: TodoTask, expectedRevision: number, position: number) => {
+      if (!Number.isSafeInteger(position) || position < 0) throw new DataApiError('validation', 'Invalid task position.');
       if (![listId, sectionId].every(isValidId)) throw new DataApiError('validation', 'Invalid task destination.');
       validateSections([{ id: sectionId, title: '', tasks: [task] }]);
       const workspaceId = this.active();
       return this.save('todoTasks', [workspaceId, listId, sectionId, task.id], {
-        workspaceId, listId, sectionId, ...task,
+        workspaceId, listId, sectionId, ...task, position,
       }, expectedRevision, 'todo-list:' + listId);
     },
   };
@@ -151,12 +153,13 @@ export class WorkspaceDataApi {
   readonly review = {
     getQuestion: async (setId: string, id: string) =>
       this.read<IndexedRow & Question>('reviewQuestions', [this.active(), setId, id]),
-    saveQuestion: async (setId: string, question: Question, expectedRevision: number) => {
+    saveQuestion: async (setId: string, question: Question, expectedRevision: number, position: number) => {
+      if (!Number.isSafeInteger(position) || position < 0) throw new DataApiError('validation', 'Invalid question position.');
       if (!isValidId(setId)) throw new DataApiError('validation', 'Invalid Review set.');
       validateQuestions([question]);
       const workspaceId = this.active();
       return this.save('reviewQuestions', [workspaceId, setId, question.id], {
-        workspaceId, setId, ...question,
+        workspaceId, setId, ...question, position,
       }, expectedRevision, 'knowledge-check:' + setId);
     },
   };
