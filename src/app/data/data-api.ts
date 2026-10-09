@@ -215,7 +215,12 @@ export class WorkspaceDataApi {
       if (!isValidId(id)) throw new DataApiError('validation', 'Invalid document ID.');
       validateDocumentData(type, data);
       const workspaceId = this.active();
-      return this.save('notebookDocuments', [workspaceId, id], { workspaceId, id, type, data }, expectedRevision, 'notebook:' + id);
+      return this.store.commit(workspaceId, [
+        { store: 'libraryNodes', type: 'exists', key: [workspaceId, 'notebook', id] },
+        { store: 'notebookDocuments', type: 'put', key: [workspaceId, id],
+          value: { workspaceId, id, type, data: JSON.parse(JSON.stringify(data)) as DocumentDataByType[DocumentTypeId] },
+          expectedRevision },
+      ], { authored: true, scopes: ['notebook:' + id] });
     },
   };
 
@@ -305,12 +310,22 @@ export class WorkspaceDataApi {
     saveList: async (id: string, data: ListGuideData, expectedRevision: number) => {
       validateGuide({ items: [{ id, kind: 'guide', name: 'Guide', mode: 'list', data }] });
       const workspaceId = this.active();
-      return this.save('guides', [workspaceId, id], { workspaceId, id, mode: 'list', data }, expectedRevision, 'guide:' + id);
+      return this.store.commit(workspaceId, [
+        { store: 'libraryNodes', type: 'exists', key: [workspaceId, 'guide', id] },
+        { store: 'guides', type: 'put', key: [workspaceId, id],
+          value: { workspaceId, id, mode: 'list', data: JSON.parse(JSON.stringify(data)) as ListGuideData },
+          expectedRevision },
+      ], { authored: true, scopes: ['guide:' + id] });
     },
     saveMap: async (id: string, data: Omit<MapGuideData, 'session'>, expectedRevision: number) => {
       validateGuide({ items: [{ id, kind: 'guide', name: 'Guide', mode: 'map', data }] });
       const workspaceId = this.active();
-      return this.save('guides', [workspaceId, id], { workspaceId, id, mode: 'map', data }, expectedRevision, 'guide:' + id);
+      return this.store.commit(workspaceId, [
+        { store: 'libraryNodes', type: 'exists', key: [workspaceId, 'guide', id] },
+        { store: 'guides', type: 'put', key: [workspaceId, id],
+          value: { workspaceId, id, mode: 'map', data: JSON.parse(JSON.stringify(data)) as Omit<MapGuideData, 'session'> },
+          expectedRevision },
+      ], { authored: true, scopes: ['guide:' + id] });
     },
     saveSession: async (id: string, session: MapStudySession, expectedRevision: number | null) => {
       const guide = await this.read<IndexedRow>('guides', [this.active(), id]);
