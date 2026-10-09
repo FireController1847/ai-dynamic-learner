@@ -180,7 +180,9 @@ export class WorkspaceDataApi {
 
   async list<T extends IndexedRow>(store: DataStoreName, predicate: (row: T) => boolean): Promise<Versioned<T>[]> {
     const workspaceId = this.active();
-    const records = await this.store.all<T>(store);
+    // Restrict the scan to this workspace's key range. Inactive staged and
+    // previously restored workspaces must not inflate normal list queries.
+    const records = (await this.store.snapshot<T>([store], workspaceId)).get(store) ?? [];
     return records.filter(record => record.workspaceId === workspaceId && predicate(record))
       .map(record => ({ value: record, revision: record.revision ?? 0 }));
   }
