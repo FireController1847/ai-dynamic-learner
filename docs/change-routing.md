@@ -44,6 +44,7 @@ Use this as a starting-file index, not a feature specification. Follow imports o
 | Index Cards settings | `display-options.ts`, `display-settings.ts`, `tree-model.ts`, `display-settings.css` |
 | Word Search library/setup | `src/features/word-search/word-search.ts`, `library.ts`, `library-model.ts`, `puzzle-form.ts` |
 | Word Search generation/play | `puzzle-generator.ts`, `game-model.ts`, `puzzle-game.ts`, `puzzle-grid.ts` |
+| Word Search / Crossword category AI | `src/features/puzzle-ai/puzzle-ai.ts`, `puzzle-ai-format.ts`, `puzzle-ai.css`, plus their respective library toolbars |
 | Word Search appearance | `display-options.ts`, `display-settings.ts`, `grid-sizing.ts`, `word-outline.ts` |
 | Crossword library/setup | `src/features/crossword/crossword.ts`, `library.ts`, `library-model.ts`, `puzzle-form.ts` |
 | Crossword generation/play | `puzzle-generator.ts`, `puzzle-model.ts`, `game-model.ts`, `puzzle-game.ts`, `puzzle-grid.ts` |
