@@ -72,7 +72,7 @@ export function useWorkspace() {
         remotePending = false;
         return;
       }
-      const snapshot = await api.initialSnapshot();
+      const snapshot = await api.initialSnapshot(true);
       observer?.stop();
       state.value = snapshot.workspace;
       revision.value += 1;
