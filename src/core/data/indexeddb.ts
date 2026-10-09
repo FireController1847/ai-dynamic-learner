@@ -35,6 +35,16 @@ const definitions = {
 } as const;
 
 export type DataStoreName = keyof typeof definitions;
+export function dataPrimaryKey(store: DataStoreName, row: IndexedRow): IDBValidKey {
+  const keyPath: string | readonly string[] = definitions[store].key;
+  const keys = typeof keyPath === 'string' ? [keyPath] : [...keyPath];
+  const values = keys.map(key => row[key]);
+  if (values.some(value => typeof value !== 'string' && typeof value !== 'number')) {
+    throw new DataApiError('validation', 'A database row has an invalid primary key.');
+  }
+  return typeof keyPath === 'string' ? values[0] as IDBValidKey : values as IDBValidKey;
+}
+
 export type IndexedRow = { workspaceId?: string; revision?: number; [property: string]: unknown };
 export type ReadKey = IDBValidKey;
 export type DataChange = {
