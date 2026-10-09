@@ -159,35 +159,36 @@ export function useWorkspace() {
   async function downloadBackup(): Promise<void> {
     const filename = `dynamic-learner-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
     if (!ready.value) {
-      // A failed reattachment after a restore may leave valid new records.
-      // Prefer those over the much older read-only legacy migration copy.
+      // Recover from a valid IDB snapshot if possible, otherwise export the
+      // read-only legacy bytes. A failed download itself must not silently
+      // trigger a second download of different content.
+      let json: string;
       try {
-        const snapshot = await api.exportSnapshot();
-        await downloadText(filename, snapshot.json, 'application/json', { deferPaint: false });
-        return;
+        json = (await api.exportSnapshot()).json;
       } catch {
-        // If IndexedDB itself is inaccessible, preserve the original bytes
-        // even when the legacy data is malformed. Do not clear site data.
         const legacy = localStorage.getItem('dynamic-learner.workspace.v1');
         if (!legacy) throw new Error('The workspace is unavailable and no recovery copy could be read.');
-        await downloadText(filename, legacy, 'application/json', { deferPaint: false });
-        return;
+        json = legacy;
       }
+      await downloadText(filename, json, 'application/json', { deferPaint: false });
+      return;
     }
     await nextTick();
+    let json: string;
+    let exportedRevision: number | null = null;
     try {
       await observer?.flush();
       const snapshot = await api.exportSnapshot();
-      await downloadText(filename, snapshot.json, 'application/json', { deferPaint: false });
-      backup.recordExport(snapshot.authoredRevision, Date.now());
+      json = snapshot.json;
+      exportedRevision = snapshot.authoredRevision;
     } catch {
-      // Emergency escape hatch for failed writes AND failed database reads.
-      // Include unsaved Vue edits and never mark an emergency export as the
-      // successful snapshot of a committed authored revision.
-      const json = JSON.stringify(state.value);
+      // A failed write or database read must not prevent emergency export.
+      // Preserve live unsaved edits, but never mark the export as committed.
+      json = JSON.stringify(state.value);
       validateWorkspaceValue(JSON.parse(json) as unknown);
-      await downloadText(filename, json, 'application/json', { deferPaint: false });
     }
+    await downloadText(filename, json, 'application/json', { deferPaint: false });
+    if (exportedRevision !== null) backup.recordExport(exportedRevision, Date.now());
   }
 
   const stopStudySubscription = subscribeStudySessions(active => {
