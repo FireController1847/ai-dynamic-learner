@@ -108,6 +108,13 @@ export class WorkspaceDataApi {
     return hydrateWorkspace(this.store, this.active());
   }
   workspaceIdentity(): string { return this.active(); }
+  /** Use only with an already validated snapshot from initialSnapshot(). */
+  adoptWorkspaceSnapshot(workspaceId: string): void {
+    if (!isValidId(workspaceId)) throw new DataApiError('validation', 'Invalid workspace identity.');
+    this.workspaceId = workspaceId;
+  }
+
+
 
   /**
    * Hydrate the UI and capture optimistic revisions from one IDB snapshot.
@@ -115,6 +122,7 @@ export class WorkspaceDataApi {
    * we record the initial compare-and-swap revisions.
    */
   async initialSnapshot(followActivePointer = false): Promise<{
+    workspaceId: string;
     workspace: Workspace;
     revisions: { commitSequence: number; authoredRevision: number };
     records: Array<{ store: DataStoreName; key: IDBValidKey; value: IndexedRow; revision: number }>;
@@ -144,11 +152,10 @@ export class WorkspaceDataApi {
           store, key: dataPrimaryKey(store, value), value,
           revision: typeof value.revision === 'number' ? value.revision : 0,
         })));
-    // Adopt the new pointer only after its complete content has been
-    // hydrated and validated from the same consistent snapshot.
-    if (followActivePointer) this.workspaceId = workspaceId;
+    // The caller decides when it is safe to adopt the active pointer. In
+    // particular, local keystrokes can arrive while this async read runs.
     return {
-      workspace,
+      workspaceId, workspace,
       revisions: { commitSequence: meta.commitSequence, authoredRevision: meta.authoredRevision },
       records,
     };
