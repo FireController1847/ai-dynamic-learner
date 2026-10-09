@@ -97,6 +97,9 @@ export function useWorkspace() {
         return;
       }
       const snapshot = await api.initialSnapshot(true);
+      // Flush Vue's pending change observers before checking whether typing
+      // occurred during the asynchronous snapshot read.
+      await nextTick();
       // A keystroke can occur while IndexedDB is reading a snapshot. Never
       // replace data that has since become dirty or is still in flight.
       if (observer?.hasPendingChanges()) {
