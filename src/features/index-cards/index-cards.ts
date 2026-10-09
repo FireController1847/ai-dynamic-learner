@@ -92,7 +92,7 @@ export const IndexCards = defineComponent({
     const settingsButton = ref<HTMLButtonElement | null>(null);
     const displayOptions = computed(() => resolvedDisplayOptions(props.model.display));
     const indexCardSettings = computed(() => resolvedIndexCardSettings(props.model.settings));
-    onDeactivated(() => { settingsOpen.value = false; aiTarget.value = null; });
+    onDeactivated(() => { settingsOpen.value = false; });
 
     async function closeSettings() {
       settingsOpen.value = false;
@@ -343,7 +343,7 @@ export const IndexCards = defineComponent({
           collapsed: libraryCollapsed.value,
           onToggleLibrary: () => setLibraryCollapsed(true),
           onNewSet: beginSetCreation,
-          onSelect: (id) => { selectedId.value = id; creationTarget.value = null; aiTarget.value = null; message.value = ''; },
+          onSelect: (id) => { selectedId.value = id; creationTarget.value = null; message.value = ''; },
           onOpenItem: () => { if (libraryOverlay.value) setLibraryCollapsed(true); },
         }, {
           footer: () => h('button', {
