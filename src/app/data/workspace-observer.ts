@@ -179,9 +179,14 @@ export async function observeWorkspace(
       existing.build = build;
       return;
     }
+    const replaced = !!existing && existing.source !== source;
     existing?.stop();
     const stop = watch(select, () => queueRow(id), { deep: true });
     bindings.set(id, { source, stop, build, authored });
+    // Some editors/importers replace an existing object with the same ID.
+    // Its key and sibling ordering are unchanged, so no structural signature
+    // changes. Persist the new object instead of waiting for another edit.
+    if (replaced) queueRow(id);
   }
 
   const captureTree = (seen: Set<string>, signature: string[], statsSignature: string[]) => {
