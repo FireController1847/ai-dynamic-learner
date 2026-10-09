@@ -14,6 +14,10 @@ import type { Question } from '../../features/knowledge-check/question-model.ts'
 import { validateQuestions } from '../../features/knowledge-check/question-model.ts';
 import type { TodoTask } from '../../features/todo-list/task-model.ts';
 import { validateSections } from '../../features/todo-list/task-model.ts';
+import { validateGame as validateWordGame, type Game as WordGame } from '../../features/word-search/game-model.ts';
+import { validateGame as validateCrosswordGame, type Game as CrosswordGame } from '../../features/crossword/game-model.ts';
+import { validateGuide, type ListGuideData, type MapGuideData, type MapStudySession } from '../../features/guide/library-model.ts';
+import { APP_STATISTICS_METRICS, type StatisticsApp, type StatisticsMetric, type StatisticsCounts } from '../../core/statistics.ts';
 
 export interface Versioned<T> { value: T; revision: number }
 export type DataListener = (change: DataChange) => void;
@@ -161,6 +165,94 @@ export class WorkspaceDataApi {
       return this.save('reviewQuestions', [workspaceId, setId, question.id], {
         workspaceId, setId, ...question, position,
       }, expectedRevision, 'knowledge-check:' + setId);
+    },
+  };
+
+  readonly wordSearch = {
+    getPuzzle: async (id: string) => this.read<IndexedRow>('wordSearches', [this.active(), id]),
+    getGame: async (id: string) => this.read<IndexedRow & { game: WordGame }>('wordSearchGames', [this.active(), id]),
+    saveGame: async (id: string, game: WordGame, expectedRevision: number | null) => {
+      const puzzle = await this.read<IndexedRow>('wordSearches', [this.active(), id]);
+      if (!puzzle?.value.puzzle) throw new DataApiError('not-found', 'The Word Search puzzle was removed.');
+      validateWordGame(puzzle.value.puzzle, game);
+      const workspaceId = this.active();
+      return this.save('wordSearchGames', [workspaceId, id], { workspaceId, id, game }, expectedRevision, 'word-search:' + id);
+    },
+  };
+
+  readonly crossword = {
+    getPuzzle: async (id: string) => this.read<IndexedRow>('crosswords', [this.active(), id]),
+    getGame: async (id: string) => this.read<IndexedRow & { game: CrosswordGame }>('crosswordGames', [this.active(), id]),
+    saveGame: async (id: string, game: CrosswordGame, expectedRevision: number | null) => {
+      const puzzle = await this.read<IndexedRow>('crosswords', [this.active(), id]);
+      if (!puzzle?.value.puzzle) throw new DataApiError('not-found', 'The Crossword puzzle was removed.');
+      validateCrosswordGame(puzzle.value.puzzle, game);
+      const workspaceId = this.active();
+      return this.save('crosswordGames', [workspaceId, id], { workspaceId, id, game }, expectedRevision, 'crossword:' + id);
+    },
+  };
+
+  readonly guide = {
+    get: async (id: string) => this.read<IndexedRow>('guides', [this.active(), id]),
+    getSession: async (id: string) => this.read<IndexedRow & { session: MapStudySession }>('guideSessions', [this.active(), id]),
+    saveList: async (id: string, data: ListGuideData, expectedRevision: number) => {
+      validateGuide({ items: [{ id, kind: 'guide', name: 'Guide', mode: 'list', data }] });
+      const workspaceId = this.active();
+      return this.save('guides', [workspaceId, id], { workspaceId, id, mode: 'list', data }, expectedRevision, 'guide:' + id);
+    },
+    saveMap: async (id: string, data: Omit<MapGuideData, 'session'>, expectedRevision: number) => {
+      validateGuide({ items: [{ id, kind: 'guide', name: 'Guide', mode: 'map', data }] });
+      const workspaceId = this.active();
+      return this.save('guides', [workspaceId, id], { workspaceId, id, mode: 'map', data }, expectedRevision, 'guide:' + id);
+    },
+    saveSession: async (id: string, session: MapStudySession, expectedRevision: number | null) => {
+      const guide = await this.read<IndexedRow>('guides', [this.active(), id]);
+      if (!guide || guide.value.mode !== 'map') throw new DataApiError('not-found', 'The map Guide no longer exists.');
+      validateGuide({ items: [{ id, kind: 'guide', name: 'Guide', mode: 'map',
+        data: { ...(guide.value.data as object), session } }] });
+      const workspaceId = this.active();
+      return this.save('guideSessions', [workspaceId, id], { workspaceId, id, session }, expectedRevision, 'guide:' + id, false);
+    },
+  };
+
+  readonly statistics = {
+    app: async (app: StatisticsApp) =>
+      this.read<IndexedRow & { counts: StatisticsCounts }>('statisticsApps', [this.active(), app]),
+    entry: async (app: StatisticsApp, id: string) =>
+      this.read<IndexedRow & { counts: StatisticsCounts; lastActivityAt: string }>(
+        'statisticsEntries', [this.active(), app, id]),
+    record: async (app: StatisticsApp, id: string | null, metric: StatisticsMetric, amount = 1) => {
+      if (!APP_STATISTICS_METRICS[app]?.includes(metric) || !Number.isSafeInteger(amount) || amount < 1 ||
+          (id !== null && !isValidId(id))) {
+        throw new DataApiError('validation', 'Invalid learning-activity event.');
+      }
+      const workspaceId = this.active();
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const appRecord = await this.read<IndexedRow & { counts: StatisticsCounts }>(
+          'statisticsApps', [workspaceId, app]);
+        const entryRecord = id !== null
+          ? await this.read<IndexedRow & { counts: StatisticsCounts; lastActivityAt: string }>(
+            'statisticsEntries', [workspaceId, app, id]) : null;
+        const nextCounts = (current: StatisticsCounts | undefined): StatisticsCounts => ({
+          ...(current ?? {}), [metric]: Math.min(Number.MAX_SAFE_INTEGER, (current?.[metric] ?? 0) + amount),
+        });
+        const operations: DataOperation[] = [{
+          store: 'statisticsApps', type: 'put', key: [workspaceId, app],
+          value: { workspaceId, app, counts: nextCounts(appRecord?.value.counts) },
+          expectedRevision: appRecord?.revision ?? null,
+        }];
+        if (id !== null) operations.push({
+          store: 'statisticsEntries', type: 'put', key: [workspaceId, app, id],
+          value: { workspaceId, app, id, counts: nextCounts(entryRecord?.value.counts),
+            lastActivityAt: new Date().toISOString() },
+          expectedRevision: entryRecord?.revision ?? null,
+        });
+        try { return await this.store.commit(workspaceId, operations, { authored: false, scopes: ['statistics:' + app] }); }
+        catch (error) {
+          if (!(error instanceof DataApiError) || error.code !== 'conflict' || attempt === 4) throw error;
+        }
+      }
+      throw new DataApiError('conflict', 'Learning activity could not be saved after repeated conflicts.');
     },
   };
 
