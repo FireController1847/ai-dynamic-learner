@@ -125,6 +125,7 @@ export class IndexedDataStore {
   private channel: BroadcastChannel | null = null;
   private readonly listeners = new Set<(change: DataChange) => void>();
   private readonly remoteListeners = new Set<(change: DataChange) => void>();
+  private readonly unavailableListeners = new Set<(message: string) => void>();
   private closed = false;
 
   async open(): Promise<void> {
@@ -133,6 +134,12 @@ export class IndexedDataStore {
     const database = await openDataDatabase();
     if (this.closed) { database.close(); return; }
     database.onversionchange = () => {
+      // Another tab opened a newer schema. This connection cannot accept
+      // writes anymore; notify the current editor before closing it.
+      for (const listener of this.unavailableListeners) {
+        try { listener('Another Dynamic Learner tab upgraded the database. Download your unsaved draft, then reload this page.'); }
+        catch (error) { console.error('Database-upgrade listener failed.', error); }
+      }
       this.database = null;
       database.close();
       this.close();
@@ -164,6 +171,11 @@ export class IndexedDataStore {
   subscribeRemote(listener: (change: DataChange) => void): () => void {
     this.remoteListeners.add(listener);
     return () => this.remoteListeners.delete(listener);
+  }
+
+  subscribeUnavailable(listener: (message: string) => void): () => void {
+    this.unavailableListeners.add(listener);
+    return () => this.unavailableListeners.delete(listener);
   }
 
   private publish(change: DataChange, broadcast: boolean) {
@@ -420,5 +432,6 @@ export class IndexedDataStore {
     this.database = null;
     this.listeners.clear();
     this.remoteListeners.clear();
+    this.unavailableListeners.clear();
   }
 }
