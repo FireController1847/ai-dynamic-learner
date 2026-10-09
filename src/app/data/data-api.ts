@@ -110,7 +110,7 @@ export class WorkspaceDataApi {
     store: DataStoreName; key: IDBValidKey; value: IndexedRow; revision: number;
   }>> {
     const names: DataStoreName[] = [
-      'libraryNodes', 'featureState', 'notebookDocuments', 'todoLists', 'todoSections', 'todoTasks',
+      'libraryNodes', 'collections', 'featureState', 'notebookDocuments', 'todoLists', 'todoSections', 'todoTasks',
       'indexCardSets', 'indexCards', 'wordSearches', 'wordSearchGames', 'crosswords',
       'crosswordGames', 'guides', 'guideSessions', 'reviewSets', 'reviewQuestions',
       'statisticsMeta', 'statisticsApps', 'statisticsEntries',
