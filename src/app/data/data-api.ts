@@ -168,9 +168,11 @@ export class WorkspaceDataApi {
       if (!isValidId(setId)) throw new DataApiError('validation', 'Invalid card set ID.');
       validateCards([card], new Set<string>());
       const workspaceId = this.active();
-      return this.save('indexCards', [workspaceId, setId, card.id], {
-        workspaceId, setId, ...card, position,
-      }, expectedRevision, 'index-cards:' + setId);
+      return this.store.commit(workspaceId, [
+        { store: 'indexCardSets', type: 'exists', key: [workspaceId, setId] },
+        { store: 'indexCards', type: 'put', key: [workspaceId, setId, card.id],
+          value: { workspaceId, setId, ...JSON.parse(JSON.stringify(card)) as Card, position }, expectedRevision },
+      ], { authored: true, scopes: ['index-cards:' + setId] });
     },
   };
 
@@ -182,9 +184,11 @@ export class WorkspaceDataApi {
       if (![listId, sectionId].every(isValidId)) throw new DataApiError('validation', 'Invalid task destination.');
       validateSections([{ id: sectionId, title: '', tasks: [task] }]);
       const workspaceId = this.active();
-      return this.save('todoTasks', [workspaceId, listId, sectionId, task.id], {
-        workspaceId, listId, sectionId, ...task, position,
-      }, expectedRevision, 'todo-list:' + listId);
+      return this.store.commit(workspaceId, [
+        { store: 'todoSections', type: 'exists', key: [workspaceId, listId, sectionId] },
+        { store: 'todoTasks', type: 'put', key: [workspaceId, listId, sectionId, task.id],
+          value: { workspaceId, listId, sectionId, ...JSON.parse(JSON.stringify(task)) as TodoTask, position }, expectedRevision },
+      ], { authored: true, scopes: ['todo-list:' + listId] });
     },
   };
 
@@ -196,9 +200,11 @@ export class WorkspaceDataApi {
       if (!isValidId(setId)) throw new DataApiError('validation', 'Invalid Review set.');
       validateQuestions([question]);
       const workspaceId = this.active();
-      return this.save('reviewQuestions', [workspaceId, setId, question.id], {
-        workspaceId, setId, ...question, position,
-      }, expectedRevision, 'knowledge-check:' + setId);
+      return this.store.commit(workspaceId, [
+        { store: 'reviewSets', type: 'exists', key: [workspaceId, setId] },
+        { store: 'reviewQuestions', type: 'put', key: [workspaceId, setId, question.id],
+          value: { workspaceId, setId, ...JSON.parse(JSON.stringify(question)) as Question, position }, expectedRevision },
+      ], { authored: true, scopes: ['knowledge-check:' + setId] });
     },
   };
 
