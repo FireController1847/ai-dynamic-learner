@@ -73,6 +73,10 @@ If a feature intentionally persists a presentation option as part of its model (
 
 ## Storage failure behavior
 
+Changes committed in another tab are broadcast as invalidations and fetched from the same-origin IndexedDB database. For normal updates to the **same workspace**, the app applies the newly saved data **in place** to existing Vue objects, including items added, deleted, reordered, or edited. Current editors stay mounted, so users can keep working in one tab while changes appear in the other. Each tab retains its own selected library item instead of following the other tab's navigation. Active study sessions defer incoming data until they end.
+
+Before integrating a remote snapshot, the app flushes pending local saves and checks for any additional typing that occurred while the snapshot was loading. Independent edits synchronize automatically. If both tabs race to save incompatible changes to the **same record**, revision checks still reject the stale write; the on-screen draft is preserved with an explicit export/recovery option. A full workspace restore is not a live merge and continues to require special protection for locally focused drafts.
+
 When a record save or cross-tab reconciliation fails, the app preserves the visible in-memory workspace and offers **Download unsaved draft**. The user can then explicitly confirm **Discard draft and reload** to load the latest committed IndexedDB workspace; it never silently merges or overwrites simultaneous edits to the same record. Another tab upgrading the IndexedDB schema produces a warning advising a draft download and page reload.
 
 
