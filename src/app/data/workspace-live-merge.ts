@@ -14,7 +14,26 @@ type Dictionary = Record<string, unknown>;
  * rejected by the IndexedDB record CAS and remain exportable as drafts.
  */
 export function applyWorkspaceSnapshot(current: Workspace, saved: Workspace): void {
+  // Opening a document in one tab must not navigate another tab away from
+  // what its user is working on. Preserve local selection while applying the
+  // shared content, unless the selected entry was deleted remotely.
+  const selected = Object.entries(current.features).flatMap(([app, model]) =>
+    Object.entries(model).filter(([key, value]) =>
+      key.startsWith('lastSelected') && typeof value === 'string'
+    ).map(([key, value]) => ({ app, key, id: value as string })));
   merge(current, saved);
+  for (const { app, key, id } of selected) {
+    const feature = (current.features as unknown as Dictionary)[app];
+    if (!isObject(feature)) continue;
+    if (containsEntry(feature.items, id)) feature[key] = id;
+  }
+}
+
+function containsEntry(items: unknown, id: string): boolean {
+  if (!Array.isArray(items)) return false;
+  return items.some(item => isObject(item) && (
+    item.id === id || containsEntry(item.children, id)
+  ));
 }
 
 function isObject(value: unknown): value is Dictionary {
@@ -47,9 +66,12 @@ function mergeArray(existing: unknown[], incoming: readonly unknown[]): void {
       }
       return copy(item);
     });
-    // Reordering and add/delete preserve the array reference and individual
-    // objects for all surviving cards, documents, questions, tasks, etc.
-    existing.splice(0, existing.length, ...ordered);
+    // Keep the array itself and individual items stable, including their
+    // ordering, when the remote change was only to an item's content.
+    if (ordered.length !== existing.length ||
+        ordered.some((item, index) => item !== existing[index])) {
+      existing.splice(0, existing.length, ...ordered);
+    }
     return;
   }
   for (let index = 0; index < incoming.length; index++) {
