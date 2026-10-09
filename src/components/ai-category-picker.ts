@@ -10,6 +10,7 @@ export const AiCategoryPicker = defineComponent({
   props: {
     destination: { type: String, required: true },
     label: { type: String, default: 'Index Cards' },
+    totalSteps: { type: Number, default: 2 },
     initialCategories: { type: Object as PropType<AiCardCategories | null>, default: null },
   },
   emits: { back: () => true, cancel: () => true, select: (_scope: AiCardScope, _categories: AiCardCategories) => true },
@@ -51,7 +52,7 @@ export const AiCategoryPicker = defineComponent({
           h('div', [
             h('p', { class: 'study-ai-muted' }, `${props.label} · Saved in ${props.destination}`),
             h('h2', { id: 'index-cards-category-title', ref: heading, tabindex: -1 }, 'Find your study categories'),
-            h('p', 'Step 1 of 2 · Find categories from your source, then choose one for a focused study set.'),
+            h('p', `Step 1 of ${props.totalSteps} · Find categories from your source, then choose one for focused study content.`),
           ]),
           h('div', { class: 'study-ai-actions' }, [
             h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('back') }, 'Back'),
