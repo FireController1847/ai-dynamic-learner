@@ -168,18 +168,17 @@ export function useWorkspace() {
     await nextTick();
     try {
       await observer?.flush();
+      const snapshot = await api.exportSnapshot();
+      await downloadText(filename, snapshot.json, 'application/json', { deferPaint: false });
+      backup.recordExport(snapshot.authoredRevision, Date.now());
     } catch {
-      // A failed IDB write must never disable the user's emergency escape.
-      // Export the live in-memory content, including unsaved edits, but DO NOT
-      // record it as a database snapshot or clear the backup reminder.
+      // Emergency escape hatch for failed writes AND failed database reads.
+      // Include unsaved Vue edits and never mark an emergency export as the
+      // successful snapshot of a committed authored revision.
       const json = JSON.stringify(state.value);
       validateWorkspaceValue(JSON.parse(json) as unknown);
       await downloadText(filename, json, 'application/json', { deferPaint: false });
-      return;
     }
-    const snapshot = await api.exportSnapshot();
-    await downloadText(filename, snapshot.json, 'application/json', { deferPaint: false });
-    backup.recordExport(snapshot.authoredRevision, Date.now());
   }
 
   const stopStudySubscription = subscribeStudySessions(active => {
