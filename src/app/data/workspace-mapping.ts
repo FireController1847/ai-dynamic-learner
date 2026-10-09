@@ -350,11 +350,12 @@ export async function hydrateWorkspace(store: Pick<IndexedDataStore, 'all'> & Pa
     throw new Error('The database is missing saved library ordering records.');
   }
   for (const collection of actualCollections) {
+    const children = collection.children;
     if (typeof collection.app !== 'string' || typeof collection.parentId !== 'string' ||
-        !Array.isArray(collection.children)) throw new Error('Invalid library collection.');
+        !Array.isArray(children)) throw new Error('Invalid library collection.');
     const expected = expectedCollections.get(JSON.stringify([collection.app, collection.parentId]));
-    if (!expected || expected.length !== collection.children.length ||
-        expected.some((id, i) => id !== collection.children![i])) {
+    if (!expected || expected.length !== children.length ||
+        expected.some((id, i) => id !== children[i])) {
       throw new Error('Saved collection ordering does not match its content.');
     }
   }
