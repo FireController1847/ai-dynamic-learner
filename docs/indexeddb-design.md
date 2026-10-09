@@ -149,6 +149,10 @@ After activation, other tabs receive the new pointer, clear old subscriptions/dr
 
 ### Schema upgrades, version changes and interrupted jobs
 
+The v1 → v2 schema upgrade backfills the added `collections` store from persisted library, card, question and Todo ordering within the IndexedDB version-change transaction. If the upgrade fails, the transaction aborts and the previous database remains intact; it is never reset as an error workaround.
+
+
+
 - `db.onversionchange` closes the connection, pauses commands and asks the tab to reload; `request.onblocked` shows which action is required rather than silently hanging.
 - Each `onupgradeneeded` schema change is transactional; data changes that are too large for a single upgrade transaction use guarded staging/activation once stores exist.
 - Never call `deleteDatabase` as an error workaround, and never erase legacy backups on upgrade failure.
