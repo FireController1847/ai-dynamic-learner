@@ -176,7 +176,11 @@ export class WorkspaceDataApi {
       if (!puzzle?.value.puzzle) throw new DataApiError('not-found', 'The Word Search puzzle was removed.');
       validateWordGame(puzzle.value.puzzle, game);
       const workspaceId = this.active();
-      return this.save('wordSearchGames', [workspaceId, id], { workspaceId, id, game }, expectedRevision, 'word-search:' + id);
+      return this.store.commit(workspaceId, [
+        { store: 'wordSearches', type: 'assert', key: [workspaceId, id], expectedRevision: puzzle.revision },
+        { store: 'wordSearchGames', type: 'put', key: [workspaceId, id],
+          value: { workspaceId, id, game: JSON.parse(JSON.stringify(game)) as WordGame }, expectedRevision },
+      ], { authored: true, scopes: ['word-search:' + id] });
     },
   };
 
@@ -188,7 +192,11 @@ export class WorkspaceDataApi {
       if (!puzzle?.value.puzzle) throw new DataApiError('not-found', 'The Crossword puzzle was removed.');
       validateCrosswordGame(puzzle.value.puzzle, game);
       const workspaceId = this.active();
-      return this.save('crosswordGames', [workspaceId, id], { workspaceId, id, game }, expectedRevision, 'crossword:' + id);
+      return this.store.commit(workspaceId, [
+        { store: 'crosswords', type: 'assert', key: [workspaceId, id], expectedRevision: puzzle.revision },
+        { store: 'crosswordGames', type: 'put', key: [workspaceId, id],
+          value: { workspaceId, id, game: JSON.parse(JSON.stringify(game)) as CrosswordGame }, expectedRevision },
+      ], { authored: true, scopes: ['crossword:' + id] });
     },
   };
 
@@ -211,7 +219,11 @@ export class WorkspaceDataApi {
       validateGuide({ items: [{ id, kind: 'guide', name: 'Guide', mode: 'map',
         data: { ...(guide.value.data as object), session } }] });
       const workspaceId = this.active();
-      return this.save('guideSessions', [workspaceId, id], { workspaceId, id, session }, expectedRevision, 'guide:' + id, false);
+      return this.store.commit(workspaceId, [
+        { store: 'guides', type: 'assert', key: [workspaceId, id], expectedRevision: guide.revision },
+        { store: 'guideSessions', type: 'put', key: [workspaceId, id],
+          value: { workspaceId, id, session: JSON.parse(JSON.stringify(session)) as MapStudySession }, expectedRevision },
+      ], { authored: true, scopes: ['guide:' + id] });
     },
   };
 
