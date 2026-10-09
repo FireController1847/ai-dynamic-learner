@@ -111,14 +111,16 @@ export const PuzzleAiCreation = defineComponent({
         h('form', { class: 'puzzle-ai-setup', onSubmit: continueToPrompt }, [
           h('div', { class: 'puzzle-ai-setup-grid' }, [
             h('label', { class: 'puzzle-ai-setting' }, [
-              h('span', wordSearch ? 'Target words' : 'Target answers'),
+              h('span', wordSearch ? 'Maximum words' : 'Target answers'),
               h('input', {
                 type: 'number', required: true, min: bounds.min, max: bounds.max, step: 1,
                 value: current.count,
                 onInput: (event: Event) => updatePreferences({ count: Number(inputValue(event)) }),
               }),
               h('span', { class: 'study-ai-muted' },
-                `Choose ${bounds.min}–${bounds.max}. Use fewer when the category is small.`),
+                wordSearch && current.count === puzzleAiLimits['word-search'].initial
+                  ? 'Default target: 6–7 words. Use fewer when the category is small.'
+                  : `Choose ${bounds.min}–${bounds.max}. Use fewer when the category is small.`),
             ]),
             wordSearch ? h('label', { class: 'puzzle-ai-setting' }, [
               h('span', 'Grid size'),
@@ -237,7 +239,7 @@ export const PuzzleAiCreation = defineComponent({
           }, {
             guidance: () => h('p', { class: 'study-ai-muted' },
               props.kind === 'word-search'
-                ? `${preferences.value.size} × ${preferences.value.size} · ${preferences.value.difficulty} · ${preferences.value.studyMode === 'hints' ? 'Hints' : 'Word list'} · Up to ${preferences.value.count} words`
+                ? `${preferences.value.size} × ${preferences.value.size} · ${preferences.value.difficulty} · ${preferences.value.studyMode === 'hints' ? 'Hints' : 'Word list'} · ${preferences.value.count === puzzleAiLimits['word-search'].initial ? 'Target 6–7 words' : `Up to ${preferences.value.count} words`}`
                 : `Automatic grid · ${preferences.value.clueDifficulty} clues · Up to ${preferences.value.count} answers`),
             preview,
           }),

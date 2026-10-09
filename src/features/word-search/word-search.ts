@@ -350,7 +350,11 @@ export const WordSearch = defineComponent({
       }, [
         h('header', { class: 'word-search-item-heading' }, [
           h('h2', { ref: workspaceHeading, tabindex: -1 }, item.name),
-          h(EntryStatistics, { app: 'word-search', id: item.id }),
+          h('span', { class: 'word-search-entry-statistics', title: 'Lifetime activity for this word search' }, [
+            h(EntryStatistics, { app: 'word-search', id: item.id, metric: 'gamesCompleted' }),
+            h(EntryStatistics, { app: 'word-search', id: item.id, metric: 'wordsSolved' }),
+            h(EntryStatistics, { app: 'word-search', id: item.id, metric: 'wordAttempts' }),
+          ]),
           h('p', 'Word search'),
         ]),
         hasPuzzle(item)

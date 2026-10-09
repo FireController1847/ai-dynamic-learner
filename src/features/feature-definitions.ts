@@ -74,7 +74,7 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'word-search', label: 'Word Search', path: '/word-search/', icon: 'word-search',
     group: 'applications',
-    version: '1.7.0',
+    version: '1.7.1',
     image: 'assets/app-icons/word-search.png',
     description: 'Create your own word searches, find every word, and pick up where you left off.'
   },

@@ -16,7 +16,7 @@ export type PuzzleAiResult =
   | { kind: 'crossword'; title: string; puzzle: CrosswordPuzzle };
 
 export const puzzleAiLimits = {
-  'word-search': { initial: 12, min: MIN_WORDS, max: MAX_WORDS },
+  'word-search': { initial: 7, min: MIN_WORDS, max: MAX_WORDS },
   crossword: { initial: 10, min: MIN_ENTRIES, max: MAX_ENTRIES },
 } as const;
 
@@ -68,7 +68,7 @@ export function puzzleAiPrompt(kind: PuzzleAiKind, scope: AiCardScope, options: 
       : '"words": [{ "word": "CONCEPT" }]'
     : '"entries": [{ "answer": "CONCEPT", "clue": "A specific clue that does not use the answer" }]';
   const instructions = kind === 'word-search'
-    ? `Choose up to ${count} DISTINCT, meaningful SINGLE WORDS, each 2–${Math.min(MAX_WORD_LENGTH, options.size)} English letters A–Z. No word may exceed ${options.size} letters because the learner selected a ${options.size}×${options.size} grid. A phrase, multiword term or invented run-together word is NOT one word.
+    ? `${count === puzzleAiLimits['word-search'].initial ? 'Aim for 6–7' : `Choose up to ${count}`} DISTINCT, meaningful SINGLE WORDS, each 2–${Math.min(MAX_WORD_LENGTH, options.size)} English letters A–Z. No word may exceed ${options.size} letters because the learner selected a ${options.size}×${options.size} grid. A phrase, multiword term or invented run-together word is NOT one word.
 ${options.studyMode === 'hints'
       ? `Provide one accurate, concise, non-spoiling "hint" for EACH word (at most ${MAX_HINT_LENGTH} characters). The puzzle will hide the answers behind hints.`
       : 'The learner selected Show word list. OMIT the "hint" field from every word; answers will be displayed directly in the sidebar.'}

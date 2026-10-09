@@ -9,6 +9,7 @@ export const STATISTICS_LABELS = {
   answerChecks: 'Answers checked', correctChecks: 'Correct checks', assessmentQuestions: 'Assessment questions', assessmentCorrect: 'Assessment correct',
   gamesStarted: 'Puzzles started', gamesCompleted: 'Puzzles completed', adventuresStarted: 'Adventures started', adventuresCompleted: 'Adventures completed',
   tasksCompleted: 'Tasks completed', calculations: 'Calculations',
+  wordsSolved: 'Words solved', wordAttempts: 'Word attempts',
 } as const;
 export type StatisticsMetric = keyof typeof STATISTICS_LABELS;
 export type StatisticsCounts = Partial<Record<StatisticsMetric, number>>;
@@ -22,7 +23,7 @@ export const APP_STATISTICS_METRICS: Record<StatisticsApp, readonly StatisticsMe
   notebook: ['views'], 'todo-list': ['views', 'tasksCompleted'],
   'index-cards': ['views', 'cardViews', 'reviewStarts', 'reviews'],
   'knowledge-check': ['views', 'studyStarts', 'studyPasses', 'quizzes', 'tests', 'answerChecks', 'correctChecks', 'assessmentQuestions', 'assessmentCorrect'],
-  'word-search': ['views', 'gamesStarted', 'gamesCompleted'], crossword: ['views', 'gamesStarted', 'gamesCompleted'],
+  'word-search': ['views', 'gamesStarted', 'gamesCompleted', 'wordsSolved', 'wordAttempts'], crossword: ['views', 'gamesStarted', 'gamesCompleted'],
   guide: ['views', 'adventuresStarted', 'adventuresCompleted'], calculator: ['views', 'calculations'],
 };
 

@@ -61,6 +61,8 @@ Tracking starts with this feature; earlier activity is not fabricated. Opening v
 
 Statistics-only changes are excluded from authored-work fingerprints used by backup reminders, while remaining part of a downloaded backup. Upload replaces the complete ledger with the uploaded workspace's history; it does not merge or duplicate counts.
 
+Word Search additionally records lifetime `wordsSolved` and `wordAttempts` counters per entry and globally. Each submitted selection counts as an attempt, including misses, invalid lines, and already-found words; canceled selections and actions blocked during loading or answer reveal do not count. A word is solved only when newly added to the current run's found list. Restarting permits solving those words again. Existing backups without these optional counters display zero; saved found-word progress is not retroactively counted.
+
 Backups contain authored user content and saved feature preferences. They do **not** automatically contain transient/browser UI state.
 
 Examples normally outside backups: active dialog, most review/study progress, temporary shuffle order, current side of a card, selected navigation tab, theme preference, Tips completion, panel widths/collapse state, and other local UI conveniences.

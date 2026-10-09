@@ -15,6 +15,8 @@ function caption(metric: StatisticsMetric, count: number): string {
     case 'quizzes': return `${plural ? 'quizzes' : 'quiz'} taken`;
     case 'tests': return `${plural ? 'tests' : 'test'} taken`;
     case 'gamesCompleted': return `${plural ? 'puzzles' : 'puzzle'} completed`;
+    case 'wordsSolved': return `${plural ? 'words' : 'word'} solved`;
+    case 'wordAttempts': return `${plural ? 'word attempts' : 'word attempt'}`;
     case 'adventuresCompleted': return `${plural ? 'adventures' : 'adventure'} completed`;
     case 'tasksCompleted': return `${plural ? 'tasks' : 'task'} completed`;
     case 'cardViews': return `${plural ? 'cards' : 'card'} viewed`;

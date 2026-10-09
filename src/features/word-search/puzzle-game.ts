@@ -108,6 +108,7 @@ export const PuzzleGame = defineComponent({
 
     function select(start: number, end: number) {
       if (!game.value || loading.value || revealed.value) return;
+      statistics?.record('word-search', props.item.id, 'wordAttempts');
       const match = matchSelection(props.item.puzzle, game.value, start, end);
       const cells = lineCells(start, end, props.item.puzzle.size);
       const text = wordOnLine(game.value.rows, start, end);
@@ -127,6 +128,7 @@ export const PuzzleGame = defineComponent({
         return;
       }
       if (foundWords.value.has(match.word)) { message.value = `${recognized}${match.word} is already found.`; return; }
+      statistics?.record('word-search', props.item.id, 'wordsSolved');
       game.value.found.push(match);
       hint.value = null;
       const completed = game.value.found.length === props.item.puzzle.words.length;
