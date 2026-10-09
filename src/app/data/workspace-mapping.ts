@@ -291,10 +291,13 @@ export async function hydrateWorkspace(store: Pick<IndexedDataStore, 'all'> & Pa
     const childIds = new Set<string>();
     for (const row of getRows(store)) {
       const id = row.id, parent = row.setId;
-      if (!id || typeof parent !== 'string' || !ownerIds.has(parent) || childIds.has(id)) {
+      const scopedId = JSON.stringify([parent, id]);
+      if (!id || typeof parent !== 'string' || !ownerIds.has(parent) || childIds.has(scopedId)) {
         throw new Error('Saved ' + store + ' contains an orphaned or duplicate child.');
       }
-      childIds.add(id);
+      // The database key is [workspaceId, setId, id]. Different sets may
+      // legitimately contain the same card or question ID.
+      childIds.add(scopedId);
     }
   }
 
