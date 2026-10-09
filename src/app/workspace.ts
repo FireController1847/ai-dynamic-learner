@@ -34,12 +34,15 @@ export function useWorkspace() {
   let refreshing = false;
   let studyActive = false;
   let lastSequence = 0;
+  let remotePending = false;
   let disposed = false;
 
-  const updateBackup = (authoredRevision: number) => {
+  const updateBackup = (authoredRevision: number, commitSequence: number) => {
     backup.workspaceChanged(authoredRevision, populated(state.value));
-    void api.revisions().then(meta => { lastSequence = Math.max(lastSequence, meta.commitSequence); })
-      .catch(() => {});
+    // Only advance past commits we actually observed. Looking up the latest
+    // database sequence here can accidentally skip unseen remote edits.
+    if (commitSequence !== lastSequence + 1) remotePending = true;
+    else if (!remotePending) lastSequence = commitSequence;
   };
   const savingProblem = (message: string) => { storageProblem.value = message; };
 
@@ -65,12 +68,16 @@ export function useWorkspace() {
       await nextTick();
       await observer?.flush();
       const result = await api.refresh(lastSequence);
-      if (!result.replaced && result.events?.length === 0) return;
+      if (!result.replaced && result.events?.length === 0) {
+        remotePending = false;
+        return;
+      }
       const snapshot = await api.initialSnapshot();
       observer?.stop();
       state.value = snapshot.workspace;
       revision.value += 1;
       lastSequence = snapshot.revisions.commitSequence;
+      remotePending = false;
       await startObserver(snapshot.records);
       backup.workspaceChanged(snapshot.revisions.authoredRevision, populated(snapshot.workspace));
       storageProblem.value = '';
@@ -85,6 +92,7 @@ export function useWorkspace() {
   function watchRemoteChanges() {
     if (unsubscribeRemote) return;
     unsubscribeRemote = api.subscribeRemote(() => {
+      remotePending = true;
       // Debounce a burst of remote edits rather than reloading per keystroke.
       if (remoteRefreshTimer !== undefined) clearTimeout(remoteRefreshTimer);
       remoteRefreshTimer = window.setTimeout(() => {
@@ -180,6 +188,16 @@ export function useWorkspace() {
     if (wasActive && !active) void syncOtherTabs();
   });
 
+  // An active editor deliberately defers a remote reload. Try again after
+  // focus moves away, even if the other tab sends no further broadcasts.
+  const onFocusOut = () => {
+    if (!remotePending) return;
+    queueMicrotask(() => {
+      if (!disposed && remotePending) void syncOtherTabs();
+    });
+  };
+  document.addEventListener('focusout', onFocusOut);
+
   const flushOnHide = () => {
     // Best effort only: browsers may terminate a tab without allowing any
     // asynchronous work, so autosaves must happen well before pagehide.
@@ -199,6 +217,7 @@ export function useWorkspace() {
     observer?.stop();
     unsubscribeRemote?.();
     stopStudySubscription();
+    document.removeEventListener('focusout', onFocusOut);
     api.close();
     document.removeEventListener('visibilitychange', onVisibility);
     window.removeEventListener('pagehide', flushOnHide);
