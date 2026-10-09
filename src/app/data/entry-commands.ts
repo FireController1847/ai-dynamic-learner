@@ -107,8 +107,8 @@ export function createEntryCommands(api: Pick<WorkspaceDataApi, 'read' | 'list' 
       feature.items.push(entry);
       // Validate all supplied data using the exact feature validators also
       // used for the existing v1 backup format.
-      validateWorkspaceValue(draft);
-      const rows = workspaceRows(ws, draft).filter(row => {
+      const validated = validateWorkspaceValue(draft);
+      const rows = workspaceRows(ws, validated).filter(row => {
         if (row.store === 'libraryNodes') return row.value.id === id;
         if (row.store === 'collections') return row.value.parentId === id;
         return row.value.id === id || row.value.setId === id;
