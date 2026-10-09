@@ -375,7 +375,7 @@ export class WorkspaceDataApi {
   async exportSnapshot(): Promise<{ json: string; authoredRevision: number }> {
     const workspaceId = this.active();
     const snapshots = await this.store.snapshot<IndexedRow>(
-      [...WORKSPACE_RECORD_STORES, 'control', 'workspaceMeta']);
+      [...WORKSPACE_RECORD_STORES, 'control', 'workspaceMeta'], workspaceId);
     const control = snapshots.get('control')?.[0];
     if (control?.activeWorkspaceId !== workspaceId) {
       throw new DataApiError('conflict', 'The workspace was replaced in another tab. Reload before exporting.');
