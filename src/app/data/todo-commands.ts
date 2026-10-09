@@ -225,7 +225,9 @@ export function createTodoCommands(api: Pick<WorkspaceDataApi, 'read' | 'list' |
       }
       const task = await api.read<IndexedRow>('todoTasks', [ws(), input.listId, input.sectionId, input.id]);
       if (!task || task.revision !== input.expectedRevision ||
-          !source.value.children.includes(input.id)) fail('conflict', 'The task changed in another tab.');
+          !source.value.children.includes(input.id)) {
+        throw new DataApiError('conflict', 'The task changed in another tab.');
+      }
       const sourceIds = source.value.children.filter(id => id !== input.id);
       const targetIds = targetKey === sourceKey ? sourceIds : [...target.value.children];
       if (!Number.isSafeInteger(input.position) || input.position < 0 || input.position > targetIds.length) {
@@ -292,7 +294,7 @@ export function createTodoCommands(api: Pick<WorkspaceDataApi, 'read' | 'list' |
       ];
       for (const id of taskCollection.value.children) {
         const task = await api.read<IndexedRow>('todoTasks', [workspaceId, input.listId, input.id, id]);
-        if (!task) fail('validation', 'A saved task was missing during section deletion.');
+        if (!task) throw new DataApiError('validation', 'A saved task was missing during section deletion.');
         operations.push(del('todoTasks', [workspaceId, input.listId, input.id, id], task.revision));
       }
       operations.push(
