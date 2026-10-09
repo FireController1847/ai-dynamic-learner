@@ -29,6 +29,12 @@ export function useWorkspace() {
   const revision = ref(0);
   const backup = useBackupReminders();
   const api = new WorkspaceDataApi();
+  const stopUnavailable = api.subscribeUnavailable(message => {
+    // Keep in-memory drafts accessible. This connection cannot be reopened
+    // until the tab itself reloads after the schema upgrade.
+    storageProblem.value = message;
+    needsReconcile.value = true;
+  });
   let observer: Awaited<ReturnType<typeof observeWorkspace>> | null = null;
   let unsubscribeRemote: (() => void) | null = null;
   let remoteRefreshTimer: number | undefined;
@@ -299,6 +305,7 @@ export function useWorkspace() {
     unsubscribeRemote?.();
     stopStudySubscription();
     document.removeEventListener('focusout', onFocusOut);
+    stopUnavailable();
     api.close();
     document.removeEventListener('visibilitychange', onVisibility);
     window.removeEventListener('pagehide', flushOnHide);
