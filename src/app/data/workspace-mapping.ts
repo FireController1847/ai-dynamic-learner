@@ -217,6 +217,18 @@ export async function hydrateWorkspace(store: IndexedDataStore, workspaceId: str
       if (!Array.isArray(target)) throw new Error('A saved library has an invalid parent.');
       target.push(nodeById.get(node.id!)!);
     }
+    // A parent cycle can leave otherwise valid nodes unreachable from the
+    // root. Reject it instead of silently dropping that content on export.
+    const reachable = new Set<string>();
+    const pending = [...root];
+    while (pending.length) {
+      const item = pending.pop()!;
+      const id = item.id as string;
+      if (reachable.has(id)) throw new Error('A saved library contains a duplicate or cyclic entry.');
+      reachable.add(id);
+      if (Array.isArray(item.children)) pending.push(...item.children as Item[]);
+    }
+    if (reachable.size !== nodes.length) throw new Error('Saved library content is orphaned or cyclic.');
     featureModels[app]!.items = root;
   }
 
