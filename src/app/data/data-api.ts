@@ -115,8 +115,8 @@ export class WorkspaceDataApi {
       'crosswordGames', 'guides', 'guideSessions', 'reviewSets', 'reviewQuestions',
       'statisticsMeta', 'statisticsApps', 'statisticsEntries',
     ];
-    const snapshot = await this.store.snapshot<IndexedRow>(names, workspaceId);
     const workspaceId = this.active();
+    const snapshot = await this.store.snapshot<IndexedRow>(names, workspaceId);
     return names.flatMap(store => (snapshot.get(store) ?? [])
       .filter(value => value.workspaceId === workspaceId)
       .map(value => ({
