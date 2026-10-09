@@ -77,7 +77,9 @@ export const PuzzleAiCreation = defineComponent({
         : result.puzzle.entries.map(entry => ({ key: entry.answer, answer: entry.answer, clue: entry.clue }));
       return h('div', [
         h('h3', result.title),
-        h('p', { class: 'study-ai-muted' }, entries.length + ' ' + (result.kind === 'word-search' ? 'words with hints' : 'answers with clues') + ' · Ready to import'),
+        h('p', { class: 'study-ai-muted' }, entries.length + ' ' + (result.kind === 'word-search'
+          ? result.puzzle.studyMode === 'hints' ? 'words with hints' : 'words to find'
+          : 'answers with clues') + ' · Ready to import'),
         h('ol', { class: 'puzzle-ai-preview-list' }, entries.map(entry => h('li', { key: entry.key }, [
           h('strong', entry.answer),
           entry.clue ? h('span', entry.clue) : null,
@@ -126,7 +128,7 @@ export const PuzzleAiCreation = defineComponent({
                   updatePreferences({ size: Number(inputValue(event)) as GridSize }),
               }, GRID_SIZES.map(size => h('option', { value: size }, `${size} × ${size}`))),
               h('span', { class: 'study-ai-muted' },
-                'The AI must choose words short enough for this grid.'),
+                'The AI must choose words short enough for this grid. Very dense word lists may not fit.'),
             ]) : h('div', { class: 'puzzle-ai-setting' }, [
               h('span', 'Grid size'),
               h('strong', 'Automatic'),
@@ -228,7 +230,7 @@ export const PuzzleAiCreation = defineComponent({
             hasPreview: candidate.value !== null,
             promptHelp: 'Use the same AI conversation and original source material. This prompt builds one puzzle only for ' + scope.value.category.title + '. Copy it, send it to your AI, then import the response.',
             importHelp: 'Send the category-specific puzzle prompt to your AI, then paste its JSON response here.',
-            readyInstructions: ['Paste the puzzle JSON below.', 'Validate the words and clues.', 'Review the entries, then create your puzzle.'],
+            readyInstructions: ['Paste the puzzle JSON below.', 'Validate the generated terms and any hints or clues.', 'Review the entries, then create your puzzle.'],
             validateLabel: 'Validate puzzle',
             onUpdateJson: (value: string) => { json.value = value; candidate.value = null; problem.value = ''; },
             onValidate: validate,
