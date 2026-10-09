@@ -372,6 +372,27 @@ export async function hydrateWorkspace(store: Pick<IndexedDataStore, 'all'> & Pa
     };
   });
 
+  // Statistics metadata is required whenever counters exist. Without this
+  // check, a dangling entry silently disappears from portable JSON exports.
+  const statsAppIds = new Set<string>();
+  const statsApps = getRows('statisticsApps');
+  for (const app of statsApps) {
+    if (typeof app.app !== 'string' || statsAppIds.has(app.app)) {
+      throw new Error('Duplicate or invalid statistics application.');
+    }
+    statsAppIds.add(app.app);
+  }
+  for (const entry of getRows('statisticsEntries')) {
+    if (typeof entry.app !== 'string' || !statsAppIds.has(entry.app)) {
+      throw new Error('An orphaned statistics entry was found.');
+    }
+  }
+  if (getRows('statisticsMeta').length > 1 ||
+      (!getRows('statisticsMeta').length &&
+        (statsApps.length || getRows('statisticsEntries').length))) {
+    throw new Error('Saved statistics metadata is missing or duplicated.');
+  }
+
   const stats = getRows('statisticsMeta')[0];
   const statistics = stats ? {
     version: stats.version, startedAt: stats.startedAt,
