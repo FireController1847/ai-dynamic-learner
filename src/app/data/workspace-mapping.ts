@@ -147,7 +147,7 @@ export const WORKSPACE_RECORD_STORES: readonly DataStoreName[] = [
 export async function hydrateWorkspace(store: Pick<IndexedDataStore, 'all'> & Partial<Pick<IndexedDataStore, 'snapshot'>>, workspaceId: string): Promise<Workspace> {
   const stores = [...WORKSPACE_RECORD_STORES];
   const snapshot = store.snapshot
-    ? await store.snapshot<Stored>(stores)
+    ? await store.snapshot<Stored>(stores, workspaceId)
     : new Map<DataStoreName, Stored[]>(await Promise.all(stores.map(async name =>
         [name, await store.all<Stored>(name)] as [DataStoreName, Stored[]])));
   const data = new Map<DataStoreName, Stored[]>(stores.map(name => [
