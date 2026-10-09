@@ -167,9 +167,19 @@ export class IndexedDataStore {
   }
 
   private publish(change: DataChange, broadcast: boolean) {
-    for (const listener of this.listeners) listener(change);
-    if (!broadcast) for (const listener of this.remoteListeners) listener(change);
-    if (broadcast) this.channel?.postMessage(change);
+    // A notification is best-effort and happens after the transaction commits.
+    // A subscriber exception must never turn a durable write into a reported
+    // failure; callers would otherwise retry using a stale record revision.
+    for (const listener of this.listeners) {
+      try { listener(change); } catch (error) { console.error('Data change subscriber failed.', error); }
+    }
+    if (!broadcast) for (const listener of this.remoteListeners) {
+      try { listener(change); } catch (error) { console.error('Remote data subscriber failed.', error); }
+    }
+    if (broadcast) {
+      try { this.channel?.postMessage(change); }
+      catch (error) { console.warn('Cross-tab notification unavailable; resume reconciliation will recover.', error); }
+    }
   }
 
   async get<T>(store: DataStoreName, key: ReadKey): Promise<T | undefined> {
