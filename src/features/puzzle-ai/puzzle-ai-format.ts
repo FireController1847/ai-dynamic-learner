@@ -51,7 +51,7 @@ Return ONLY one fenced JSON code block with this exact structure:
 }
 \`\`\`
 
-The example is a STRUCTURAL TEMPLATE, not puzzle content. Output 1–${count} unique entries within the selected count and app limits, with no extra fields. Title must be 1–120 characters and use the selected category title. Include the exact selected category key. English letters A–Z only for answers, with optional spaces/hyphens/apostrophes; Crossword also allows ampersands. Hints and clues must be plain text, not answer reveals or source markers.`;
+The example is a STRUCTURAL TEMPLATE, not puzzle content. Output ${puzzleAiLimits[kind].min}–${count} unique entries, with no extra fields. Title must be 1–120 characters and use the selected category title. Include the exact selected category key. English letters A–Z only for answers, with optional spaces/hyphens/apostrophes; Crossword also allows ampersands. Hints and clues must be plain text, not answer reveals or source markers.`;
   return categoryScopedPrompt(body, scope, kind === 'word-search' ? 'word-search terms and hints' : 'crossword answers and clues');
 }
 
