@@ -51,7 +51,10 @@ export async function observeWorkspace(
   let initializing = true;
   let chain: Promise<void> = Promise.resolve();
   let structuralTimer: number | undefined;
+  let statisticsTimer: number | undefined;
   let lastStructure = '';
+  let lastStatisticsStructure = '';
+  const statisticsStores = new Set<DataStoreName>(['statisticsMeta','statisticsApps','statisticsEntries']);
   const bindings = new Map<string, Binding>();
   const timers = new Map<string, number>();
   const pending = new Set<string>();
@@ -67,7 +70,8 @@ export async function observeWorkspace(
     });
   };
 
-  const apply = async (rows: readonly (RowPut | null)[], removeMissing = false, authored = true) => {
+  const apply = async (rows: readonly (RowPut | null)[], removeMissing = false,
+    authored = true, removedStores?: ReadonlySet<DataStoreName>) => {
     const desired = new Map<string, RowPut>();
     for (const row of rows) {
       if (row) desired.set(token(row.store, row.key), row);
@@ -85,7 +89,7 @@ export async function observeWorkspace(
     }
     if (removeMissing) {
       for (const [id, previous] of known) {
-        if (desired.has(id)) continue;
+        if (desired.has(id) || (removedStores && !removedStores.has(previous.store))) continue;
         const op: DataOperation = { store: previous.store, type: 'delete', key: previous.key,
           expectedRevision: previous.revision };
         operations.push(op);
@@ -159,7 +163,7 @@ export async function observeWorkspace(
     bindings.set(id, { source, stop, build, authored });
   }
 
-  const captureTree = (seen: Set<string>, signature: string[]) => {
+  const captureTree = (seen: Set<string>, signature: string[], statsSignature: string[]) => {
     const workspace = state.value;
     const features = workspace.features as unknown as Record<string, { items: Plain[]; [name: string]: unknown }>;
     for (const [app, model] of Object.entries(features)) {
@@ -294,13 +298,13 @@ export async function observeWorkspace(
       attach('statisticsMeta', workspaceId, stats,
         () => [stats.version, stats.startedAt],
         () => put('statisticsMeta', workspaceId, { version: stats.version, startedAt: stats.startedAt }), false, seen);
-      signature.push('stats-apps:' + Object.keys(stats.apps).sort().join(','));
+      statsSignature.push('stats-apps:' + Object.keys(stats.apps).sort().join(','));
       for (const [app, record] of Object.entries(stats.apps)) {
         if (!record) continue;
         attach('statisticsApps', [workspaceId, app], record,
           () => record.counts,
           () => put('statisticsApps', [workspaceId, app], { app, counts: record.counts }), false, seen);
-        signature.push('stats-entries:' + app + ':' + Object.keys(record.entries).sort().join(','));
+        statsSignature.push('stats-entries:' + app + ':' + Object.keys(record.entries).sort().join(','));
         for (const [id, entry] of Object.entries(record.entries)) {
           attach('statisticsEntries', [workspaceId, app, id], entry,
             () => entry,
@@ -310,6 +314,32 @@ export async function observeWorkspace(
       }
     }
   };
+
+  function statisticsRows(): RowPut[] {
+    const stats = state.value.statistics;
+    if (!stats) return [];
+    const rows: RowPut[] = [
+      put('statisticsMeta', workspaceId, { version: stats.version, startedAt: stats.startedAt }),
+    ];
+    for (const [app, record] of Object.entries(stats.apps)) {
+      if (!record) continue;
+      rows.push(put('statisticsApps', [workspaceId, app], { app, counts: record.counts }));
+      for (const [id, entry] of Object.entries(record.entries)) {
+        rows.push(put('statisticsEntries', [workspaceId, app, id],
+          { app, id, counts: entry.counts, lastActivityAt: entry.lastActivityAt }));
+      }
+    }
+    return rows;
+  }
+
+  function queueStatistics() {
+    if (closed || failed || initializing) return;
+    if (statisticsTimer !== undefined) clearTimeout(statisticsTimer);
+    statisticsTimer = window.setTimeout(() => {
+      statisticsTimer = undefined;
+      scheduleAction(() => apply(statisticsRows(), true, false, statisticsStores));
+    }, KEY_DELAY_MS);
+  }
 
   function queueStructure() {
     if (closed || failed || initializing) return;
@@ -331,7 +361,8 @@ export async function observeWorkspace(
   const stopSkeleton = watchEffect(() => {
     const seen = new Set<string>();
     const signature: string[] = [];
-    captureTree(seen, signature);
+    const statsSignature: string[] = [];
+    captureTree(seen, signature, statsSignature);
     for (const [id, binding] of bindings) {
       if (seen.has(id)) continue;
       binding.stop();
@@ -347,12 +378,23 @@ export async function observeWorkspace(
       lastStructure = nextSignature;
       if (previous) queueStructure();
     }
+    const nextStats = statsSignature.join('|');
+    if (nextStats !== lastStatisticsStructure) {
+      const previous = lastStatisticsStructure;
+      lastStatisticsStructure = nextStats;
+      if (previous) queueStatistics();
+    }
   });
 
   initializing = false;
 
   async function flush(): Promise<void> {
     await nextTick();
+    if (statisticsTimer !== undefined) {
+      clearTimeout(statisticsTimer);
+      statisticsTimer = undefined;
+      scheduleAction(() => apply(statisticsRows(), true, false, statisticsStores));
+    }
     if (structuralTimer !== undefined) {
       clearTimeout(structuralTimer);
       structuralTimer = undefined;
@@ -380,6 +422,7 @@ export async function observeWorkspace(
     for (const row of bindings.values()) row.stop();
     bindings.clear();
     if (structuralTimer !== undefined) clearTimeout(structuralTimer);
+    if (statisticsTimer !== undefined) clearTimeout(statisticsTimer);
     for (const timer of timers.values()) clearTimeout(timer);
     timers.clear();
     pending.clear();
