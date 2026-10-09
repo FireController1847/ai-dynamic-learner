@@ -6,13 +6,14 @@
  * update. BroadcastChannel messages only announce committed changes.
  */
 export const DATABASE_NAME = 'dynamic-learner-data';
-export const DATABASE_VERSION = 1;
+export const DATABASE_VERSION = 2;
 export const CHANNEL_NAME = 'dynamic-learner.data.v1';
 
 const definitions = {
   control: { key: 'key' },
   workspaceMeta: { key: 'id' },
   libraryNodes: { key: ['workspaceId', 'app', 'id'], indexes: { siblings: ['workspaceId', 'app', 'parentKey', 'position'] } },
+  collections: { key: ['workspaceId', 'app', 'parentId'] },
   featureState: { key: ['workspaceId', 'app'] },
   notebookDocuments: { key: ['workspaceId', 'id'] },
   todoLists: { key: ['workspaceId', 'id'], indexes: { ordered: ['workspaceId', 'position'] } },
