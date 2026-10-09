@@ -5,7 +5,7 @@ import {
   IndexedDataStore, DataApiError, dataPrimaryKey, type DataChange, type DataCommit,
   type DataOperation, type DataStoreName, type IndexedRow,
 } from '../../core/data/indexeddb.ts';
-import { hydrateWorkspace, workspaceRows } from './workspace-mapping.ts';
+import { hydrateWorkspace, workspaceRows, WORKSPACE_RECORD_STORES } from './workspace-mapping.ts';
 import type { DocumentTypeId, DocumentDataByType } from '../../features/notebook/document-types.ts';
 import { validateDocumentData } from '../../features/notebook/document-types.ts';
 import type { Card } from '../../features/index-cards/card-model.ts';
@@ -363,10 +363,33 @@ export class WorkspaceDataApi {
     this.workspaceId = stagedId;
   }
 
+  /**
+   * The workspace and its authored revision must be captured by one readonly
+   * transaction. Otherwise an edit from another tab between two reads might
+   * cause us to incorrectly mark newer content as backed up.
+   */
+  async exportSnapshot(): Promise<{ json: string; authoredRevision: number }> {
+    const workspaceId = this.active();
+    const snapshots = await this.store.snapshot<IndexedRow>(
+      [...WORKSPACE_RECORD_STORES, 'control', 'workspaceMeta']);
+    const control = snapshots.get('control')?.[0];
+    if (control?.activeWorkspaceId !== workspaceId) {
+      throw new DataApiError('conflict', 'The workspace was replaced in another tab. Reload before exporting.');
+    }
+    const meta = snapshots.get('workspaceMeta')?.find(row => row.id === workspaceId);
+    if (!meta || typeof meta.authoredRevision !== 'number') {
+      throw new DataApiError('unavailable', 'Workspace backup metadata is missing.');
+    }
+    const reader = {
+      all: async <T>(store: DataStoreName): Promise<T[]> =>
+        (snapshots.get(store) ?? []) as T[],
+    };
+    const workspace = await hydrateWorkspace(reader, workspaceId);
+    return { json: JSON.stringify(workspace), authoredRevision: meta.authoredRevision };
+  }
+
   async exportWorkspaceJson(): Promise<string> {
-    // A full snapshot is intentionally constructed only for a user-initiated
-    // backup, not for routine mutations.
-    return JSON.stringify(await this.workspace());
+    return (await this.exportSnapshot()).json;
   }
 
   close() { this.store.close(); this.workspaceId = null; this.initialization = null; }
