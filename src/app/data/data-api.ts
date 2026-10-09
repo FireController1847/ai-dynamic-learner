@@ -100,6 +100,10 @@ export class WorkspaceDataApi {
     return this.store.subscribeRemote(listener);
   }
 
+  subscribeUnavailable(listener: (message: string) => void): () => void {
+    return this.store.subscribeUnavailable(listener);
+  }
+
   async workspace(): Promise<Workspace> {
     return hydrateWorkspace(this.store, this.active());
   }
