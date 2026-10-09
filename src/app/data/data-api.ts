@@ -2,7 +2,7 @@ import type { Workspace } from '../workspace-format.ts';
 import { emptyWorkspace, parseWorkspace } from '../workspace-format.ts';
 import { createId, isValidId } from '../../core/ids.ts';
 import {
-  IndexedDataStore, DataApiError, type DataChange, type DataCommit,
+  IndexedDataStore, DataApiError, dataPrimaryKey, type DataChange, type DataCommit,
   type DataOperation, type DataStoreName, type IndexedRow,
 } from '../../core/data/indexeddb.ts';
 import { hydrateWorkspace, workspaceRows } from './workspace-mapping.ts';
@@ -96,6 +96,31 @@ export class WorkspaceDataApi {
   async workspace(): Promise<Workspace> {
     return hydrateWorkspace(this.store, this.active());
   }
+  workspaceIdentity(): string { return this.active(); }
+
+  /**
+   * Bootstrap record revisions once for the legacy Vue compatibility bridge.
+   * Ordinary edits must never use this workspace-wide snapshot.
+   */
+  async persistedRows(): Promise<Array<{
+    store: DataStoreName; key: IDBValidKey; value: IndexedRow; revision: number;
+  }>> {
+    const names: DataStoreName[] = [
+      'libraryNodes', 'featureState', 'notebookDocuments', 'todoLists', 'todoSections', 'todoTasks',
+      'indexCardSets', 'indexCards', 'wordSearches', 'wordSearchGames', 'crosswords',
+      'crosswordGames', 'guides', 'guideSessions', 'reviewSets', 'reviewQuestions',
+      'statisticsMeta', 'statisticsApps', 'statisticsEntries',
+    ];
+    const snapshot = await this.store.snapshot<IndexedRow>(names);
+    const workspaceId = this.active();
+    return names.flatMap(store => (snapshot.get(store) ?? [])
+      .filter(value => value.workspaceId === workspaceId)
+      .map(value => ({
+        store, key: dataPrimaryKey(store, value), value,
+        revision: typeof value.revision === 'number' ? value.revision : 0,
+      })));
+  }
+
 
   /** Refresh a tab after a missed BroadcastChannel message or page resume.
    * A null journal result means the consumer should reload affected views.
