@@ -128,6 +128,9 @@ export async function observeWorkspace(
     if (closed || failed || initializing) return;
     const binding = bindings.get(id);
     if (!binding) return;
+    // The structural transaction captures this record's latest state too.
+    // Do not later replay an older row snapshot after a reorder.
+    if (structuralTimer !== undefined) return;
     pending.set(id, binding.build());
     const existing = timers.get(id);
     if (existing !== undefined) clearTimeout(existing);
@@ -312,6 +315,9 @@ export async function observeWorkspace(
     if (structuralTimer !== undefined) clearTimeout(structuralTimer);
     structuralTimer = window.setTimeout(() => {
       structuralTimer = undefined;
+      for (const timer of timers.values()) clearTimeout(timer);
+      timers.clear();
+      pending.clear();
       scheduleAction(async () => {
         // Whole-tree conversion is allowed for rare structural changes
         // (creation, deletion, reordering); ordinary typing uses queueRow.
@@ -349,6 +355,9 @@ export async function observeWorkspace(
     if (structuralTimer !== undefined) {
       clearTimeout(structuralTimer);
       structuralTimer = undefined;
+      for (const timer of timers.values()) clearTimeout(timer);
+      timers.clear();
+      pending.clear();
       const rows = workspaceRows(workspaceId, state.value);
       scheduleAction(() => apply(rows, true));
     }
