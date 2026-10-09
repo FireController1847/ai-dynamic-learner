@@ -137,13 +137,15 @@ function indexed(rows: readonly Stored[]): Map<string, IndexedRow> {
 }
 const ordering = (a: Stored, b: Stored) => (a.position ?? 0) - (b.position ?? 0);
 
-export async function hydrateWorkspace(store: Pick<IndexedDataStore, 'all'> & Partial<Pick<IndexedDataStore, 'snapshot'>>, workspaceId: string): Promise<Workspace> {
-  const stores: DataStoreName[] = [
+export const WORKSPACE_RECORD_STORES: readonly DataStoreName[] = [
     'featureState', 'libraryNodes', 'notebookDocuments', 'indexCardSets', 'indexCards',
     'wordSearches', 'wordSearchGames', 'crosswords', 'crosswordGames', 'guides', 'guideSessions',
     'reviewSets', 'reviewQuestions', 'todoLists', 'todoSections', 'todoTasks',
     'statisticsMeta', 'statisticsApps', 'statisticsEntries',
-  ];
+];
+
+export async function hydrateWorkspace(store: Pick<IndexedDataStore, 'all'> & Partial<Pick<IndexedDataStore, 'snapshot'>>, workspaceId: string): Promise<Workspace> {
+  const stores = [...WORKSPACE_RECORD_STORES];
   const snapshot = store.snapshot
     ? await store.snapshot<Stored>(stores)
     : new Map<DataStoreName, Stored[]>(await Promise.all(stores.map(async name =>
