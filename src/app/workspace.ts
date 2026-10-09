@@ -43,8 +43,8 @@ export function useWorkspace() {
   };
   const savingProblem = (message: string) => { storageProblem.value = message; };
 
-  async function startObserver() {
-    observer = await observeWorkspace(state, api, savingProblem, updateBackup);
+  async function startObserver(records: Awaited<ReturnType<WorkspaceDataApi['initialSnapshot']>>['records']) {
+    observer = await observeWorkspace(state, api, savingProblem, updateBackup, records);
   }
 
   async function syncOtherTabs() {
@@ -66,14 +66,13 @@ export function useWorkspace() {
       await observer?.flush();
       const result = await api.refresh(lastSequence);
       if (!result.replaced && result.events?.length === 0) return;
-      const incoming = await api.workspace();
-      const meta = await api.revisions();
+      const snapshot = await api.initialSnapshot();
       observer?.stop();
-      state.value = incoming;
+      state.value = snapshot.workspace;
       revision.value += 1;
-      lastSequence = meta.commitSequence;
-      await startObserver();
-      backup.workspaceChanged(meta.authoredRevision, populated(incoming));
+      lastSequence = snapshot.revisions.commitSequence;
+      await startObserver(snapshot.records);
+      backup.workspaceChanged(snapshot.revisions.authoredRevision, populated(snapshot.workspace));
       storageProblem.value = '';
     } catch (error) {
       storageProblem.value = 'Changes from another tab could not be loaded safely: ' + errorMessage(error) +
@@ -87,16 +86,15 @@ export function useWorkspace() {
     try {
       await api.ready();
       if (disposed) return;
-      const loaded = await api.workspace();
-      const meta = await api.revisions();
-      state.value = loaded;
-      lastSequence = meta.commitSequence;
-      await startObserver();
+      const snapshot = await api.initialSnapshot();
+      state.value = snapshot.workspace;
+      lastSequence = snapshot.revisions.commitSequence;
+      await startObserver(snapshot.records);
       if (disposed) return;
       let legacyPresent = false;
       try { legacyPresent = localStorage.getItem('dynamic-learner.workspace.v1') !== null; }
       catch { /* The Data API already handled source storage failures. */ }
-      backup.workspaceLoaded(meta.authoredRevision, populated(loaded), legacyPresent);
+      backup.workspaceLoaded(snapshot.revisions.authoredRevision, populated(snapshot.workspace), legacyPresent);
       ready.value = true;
       unsubscribeRemote = api.subscribeRemote(() => {
         // Rebuild once after a burst of edits in another tab, rather than
@@ -130,12 +128,12 @@ export function useWorkspace() {
       await observer?.flush();
       await api.restoreWorkspace(replacement);
       observer?.stop();
-      state.value = replacement;
+      const snapshot = await api.initialSnapshot();
+      state.value = snapshot.workspace;
       revision.value += 1;
-      const meta = await api.revisions();
-      lastSequence = meta.commitSequence;
-      await startObserver();
-      backup.workspaceRestored(meta.authoredRevision, populated(replacement));
+      lastSequence = snapshot.revisions.commitSequence;
+      await startObserver(snapshot.records);
+      backup.workspaceRestored(snapshot.revisions.authoredRevision, populated(snapshot.workspace));
       storageProblem.value = '';
       replacedSafely = true;
     } finally {
