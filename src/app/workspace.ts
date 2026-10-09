@@ -175,12 +175,12 @@ export function useWorkspace() {
     }
     await nextTick();
     let json: string;
-    let exportedRevision: number | null = null;
+    let exportedSnapshot: { workspaceId: string; revision: number } | null = null;
     try {
       await observer?.flush();
       const snapshot = await api.exportSnapshot();
       json = snapshot.json;
-      exportedRevision = snapshot.authoredRevision;
+      exportedSnapshot = { workspaceId: snapshot.workspaceId, revision: snapshot.authoredRevision };
     } catch {
       // A failed write or database read must not prevent emergency export.
       // Preserve live unsaved edits, but never mark the export as committed.
@@ -188,7 +188,7 @@ export function useWorkspace() {
       validateWorkspaceValue(JSON.parse(json) as unknown);
     }
     await downloadText(filename, json, 'application/json', { deferPaint: false });
-    if (exportedRevision !== null) backup.recordExport(api.workspaceIdentity(), exportedRevision, Date.now());
+    if (exportedSnapshot) backup.recordExport(exportedSnapshot.workspaceId, exportedSnapshot.revision, Date.now());
   }
 
   const stopStudySubscription = subscribeStudySessions(active => {
