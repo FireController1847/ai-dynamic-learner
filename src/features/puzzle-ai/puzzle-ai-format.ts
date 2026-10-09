@@ -100,9 +100,6 @@ export function parsePuzzleAiImport(json: string, kind: PuzzleAiKind, scope: AiC
     }
     const answer = item.answer.replace(/[\s'’\-&]/g, '').toUpperCase();
     if (!/^[a-zA-Z\s'’\-&]+$/.test(item.answer) || !/^[A-Z]{2,21}$/.test(answer))
-        throw new Error(`Answer ${index + 1} must contain 2–21 English letters.`);
-    }
-    if (!/^[a-zA-Z\s'’\-&]+$/.test(item.answer) || !/^[A-Z]{2,21}$/.test(answer))
       throw new Error(`Answer ${index + 1} must contain 2–21 English letters.`);
     if (used.has(answer)) throw new Error(`The answer ${answer} is repeated.`);
     used.add(answer); entries.push({ answer, clue: item.clue.trim() });
