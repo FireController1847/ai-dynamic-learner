@@ -37,7 +37,7 @@ export async function observeWorkspace(
   problem: (message: string) => void,
   updated: (authoredRevision: number, commitSequence: number) => void,
   initialRecords: Awaited<ReturnType<WorkspaceDataApi['initialSnapshot']>>['records'],
-): Promise<{ flush(): Promise<void>; stop(): void; hasPendingChanges(): boolean; hasFailed(): boolean }> {
+): Promise<{ flush(): Promise<void>; settle(): Promise<void>; stop(): void; hasPendingChanges(): boolean; hasFailed(): boolean }> {
   const workspaceId = api.workspaceIdentity();
   const known = new Map<string, KnownRow>();
   for (const record of initialRecords) {
@@ -457,6 +457,9 @@ export async function observeWorkspace(
   }
   return {
     flush, stop,
+    // Unlike flush, settle does not schedule draft writes after stop().
+    // It only waits for any transaction already in progress to finish.
+    settle: async () => { await chain; },
     hasPendingChanges: () => failed || queuedActions > 0 || pending.size > 0 ||
       timers.size > 0 || statisticsTimer !== undefined || structuralTimer !== undefined,
     hasFailed: () => failed,
