@@ -1,10 +1,10 @@
 # Unified Data API — architecture proposal
 
-> **Status: implementation in progress.** The initial browser database, workspace mapping, and typed repository are implemented in `src/core/data/indexeddb.ts` and `src/app/data/`. **They are not connected to live Vue feature editing yet; `src/app/workspace.ts` and its localStorage watcher remain authoritative.** The contracts in this document describe the full target, including commands and UI cutover still to implement. Review alongside [IndexedDB design](indexeddb-design.md).
+> **Status: implementation integrated on this draft PR, not yet browser-validated.** `src/app/workspace.ts` now initializes the IndexedDB Data API; `workspace-observer.ts` translates existing Vue model mutations into targeted record writes. Live `localStorage` workspace writing and full-workspace backup fingerprinting have been replaced. The longer-term objective remains direct typed API commands from feature components, without the compatibility observer. Review alongside [IndexedDB design](indexeddb-design.md).
 
 ## Why this change
 
-`src/app/workspace.ts` currently owns one reactive `Workspace` object, observes it deeply, and runs `JSON.stringify` plus synchronous `localStorage.setItem('dynamic-learner.workspace.v1', ...)` after edits. The backup-reminder fingerprint in `src/app/backup-reminders.ts` separately serializes the entire authored workspace. As Notebook documents and other content grow, editing a small record continues to copy all content. Separate tabs also hold independent workspace snapshots and can overwrite each other's changes.
+Before this PR, `src/app/workspace.ts` owned one reactive `Workspace` object, observed it deeply, and ran `JSON.stringify` plus synchronous `localStorage.setItem('dynamic-learner.workspace.v1', ...)` after edits. The old backup-reminder fingerprint in `src/app/backup-reminders.ts` separately serialized the entire authored workspace. As Notebook documents and other content grow, editing a small record continues to copy all content. Separate tabs also hold independent workspace snapshots and can overwrite each other's changes.
 
 The intended model is **local-first, provider-independent data operations**. IndexedDB is the first persistence provider. An eventual account/HTTP sync backend attaches behind this contract; it does not require features to start issuing HTTP requests or abandon offline editing.
 
