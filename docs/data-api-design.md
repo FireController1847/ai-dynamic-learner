@@ -132,9 +132,7 @@ per-record Vue observer.
 - Callers supply revision preconditions. A command changes all related rows
   in one transaction or rejects them together.
 
-Direct feature-owned calls, more targeted cross-tab hydration, and polished
-same-record conflict resolution UI remain later refinements. No browser-level
-acceptance runs have been performed.
+The current Vue compatibility observer remains the live bridge for existing feature components. The app now provides non-destructive conflict recovery: download the current in-memory draft, then explicitly confirm a reload of saved IndexedDB content. It does not automatically merge two competing edits to the same record. Targeted cross-tab hydration and direct feature-owned calls remain optional later optimizations, rather than prerequisites for exercising the migration. No browser-level acceptance runs have been performed.
 
 ### Concrete feature operation families
 
