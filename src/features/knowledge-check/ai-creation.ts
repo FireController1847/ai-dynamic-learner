@@ -143,6 +143,7 @@ export const ReviewAiCreation = defineComponent({
             ? 'Edit all values freely, then apply the previewed percentages together. Zero stays excluded.'
             : 'Type a percentage, then press Enter or leave the field to balance the other enabled types. Zero stays excluded.')}`),
           editingMix.value ? h('p', { class: 'study-ai-muted' }, 'Relative weights need not total 100: for example, 2 / 1 / 1 becomes 50% / 25% / 25%. Blank or 0 excludes a type. Whole-number rounding is shown beside each field.') : null,
+          editingMix.value && !normalizedMix.value ? h('p', { class: 'study-ai-error', role: 'status' }, 'Use whole weights from 0 to 100, with at least one type above 0.') : null,
           weightNotice.value ? h('p', { class: 'study-ai-muted', role: 'status' }, weightNotice.value) : null,
           h('p', { class: 'study-ai-muted' }, 'Statements are not scored. You can still import an Index Cards set using the Library’s existing Import knowledge set action.'),
           h('div', { class: 'study-ai-actions' }, editingMix.value ? [
@@ -152,7 +153,7 @@ export const ReviewAiCreation = defineComponent({
           ] : [
             h('button', { type: 'button', class: 'quiet-button', onClick: () => { preferences.value.weights = equalizeQuestionWeights(preferences.value.weights); weightNotice.value = ''; } }, 'Equalize enabled types'),
             h('button', { type: 'button', class: 'quiet-button', onClick: editWholeMix }, 'Edit whole mix'),
-            h('button', { type: 'button', class: 'quiet-button', onClick: () => { preferences.value.weights = { ...DEFAULT_AI_WEIGHTS }; } }, 'Reset percentages'),
+            h('button', { type: 'button', class: 'quiet-button', onClick: () => { preferences.value.weights = { ...DEFAULT_AI_WEIGHTS }; weightNotice.value = ''; } }, 'Reset percentages'),
             h('button', { type: 'button', class: 'card-primary-button', disabled: Boolean(mixProblem.value), onClick: () => {
               if (editingWeight.value) commitWeight(editingWeight.value);
               if (!mixProblem.value) go('generate');
