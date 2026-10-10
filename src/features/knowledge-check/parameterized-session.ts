@@ -27,10 +27,15 @@ export function validateSessionSnapshot(value: unknown): asserts value is Parame
   if (!value.templates.length || !value.templates.some(question => question.type === 'parameterized')) throw new Error('Saved session has no generated templates.');
   const ids = new Set(value.templates.map(question => question.id));
   if (!isRecord(value.settings) || Object.keys(value.settings).some(key => ![
-    'order','questionLimit','shuffleChoices','shortAnswerStrictness','fillBlankAnswerStrictness','quizAttempts','timeLimitMinutes','showTestAnswers',
+    'order','presentation','allowBack','questionLimit','shuffleChoices','shortAnswerStrictness','fillBlankAnswerStrictness','quizAttempts','timeLimitMinutes','showTestAnswers',
   ].includes(key))) throw new Error('Invalid saved session settings.');
   const settings = value.settings;
+  // Old in-progress sessions were all one-at-a-time. Preserve that layout on resume.
+  if (settings.presentation === undefined) settings.presentation = 'one-at-a-time';
+  if (settings.allowBack === undefined) settings.allowBack = true;
   validateSetOptions({ description: '', assessmentOrder: settings.order, assessmentQuestionLimit: settings.questionLimit,
+    quizPresentation: settings.presentation, testPresentation: settings.presentation,
+    quizAllowBack: settings.allowBack, testAllowBack: settings.allowBack,
     shuffleChoices: settings.shuffleChoices, shortAnswerStrictness: settings.shortAnswerStrictness,
     fillBlankAnswerStrictness: settings.fillBlankAnswerStrictness, quizAttempts: settings.quizAttempts,
     timeLimitMinutes: settings.timeLimitMinutes, showTestAnswers: settings.showTestAnswers });

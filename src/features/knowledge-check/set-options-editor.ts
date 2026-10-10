@@ -3,7 +3,7 @@ import { defineComponent, h, type PropType } from 'vue';
 import { AnswerStrictnessField } from '../../components/answer-strictness-field.ts';
 import { inputValue } from '../../core/dom.ts';
 import { MAX_QUESTIONS, MAX_TEXT } from './question-model.ts';
-import type { QuestionOrder, SetOptions } from './set-options.ts';
+import type { QuestionOrder, QuestionPresentation, SetOptions } from './set-options.ts';
 
 export const SetOptionsEditor = defineComponent({
   name: 'KnowledgeSetOptions',
@@ -70,13 +70,35 @@ export const SetOptionsEditor = defineComponent({
       h('p', { class: 'knowledge-muted' }, 'These defaults are fixed for Test. Quiz uses them unless you choose Customize Settings before starting.'),
 
       h('h3', 'Quiz settings'),
+      h('label', { class: 'knowledge-field' }, ['Question layout', h('select', {
+        value: props.options.quizPresentation,
+        onChange: (event: Event) => { props.options.quizPresentation = inputValue(event) as QuestionPresentation; },
+      }, [
+        h('option', { value: 'scroll' }, 'All questions (vertical scroll)'),
+        h('option', { value: 'one-at-a-time' }, 'One at a time'),
+      ])]),
+      props.options.quizPresentation === 'one-at-a-time' ? h('label', { class: 'knowledge-option-toggle' }, [h('input', {
+        type: 'checkbox', checked: props.options.quizAllowBack,
+        onChange: (event: Event) => { props.options.quizAllowBack = (event.target as HTMLInputElement).checked; },
+      }), 'Allow going back to earlier questions']) : null,
       h('label', { class: 'knowledge-field' }, ['Allowed attempts per question', h('input', {
         type: 'number', min: 1, step: 1, required: true, value: props.options.quizAttempts,
         onInput: (event: Event) => { props.options.quizAttempts = Number(inputValue(event)); },
       })]),
-      h('p', { class: 'knowledge-muted' }, 'Quiz uses this by default, but you can change it for an individual Quiz session.'),
+      h('p', { class: 'knowledge-muted' }, 'Quiz uses these defaults unless the learner chooses Customize Settings. In scrolling mode each question keeps its own Check answer button.'),
 
       h('h3', 'Test settings'),
+      h('label', { class: 'knowledge-field' }, ['Question layout', h('select', {
+        value: props.options.testPresentation,
+        onChange: (event: Event) => { props.options.testPresentation = inputValue(event) as QuestionPresentation; },
+      }, [
+        h('option', { value: 'scroll' }, 'All questions (vertical scroll)'),
+        h('option', { value: 'one-at-a-time' }, 'One at a time'),
+      ])]),
+      props.options.testPresentation === 'one-at-a-time' ? h('label', { class: 'knowledge-option-toggle' }, [h('input', {
+        type: 'checkbox', checked: props.options.testAllowBack,
+        onChange: (event: Event) => { props.options.testAllowBack = (event.target as HTMLInputElement).checked; },
+      }), 'Allow going back to earlier questions']) : null,
       h('label', { class: 'knowledge-option-toggle' }, [h('input', {
         type: 'checkbox', checked: props.options.timeLimitMinutes !== null,
         onChange: (event: Event) => { props.options.timeLimitMinutes = (event.target as HTMLInputElement).checked ? 15 : null; },
@@ -90,7 +112,7 @@ export const SetOptionsEditor = defineComponent({
         type: 'checkbox', checked: props.options.showTestAnswers,
         onChange: (event: Event) => { props.options.showTestAnswers = (event.target as HTMLInputElement).checked; },
       }), 'Show correct/wrong answers after the Test']),
-      h('p', { class: 'knowledge-muted' }, 'Turn this off for score-only Test results. Test settings cannot be changed when starting a Test.'),
+      h('p', { class: 'knowledge-muted' }, 'Turn this off for score-only Test results. Test layout and navigation are fixed by the creator.'),
     ]);
   },
 });

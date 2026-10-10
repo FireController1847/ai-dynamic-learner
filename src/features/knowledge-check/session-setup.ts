@@ -4,7 +4,7 @@ import { AnswerStrictnessField } from '../../components/answer-strictness-field.
 import type { CheckItem } from './library-model.ts';
 import type { CheckModeId } from './check-types.ts';
 import { QUESTION_ORDER_LABELS, settingsForMode, type SessionSettings } from './session-settings.ts';
-import type { QuestionOrder } from './set-options.ts';
+import type { QuestionOrder, QuestionPresentation } from './set-options.ts';
 import { inputValue } from '../../core/dom.ts';
 
 type QuizSetupChoice = 'default' | 'customize';
@@ -49,7 +49,7 @@ export const SessionSetup = defineComponent({
       const count = defaults.questionLimit === null
         ? 'all questions'
         : `up to ${defaults.questionLimit} questions`;
-      return `${QUESTION_ORDER_LABELS[defaults.order]}, ${count}, ${defaults.shuffleChoices ? 'shuffled' : 'original'} answer-choice order, Short Answer strictness ${defaults.shortAnswerStrictness}, Fill in the Blanks strictness ${defaults.fillBlankAnswerStrictness}, ${defaults.quizAttempts} ${defaults.quizAttempts === 1 ? 'attempt' : 'attempts'} per question.`;
+      return `${defaults.presentation === 'scroll' ? 'All questions' : 'One at a time'}, ${QUESTION_ORDER_LABELS[defaults.order]}, ${count}, ${defaults.shuffleChoices ? 'shuffled' : 'original'} answer-choice order, Short Answer strictness ${defaults.shortAnswerStrictness}, Fill in the Blanks strictness ${defaults.fillBlankAnswerStrictness}, ${defaults.quizAttempts} ${defaults.quizAttempts === 1 ? 'attempt' : 'attempts'} per question.`;
     }
 
     function emitStudy() {
@@ -107,7 +107,7 @@ export const SessionSetup = defineComponent({
               }),
               h('span', [
                 h('strong', 'Customize Settings'),
-                h('span', { class: 'knowledge-session-choice-description' }, 'Temporarily change order, question count, answer-choice shuffling, answer strictness, or allowed attempts.'),
+                h('span', { class: 'knowledge-session-choice-description' }, 'Temporarily change layout, navigation, order, question count, answer-choice shuffling, answer strictness, or allowed attempts.'),
               ]),
             ]),
           ]),
@@ -135,6 +135,19 @@ export const SessionSetup = defineComponent({
           orderChoice('backward', 'Reverse order', 'Run the saved question order backward.', custom.value.order, () => { custom.value.order = 'backward'; }, 'quiz-question-order'),
           orderChoice('shuffle', 'Shuffle', 'Use a new random question order.', custom.value.order, () => { custom.value.order = 'shuffle'; }, 'quiz-question-order'),
         ]),
+        h('label', { class: 'knowledge-field' }, ['Question layout', h('select', {
+          value: custom.value.presentation,
+          onChange: (event: Event) => { custom.value.presentation = inputValue(event) as QuestionPresentation; },
+        }, [
+          h('option', { value: 'scroll' }, 'All questions (vertical scroll)'),
+          h('option', { value: 'one-at-a-time' }, 'One at a time'),
+        ])]),
+        custom.value.presentation === 'one-at-a-time' ? h('label', { class: 'knowledge-option-toggle' }, [
+          h('input', {
+            type: 'checkbox', checked: custom.value.allowBack,
+            onChange: (event: Event) => { custom.value.allowBack = (event.target as HTMLInputElement).checked; },
+          }), 'Allow going back to earlier questions',
+        ]) : null,
         h('label', { class: 'knowledge-option-toggle' }, [
           h('input', {
             type: 'checkbox',

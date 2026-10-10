@@ -127,7 +127,8 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
     // Resolve all visited questions and submitted results using their original seeds.
     const visited = new Set([...snapshot.checked, ...snapshot.revealed, ...snapshot.hints, ...Object.keys(snapshot.responses), ...snapshot.studyVisited]);
     for (let index = 0; index < templates.length; index++) {
-      if ((snapshot.submitted || visited.has(templates[index]!.id) || index === snapshot.position) && !await ensureQuestion(index)) return;
+      if ((snapshot.submitted || options.value.presentation === 'scroll' ||
+        visited.has(templates[index]!.id) || index === snapshot.position) && !await ensureQuestion(index)) return;
     }
     responses.value = { ...snapshot.responses }; feedbackResponses.value = { ...snapshot.feedbackResponses };
     checked.value = new Set(snapshot.checked); revealed.value = new Set(snapshot.revealed); hints.value = new Set(snapshot.hints);
@@ -198,6 +199,11 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
     seeds = Object.fromEntries(templates.map(question => [question.id, newVariantSeed()])); generatedIds.clear();
     questions.value = templates.map(cloneQuestion);
     if (!await ensureQuestion(0, true)) return;
+    if (settings.presentation === 'scroll') {
+      for (let index = 1; index < templates.length; index++) {
+        if (!await ensureQuestion(index, true)) return;
+      }
+    }
     position.value = 0; submitted.value = false; expired.value = false; ended.value = false; clearCelebration();
     now.value = Date.now(); started.value = true;
     if (mode === 'study') statistics?.record('knowledge-check', item.id, 'studyStarts');
@@ -220,12 +226,12 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
     if (!window.confirm(`Leave this ${mode === 'test' ? 'Test' : 'Quiz'}? This will end your session and discard its answers.`)) return false;
     end(); return true;
   }
-  function check() {
+  function check(index = position.value) {
     tick();
     if (submitted.value || submitting.value || generating.value) return;
-    const question = questions.value[position.value];
+    const question = questions.value[index];
     if (!question) return;
-    if (!questionScored(question)) return;
+    if (!questionScored(question) || (mode === 'quiz' && checked.value.has(question.id))) return;
     const response = responses.value[question.id];
     if (question.type !== 'fill-in-the-blanks' && !questionResponseAnswered(question, response)) return;
     // Retry feedback describes the last check, never a newly selected answer.

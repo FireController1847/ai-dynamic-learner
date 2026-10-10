@@ -1,10 +1,12 @@
 import type { AnswerStrictness } from '../../../packages/@dynamic-learner/answer-matching/src/index.ts';
 import type { CheckModeId } from './check-types.ts';
-import { defaultSetOptions, type QuestionOrder, type SetOptions } from './set-options.ts';
+import { defaultSetOptions, type QuestionOrder, type QuestionPresentation, type SetOptions } from './set-options.ts';
 import { cloneQuestion, type Question } from './question-model.ts';
 
 export interface SessionSettings {
   order: QuestionOrder;
+  presentation: QuestionPresentation;
+  allowBack: boolean;
   questionLimit: number | null;
   shuffleChoices: boolean;
   shortAnswerStrictness: AnswerStrictness;
@@ -32,6 +34,8 @@ export function settingsForMode(options: SetOptions | undefined, mode: CheckMode
   if (mode === 'study') {
     return {
       order: 'forward',
+      presentation: 'scroll',
+      allowBack: true,
       questionLimit: null,
       shuffleChoices: false,
       shortAnswerStrictness: saved.shortAnswerStrictness,
@@ -43,6 +47,8 @@ export function settingsForMode(options: SetOptions | undefined, mode: CheckMode
   }
   return {
     order: saved.assessmentOrder,
+    presentation: mode === 'quiz' ? saved.quizPresentation : saved.testPresentation,
+    allowBack: mode === 'quiz' ? saved.quizAllowBack : saved.testAllowBack,
     questionLimit: saved.assessmentQuestionLimit,
     shuffleChoices: saved.shuffleChoices,
     shortAnswerStrictness: saved.shortAnswerStrictness,
