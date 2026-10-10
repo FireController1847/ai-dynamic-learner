@@ -29,6 +29,7 @@ Use this as a starting-file index, not a feature specification. Follow imports o
 | GitHub Pages / route output | `webpack.config.mts`, `build/site-config.mts`, `build/page-metadata.mts`, `.github/workflows/deploy-pages.yml` |
 | Calculator | `src/features/calculator/` |
 | Notebook composition/library | `src/features/notebook/notebook.ts`, `library.ts`, `library-model.ts`, `document-types.ts` |
+| Workbook scaffold | `src/features/workbook/workbook.ts`; register in `src/features/feature-definitions.ts` and `feature-registry.ts` |
 | Notebook Markdown | `markdown-editor.ts`, `markdown-renderer.ts`, `markdown-outline.ts`, `document-files.ts` |
 | Notebook Lined Paper | `lined-editor.ts`, `lined-pagination.ts`, `lined-editor.css` |
 | Notebook Graph Paper | `graph-editor.ts`, `graph-paper.ts`, `graph-model.ts`, `graph-scene.ts`, `graph-interaction.ts`, `graph-gestures.ts`; see `graph-paper.md` |

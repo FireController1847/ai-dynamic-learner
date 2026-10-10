@@ -658,4 +658,9 @@ export const tipsCatalog: TipsCatalog = {
     ],
   },
 
+  workbook: {
+    version: 1,
+    sections: [],
+  },
+
 };

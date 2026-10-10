@@ -9,6 +9,7 @@ const paths: Record<string, string> = {
   checklist: 'M9 5h12M9 12h12M9 19h12M2 5l2 2 3-4M2 12l2 2 3-4M2 19l2 2 3-4',
   archive: 'M3 3h18v5H3ZM5 8v13h14V8M9 12h6',
   document: 'M6 3h9l4 4v14H6ZM15 3v5h5M9 12h6M9 16h6',
+  workbook: 'M5 3h14v18H5ZM5 8h14M10 8v13M15 8v13M5 13h14M5 18h14',
   cards: 'M6 3h15v14H6ZM3 7v14h14M9 8h9M9 12h6',
   pencil: 'm4 16-1 5 5-1L20 8l-4-4ZM14 6l4 4',
   trash: 'M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7',

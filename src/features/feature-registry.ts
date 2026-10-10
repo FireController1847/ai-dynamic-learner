@@ -1,6 +1,7 @@
 import { h, type VNode } from 'vue';
 import { Calculator } from './calculator/calculator.ts';
 import { Notebook } from './notebook/notebook.ts';
+import { Workbook } from './workbook/workbook.ts';
 import { TodoList } from './todo-list/todo-list.ts';
 import { IndexCards } from './index-cards/index-cards.ts';
 import { WordSearch } from './word-search/word-search.ts';
@@ -30,6 +31,7 @@ export interface FeatureModels {
 const renderers: Record<FeatureId, (definition: FeatureDefinition, models: FeatureModels) => VNode> = {
   calculator: (definition) => h(Calculator, { key: definition.id, title: definition.label }),
   notebook: (definition, models) => h(Notebook, { key: definition.id, title: definition.label, model: models.notebook }),
+  workbook: (definition) => h(Workbook, { key: definition.id }),
   'todo-list': (definition, models) => h(TodoList, { key: definition.id, title: definition.label, model: models['todo-list'] }),
   'index-cards': (definition, models) => h(IndexCards, { key: definition.id, title: definition.label, model: models['index-cards'] }),
   'word-search': (definition, models) => h(WordSearch, { key: definition.id, title: definition.label, model: models['word-search'] }),
