@@ -31,10 +31,12 @@ export const KnowledgeSession = defineComponent({
     useStudySession(computed(() => started.value && !submitted.value && !ended.value));
     const fillBlankPrimaryButton = ref<HTMLButtonElement | null>(null);
     const backward = ref(false);
+    const scrollSession = ref<HTMLElement | null>(null);
 
     function moveQuestion(next: number, wrap = false) {
       tick();
       if (submitted.value || state.generating.value || state.submitting.value || next < 0 || next >= questions.value.length) return;
+      if (next < position.value && props.mode !== 'study' && options.value.presentation === 'one-at-a-time' && !options.value.allowBack) return;
       if (wrap) state.finishStudyPass();
       backward.value = next < position.value && !wrap;
       position.value = next;
@@ -172,7 +174,11 @@ export const KnowledgeSession = defineComponent({
       } else if (blankIndex < blankCount - 1) {
         inputs[blankIndex + 1]?.focus();
       } else {
-        fillBlankPrimaryButton.value?.click();
+        const card = (event.currentTarget as HTMLElement).closest('.knowledge-prompt');
+        const cardAction = card?.querySelector<HTMLButtonElement>('[data-review-primary]');
+        if (cardAction) cardAction.click();
+        else if (options.value.presentation === 'one-at-a-time') fillBlankPrimaryButton.value?.click();
+        else (card?.nextElementSibling as HTMLElement | null)?.focus();
       }
     }
 
@@ -227,44 +233,7 @@ export const KnowledgeSession = defineComponent({
       tick(); if (!submitted.value) submit();
     }
 
-    function renderSession() {
-      if (state.generating.value || state.submitting.value) return h('section', { key: 'generating', class: 'knowledge-session', 'aria-busy': 'true' }, [
-        h('p', { role: 'status' }, state.submitting.value ? 'Preparing results…' : 'Generating your question…'),
-        h('button', { type: 'button', class: 'quiet-button', onClick: end }, 'End session'),
-      ]);
-      if (state.generationError.value) return h('section', { key: 'generation-error', class: 'knowledge-session' }, [
-        h('h3', 'This question could not be generated'), h('p', { role: 'alert' }, state.generationError.value),
-        h('p', 'Check its ranges, constraints, computed choices, or registered solver in the builder.'),
-        h('button', { type: 'button', class: 'quiet-button', onClick: end }, 'Back to overview'),
-      ]);
-      if (!questionCount.value && !state.resumable.value) return h('section', { key: 'empty', class: 'knowledge-session knowledge-builder-empty' }, [
-        h('h3', 'Add questions to get started'), h('p', 'Complete a question and its correct answer in the builder.'),
-        h('button', { type: 'button', class: 'card-primary-button', onClick: () => emit('build') }, 'Build questions'),
-      ]);
-      if (!started.value) return h(SessionIntro, { key: 'intro', item: props.item, mode: props.mode, settings: props.settings,
-        count: questionCount.value, ended: ended.value, resumable: state.resumable.value, message: state.storageMessage.value,
-        onResume: state.resume, onBack: () => emit('back'), onStart: start });
-      const question = questions.value[position.value];
-      if (submitted.value) {
-        const showAnswers = props.mode !== 'test' || options.value.showTestAnswers;
-        return h('section', { key: 'results', class: 'knowledge-session knowledge-session-results', 'aria-label': 'Results' }, [
-          h('header', { class: 'knowledge-results-heading' }, [h('h3', props.mode === 'test' ? 'Test complete' : 'Quiz complete'),
-            scoredCount.value
-              ? h('p', { class: 'knowledge-score' }, `${score.value} / ${scoredCount.value}`)
-              : h('p', { class: 'knowledge-score' }, 'No scored questions'),
-            scoredCount.value ? h('p', `${Math.round(score.value / scoredCount.value * 100)}% correct`) : null,
-            expired.value ? h('p', { role: 'status' }, 'Time ran out. Your entered answers were submitted automatically.') : null]),
-          showAnswers ? questions.value.map((entry, index) => h('article', { class: 'knowledge-result', key: entry.id,
-            style: { '--review-delay': `${Math.min(index, 8) * 42 + 100}ms` } }, [
-            h('h4', `${index + 1}. ${entry.type === 'fill-in-the-blanks' ? maskFillBlankAnswers(entry.prompt) : entry.prompt}`),
-            entry.context?.trim() ? h(MarkdownContent, { text: entry.context, class: 'knowledge-question-context' }) : null,
-            questionScored(entry) ? [responseSummary(entry), feedback(entry)] :
-              h('p', { class: 'knowledge-muted' }, 'Statement · Not scored'),
-          ])) : h('p', 'This set is configured to show the score only.'),
-          h('button', { type: 'button', class: 'card-primary-button', onClick: () => { started.value = false; } }, 'Back to overview'),
-        ]);
-      }
-      if (!question) return null;
+    function renderQuestion(question: Question, index: number, scroll: boolean) {
       const study = props.mode === 'study';
       const wasChecked = checked.value.has(question.id);
       const attemptCount = attempts.value[question.id] ?? 0;
@@ -280,25 +249,11 @@ export const KnowledgeSession = defineComponent({
       const choices = question.type === 'true-false' ? ['True', 'False'] : question.choices.filter(choice => choice.trim());
       const canCheck = scored && (question.type === 'fill-in-the-blanks' || questionResponseAnswered(question, currentResponse(question)));
 
-      return h('section', { key: 'questions', class: ['knowledge-session', { 'is-backward': backward.value }], 'data-mode': props.mode, 'aria-label': `${props.mode} questions` }, [
-        state.storageMessage.value ? h('p', { role: 'status', class: 'knowledge-message' }, state.storageMessage.value) : null,
-        h('div', { class: 'knowledge-session-progress' }, [h('p', `Question ${position.value + 1} of ${questions.value.length}`),
-          study ? h('p', 'Practice freely — hints and retries welcome') : h('p', `${answered.value} answered`),
-          study ? h('p', { class: 'knowledge-study-score', key: studyChecks.value },
-            `${studyCorrectChecks.value} / ${studyChecks.value} checks correct · ${studyChecks.value ? Math.round(studyCorrectChecks.value / studyChecks.value * 100) : 0}%`) : null,
-          remaining.value !== null ? h('p', { class: ['knowledge-timer', { 'is-low': remaining.value <= 60 }], role: 'timer', 'aria-live': 'off' },
-            `Time left: ${Math.floor(remaining.value / 60)}:${String(remaining.value % 60).padStart(2, '0')}`) : null,
-          study ? h('button', { type: 'button', class: 'quiet-button', onClick: end }, 'End studying') :
-            h('button', { type: 'button', class: 'quiet-button', onClick: state.leave }, props.mode === 'test' ? 'End test' : 'End quiz'),
-          h('div', { class: 'knowledge-progress-track', 'aria-hidden': 'true' }, [
-            h('span', { style: { width: `${(position.value + 1) / questions.value.length * 100}%` } }),
-          ])]),
-        questions.value.length < props.item.questions.length ? h('p', { class: 'knowledge-muted' }, 'This older set contains unfinished questions. Complete them in the builder to include them.') : null,
-        h(Transition, { name: 'knowledge-question', mode: 'out-in', onBeforeLeave: leaveReviewPanel,
-          onLeaveCancelled: restoreReviewPanel, onAfterEnter: enterReviewPanel }, {
-          default: () => h('article', { class: 'knowledge-prompt', key: question.id, tabindex: -1,
+          return h('article', { class: 'knowledge-prompt', key: question.id, tabindex: -1,
+            'data-review-question-index': index,
             'data-review-focus': '',
-            'aria-label': `Question ${position.value + 1} of ${questions.value.length}` }, [
+            'aria-label': `Question ${index + 1} of ${questions.value.length}` }, [
+          scroll ? h('p', { class: 'knowledge-question-number' }, `Question ${index + 1} of ${questions.value.length}`) : null,
           question.type === 'fill-in-the-blanks' && question.context?.trim()
             ? h(MarkdownContent, { text: question.context, class: 'knowledge-question-context' }) : null,
           question.type === 'fill-in-the-blanks'
@@ -341,9 +296,9 @@ export const KnowledgeSession = defineComponent({
               default: () => showFeedback ? h('div', { key: `${question.id}-${attemptCount}` }, [feedback(question, study ? correct : !quizRetrying)]) : null,
             }),
             !locked ? h('button', {
-              ref: question.type === 'fill-in-the-blanks' ? fillBlankPrimaryButton : undefined,
+              ref: question.type === 'fill-in-the-blanks' && !scroll ? fillBlankPrimaryButton : undefined,
               type: 'button', class: 'card-primary-button',
-              disabled: !canCheck, onClick: check,
+              disabled: !canCheck, 'data-review-primary': '', onClick: () => check(index),
             }, 'Check answer') : null,
           ]) : h('p', { class: 'knowledge-muted' }, 'Feedback is held until submission. You can change your answers.'),
           study && scored ? h('div', { class: 'knowledge-study-tools' }, [
@@ -362,10 +317,103 @@ export const KnowledgeSession = defineComponent({
               question.type === 'dropdown' ? [h('p', 'Answers:'), h('ul', (question.matches ?? []).map(row => h('li', `${row.label}: ${row.answer}`)))] :
                 question.type === 'fill-in-the-blanks' ? [h('p', 'Answers:'), fillBlankAnswerKey(question)] : [h('p', `Answer: ${question.answer}`)]) : null),
           ]) : null,
-        ]),
+      ]);
+    }
+
+    function renderSession() {
+      if (state.generating.value || state.submitting.value) return h('section', { key: 'generating', class: 'knowledge-session', 'aria-busy': 'true' }, [
+        h('p', { role: 'status' }, state.submitting.value ? 'Preparing results…' : 'Generating your question…'),
+        h('button', { type: 'button', class: 'quiet-button', onClick: end }, 'End session'),
+      ]);
+      if (state.generationError.value) return h('section', { key: 'generation-error', class: 'knowledge-session' }, [
+        h('h3', 'This question could not be generated'), h('p', { role: 'alert' }, state.generationError.value),
+        h('p', 'Check its ranges, constraints, computed choices, or registered solver in the builder.'),
+        h('button', { type: 'button', class: 'quiet-button', onClick: end }, 'Back to overview'),
+      ]);
+      if (!questionCount.value && !state.resumable.value) return h('section', { key: 'empty', class: 'knowledge-session knowledge-builder-empty' }, [
+        h('h3', 'Add questions to get started'), h('p', 'Complete a question and its correct answer in the builder.'),
+        h('button', { type: 'button', class: 'card-primary-button', onClick: () => emit('build') }, 'Build questions'),
+      ]);
+      if (!started.value) return h(SessionIntro, { key: 'intro', item: props.item, mode: props.mode, settings: props.settings,
+        count: questionCount.value, ended: ended.value, resumable: state.resumable.value, message: state.storageMessage.value,
+        onResume: state.resume, onBack: () => emit('back'), onStart: start });
+      const question = questions.value[position.value];
+      if (submitted.value) {
+        const showAnswers = props.mode !== 'test' || options.value.showTestAnswers;
+        return h('section', { key: 'results', class: 'knowledge-session knowledge-session-results', 'aria-label': 'Results' }, [
+          h('header', { class: 'knowledge-results-heading' }, [h('h3', props.mode === 'test' ? 'Test complete' : 'Quiz complete'),
+            scoredCount.value
+              ? h('p', { class: 'knowledge-score' }, `${score.value} / ${scoredCount.value}`)
+              : h('p', { class: 'knowledge-score' }, 'No scored questions'),
+            scoredCount.value ? h('p', `${Math.round(score.value / scoredCount.value * 100)}% correct`) : null,
+            expired.value ? h('p', { role: 'status' }, 'Time ran out. Your entered answers were submitted automatically.') : null]),
+          showAnswers ? questions.value.map((entry, index) => h('article', { class: 'knowledge-result', key: entry.id,
+            style: { '--review-delay': `${Math.min(index, 8) * 42 + 100}ms` } }, [
+            h('h4', `${index + 1}. ${entry.type === 'fill-in-the-blanks' ? maskFillBlankAnswers(entry.prompt) : entry.prompt}`),
+            entry.context?.trim() ? h(MarkdownContent, { text: entry.context, class: 'knowledge-question-context' }) : null,
+            questionScored(entry) ? [responseSummary(entry), feedback(entry)] :
+              h('p', { class: 'knowledge-muted' }, 'Statement · Not scored'),
+          ])) : h('p', 'This set is configured to show the score only.'),
+          h('button', { type: 'button', class: 'card-primary-button', onClick: () => { started.value = false; } }, 'Back to overview'),
+        ]);
+      }
+      if (!question) return null;
+      if (options.value.presentation === 'scroll') {
+        return h('section', {
+          key: 'questions', ref: scrollSession, class: 'knowledge-session knowledge-scroll-session',
+          'data-mode': props.mode, 'aria-label': `${props.mode} questions`,
+        }, [
+          state.storageMessage.value ? h('p', { role: 'status', class: 'knowledge-message' }, state.storageMessage.value) : null,
+          h('div', { class: 'knowledge-session-progress' }, [
+            h('p', `${questions.value.length} ${questions.value.length === 1 ? 'question' : 'questions'} in this session`),
+            props.mode === 'study'
+              ? h('p', 'Practice freely — hints and retries welcome')
+              : h('p', `${props.mode === 'quiz' ? resolved.value - (questions.value.length - scoredCount.value) : answered.value} of ${scoredCount.value} ${props.mode === 'quiz' ? 'checked' : 'answered'}`),
+            props.mode === 'study' ? h('p', { class: 'knowledge-study-score' },
+              `${studyCorrectChecks.value} / ${studyChecks.value} checks correct · ${studyChecks.value ? Math.round(studyCorrectChecks.value / studyChecks.value * 100) : 0}%`) : null,
+            remaining.value !== null ? h('p', { class: ['knowledge-timer', { 'is-low': remaining.value <= 60 }], role: 'timer', 'aria-live': 'off' },
+              `Time left: ${Math.floor(remaining.value / 60)}:${String(remaining.value % 60).padStart(2, '0')}`) : null,
+            props.mode === 'study' ? h('button', { type: 'button', class: 'quiet-button', onClick: end }, 'End studying')
+              : h('button', { type: 'button', class: 'quiet-button', onClick: state.leave },
+                props.mode === 'test' ? 'End test' : 'End quiz'),
+          ]),
+          h('div', { class: 'knowledge-scroll-questions' }, questions.value.map((entry, index) =>
+            renderQuestion(entry, index, true))),
+          h('div', { class: 'knowledge-session-navigation knowledge-scroll-footer' }, [
+            props.mode === 'study'
+              ? h('button', { type: 'button', class: 'quiet-button knowledge-keep-studying', onClick: () => {
+                state.finishStudyPass();
+                scrollSession.value?.querySelector<HTMLElement>('.knowledge-prompt')?.scrollIntoView({ block: 'start' });
+                state.resetStudyPass();
+              } }, ['Keep studying', h(Icon, { name: 'chevron' })])
+              : h('button', {
+                type: 'button', class: 'card-primary-button',
+                disabled: state.submitting.value || (props.mode === 'quiz' && resolved.value !== questions.value.length),
+                onClick: props.mode === 'test' ? submitTest : () => submit(),
+              }, props.mode === 'test' ? 'Submit test' : 'See results'),
+          ]),
+        ]);
+      }
+      return h('section', { key: 'questions', class: ['knowledge-session', { 'is-backward': backward.value }], 'data-mode': props.mode, 'aria-label': `${props.mode} questions` }, [
+        state.storageMessage.value ? h('p', { role: 'status', class: 'knowledge-message' }, state.storageMessage.value) : null,
+        h('div', { class: 'knowledge-session-progress' }, [h('p', `Question ${position.value + 1} of ${questions.value.length}`),
+          study ? h('p', 'Practice freely — hints and retries welcome') : h('p', `${answered.value} answered`),
+          study ? h('p', { class: 'knowledge-study-score', key: studyChecks.value },
+            `${studyCorrectChecks.value} / ${studyChecks.value} checks correct · ${studyChecks.value ? Math.round(studyCorrectChecks.value / studyChecks.value * 100) : 0}%`) : null,
+          remaining.value !== null ? h('p', { class: ['knowledge-timer', { 'is-low': remaining.value <= 60 }], role: 'timer', 'aria-live': 'off' },
+            `Time left: ${Math.floor(remaining.value / 60)}:${String(remaining.value % 60).padStart(2, '0')}`) : null,
+          study ? h('button', { type: 'button', class: 'quiet-button', onClick: end }, 'End studying') :
+            h('button', { type: 'button', class: 'quiet-button', onClick: state.leave }, props.mode === 'test' ? 'End test' : 'End quiz'),
+          h('div', { class: 'knowledge-progress-track', 'aria-hidden': 'true' }, [
+            h('span', { style: { width: `${(position.value + 1) / questions.value.length * 100}%` } }),
+          ])]),
+        questions.value.length < props.item.questions.length ? h('p', { class: 'knowledge-muted' }, 'This older set contains unfinished questions. Complete them in the builder to include them.') : null,
+        h(Transition, { name: 'knowledge-question', mode: 'out-in', onBeforeLeave: leaveReviewPanel,
+          onLeaveCancelled: restoreReviewPanel, onAfterEnter: enterReviewPanel }, {
+          default: () => renderQuestion(question, position.value, false),
         }),
         h('div', { class: 'knowledge-session-navigation' }, [
-          h('button', { type: 'button', class: 'quiet-button', disabled: position.value === 0,
+          h('button', { type: 'button', class: 'quiet-button', disabled: position.value === 0 || (props.mode !== 'study' && !options.value.allowBack),
             onClick: () => moveQuestion(position.value - 1) }, 'Previous'),
           position.value < questions.value.length - 1 ? h('button', {
             ref: question.type === 'fill-in-the-blanks' && props.mode === 'test' ? fillBlankPrimaryButton : undefined,
