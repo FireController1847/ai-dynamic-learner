@@ -16,7 +16,7 @@
 .knowledge-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .knowledge-field { display: grid; gap: 6px; margin-bottom: 16px; font-weight: 600; }
 .knowledge-field input, .knowledge-field select, .knowledge-field textarea,
-.knowledge-choice-row > input:not([type='radio']) {
+.knowledge-choice-row > input[type='text'] {
   width: 100%; min-width: 0; padding: 8px 10px; border: 1px solid var(--control-border);
   border-radius: var(--radius); color: var(--text-color); background: var(--page-background); font-weight: 400;
 }
@@ -35,7 +35,11 @@
 .knowledge-choice-editor, .knowledge-answer-choices { border: 0; padding: 0; margin: 0 0 20px; min-width: 0; }
 .knowledge-choice-editor legend, .knowledge-answer-choices legend { font-weight: 600; margin-bottom: 8px; }
 .knowledge-choice-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-.knowledge-choice-row input[type='radio'], .knowledge-answer-choice input { flex: 0 0 auto; accent-color: var(--brand); }
+.knowledge-choice-row > input[type='radio'], .knowledge-choice-row > input[type='checkbox'], .knowledge-answer-choice input {
+  flex: 0 0 auto;
+  width: auto;
+  accent-color: var(--brand);
+}
 .knowledge-session { width: min(820px, 100%); margin: 0 auto; padding: clamp(20px, 4vw, 40px); }
 .knowledge-session-progress, .knowledge-session-navigation { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
 .knowledge-session-progress { color: var(--text-secondary); font-size: 12px; }
@@ -57,7 +61,7 @@
   .knowledge-question-editor { padding: 20px 0 0; }
 }
 @media (pointer: coarse) {
-  .knowledge-field input, .knowledge-field textarea, .knowledge-field select, .knowledge-choice-row > input:not([type='radio']) { font-size: 16px; }
+  .knowledge-field input, .knowledge-field textarea, .knowledge-field select, .knowledge-choice-row > input[type='text'] { font-size: 16px; }
   .knowledge-question-row, .knowledge-answer-choice { min-height: 44px; }
 }
 

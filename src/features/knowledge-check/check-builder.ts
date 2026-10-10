@@ -180,7 +180,7 @@ export const CheckBuilder = defineComponent({
                     } else question.answer = choice;
                   },
                 }),
-                h('input', { value: choice, maxlength: MAX_TEXT, 'aria-label': `Choice ${index + 1}`,
+                h('input', { type: 'text', value: choice, maxlength: MAX_TEXT, 'aria-label': `Choice ${index + 1}`,
                   onInput: (event: Event) => {
                     const next = inputValue(event);
                     if (choice && question.answer === choice) question.answer = next;
