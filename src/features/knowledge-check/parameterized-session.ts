@@ -12,7 +12,7 @@ export interface ParameterizedSessionSnapshot {
   version: 1; instances?: Record<string, GeneratedVariant>; templates: Question[]; seeds: Record<string, string>; settings: SessionSettings;
   position: number; responses: Record<string, QuestionResponse>; feedbackResponses: Record<string, QuestionResponse>;
   checked: string[]; revealed: string[]; hints: string[]; attempts: Record<string, number>;
-  submitted: boolean; expired: boolean; deadline: number | null;
+  submitted: boolean; expired: boolean; deadline: number | null; paused?: boolean;
   studyChecks: number; studyCorrectChecks: number; studyVisited: string[]; studyPassRecorded: boolean;
 }
 const MAX_SNAPSHOT = 4 * 1024 * 1024;
@@ -21,10 +21,14 @@ function natural(value: unknown): value is number { return typeof value === 'num
 export function validateSessionSnapshot(value: unknown): asserts value is ParameterizedSessionSnapshot {
   if (!isRecord(value) || value.version !== 1 || Object.keys(value).some(key => ![
     'version','instances','templates','seeds','settings','position','responses','feedbackResponses','checked','revealed','hints','attempts',
-    'submitted','expired','deadline','studyChecks','studyCorrectChecks','studyVisited','studyPassRecorded',
+    'submitted','expired','deadline','paused','studyChecks','studyCorrectChecks','studyVisited','studyPassRecorded',
   ].includes(key))) throw new Error('Unsupported saved generated session.');
   validateQuestions(value.templates);
-  if (!value.templates.length || !value.templates.some(question => question.type === 'parameterized')) throw new Error('Saved session has no generated templates.');
+  if (!value.templates.length ||
+      (!value.templates.some(question => question.type === 'parameterized') && value.paused !== true) ||
+      (value.paused !== undefined && typeof value.paused !== 'boolean')) {
+    throw new Error('Saved session is neither an interrupted generated session nor a paused session.');
+  }
   const ids = new Set(value.templates.map(question => question.id));
   if (!isRecord(value.settings) || Object.keys(value.settings).some(key => ![
     'order','presentation','allowBack','questionLimit','shuffleChoices','shortAnswerStrictness','fillBlankAnswerStrictness','quizAttempts','timeLimitMinutes','showTestAnswers',
@@ -81,6 +85,23 @@ export function readSession(key: string): ParameterizedSessionSnapshot | null {
   if (text.length > MAX_SNAPSHOT) throw new Error('Saved session exceeds the size limit.');
   const value: unknown = JSON.parse(text); validateSessionSnapshot(value); return value;
 }
+export function pausedSessionSettings(id: string, mode: 'study' | 'quiz'): SessionSettings | null {
+  try {
+    const snapshot = readSession(sessionStorageKey(id, mode));
+    if (!snapshot?.paused || snapshot.submitted || snapshot.expired ||
+        (mode === 'quiz' && snapshot.settings.timeLimitMinutes !== null)) return null;
+    return { ...snapshot.settings };
+  } catch {
+    // A corrupt or inaccessible browser-local snapshot must not block a fresh session.
+    return null;
+  }
+}
+
+export function clearSession(id: string, mode: 'study' | 'quiz'): void {
+  try { localStorage.removeItem(sessionStorageKey(id, mode)); }
+  catch { /* Storage may be unavailable; the session UI reports save errors. */ }
+}
+
 export function writeSession(key: string, snapshot: ParameterizedSessionSnapshot): void {
   const text = JSON.stringify(snapshot);
   if (text.length > MAX_SNAPSHOT) throw new Error('Session is too large to save locally.');

@@ -61,6 +61,7 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
   const inFlight = new Map<string, Promise<boolean>>();
   const storageMessage = ref('');
   const resumable = ref(false);
+  const paused = ref(false);
   const storageKey = sessionStorageKey(item.id, mode);
   let templates: Question[] = [];
   let seeds: Record<string, string> = {};
@@ -72,16 +73,25 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
     question.generated?.answers.map(answer => [answer.key, answer.label, answer.text, answer.value])]);
   try { if (statisticsEnabled) { saved = readSession(storageKey); resumable.value = Boolean(saved); } }
   catch (error) { storageMessage.value = `Saved session unavailable: ${error instanceof Error ? error.message : String(error)}`; }
-  function persist() {
-    if (!statisticsEnabled || !started.value || !templates.some(question => question.type === 'parameterized')) return;
+  function persist(): boolean {
+    if (!statisticsEnabled || !started.value ||
+        (!paused.value && !templates.some(question => question.type === 'parameterized'))) return false;
     try {
-      saved = { version: 1, templates, instances: { ...instances }, seeds: { ...seeds }, settings: { ...options.value }, position: position.value,
+      const snapshot: ParameterizedSessionSnapshot = {
+        version: 1, templates, instances: { ...instances }, seeds: { ...seeds },
+        settings: { ...options.value }, position: position.value, paused: paused.value,
         responses: { ...responses.value }, feedbackResponses: { ...feedbackResponses.value }, checked: [...checked.value],
         revealed: [...revealed.value], hints: [...hints.value], attempts: { ...attempts.value }, submitted: submitted.value,
         expired: expired.value, deadline: deadline.value, studyChecks: studyChecks.value, studyCorrectChecks: studyCorrectChecks.value,
-        studyVisited: [...studyVisited], studyPassRecorded };
-      writeSession(storageKey, saved); resumable.value = true; storageMessage.value = '';
-    } catch (error) { storageMessage.value = `Session could not be saved: ${error instanceof Error ? error.message : String(error)}`; }
+        studyVisited: [...studyVisited], studyPassRecorded,
+      };
+      writeSession(storageKey, snapshot);
+      saved = snapshot; resumable.value = true; storageMessage.value = '';
+      return true;
+    } catch (error) {
+      storageMessage.value = `Session could not be saved: ${error instanceof Error ? error.message : String(error)}`;
+      return false;
+    }
   }
   function ensureQuestion(index: number, fresh = false): Promise<boolean> {
     const template = templates[index];
@@ -135,7 +145,8 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
     attempts.value = { ...snapshot.attempts }; studyChecks.value = snapshot.studyChecks; studyCorrectChecks.value = snapshot.studyCorrectChecks;
     studyVisited = new Set(snapshot.studyVisited); studyPassRecorded = snapshot.studyPassRecorded;
     submitted.value = snapshot.submitted; expired.value = snapshot.expired; deadline.value = snapshot.deadline;
-    ended.value = false; started.value = true; tick();
+    ended.value = false; paused.value = false; started.value = true; tick();
+    persist();
   }
   watch([responses, feedbackResponses, checked, revealed, hints, attempts, position, submitted, deadline, studyChecks, studyCorrectChecks], persist, { deep: true });
 
@@ -188,7 +199,7 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
   }
   async function start() {
     if (generating.value || submitting.value) return;
-    resetGeneration(); started.value = false;
+    resetGeneration(); started.value = false; paused.value = false;
     responses.value = {}; checked.value = new Set(); revealed.value = new Set(); hints.value = new Set(); attempts.value = {};
     feedbackResponses.value = {};
     studyChecks.value = 0; studyCorrectChecks.value = 0;
@@ -219,10 +230,21 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
     deadline.value = mode === 'test' && options.value.timeLimitMinutes !== null ? now.value + options.value.timeLimitMinutes * 60_000 : null;
     persist();
   }
+  function pause(): boolean {
+    if (!started.value || submitted.value || generating.value || submitting.value ||
+        !statisticsEnabled || (mode === 'quiz' && options.value.timeLimitMinutes !== null) || mode === 'test') return false;
+    paused.value = true;
+    if (!persist()) { paused.value = false; return false; }
+    // Leave the persisted snapshot intact; unmounting must not turn Pause into End.
+    started.value = false;
+    clearCelebration();
+    resetGeneration();
+    return true;
+  }
   function end() {
     finishStudyPass(); resetGeneration(); instances = {};
     try { if (statisticsEnabled) localStorage.removeItem(storageKey); } catch { storageMessage.value = 'Saved session could not be cleared.'; }
-    saved = null; resumable.value = false; generationError.value = '';
+    saved = null; resumable.value = false; paused.value = false; generationError.value = '';
     started.value = false; submitted.value = false; deadline.value = null; ended.value = true; clearCelebration();
     responses.value = {}; checked.value = new Set(); revealed.value = new Set(); hints.value = new Set(); attempts.value = {};
     feedbackResponses.value = {};
@@ -295,11 +317,14 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
     document.removeEventListener('visibilitychange', tick);
   }
   onMounted(attach); onActivated(attach);
-  onDeactivated(() => { if (templates.some(question => question.type === 'parameterized')) persist();
-    else if (active.value || (mode === 'study' && started.value)) end(); detach(); });
+  onDeactivated(() => {
+    if (started.value && templates.some(question => question.type === 'parameterized')) persist();
+    else if (active.value || (mode === 'study' && started.value)) end();
+    detach();
+  });
   onBeforeUnmount(() => { finishStudyPass(); persist(); resetGeneration(); detach(); });
   return { questions, questionCount, options, position, responses, feedbackResponses, checked, revealed, hints, submitted, started, expired, ended,
     active, answered, resolved, score, scoredCount, remaining, celebrating, attempts, studyChecks, studyCorrectChecks,
     generationError, generating, submitting, storageMessage, resumable, resume,
-    start, end, check, submit, leave, tick, finishStudyPass, completeStudyScrollPass, resetStudyPass };
+    start, pause, end, check, submit, leave, tick, finishStudyPass, completeStudyScrollPass, resetStudyPass };
 }
