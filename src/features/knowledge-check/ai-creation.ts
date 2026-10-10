@@ -135,7 +135,7 @@ export const ReviewAiCreation = defineComponent({
                 onChange: () => { preferences.value.mixMode = 'ai'; editingMix.value = false; editingWeight.value = null; },
               }),
               h('span', [h('strong', 'Let AI choose'),
-                h('span', 'AI chooses the appropriate question types and how often to use each.')]),
+                h('span', 'AI chooses the types, prioritizing generated numeric questions and clear, reliably checked answers.')]),
             ]),
           ]),
           preferences.value.mixMode === 'custom' ? h('fieldset', { class: 'review-ai-mix' }, [
@@ -172,7 +172,7 @@ export const ReviewAiCreation = defineComponent({
           preferences.value.mixMode === 'custom' && editingMix.value && !normalizedMix.value ? h('p', { class: 'study-ai-error', role: 'status' }, 'Use whole weights from 0 to 100, with at least one type above 0.') : null,
           preferences.value.mixMode === 'custom' && weightNotice.value ? h('p', { class: 'study-ai-muted', role: 'status' }, weightNotice.value) : null,
           preferences.value.mixMode === 'ai' ? h('p', { class: mixProblem.value ? 'study-ai-error' : 'study-ai-muted', role: 'status' },
-            mixProblem.value || 'AI will decide the mix based on the source. You choose only the total number of items and coverage. Some types may not be used at all.') : null,
+            mixProblem.value || 'AI prioritizes procedural questions for numbers, single-word blanks, and a sensible mix of single- and multi-answer choices. Short Answer is used only when needed. Some types may be omitted.') : null,
           h('p', { class: 'study-ai-muted' }, 'Statements are not scored. You can still import an Index Cards set using the Library’s existing Import knowledge set action.'),
           h('div', { class: 'study-ai-actions' }, preferences.value.mixMode === 'ai' ? [
             h('button', { type: 'button', class: 'card-primary-button',
