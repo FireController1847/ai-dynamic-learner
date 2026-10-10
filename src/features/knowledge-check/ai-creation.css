@@ -16,3 +16,7 @@
 .review-ai-workspace button.card-primary-button { justify-self:start; }
 @media(max-width:600px) { .review-ai-scope,.review-ai-settings { grid-template-columns:1fr; } .review-ai-weight { grid-template-columns:minmax(0,1fr) 64px auto; } .review-ai-weight>.study-ai-muted { grid-column:1/-1; } }
 .knowledge-check-library-actions { flex-wrap:wrap;justify-content:flex-end; }
+
+.review-ai-import-warning { padding:12px;border-inline-start:3px solid var(--text-secondary);background:var(--surface-subtle);overflow-wrap:anywhere; }
+.review-ai-import-warning ul { margin-block:8px;padding-inline-start:24px; }
+.review-ai-import-warning p { margin-block:8px 0; }

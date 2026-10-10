@@ -1,18 +1,20 @@
+import { AI_PARAMETERIZED_EXAMPLE, AI_SOLVER_EXAMPLE, PARAMETERIZED_AI_GUIDANCE, parseAiSolvers, resolveAiParameters } from './ai-parameterized-format.ts';
 import { parseAiImportJson } from '../../core/ai-json.ts';
 import { categoryScopedPrompt, type AiCardScope } from '../../core/ai-study-categories.ts';
 import { parseFillBlankTemplate } from '../../core/fill-blank.ts';
 import { isRecord } from '../../core/validation.ts';
 import { MAX_NAME_LENGTH } from './library-model.ts';
-import { createQuestion, MAX_TEXT, MAX_QUESTION_CONTEXT, questionReady, validateQuestions, type Question } from './question-model.ts';
+import { createQuestion, MAX_TEXT, MAX_QUESTION_CONTEXT, questionReady, validateQuestions, MAX_QUESTIONS, type Question } from './question-model.ts';
 import { MAX_DROPDOWN_CHOICES, MAX_DROPDOWN_ROWS, validateDropdownMatches } from './dropdown-model.ts';
 import { AI_QUESTION_TYPES, allocateQuestions, questionTypeLabel, type QuestionWeights } from './ai-question-mix.ts';
 
 export const REVIEW_AI_FORMAT = 'dynamic-learner-review';
-export interface ReviewAiImport { title: string; description: string; questions: Question[] }
+export interface ReviewAiImport { title: string; description: string; questions: Question[]; warnings: string[] }
 export interface ReviewAiPreferences { count: number; weights: QuestionWeights; coverage: 'essentials' | 'balanced' | 'comprehensive' }
 
 export function reviewAiPrompt(preferences: ReviewAiPreferences, scope: AiCardScope | null): string {
   const counts = allocateQuestions(preferences.weights, preferences.count);
+  const enabledTypes = AI_QUESTION_TYPES.filter(type => counts[type] > 0);
   const examples: Record<keyof QuestionWeights, object> = {
     'multiple-choice': { type: 'multiple-choice', prompt: 'Which symbol represents gold?', choices: ['Au', 'Ag', 'Fe', 'Cu'], answer: 'Au', explanation: 'Au represents gold.' },
     'true-false': { type: 'true-false', prompt: 'The chemical symbol for gold is Au.', answer: 'True' },
@@ -20,7 +22,26 @@ export function reviewAiPrompt(preferences: ReviewAiPreferences, scope: AiCardSc
     'short-answer': { type: 'short-answer', prompt: 'What is the chemical symbol for gold?', answer: 'Au' },
     dropdown: { type: 'dropdown', prompt: 'Match each element to its symbol.', choices: ['Au', 'Ag', 'Fe'],
       matches: [{ label: 'Gold', answer: 'Au' }, { label: 'Silver', answer: 'Ag' }] },
+    parameterized: AI_PARAMETERIZED_EXAMPLE,
     statement: { type: 'statement', prompt: 'Gold has the chemical symbol Au.' },
+  };
+  const quality: Record<keyof QuestionWeights, string> = {
+    'multiple-choice': `- Multiple choice: normally four distinct, plausible choices, exactly one correct. Put the correct choice's exact text in answer. Avoid giveaway wording, arbitrary tricks, "all of the above", and always putting the correct answer first. Mix the answer positions.`,
+    'true-false': `- True/false: one clear factual claim, with answer exactly "True" or "False". Include both outcomes when useful, without ambiguous qualifiers or trick statements.`,
+    'fill-in-the-blanks': `- Fill in the blanks: {{answer}} markers inside concise, contextual statements. Almost always one word per blank; 2–3 only for an indivisible term. For separate items use {{letters}} and {{numbers}} or {{letters}} or {{numbers}}, preserving the source meaning. Keep meaningful context visible; several related blanks are welcome. Keep terminology and blank boundaries consistent throughout, never alternating a full term like "nullword" with "null" for the same concept. Keep {{answer}} markers only in "prompt"; optional Markdown context is background material and must not replace the blank-aware prompt.`,
+    'short-answer': `- Short answer: a specific quick-recall question with an answer of 1–5 words, not an essay or a list.`,
+    'dropdown': `- Dropdown: one matching question with a shared list of 2–${MAX_DROPDOWN_CHOICES} distinct choices and 1–${MAX_DROPDOWN_ROWS} labeled rows in "matches". Each row has "label" and "answer"; its answer must exactly match one choice. Keep rows related and labels distinct. Choices may be reused when factually appropriate. The entire matching question counts as one item in the requested mix.`,
+    'statement': `- Statement: a concise authored fact or transition with no answer, choices, or explanation; it is not scored.`,
+    parameterized: PARAMETERIZED_AI_GUIDANCE,
+  };
+  const fields: Record<keyof QuestionWeights, string> = {
+    'multiple-choice': 'Use only type/prompt/choices/answer/optional explanation on multiple choice.',
+    'true-false': 'Use type/prompt/answer/optional explanation on true/false; omit choices.',
+    'short-answer': 'Use type/prompt/answer/optional explanation on short answer; omit choices.',
+    'dropdown': 'On Dropdown use type/prompt/choices/matches/optional explanation, with correct answers inside the matching rows and no top-level answer.',
+    'fill-in-the-blanks': 'On fill in the blanks use type/prompt/optional explanation, with answers embedded in {{markers}}.',
+    'statement': 'On statements use only type/prompt.',
+    'parameterized': 'On parameterized questions use type/prompt/parameters/optional explanation, and place referenced JavaScript solver packages in the optional top-level solvers array.',
   };
   const prompt = `Using the original source material supplied earlier in this conversation, construct a Dynamic Learner Review knowledge set.
 
@@ -28,20 +49,14 @@ Scope: ${scope ? 'Only the selected category described above.' : 'The overall su
 Coverage: ${preferences.coverage === 'essentials' ? 'Core concepts only.' : preferences.coverage === 'comprehensive' ? 'Broad useful coverage, without trivia or repetition.' : 'Major ideas and useful supporting facts.'}
 
 Create EXACTLY ${preferences.count} items, with this exact question mix (counts already account for rounding):
-${AI_QUESTION_TYPES.map(type => `- ${questionTypeLabel(type)}: ${preferences.weights[type]}% preference → ${counts[type]} items`).join('\n')}
-Types with zero items are forbidden. Do not substitute another type. If the source cannot support this many useful items, ask me to reduce the count instead of inventing facts.
+${enabledTypes.map(type => `- ${questionTypeLabel(type)}: ${preferences.weights[type]}% preference → ${counts[type]} items`).join('\n')}
+Use only the question types listed above. Do not substitute another type. If the source cannot support this many useful items, ask me to reduce the count instead of inventing facts.
 
 Question quality:
-- Multiple choice: normally four distinct, plausible choices, exactly one correct. Put the correct choice's exact text in answer. Avoid giveaway wording, arbitrary tricks, "all of the above", and always putting the correct answer first. Mix the answer positions.
-- True/false: one clear factual claim, with answer exactly "True" or "False". Include both outcomes when useful, without ambiguous qualifiers or trick statements.
-- Fill in the blanks: {{answer}} markers inside concise, contextual statements. Almost always one word per blank; 2–3 only for an indivisible term. For separate items use {{letters}} and {{numbers}} or {{letters}} or {{numbers}}, preserving the source meaning. Keep meaningful context visible; several related blanks are welcome. Keep terminology and blank boundaries consistent throughout, never alternating a full term like "nullword" with "null" for the same concept.
-- Short answer, ONLY when enabled: a specific quick-recall question with an answer of 1–5 words, not an essay or a list.
-- Dropdown, ONLY when enabled: one matching question with a shared list of 2–${MAX_DROPDOWN_CHOICES} distinct choices and 1–${MAX_DROPDOWN_ROWS} labeled rows in "matches". Each row has "label" and "answer"; its answer must exactly match one choice. Keep rows related and labels distinct. Choices may be reused when factually appropriate. The entire matching question counts as one item in the requested mix.
-- Statement, ONLY when enabled: a concise authored fact or transition with no answer, choices, or explanation; it is not scored.
-- Make every item self-contained, accurate, and based on the source. Avoid duplicates and unsupported facts. Do not include citations, URLs, source markers, IDs, session settings, or other application data.
-- An optional explanation may give one short clarifying sentence for a scored question. It must not be present on a Statement.
-- Keep "prompt" as the concise main question/title in plain text. When useful, add an optional "context" string with GitHub-flavored Markdown: passages, tables, lists, task lists, links, strikethrough, or fenced code. This is supporting material shown separately from the title, not an answer key or feedback. Omit filler context. Do not use raw HTML.
-- Keep choices, answers, and matching-row labels as plain text. For Fill in the Blanks, {{answer}} markers belong only in "prompt"; Markdown context is separate background material and must not replace the blank-aware prompt.
+${enabledTypes.map(type => quality[type]).join('\n')}
+- Make every item self-contained, accurate, and based on the source. Avoid duplicates and unsupported facts. Do not include citations, URLs, source markers, question/library IDs, or session settings.${counts.parameterized > 0 ? ' Required solver IDs and parameter-generation rules are allowed for parameterized questions.' : ''}
+${enabledTypes.some(type => type !== 'statement') ? '- An optional explanation may give one short clarifying sentence for a scored question.\n' : ''}- Keep "prompt" as the concise main question/title in plain text. When useful, add an optional "context" string with GitHub-flavored Markdown: passages, tables, lists, task lists, links, strikethrough, or fenced code. This is supporting material shown separately from the title, not an answer key or feedback. Omit filler context. Do not use raw HTML.
+- Keep response text as plain text.
 
 Vary the presentation across the knowledge set:
 - Intentionally mix concise standalone questions with questions that use meaningful Markdown context. For medium or large sets, include several context-based questions when the material supports them; do not make every question the same simple recall format. This is a flexible writing goal, not another percentage quota.
@@ -51,24 +66,28 @@ Vary the presentation across the knowledge set:
 
 Return ONLY one JSON code block using this structure:
 \`\`\`json
-${JSON.stringify({ format: REVIEW_AI_FORMAT, version: 1, title: 'Short knowledge set title', description: 'Brief scope of this knowledge set.', questions: AI_QUESTION_TYPES.filter(type => counts[type] > 0).map(type => examples[type]) }, null, 2)}
+${JSON.stringify({ format: REVIEW_AI_FORMAT, version: 1, title: 'Short knowledge set title', description: 'Brief scope of this knowledge set.', ...(counts.parameterized > 0 ? { solvers: [AI_SOLVER_EXAMPLE] } : {}), questions: enabledTypes.map(type => examples[type]) }, null, 2)}
 \`\`\`
 
 These are format examples only; use the requested counts and source content, not these example facts. Title: 1–${MAX_NAME_LENGTH} characters. Description: at most ${MAX_TEXT} characters. Prompt, answer, explanation, and each choice: at most ${MAX_TEXT} characters of plain text. Optional context: at most ${MAX_QUESTION_CONTEXT} characters of Markdown, encoded as a JSON string (escape newlines inside strings).
-Use only type/prompt/choices/answer/optional explanation on multiple choice; omit choices on true/false and short answer. On Dropdown use type/prompt/choices/matches/optional explanation, with correct answers inside the matching rows and no top-level answer. On fill in the blanks use type/prompt/optional explanation, with answers embedded in {{markers}}. On statements use only type/prompt. Any of these types may also include the optional context field.`;
+${enabledTypes.map(type => fields[type]).join('\n')}
+Any of these types may also include the optional context field.`;
   return scope ? categoryScopedPrompt(prompt, scope, 'Review questions') : prompt;
 }
 
 export function parseReviewAiImport(text: string, preferences: ReviewAiPreferences): ReviewAiImport {
   const expected = allocateQuestions(preferences.weights, preferences.count);
   const value = parseAiImportJson(text);
-  if (!isRecord(value) || Object.keys(value).some(key => !['format', 'version', 'title', 'description', 'questions'].includes(key)) ||
+  if (!isRecord(value) || Object.keys(value).some(key => !['format', 'version', 'title', 'description', 'questions', 'solvers'].includes(key)) ||
       value.format !== REVIEW_AI_FORMAT || value.version !== 1 || typeof value.title !== 'string' ||
       !value.title.trim() || value.title.trim().length > MAX_NAME_LENGTH ||
       typeof value.description !== 'string' || value.description.length > MAX_TEXT ||
-      !Array.isArray(value.questions) || value.questions.length !== preferences.count) {
-    throw new Error(`Paste a supported Review response with exactly ${preferences.count} items, a title, and a description.`);
+      !Array.isArray(value.questions) || value.questions.length < 1 || value.questions.length > MAX_QUESTIONS) {
+    throw new Error(`Paste a supported Review response with 1–${MAX_QUESTIONS} items, a title, and a description.`);
   }
+  const warnings: string[] = [];
+  if (value.questions.length !== preferences.count) warnings.push(`Requested ${preferences.count} items; this JSON contains ${value.questions.length}.`);
+  const packages = parseAiSolvers(value.solvers);
   const entries: unknown[] = value.questions;
   const questions = entries.map((entry, index): Question => {
     if (!isRecord(entry) || !AI_QUESTION_TYPES.some(type => type === entry.type) ||
@@ -76,7 +95,7 @@ export function parseReviewAiImport(text: string, preferences: ReviewAiPreferenc
       throw new Error(`Item ${index + 1} needs a supported type and a non-empty prompt.`);
     }
     const type = AI_QUESTION_TYPES.find(type => type === entry.type)!;
-    const fields = type === 'statement' ? ['type', 'prompt'] : type === 'dropdown' ? ['type', 'prompt', 'choices', 'matches', 'explanation'] : type === 'fill-in-the-blanks' ? ['type', 'prompt', 'explanation'] :
+    const fields = type === 'parameterized' ? ['type', 'prompt', 'parameters', 'explanation'] : type === 'statement' ? ['type', 'prompt'] : type === 'dropdown' ? ['type', 'prompt', 'choices', 'matches', 'explanation'] : type === 'fill-in-the-blanks' ? ['type', 'prompt', 'explanation'] :
       type === 'multiple-choice' ? ['type', 'prompt', 'answer', 'choices', 'explanation'] : ['type', 'prompt', 'answer', 'explanation'];
     fields.push('context');
     if (Object.keys(entry).some(key => !fields.includes(key)) ||
@@ -88,7 +107,8 @@ export function parseReviewAiImport(text: string, preferences: ReviewAiPreferenc
     question.prompt = entry.prompt.trim();
     question.explanation = typeof entry.explanation === 'string' ? entry.explanation.trim() : '';
     if (typeof entry.context === 'string') question.context = entry.context.trim();
-    if (type !== 'statement' && type !== 'fill-in-the-blanks' && type !== 'dropdown') {
+    if (type === 'parameterized') question.parameters = resolveAiParameters(entry.parameters, packages);
+    if (type !== 'parameterized' && type !== 'statement' && type !== 'fill-in-the-blanks' && type !== 'dropdown') {
       if (typeof entry.answer !== 'string' || !entry.answer.trim() || entry.answer.length > MAX_TEXT) throw new Error(`Item ${index + 1} needs a short correct answer.`);
       question.answer = entry.answer.trim();
     }
@@ -115,10 +135,13 @@ export function parseReviewAiImport(text: string, preferences: ReviewAiPreferenc
     if (!questionReady(question)) throw new Error(`Item ${index + 1} is incomplete or its correct answer does not match a distinct choice.`);
     return question;
   });
+  for (const pkg of packages) {
+    if (!questions.some(question => question.parameters?.rules.solver?.package?.id === pkg.id && question.parameters.rules.solver.package.solverVersion === pkg.solverVersion)) warnings.push(`Solver “${pkg.label}” is unused and will not be imported.`);
+  }
   validateQuestions(questions);
   for (const type of AI_QUESTION_TYPES) {
     const actual = questions.filter(question => question.type === type).length;
-    if (actual !== expected[type]) throw new Error(`${questionTypeLabel(type)}: expected ${expected[type]} items, received ${actual}. Regenerate using the current prompt and mix.`);
+    if (actual !== expected[type]) warnings.push(`${questionTypeLabel(type)}: requested ${expected[type]}, received ${actual}.${preferences.weights[type] === 0 && actual > 0 ? ' This type is disabled in the current mix.' : ''}`);
   }
-  return { title: value.title.trim(), description: value.description.trim(), questions };
+  return { title: value.title.trim(), description: value.description.trim(), questions, warnings };
 }

@@ -7,8 +7,8 @@ import type { AiCardCategories, AiCardScope } from '../../core/ai-study-categori
 import { inputValue } from '../../core/dom.ts';
 import { parseFillBlankTemplate } from '../../core/fill-blank.ts';
 import { parseReviewAiImport, reviewAiPrompt, type ReviewAiImport, type ReviewAiPreferences } from './ai-import-format.ts';
-import { AI_QUESTION_TYPES, allocateQuestions, DEFAULT_AI_WEIGHTS, equalizeQuestionWeights, normalizeQuestionWeights, questionMixProblem, questionTypeLabel, rebalanceQuestionWeights, type QuestionWeights } from './ai-question-mix.ts';
-import { MAX_QUESTIONS, questionDisplayPrompt, type Question, type QuestionType } from './question-model.ts';
+import { AI_QUESTION_TYPES, allocateQuestions, DEFAULT_AI_WEIGHTS, equalizeQuestionWeights, normalizeQuestionWeights, questionMixProblem, questionTypeLabel, rebalanceQuestionWeights, type QuestionWeights, type AiQuestionType } from './ai-question-mix.ts';
+import { MAX_QUESTIONS, questionDisplayPrompt, type Question } from './question-model.ts';
 
 export const ReviewAiCreation = defineComponent({
   name: 'ReviewAiCreation',
@@ -24,11 +24,11 @@ export const ReviewAiCreation = defineComponent({
     const candidate = ref<ReviewAiImport | null>(null);
     const backward = ref(false);
     const heading = ref<HTMLElement | null>(null);
-    const editingWeight = ref<QuestionType | null>(null);
+    const editingWeight = ref<AiQuestionType | null>(null);
     const weightText = ref('');
     const weightNotice = ref('');
     const editingMix = ref(false);
-    const relativeTexts = ref<Record<QuestionType, string>>(Object.fromEntries(AI_QUESTION_TYPES.map(type => [type, '0'])) as Record<QuestionType, string>);
+    const relativeTexts = ref<Record<AiQuestionType, string>>(Object.fromEntries(AI_QUESTION_TYPES.map(type => [type, '0'])) as Record<AiQuestionType, string>);
     const normalizedMix = computed(() => normalizeQuestionWeights(Object.fromEntries(AI_QUESTION_TYPES.map(type =>
       [type, relativeTexts.value[type].trim() ? Number(relativeTexts.value[type]) : 0])) as QuestionWeights));
     const mixProblem = computed(() => questionMixProblem(preferences.value.weights, preferences.value.count));
@@ -40,7 +40,7 @@ export const ReviewAiCreation = defineComponent({
     const total = computed(() => AI_QUESTION_TYPES.reduce((sum, type) => sum + preferences.value.weights[type], 0));
     const prompt = computed(() => mixProblem.value ? '' : reviewAiPrompt(preferences.value, scope.value));
     onMounted(() => heading.value?.focus());
-    function commitWeight(type: QuestionType, input?: HTMLInputElement) {
+    function commitWeight(type: AiQuestionType, input?: HTMLInputElement) {
       if (editingWeight.value !== type) return;
       const requested = weightText.value.trim() ? Number(weightText.value) : Number.NaN;
       const previous = preferences.value.weights[type];
@@ -53,7 +53,7 @@ export const ReviewAiCreation = defineComponent({
     }
     function editWholeMix() {
       if (editingWeight.value) commitWeight(editingWeight.value);
-      relativeTexts.value = Object.fromEntries(AI_QUESTION_TYPES.map(type => [type, String(preferences.value.weights[type])])) as Record<QuestionType, string>;
+      relativeTexts.value = Object.fromEntries(AI_QUESTION_TYPES.map(type => [type, String(preferences.value.weights[type])])) as Record<AiQuestionType, string>;
       weightNotice.value = '';
       editingMix.value = true;
     }
@@ -72,13 +72,14 @@ export const ReviewAiCreation = defineComponent({
       catch (error) { problem.value = error instanceof Error ? error.message : String(error); }
     }
     function previewQuestion(question: Question, index: number) {
-      const answers = question.type === 'dropdown' ? (question.matches ?? []).map(row => `${row.label}: ${row.answer}`) :
+      const answers = question.type === 'parameterized' ? (question.parameters?.rules.answers ?? []).map(answer => `${answer.label}: ${answer.expression ?? `Solver output ${answer.solverKey}`}`) : question.type === 'dropdown' ? (question.matches ?? []).map(row => `${row.label}: ${row.answer}`) :
         question.type === 'fill-in-the-blanks' ? parseFillBlankTemplate(question.prompt).answers : [question.answer];
       return h('li', { key: question.id }, [
         h('span', { class: 'study-ai-muted' }, `${index + 1} · ${questionTypeLabel(question.type)}`),
         h('strong', questionDisplayPrompt(question)),
         question.context?.trim() ? h(MarkdownContent, { text: question.context, class: 'knowledge-question-context' }) : null,
         question.type === 'dropdown' ? h('ul', (question.matches ?? []).map(row => h('li', row.label))) : null,
+        question.parameters?.rules.solver?.package ? h('p', { class: 'study-ai-muted' }, `Includes uploaded solver: ${question.parameters.rules.solver.package.label}. Code runs only when previewing or reviewing a generated variant.`) : null,
         question.choices.length ? h('ul', question.choices.map(choice => h('li', choice))) : null,
         question.type !== 'statement' ? h('details', [h('summary', 'Reveal answer'),
           h('p', answers.join(' · ')), question.explanation ? h('p', question.explanation) : null]) : null,
@@ -163,14 +164,19 @@ export const ReviewAiCreation = defineComponent({
           idPrefix: 'review-ai', label: 'Review', prompt: prompt.value, json: json.value, problem: problem.value,
           maxLength: MAX_AI_IMPORT_LENGTH, hasPreview: candidate.value !== null,
           promptHelp: scope.value ? 'Send this prompt in the conversation containing the matching source and categories. It creates the selected category’s knowledge set using your question mix.' : 'Give your AI the source material first, then send this prompt to construct the overall knowledge set using your question mix.',
-          importHelp: 'Wait for the knowledge set response, then paste its JSON here. Every question and the requested type mix are validated before creation.',
+          importHelp: 'Wait for the knowledge set response, then paste its JSON here. Questions are checked before creation. Differences from your requested count or mix appear as warnings; you can still import valid questions.',
           readyInstructions: ['Paste the Review JSON below.', 'Choose Validate JSON.', 'Review the questions, then create the knowledge set.'],
           onUpdateJson: (value: string) => { json.value = value; candidate.value = null; problem.value = ''; }, onValidate: validate,
         }, { preview: () => candidate.value ? h('div', { class: 'study-ai-preview' }, [
           h('h3', candidate.value.title), h('p', candidate.value.description),
-          h('p', { role: 'status' }, `${candidate.value.questions.length} items · Requested question mix matched`),
+          h('p', { role: 'status' }, `${candidate.value.questions.length} items · ${candidate.value.warnings.length ? 'Valid questions with import warnings' : 'Requested question mix matched'}`),
+          candidate.value.warnings.length ? h('section', { class: 'review-ai-import-warning', role: 'status', 'aria-label': 'Import warnings' }, [
+            h('strong', 'This JSON differs from the request'),
+            h('ul', candidate.value.warnings.map(warning => h('li', warning))),
+            h('p', 'You can still create the knowledge set with all of these questions.'),
+          ]) : null,
           h('ol', { class: 'review-ai-preview' }, candidate.value.questions.map(previewQuestion)),
-          h('button', { type: 'button', class: 'card-primary-button', onClick: () => { if (candidate.value) emit('create', candidate.value); } }, 'Create knowledge set'),
+          h('button', { type: 'button', class: 'card-primary-button', onClick: () => { if (candidate.value) emit('create', candidate.value); } }, candidate.value.warnings.length ? 'Create knowledge set anyway' : 'Create knowledge set'),
         ]) : null }),
       ]);
     }

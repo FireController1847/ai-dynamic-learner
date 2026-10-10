@@ -765,3 +765,31 @@
 @media (max-width: 560px) {
   .knowledge-import-resolution-actions { grid-template-columns: 1fr; }
 }
+
+.knowledge-parameterized-editor,
+.knowledge-parameterized-answers,
+.knowledge-parameterized-preview {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.knowledge-parameter-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: 12px;
+  padding-block: 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+.knowledge-parameter-row > details {
+  grid-column: 1 / -1;
+}
+.knowledge-parameterized-preview dl {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: 8px 16px;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.knowledge-parameterized-preview dd {
+  margin: 0;
+}

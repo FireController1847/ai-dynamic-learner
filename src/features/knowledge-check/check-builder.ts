@@ -3,6 +3,8 @@ import { SetOptionsEditor } from './set-options-editor.ts';
 import type { CheckItem } from './library-model.ts';
 import { MAX_NAME_LENGTH } from './library-model.ts';
 import { cloneQuestion, createQuestion, questionDisplayPrompt, questionHasContent, questionProblem, questionsForSave, MAX_QUESTIONS, MAX_TEXT, QUESTION_TYPES, type Question, type QuestionType } from './question-model.ts';
+import type { SolverPackage } from '../../core/parameterized/solver-package.ts';
+import { ParameterizedEditor } from './parameterized-editor.ts';
 import { DropdownEditor } from './dropdown-editor.ts';
 import { QuestionContextEditor } from './context-editor.ts';
 import { ReviewFillBlankEditor } from './fill-blank-editor.ts';
@@ -22,10 +24,15 @@ export const CheckBuilder = defineComponent({
   setup(props, { emit }) {
     const name = ref(props.item?.name ?? 'New knowledge set');
     const questions = ref<Question[]>(props.item?.questions.map(cloneQuestion) ?? []);
+    const uploadedSolvers = ref<SolverPackage[]>([]);
+    for (const question of questions.value) { const pkg = question.parameters?.rules.solver?.package;
+      if (pkg && !uploadedSolvers.value.some(entry => entry.id === pkg.id && entry.solverVersion === pkg.solverVersion)) uploadedSolvers.value.push(JSON.parse(JSON.stringify(pkg)) as SolverPackage);
+    }
     const selected = ref(0);
     const tab = ref<'questions' | 'options'>('questions');
     const options = ref<SetOptions>({ ...defaultSetOptions(), ...props.item?.options });
     const message = ref('');
+    const draftProblems = ref<Record<string, string>>({});
     const invalid = computed(() => questions.value.findIndex(question => questionHasContent(question) && Boolean(questionProblem(question))));
     const optionsProblem = computed(() => {
       try { validateSetOptions(options.value); return ''; }
@@ -33,6 +40,7 @@ export const CheckBuilder = defineComponent({
     });
     function canLeaveQuestion(): boolean {
       const current = questions.value[selected.value];
+      if (current && draftProblems.value[current.id]) return false;
       if (current && questionHasContent(current) && questionProblem(current)) {
         return false;
       }
@@ -40,6 +48,7 @@ export const CheckBuilder = defineComponent({
     }
     function save() {
       try {
+        if (Object.values(draftProblems.value).some(Boolean)) return;
         if (invalid.value >= 0) { selected.value = invalid.value; tab.value = 'questions'; return; }
         validateSetOptions(options.value);
         emit('save', name.value.trim(), questionsForSave(questions.value), { ...options.value });
@@ -55,6 +64,7 @@ export const CheckBuilder = defineComponent({
     function removeQuestion(question: Question) {
       questions.value = questions.value.filter((entry) => entry.id !== question.id);
       selected.value = Math.min(selected.value, Math.max(0, questions.value.length - 1));
+      delete draftProblems.value[question.id];
       pendingDelete.value = null;
     }
     function changeType(question: Question, event: Event) {
@@ -65,6 +75,9 @@ export const CheckBuilder = defineComponent({
       }
       const replacement = createQuestion(type as QuestionType);
       Object.assign(question, { type: replacement.type, answer: replacement.answer, choices: replacement.choices });
+      delete question.parameters; delete draftProblems.value[question.id];
+      if (replacement.parameters) { question.parameters = replacement.parameters;
+        if (!question.prompt.trim()) question.prompt = replacement.prompt; }
       delete question.matches;
       if (replacement.matches) question.matches = replacement.matches;
       if (replacement.type === 'statement') question.explanation = '';
@@ -84,7 +97,7 @@ export const CheckBuilder = defineComponent({
             h('p', 'Add questions, then use them to study or test yourself.')]),
           h('div', { class: 'knowledge-actions' }, [
             h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel') }, 'Cancel'),
-            h('button', { type: 'button', class: 'card-primary-button', disabled: !name.value.trim() || invalid.value >= 0 || Boolean(optionsProblem.value),
+            h('button', { type: 'button', class: 'card-primary-button', disabled: !name.value.trim() || invalid.value >= 0 || Boolean(optionsProblem.value) || Object.values(draftProblems.value).some(Boolean),
               onClick: save },
             props.item ? 'Save questions' : 'Create knowledge set'),
           ]),
@@ -127,9 +140,11 @@ export const CheckBuilder = defineComponent({
             }, QUESTION_TYPES.map((type) => h('option', { value: type.id }, type.label)))]),
             question.type === 'fill-in-the-blanks'
               ? h(ReviewFillBlankEditor, { question, onMessage: (value: string) => { message.value = value; } })
-              : textField(question.type === 'statement' ? 'Statement' : 'Question', 'prompt', question),
+              : textField(question.type === 'parameterized' ? 'Question template' : question.type === 'statement' ? 'Statement' : 'Question', 'prompt', question),
             h(QuestionContextEditor, { key: question.id, question }),
-            question.type === 'statement' ? null : question.type === 'dropdown' ? h(DropdownEditor, { question }) : question.type === 'multiple-choice' ? h('fieldset', { class: 'knowledge-choice-editor' }, [
+            question.type === 'parameterized' ? h(ParameterizedEditor, { question, key: question.id, packages: uploadedSolvers.value,
+              onUploadSolver: (pkg: SolverPackage) => { if (!uploadedSolvers.value.some(entry => entry.id === pkg.id && entry.solverVersion === pkg.solverVersion)) uploadedSolvers.value.push(pkg); },
+              onDraftProblem: (value: string) => { draftProblems.value[question.id] = value; } }) : question.type === 'statement' ? null : question.type === 'dropdown' ? h(DropdownEditor, { question }) : question.type === 'multiple-choice' ? h('fieldset', { class: 'knowledge-choice-editor' }, [
               h('legend', 'Answer choices'),
               h('p', { class: 'knowledge-muted' }, 'Choose the correct answer.'),
               ...question.choices.map((choice, index) => h('div', { class: 'knowledge-choice-row', key: index }, [

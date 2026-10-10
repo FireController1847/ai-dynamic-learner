@@ -11,8 +11,8 @@ export const SessionIntro = defineComponent({
   props: { item: { type: Object as PropType<CheckItem>, required: true },
     mode: { type: String as PropType<CheckModeId>, required: true },
     settings: { type: Object as PropType<SessionSettings>, required: true },
-    count: { type: Number, required: true }, ended: Boolean },
-  emits: { back: () => true, start: () => true },
+    count: { type: Number, required: true }, ended: Boolean, resumable: Boolean, message: String },
+  emits: { back: () => true, start: () => true, resume: () => true },
   setup(props, { emit }) {
     return () => {
       const test = props.mode === 'test';
@@ -55,10 +55,12 @@ export const SessionIntro = defineComponent({
           test ? h('p', settings.timeLimitMinutes !== null ? 'The clock starts only when you press Start test. When time runs out, your current answers are submitted.' : 'There is no clock. Submit when you are ready.') : null,
           test ? h('p', settings.showTestAnswers ? 'Results include your score and a review of correct/wrong answers.' : 'This Test shows your score only; answers and explanations remain hidden.') : null,
         ]),
+        props.message ? h('p', { role: 'status', class: 'knowledge-message' }, props.message) : null,
         props.ended ? h('p', { role: 'status' }, study ? 'Your study session ended. Start again when ready.' : 'Your previous session ended. Start again when ready.') : null,
         h('div', { class: 'knowledge-intro-actions' }, [
           h('button', { type: 'button', class: 'quiet-button',
             onClick: () => emit('back') }, 'Back'),
+          props.resumable ? h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('resume') }, 'Resume saved session') : null,
           h(EntryStatistics, { app: 'knowledge-check', id: props.item.id,
             metric: study ? 'studyPasses' : test ? 'tests' : 'quizzes' }),
           h('button', { type: 'button', class: 'card-primary-button', disabled: !props.count,
@@ -67,7 +69,8 @@ export const SessionIntro = defineComponent({
             h(Icon, { name: 'chevron' }),
           ]),
         ]),
-        h('p', { class: 'knowledge-muted knowledge-intro-note' }, study ?
+        h('p', { class: 'knowledge-muted knowledge-intro-note' }, props.item.questions.some(question => question.type === 'parameterized') ?
+          'Generated questions stay stable during a session. Interrupted sessions are saved on this browser; starting again creates fresh variants. End the session to discard its saved progress.' : study ?
           'Press End studying whenever you are ready. Starting again begins a fresh practice session.' :
           'Leaving this set or switching modes will end an active session. Answers are not saved between sessions.'),
       ]);

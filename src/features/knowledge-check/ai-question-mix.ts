@@ -1,14 +1,15 @@
 import { MAX_QUESTIONS, QUESTION_TYPES, type QuestionType } from './question-model.ts';
 
-export type QuestionWeights = Record<QuestionType, number>;
-export const AI_QUESTION_TYPES = ['multiple-choice', 'true-false', 'fill-in-the-blanks', 'dropdown', 'short-answer', 'statement'] as const;
+export type AiQuestionType = QuestionType;
+export type QuestionWeights = Record<AiQuestionType, number>;
+export const AI_QUESTION_TYPES = ['multiple-choice', 'true-false', 'fill-in-the-blanks', 'dropdown', 'short-answer', 'statement', 'parameterized'] as const;
 export const DEFAULT_AI_WEIGHTS: QuestionWeights = {
-  'multiple-choice': 58, 'true-false': 23, 'fill-in-the-blanks': 14, dropdown: 5, 'short-answer': 0, statement: 0,
+  'multiple-choice': 58, 'true-false': 23, 'fill-in-the-blanks': 14, dropdown: 5, 'short-answer': 0, statement: 0, parameterized: 0,
 };
 export const questionTypeLabel = (type: QuestionType) => QUESTION_TYPES.find(entry => entry.id === type)?.label ?? type;
 
 /** Keep the edited value; share its change equally, respecting each 0–100 bound. */
-export function rebalanceQuestionWeights(weights: QuestionWeights, edited: QuestionType, requested: number): QuestionWeights {
+export function rebalanceQuestionWeights(weights: QuestionWeights, edited: AiQuestionType, requested: number): QuestionWeights {
   const valid = AI_QUESTION_TYPES.every(type => Number.isInteger(weights[type]) && weights[type] >= 0 && weights[type] <= 100) &&
     AI_QUESTION_TYPES.reduce((sum, type) => sum + weights[type], 0) === 100;
   const next = { ...(valid ? weights : DEFAULT_AI_WEIGHTS) };
@@ -63,7 +64,7 @@ export function questionMixProblem(weights: QuestionWeights, count: number): str
 export function allocateQuestions(weights: QuestionWeights, count: number): QuestionWeights {
   const problem = questionMixProblem(weights, count);
   if (problem) throw new Error(problem);
-  const result: QuestionWeights = { 'multiple-choice': 0, 'true-false': 0, 'fill-in-the-blanks': 0, dropdown: 0, 'short-answer': 0, statement: 0 };
+  const result: QuestionWeights = { 'multiple-choice': 0, 'true-false': 0, 'fill-in-the-blanks': 0, dropdown: 0, 'short-answer': 0, statement: 0, parameterized: 0 };
   const remainders = AI_QUESTION_TYPES.map((type, order) => {
     const exact = weights[type] * count / 100;
     result[type] = Math.floor(exact);

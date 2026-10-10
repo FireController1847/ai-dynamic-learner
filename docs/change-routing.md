@@ -57,6 +57,8 @@ Use this as a starting-file index, not a feature specification. Follow imports o
 | Guide Map | `map-editor.ts`, `map-graph.ts`, `map-study.ts`, `map-presentation.ts`, `guide.css` |
 | Review library/model | `src/features/knowledge-check/knowledge-check.ts`, `library.ts`, `library-model.ts` |
 | Review authoring | `check-builder.ts`, `question-model.ts`, `fill-blank-editor.ts`, `set-options*.ts` |
+| Review solver uploads / AI algorithms | `src/core/parameterized/solver-package.ts`, `solver-sandbox.ts`, `variant-validation.ts`; `src/features/knowledge-check/solver-editor.ts`, `ai-parameterized-format.ts`, `ai-import-format.ts`, `parameterized-session.ts` |
+| Review parameterized questions | `src/core/parameterized/` (expressions, RNG, solvers, rules, instances, numeric matching); `parameterized-model.ts`, `parameterized-editor.ts`, `parameterized-fields.ts`, `parameterized-session.ts`, `session-state.ts`; see `docs/parameterized-questions.md` |
 | Review Dropdown matching | `dropdown-model.ts`, `dropdown-editor.ts`, `question-model.ts`, `knowledge-session.ts`, `session-settings.ts` |
 | Review Markdown context | `context-editor.ts`, `question-model.ts`, `knowledge-session.ts`, shared Markdown components |
 | Review Study/Quiz/Test | `knowledge-set.ts`, `session-setup.ts`, `session-settings.ts`, `session-intro.ts`, `session-state.ts`, `knowledge-session.ts`, `review-motion.ts`, `review-motion.css` |
