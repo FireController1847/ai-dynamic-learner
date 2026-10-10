@@ -7,7 +7,7 @@ import type { AiCardCategories, AiCardScope } from '../../core/ai-study-categori
 import { inputValue } from '../../core/dom.ts';
 import { parseFillBlankTemplate } from '../../core/fill-blank.ts';
 import { parseReviewAiImport, reviewAiPrompt, type ReviewAiImport, type ReviewAiPreferences } from './ai-import-format.ts';
-import { AI_QUESTION_TYPES, allocateQuestions, DEFAULT_AI_WEIGHTS, equalizeQuestionWeights, normalizeQuestionWeights, questionMixProblem, questionTypeLabel, rebalanceQuestionWeights, type QuestionWeights, type AiQuestionType } from './ai-question-mix.ts';
+import { AI_QUESTION_TYPES, allocateQuestions, DEFAULT_AI_WEIGHTS, equalizeQuestionWeights, normalizeQuestionWeights, questionCountProblem, questionMixProblem, questionTypeLabel, rebalanceQuestionWeights, type QuestionWeights, type AiQuestionType } from './ai-question-mix.ts';
 import { MAX_QUESTIONS, questionDisplayPrompt, type Question } from './question-model.ts';
 
 export const ReviewAiCreation = defineComponent({
@@ -18,7 +18,7 @@ export const ReviewAiCreation = defineComponent({
     const stage = ref<'scope' | 'categories' | 'configure' | 'generate'>('scope');
     const scope = ref<AiCardScope | null>(null);
     const categories = ref<AiCardCategories | null>(null);
-    const preferences = ref<ReviewAiPreferences>({ count: 20, coverage: 'balanced', weights: { ...DEFAULT_AI_WEIGHTS } });
+    const preferences = ref<ReviewAiPreferences>({ count: 20, coverage: 'balanced', mixMode: 'custom', weights: { ...DEFAULT_AI_WEIGHTS } });
     const json = ref('');
     const problem = ref('');
     const candidate = ref<ReviewAiImport | null>(null);
@@ -31,8 +31,11 @@ export const ReviewAiCreation = defineComponent({
     const relativeTexts = ref<Record<AiQuestionType, string>>(Object.fromEntries(AI_QUESTION_TYPES.map(type => [type, '0'])) as Record<AiQuestionType, string>);
     const normalizedMix = computed(() => normalizeQuestionWeights(Object.fromEntries(AI_QUESTION_TYPES.map(type =>
       [type, relativeTexts.value[type].trim() ? Number(relativeTexts.value[type]) : 0])) as QuestionWeights));
-    const mixProblem = computed(() => questionMixProblem(preferences.value.weights, preferences.value.count));
-    const counts = computed(() => mixProblem.value ? null : allocateQuestions(preferences.value.weights, preferences.value.count));
+    const mixProblem = computed(() => preferences.value.mixMode === 'ai'
+      ? questionCountProblem(preferences.value.count)
+      : questionMixProblem(preferences.value.weights, preferences.value.count));
+    const counts = computed(() => preferences.value.mixMode !== 'custom' || mixProblem.value
+      ? null : allocateQuestions(preferences.value.weights, preferences.value.count));
     const displayCounts = computed(() => editingMix.value
       ? normalizedMix.value && !questionMixProblem(normalizedMix.value, preferences.value.count)
         ? allocateQuestions(normalizedMix.value, preferences.value.count) : null
@@ -73,7 +76,8 @@ export const ReviewAiCreation = defineComponent({
     }
     function previewQuestion(question: Question, index: number) {
       const answers = question.type === 'parameterized' ? (question.parameters?.rules.answers ?? []).map(answer => `${answer.label}: ${answer.expression ?? `Solver output ${answer.solverKey}`}`) : question.type === 'dropdown' ? (question.matches ?? []).map(row => `${row.label}: ${row.answer}`) :
-        question.type === 'fill-in-the-blanks' ? parseFillBlankTemplate(question.prompt).answers : [question.answer];
+        question.type === 'fill-in-the-blanks' ? parseFillBlankTemplate(question.prompt).answers :
+        question.correctAnswers ?? [question.answer];
       return h('li', { key: question.id }, [
         h('span', { class: 'study-ai-muted' }, `${index + 1} · ${questionTypeLabel(question.type)}`),
         h('strong', questionDisplayPrompt(question)),
@@ -95,7 +99,9 @@ export const ReviewAiCreation = defineComponent({
         h('header', { class: 'study-ai-header' }, [
           h('div', [h('p', { class: 'study-ai-muted' }, `Review · Saved in ${props.destination}`),
             h('h2', { ref: heading, tabindex: -1 }, stage.value === 'scope' ? 'Create a knowledge set with AI' : stage.value === 'configure' ? 'Choose your question mix' : scope.value?.category.title ?? 'Overall subject'),
-            h('p', stage.value === 'scope' ? 'Choose the scope, set your question percentages, then generate and import the knowledge set.' : scope.value?.category.description ?? 'Cover the overall subject using your preferred question mix.'),
+            h('p', stage.value === 'scope'
+              ? 'Choose the scope, then decide whether to set question percentages or let AI choose the most suitable types.'
+              : scope.value?.category.description ?? 'Cover the overall subject using your chosen question-type strategy.'),
           ]),
           h('div', { class: 'study-ai-actions' }, [
             stage.value !== 'scope' ? h('button', { type: 'button', class: 'quiet-button', onClick: back }, 'Back') : null,
@@ -113,7 +119,26 @@ export const ReviewAiCreation = defineComponent({
               const value = inputValue(event); if (value === 'essentials' || value === 'balanced' || value === 'comprehensive') preferences.value.coverage = value;
             } }, [h('option', { value: 'essentials' }, 'Essentials only'), h('option', { value: 'balanced' }, 'Balanced'), h('option', { value: 'comprehensive' }, 'Comprehensive')])]),
           ]),
-          h('fieldset', { class: 'review-ai-mix' }, [
+          h('fieldset', { class: 'review-ai-mix-strategy' }, [
+            h('legend', 'Question types'),
+            h('label', { class: 'review-ai-mix-mode' }, [
+              h('input', { type: 'radio', name: 'review-ai-mix-mode',
+                checked: preferences.value.mixMode === 'custom',
+                onChange: () => { preferences.value.mixMode = 'custom'; editingMix.value = false; editingWeight.value = null; },
+              }),
+              h('span', [h('strong', 'Custom percentages'),
+                h('span', 'Set how many questions of each type you want.')]),
+            ]),
+            h('label', { class: 'review-ai-mix-mode' }, [
+              h('input', { type: 'radio', name: 'review-ai-mix-mode',
+                checked: preferences.value.mixMode === 'ai',
+                onChange: () => { preferences.value.mixMode = 'ai'; editingMix.value = false; editingWeight.value = null; },
+              }),
+              h('span', [h('strong', 'Let AI choose'),
+                h('span', 'AI chooses the appropriate question types and how often to use each.')]),
+            ]),
+          ]),
+          preferences.value.mixMode === 'custom' ? h('fieldset', { class: 'review-ai-mix' }, [
             h('legend', editingMix.value ? 'Set the whole mix using relative weights' : 'Question type percentages'),
             ...AI_QUESTION_TYPES.map(type => h('label', { class: 'review-ai-weight', key: type }, [
               h('span', questionTypeLabel(type)),
@@ -140,14 +165,20 @@ export const ReviewAiCreation = defineComponent({
               h('span', { class: 'study-ai-muted' }, displayCounts.value ? `${displayCounts.value[type]} items` : '—'),
             ])),
           ]),
-          h('p', { role: 'status', class: mixProblem.value ? 'study-ai-error' : 'study-ai-muted' }, `Active mix: ${total.value}%. ${mixProblem.value || (editingMix.value
+          preferences.value.mixMode === 'custom' ? h('p', { role: 'status', class: mixProblem.value ? 'study-ai-error' : 'study-ai-muted' }, `Active mix: ${total.value}%. ${mixProblem.value || (editingMix.value
             ? 'Edit all values freely, then apply the previewed percentages together. Zero stays excluded.'
             : 'Type a percentage, then press Enter or leave the field to balance the other enabled types. Zero stays excluded.')}`),
-          editingMix.value ? h('p', { class: 'study-ai-muted' }, 'Relative weights need not total 100: for example, 2 / 1 / 1 becomes 50% / 25% / 25%. Blank or 0 excludes a type. Whole-number rounding is shown beside each field.') : null,
-          editingMix.value && !normalizedMix.value ? h('p', { class: 'study-ai-error', role: 'status' }, 'Use whole weights from 0 to 100, with at least one type above 0.') : null,
-          weightNotice.value ? h('p', { class: 'study-ai-muted', role: 'status' }, weightNotice.value) : null,
+          preferences.value.mixMode === 'custom' && editingMix.value ? h('p', { class: 'study-ai-muted' }, 'Relative weights need not total 100: for example, 2 / 1 / 1 becomes 50% / 25% / 25%. Blank or 0 excludes a type. Whole-number rounding is shown beside each field.') : null,
+          preferences.value.mixMode === 'custom' && editingMix.value && !normalizedMix.value ? h('p', { class: 'study-ai-error', role: 'status' }, 'Use whole weights from 0 to 100, with at least one type above 0.') : null,
+          preferences.value.mixMode === 'custom' && weightNotice.value ? h('p', { class: 'study-ai-muted', role: 'status' }, weightNotice.value) : null,
+          preferences.value.mixMode === 'ai' ? h('p', { class: mixProblem.value ? 'study-ai-error' : 'study-ai-muted', role: 'status' },
+            mixProblem.value || 'AI will decide the mix based on the source. You choose only the total number of items and coverage. Some types may not be used at all.') : null,
           h('p', { class: 'study-ai-muted' }, 'Statements are not scored. You can still import an Index Cards set using the Library’s existing Import knowledge set action.'),
-          h('div', { class: 'study-ai-actions' }, editingMix.value ? [
+          h('div', { class: 'study-ai-actions' }, preferences.value.mixMode === 'ai' ? [
+            h('button', { type: 'button', class: 'card-primary-button',
+              disabled: Boolean(mixProblem.value), onClick: () => { if (!mixProblem.value) go('generate'); },
+            }, 'Generate prompt'),
+          ] : editingMix.value ? [
             h('button', { type: 'button', class: 'quiet-button', onClick: () => { editingMix.value = false; } }, 'Cancel mix edits'),
             h('button', { type: 'button', class: 'card-primary-button', disabled: !normalizedMix.value,
               onClick: () => { if (normalizedMix.value) { preferences.value.weights = { ...normalizedMix.value }; editingMix.value = false; } } }, 'Apply mix'),
@@ -163,13 +194,19 @@ export const ReviewAiCreation = defineComponent({
         ] : h(AiPromptExchange, {
           idPrefix: 'review-ai', label: 'Review', prompt: prompt.value, json: json.value, problem: problem.value,
           maxLength: MAX_AI_IMPORT_LENGTH, hasPreview: candidate.value !== null,
-          promptHelp: scope.value ? 'Send this prompt in the conversation containing the matching source and categories. It creates the selected category’s knowledge set using your question mix.' : 'Give your AI the source material first, then send this prompt to construct the overall knowledge set using your question mix.',
-          importHelp: 'Wait for the knowledge set response, then paste its JSON here. Questions are checked before creation. Differences from your requested count or mix appear as warnings; you can still import valid questions.',
+          promptHelp: scope.value
+            ? `Send this prompt in the conversation containing the matching source and categories. It creates the selected category’s knowledge set ${preferences.value.mixMode === 'ai' ? 'with AI-selected question types' : 'using your percentages'}.`
+            : `Give your AI the source material first, then send this prompt to create the overall knowledge set ${preferences.value.mixMode === 'ai' ? 'with an appropriate mix of question types' : 'using your percentages'}.`,
+          importHelp: preferences.value.mixMode === 'ai'
+            ? 'Paste the AI-generated JSON here. Each question is validated, and a different total count produces a warning. Any valid question-type mix is allowed.'
+            : 'Paste the AI-generated JSON here. Questions are validated; differences from your requested count or mix produce warnings.',
           readyInstructions: ['Paste the Review JSON below.', 'Choose Validate JSON.', 'Review the questions, then create the knowledge set.'],
           onUpdateJson: (value: string) => { json.value = value; candidate.value = null; problem.value = ''; }, onValidate: validate,
         }, { preview: () => candidate.value ? h('div', { class: 'study-ai-preview' }, [
           h('h3', candidate.value.title), h('p', candidate.value.description),
-          h('p', { role: 'status' }, `${candidate.value.questions.length} items · ${candidate.value.warnings.length ? 'Valid questions with import warnings' : 'Requested question mix matched'}`),
+          h('p', { role: 'status' }, `${candidate.value.questions.length} items · ${candidate.value.warnings.length
+            ? 'Valid questions with import warnings'
+            : preferences.value.mixMode === 'ai' ? 'AI-selected question mix' : 'Requested question mix matched'}`),
           candidate.value.warnings.length ? h('section', { class: 'review-ai-import-warning', role: 'status', 'aria-label': 'Import warnings' }, [
             h('strong', 'This JSON differs from the request'),
             h('ul', candidate.value.warnings.map(warning => h('li', warning))),

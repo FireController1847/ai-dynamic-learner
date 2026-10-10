@@ -20,3 +20,18 @@
 .review-ai-import-warning { padding:12px;border-inline-start:3px solid var(--text-secondary);background:var(--surface-subtle);overflow-wrap:anywhere; }
 .review-ai-import-warning ul { margin-block:8px;padding-inline-start:24px; }
 .review-ai-import-warning p { margin-block:8px 0; }
+
+/* Review AI generation: keep mode selection distinct from the percentage editor. */
+.review-ai-mix-strategy {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-dialog);
+}
+.review-ai-mix-strategy legend { padding-inline: 6px; font-weight: 600; }
+.review-ai-mix-mode { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
+.review-ai-mix-mode > input { flex: 0 0 auto; margin-top: 4px; accent-color: var(--brand); }
+.review-ai-mix-mode > span { display: grid; gap: 3px; }
+.review-ai-mix-mode > span > span { color: var(--text-secondary); font-size: 12px; }
