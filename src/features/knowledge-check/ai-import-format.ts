@@ -6,15 +6,25 @@ import { isRecord } from '../../core/validation.ts';
 import { MAX_NAME_LENGTH } from './library-model.ts';
 import { createQuestion, MAX_TEXT, MAX_QUESTION_CONTEXT, questionReady, validateQuestions, MAX_QUESTIONS, type Question } from './question-model.ts';
 import { MAX_DROPDOWN_CHOICES, MAX_DROPDOWN_ROWS, validateDropdownMatches } from './dropdown-model.ts';
-import { AI_QUESTION_TYPES, allocateQuestions, questionTypeLabel, type QuestionWeights } from './ai-question-mix.ts';
+import { AI_QUESTION_TYPES, allocateQuestions, questionCountProblem, questionTypeLabel, type QuestionWeights } from './ai-question-mix.ts';
 
 export const REVIEW_AI_FORMAT = 'dynamic-learner-review';
 export interface ReviewAiImport { title: string; description: string; questions: Question[]; warnings: string[] }
-export interface ReviewAiPreferences { count: number; weights: QuestionWeights; coverage: 'essentials' | 'balanced' | 'comprehensive' }
+export type ReviewAiMixMode = 'custom' | 'ai';
+export interface ReviewAiPreferences {
+  count: number;
+  mixMode: ReviewAiMixMode;
+  weights: QuestionWeights;
+  coverage: 'essentials' | 'balanced' | 'comprehensive';
+}
 
 export function reviewAiPrompt(preferences: ReviewAiPreferences, scope: AiCardScope | null): string {
-  const counts = allocateQuestions(preferences.weights, preferences.count);
-  const enabledTypes = AI_QUESTION_TYPES.filter(type => counts[type] > 0);
+  const countProblem = questionCountProblem(preferences.count);
+  if (countProblem) throw new Error(countProblem);
+  const aiChoosesMix = preferences.mixMode === 'ai';
+  const counts = aiChoosesMix ? null : allocateQuestions(preferences.weights, preferences.count);
+  const enabledTypes = AI_QUESTION_TYPES.filter(type => counts === null || counts[type] > 0);
+  const allowParameterized = counts === null || counts.parameterized > 0;
   const examples: Record<keyof QuestionWeights, object> = {
     'multiple-choice': { type: 'multiple-choice', prompt: 'Which symbol represents gold?', choices: ['Au', 'Ag', 'Fe', 'Cu'], answer: 'Au', explanation: 'Au represents gold.' },
     'true-false': { type: 'true-false', prompt: 'The chemical symbol for gold is Au.', answer: 'True' },
@@ -48,13 +58,16 @@ export function reviewAiPrompt(preferences: ReviewAiPreferences, scope: AiCardSc
 Scope: ${scope ? 'Only the selected category described above.' : 'The overall subject: distribute useful questions across its major topics.'}
 Coverage: ${preferences.coverage === 'essentials' ? 'Core concepts only.' : preferences.coverage === 'comprehensive' ? 'Broad useful coverage, without trivia or repetition.' : 'Major ideas and useful supporting facts.'}
 
-Create EXACTLY ${preferences.count} items, with this exact question mix (counts already account for rounding):
-${enabledTypes.map(type => `- ${questionTypeLabel(type)}: ${preferences.weights[type]}% preference → ${counts[type]} items`).join('\n')}
-Use only the question types listed above. Do not substitute another type. If the source cannot support this many useful items, ask me to reduce the count instead of inventing facts.
+Create EXACTLY ${preferences.count} items.
+${aiChoosesMix
+    ? `Choose the question types and their counts yourself based on what best tests understanding of the source. You may use any mix of the supported types listed below, including omitting types that do not suit this content. Do not impose fixed percentages, quotas, or an equal split. Prefer a varied, purposeful mix of useful scored questions; use unscored Statements only when they genuinely help with context or instructions. Include Parameterized questions only when the material warrants variable/calculated examples and you can supply fully valid generation rules and any required solvers. Make each question type earn its place.`
+    : `Use this exact question mix (counts already account for rounding):
+${enabledTypes.map(type => `- ${questionTypeLabel(type)}: ${preferences.weights[type]}% preference → ${counts![type]} items`).join('\n')}`}
+Use only these supported question types: ${enabledTypes.map(questionTypeLabel).join(', ')}. Do not substitute another type. If the source cannot support this many useful items, ask me to reduce the count instead of inventing facts.
 
 Question quality:
 ${enabledTypes.map(type => quality[type]).join('\n')}
-- Make every item self-contained, accurate, and based on the source. Avoid duplicates and unsupported facts. Do not include citations, URLs, source markers, question/library IDs, or session settings.${counts.parameterized > 0 ? ' Required solver IDs and parameter-generation rules are allowed for parameterized questions.' : ''}
+- Make every item self-contained, accurate, and based on the source. Avoid duplicates and unsupported facts. Do not include citations, URLs, source markers, question/library IDs, or session settings.${allowParameterized ? ' Required solver IDs and parameter-generation rules are allowed only for parameterized questions.' : ''}
 ${enabledTypes.some(type => type !== 'statement') ? '- An optional explanation may give one short clarifying sentence for a scored question.\n' : ''}- Keep "prompt" as the concise main question/title in plain text. When useful, add an optional "context" string with GitHub-flavored Markdown: passages, tables, lists, task lists, links, strikethrough, or fenced code. This is supporting material shown separately from the title, not an answer key or feedback. Omit filler context. Do not use raw HTML.
 - Keep response text as plain text.
 
@@ -62,21 +75,23 @@ Vary the presentation across the knowledge set:
 - Intentionally mix concise standalone questions with questions that use meaningful Markdown context. For medium or large sets, include several context-based questions when the material supports them; do not make every question the same simple recall format. This is a flexible writing goal, not another percentage quota.
 - Use small GFM tables for comparisons, classifications, timelines, or data interpretation; brief passages or scenarios for application questions; lists for processes or related facts; and fenced code blocks for code-reading questions when relevant to the subject.
 - Make the context useful to answering the question: ask the learner to interpret, compare, infer, or apply something in it. Do not add a decorative table or simply repeat the question beneath its title.
-- Base all context on the source's information and concepts. Do not invent unsupported factual claims or include a labeled answer key. Keep context compact, preserve the requested question-type mix, and leave some questions without context. If the source does not benefit from added context, prioritize clarity over forcing variety.
+- Base all context on the source's information and concepts. Do not invent unsupported factual claims or include a labeled answer key. Keep context compact, preserve the ${aiChoosesMix ? 'AI-selected, content-appropriate question-type mix' : 'requested question-type mix'}, and leave some questions without context. If the source does not benefit from added context, prioritize clarity over forcing variety.
 
 Return ONLY one JSON code block using this structure:
 \`\`\`json
-${JSON.stringify({ format: REVIEW_AI_FORMAT, version: 1, title: 'Short knowledge set title', description: 'Brief scope of this knowledge set.', ...(counts.parameterized > 0 ? { solvers: [AI_SOLVER_EXAMPLE] } : {}), questions: enabledTypes.map(type => examples[type]) }, null, 2)}
+${JSON.stringify({ format: REVIEW_AI_FORMAT, version: 1, title: 'Short knowledge set title', description: 'Brief scope of this knowledge set.', ...(allowParameterized ? { solvers: [AI_SOLVER_EXAMPLE] } : {}), questions: enabledTypes.map(type => examples[type]) }, null, 2)}
 \`\`\`
 
-These are format examples only; use the requested counts and source content, not these example facts. Title: 1–${MAX_NAME_LENGTH} characters. Description: at most ${MAX_TEXT} characters. Prompt, answer, explanation, and each choice: at most ${MAX_TEXT} characters of plain text. Optional context: at most ${MAX_QUESTION_CONTEXT} characters of Markdown, encoded as a JSON string (escape newlines inside strings).
+These are format examples only, not required proportions or a requirement to use every type. ${allowParameterized ? 'Omit solvers unless an included Parameterized question actually needs uploaded JavaScript solver packages. ' : ''}Use the ${aiChoosesMix ? 'AI-selected distribution and' : 'requested counts and'} source content, not these example facts. Title: 1–${MAX_NAME_LENGTH} characters. Description: at most ${MAX_TEXT} characters. Prompt, answer, explanation, and each choice: at most ${MAX_TEXT} characters of plain text. Optional context: at most ${MAX_QUESTION_CONTEXT} characters of Markdown, encoded as a JSON string (escape newlines inside strings).
 ${enabledTypes.map(type => fields[type]).join('\n')}
 Any of these types may also include the optional context field.`;
   return scope ? categoryScopedPrompt(prompt, scope, 'Review questions') : prompt;
 }
 
 export function parseReviewAiImport(text: string, preferences: ReviewAiPreferences): ReviewAiImport {
-  const expected = allocateQuestions(preferences.weights, preferences.count);
+  const countProblem = questionCountProblem(preferences.count);
+  if (countProblem) throw new Error(countProblem);
+  const expected = preferences.mixMode === 'ai' ? null : allocateQuestions(preferences.weights, preferences.count);
   const value = parseAiImportJson(text);
   if (!isRecord(value) || Object.keys(value).some(key => !['format', 'version', 'title', 'description', 'questions', 'solvers'].includes(key)) ||
       value.format !== REVIEW_AI_FORMAT || value.version !== 1 || typeof value.title !== 'string' ||
@@ -146,9 +161,11 @@ export function parseReviewAiImport(text: string, preferences: ReviewAiPreferenc
     if (!questions.some(question => question.parameters?.rules.solver?.package?.id === pkg.id && question.parameters.rules.solver.package.solverVersion === pkg.solverVersion)) warnings.push(`Solver “${pkg.label}” is unused and will not be imported.`);
   }
   validateQuestions(questions);
-  for (const type of AI_QUESTION_TYPES) {
-    const actual = questions.filter(question => question.type === type).length;
-    if (actual !== expected[type]) warnings.push(`${questionTypeLabel(type)}: requested ${expected[type]}, received ${actual}.${preferences.weights[type] === 0 && actual > 0 ? ' This type is disabled in the current mix.' : ''}`);
+  if (expected !== null) {
+    for (const type of AI_QUESTION_TYPES) {
+      const actual = questions.filter(question => question.type === type).length;
+      if (actual !== expected[type]) warnings.push(`${questionTypeLabel(type)}: requested ${expected[type]}, received ${actual}.${preferences.weights[type] === 0 && actual > 0 ? ' This type is disabled in the current mix.' : ''}`);
+    }
   }
   return { title: value.title.trim(), description: value.description.trim(), questions, warnings };
 }
