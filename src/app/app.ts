@@ -7,6 +7,7 @@ import { pageHref, useNavigation } from './navigation.ts';
 import { useWorkspace } from './workspace.ts';
 import { provideStatistics } from '../components/statistics-context.ts';
 import { GlobalStatistics } from '../components/global-statistics.ts';
+import { STATISTICS_APPS } from '../core/statistics.ts';
 import { WorkspaceTools } from './workspace-tools.ts';
 import { BackupReminderBanner } from './backup-reminder-ui.ts';
 import { ThemeMenu, type ThemeMenuHandle } from './theme-menu.ts';
@@ -292,7 +293,10 @@ const App = defineComponent({
         ]),
       ]),
       statisticsOpen.value ? h(GlobalStatistics, {
-        apps: features.map(feature => ({ id: feature.id, label: feature.label })), returnFocus: statisticsButton.value,
+        apps: features.flatMap(feature => {
+          const id = STATISTICS_APPS.find(app => app === feature.id);
+          return id ? [{ id, label: feature.label }] : [];
+        }), returnFocus: statisticsButton.value,
         onClose: () => { statisticsOpen.value = false; },
       }) : null,
       activeFeature.value ? h('span', {
