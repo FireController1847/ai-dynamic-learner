@@ -74,10 +74,14 @@ export const SessionIntro = defineComponent({
             h(Icon, { name: 'chevron' }),
           ]),
         ]),
-        h('p', { class: 'knowledge-muted knowledge-intro-note' }, props.item.questions.some(question => question.type === 'parameterized') ?
-          'Generated questions stay stable during a session. Interrupted sessions are saved on this browser; starting again creates fresh variants. End the session to discard its saved progress.' : study ?
-          'Press End studying whenever you are ready. Starting again begins a fresh practice session.' :
-          'Leaving this set or switching modes will end an active session. Answers are not saved between sessions.'),
+        h('p', { class: 'knowledge-muted knowledge-intro-note' },
+          study
+            ? 'Use Pause Studying to save your current progress on this browser, or End studying to discard it.'
+            : !test && settings.timeLimitMinutes === null
+              ? 'Use Pause Quiz to save your answers on this browser, or End quiz to discard them.'
+              : props.item.questions.some(question => question.type === 'parameterized')
+                ? 'Generated questions stay stable during this session; interruption recovery is browser-local. Ending discards saved progress.'
+                : 'Leaving or switching modes ends the active Test. Test answers are not preserved after ending.'),
       ]);
     };
   },

@@ -146,7 +146,18 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
     studyVisited = new Set(snapshot.studyVisited); studyPassRecorded = snapshot.studyPassRecorded;
     submitted.value = snapshot.submitted; expired.value = snapshot.expired; deadline.value = snapshot.deadline;
     ended.value = false; paused.value = false; started.value = true; tick();
-    persist();
+    if (templates.some(question => question.type === 'parameterized')) {
+      persist();
+    } else {
+      // Explicit pause is the only persistent state for ordinary Study/Quiz.
+      // A resumed session is live again, not still paused on the mode picker.
+      try {
+        localStorage.removeItem(storageKey);
+        saved = null; resumable.value = false;
+      } catch (error) {
+        storageMessage.value = `Could not clear paused state: ${error instanceof Error ? error.message : String(error)}`;
+      }
+    }
   }
   watch([responses, feedbackResponses, checked, revealed, hints, attempts, position, submitted, deadline, studyChecks, studyCorrectChecks], persist, { deep: true });
 
@@ -200,6 +211,11 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
   async function start() {
     if (generating.value || submitting.value) return;
     resetGeneration(); started.value = false; paused.value = false;
+    // Starting fresh replaces any paused static snapshot from an earlier run.
+    if (saved?.paused && !saved.templates.some(question => question.type === 'parameterized')) {
+      try { localStorage.removeItem(storageKey); saved = null; resumable.value = false; }
+      catch { storageMessage.value = 'Previous paused session could not be cleared.'; }
+    }
     responses.value = {}; checked.value = new Set(); revealed.value = new Set(); hints.value = new Set(); attempts.value = {};
     feedbackResponses.value = {};
     studyChecks.value = 0; studyCorrectChecks.value = 0;

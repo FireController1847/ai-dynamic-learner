@@ -90,3 +90,6 @@ Uploaded solver definitions live inside their question's `rules.solver.package`;
 
 
 Study question selection: `session-settings.ts` uses contiguous-section sampling when Study's configured question limit is smaller than the authored set, one draw from each section before applying requested display order. `session-state.ts` generates the sample only on Start; generated question templates remain stable while navigating. In revisitable one-at-a-time Quiz, `knowledge-session.ts` clears finalized status and prior feedback upon answer revision so checking and per-question score state remain coherent.
+
+
+`parameterized-session.ts` is also Review's validated, bounded browser-local session persistence layer. Explicit Study and untimed Quiz pauses serialize the existing session fields, including static-only question sets, using `paused: true`; the mode picker only advertises snapshots with this flag. `knowledge-set.ts` routes the paused mode directly back to the saved effective settings, and `knowledge-session.ts` resumes rather than rebuilding the randomized session. Ordinary sessions cease being marked paused on resume; automatic generated-session interruption recovery remains separate.

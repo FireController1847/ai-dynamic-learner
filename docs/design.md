@@ -74,3 +74,8 @@ Review Study displays all questions in one vertical list by default; each card s
 
 
 Study respects the knowledge set's optional shared question limit. When available questions exceed that limit, each Study session divides the authored sequence into that many contiguous, nearly equal sections and randomly selects one question per section. In-order, reverse-order, and shuffled presentation apply **after** selection. Revisited, finalized one-at-a-time Quiz answers can be edited if the creator permits backward navigation; editing clears prior feedback and restarts that question's attempt window, requiring a new Check answer before moving forward. The same ability is not added to forward-only Quiz or scrolling Quiz layouts.
+
+
+## Review pause and resume
+
+Question limits are creator-only across Study, Quiz, and Test. The Quiz Customize Settings flow never shows or changes that shared limit. An active Study or untimed Quiz presents **Pause Studying** / **Pause Quiz** immediately to the left of **End studying** / **End quiz** in either question layout. Pausing saves the current question order and session progress to this browser before returning to the Review mode picker, whose corresponding card becomes **Resume Study** or **Resume Quiz**. Resume skips setup and restores the saved state. Test stays end-only, with no Pause option. A failed save keeps the session open and displays the error; End discards saved state.
