@@ -18,7 +18,7 @@ export const WordSearchLibrary = defineComponent({
     selectedId: { type: String as PropType<string | null>, default: null },
     collapsed: Boolean,
   },
-  emits: { 'select': (_id: string | null) => true, 'open-item': () => true, 'toggle-library': () => true, 'new-word-search': (_target: { parentId: string | null; parentName: string }) => true },
+  emits: { 'select': (_id: string | null) => true, 'open-item': () => true, 'toggle-library': () => true, 'new-word-search': (_target: { parentId: string | null; parentName: string }) => true, 'open-ai': (_target: { parentId: string | null; parentName: string }) => true },
   setup(props, { emit, expose, slots }) {
     const expanded = ref(new Set<string>());
     const editingId = ref<string | null>(null);
@@ -110,6 +110,12 @@ export const WordSearchLibrary = defineComponent({
       const target = chosenDestination();
       emit('new-word-search', target);
       announcement.value = 'Opened new word search setup for ' + target.parentName + '.';
+    }
+
+    function requestAiSetup() {
+      const target = chosenDestination();
+      emit('open-ai', target);
+      announcement.value = 'Opened word search AI creation for ' + target.parentName + '.';
     }
 
     function toggle(id: string) {
@@ -304,6 +310,10 @@ export const WordSearchLibrary = defineComponent({
       h('div', { class: 'word-search-library-toolbar' }, [
         h('h3', 'Library'),
         h('div', { class: 'word-search-library-actions' }, [
+          h('button', {
+            type: 'button', class: 'icon-button', title: 'Create word search with AI',
+            'aria-label': 'Create word search with AI', onClick: requestAiSetup,
+          }, [h(Icon, { name: 'ai' })]),
           h('button', {
             ref: createGroupButton,
             type: 'button', class: 'icon-button', title: 'New group',

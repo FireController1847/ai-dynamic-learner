@@ -1,0 +1,18 @@
+.review-ai-settings { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px; }
+.review-ai-settings label { display:grid;gap:6px;min-width:0; }
+.review-ai-settings input,.review-ai-settings select { width:100%;min-width:0; }
+.review-ai-scope { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px; }
+.review-ai-scope button { display:grid;gap:8px;padding:24px;text-align:left;white-space:normal; }
+.review-ai-scope span { color:var(--text-secondary); }
+.review-ai-mix { display:grid;gap:12px;margin:0;padding:16px;border:1px solid var(--border-color);border-radius:var(--radius-dialog); }
+.review-ai-mix legend { padding-inline:6px;font-weight:600; }
+.review-ai-weight { display:grid;grid-template-columns:minmax(0,1fr) 80px auto 72px;gap:8px;align-items:center; }
+.review-ai-weight input { width:100%;min-width:0; }
+.review-ai-preview { display:grid;gap:12px;max-height:420px;overflow:auto;margin:0;padding:4px 12px 4px 28px; }
+.review-ai-preview>li { padding-block:8px;border-bottom:1px solid var(--border-color);overflow-wrap:anywhere; }
+.review-ai-preview strong,.review-ai-preview>li>.study-ai-muted { display:block;white-space:pre-wrap; }
+.review-ai-preview summary { cursor:pointer;color:var(--brand-text); }
+.review-ai-preview details { margin-top:8px; }
+.review-ai-workspace button.card-primary-button { justify-self:start; }
+@media(max-width:600px) { .review-ai-scope,.review-ai-settings { grid-template-columns:1fr; } .review-ai-weight { grid-template-columns:minmax(0,1fr) 64px auto; } .review-ai-weight>.study-ai-muted { grid-column:1/-1; } }
+.knowledge-check-library-actions { flex-wrap:wrap;justify-content:flex-end; }
