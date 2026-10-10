@@ -7,8 +7,8 @@ import type { AiCardCategories, AiCardScope } from '../../core/ai-study-categori
 import { inputValue } from '../../core/dom.ts';
 import { parseFillBlankTemplate } from '../../core/fill-blank.ts';
 import { parseReviewAiImport, reviewAiPrompt, type ReviewAiImport, type ReviewAiPreferences } from './ai-import-format.ts';
-import { AI_QUESTION_TYPES, allocateQuestions, DEFAULT_AI_WEIGHTS, questionMixProblem, questionTypeLabel, rebalanceQuestionWeights } from './ai-question-mix.ts';
-import { MAX_QUESTIONS, questionDisplayPrompt, type Question } from './question-model.ts';
+import { AI_QUESTION_TYPES, allocateQuestions, DEFAULT_AI_WEIGHTS, equalizeQuestionWeights, normalizeQuestionWeights, questionMixProblem, questionTypeLabel, rebalanceQuestionWeights, type QuestionWeights } from './ai-question-mix.ts';
+import { MAX_QUESTIONS, questionDisplayPrompt, type Question, type QuestionType } from './question-model.ts';
 
 export const ReviewAiCreation = defineComponent({
   name: 'ReviewAiCreation',
@@ -24,11 +24,39 @@ export const ReviewAiCreation = defineComponent({
     const candidate = ref<ReviewAiImport | null>(null);
     const backward = ref(false);
     const heading = ref<HTMLElement | null>(null);
+    const editingWeight = ref<QuestionType | null>(null);
+    const weightText = ref('');
+    const weightNotice = ref('');
+    const editingMix = ref(false);
+    const relativeTexts = ref<Record<QuestionType, string>>(Object.fromEntries(AI_QUESTION_TYPES.map(type => [type, '0'])) as Record<QuestionType, string>);
+    const normalizedMix = computed(() => normalizeQuestionWeights(Object.fromEntries(AI_QUESTION_TYPES.map(type =>
+      [type, relativeTexts.value[type].trim() ? Number(relativeTexts.value[type]) : 0])) as QuestionWeights));
     const mixProblem = computed(() => questionMixProblem(preferences.value.weights, preferences.value.count));
     const counts = computed(() => mixProblem.value ? null : allocateQuestions(preferences.value.weights, preferences.value.count));
+    const displayCounts = computed(() => editingMix.value
+      ? normalizedMix.value && !questionMixProblem(normalizedMix.value, preferences.value.count)
+        ? allocateQuestions(normalizedMix.value, preferences.value.count) : null
+      : counts.value);
     const total = computed(() => AI_QUESTION_TYPES.reduce((sum, type) => sum + preferences.value.weights[type], 0));
     const prompt = computed(() => mixProblem.value ? '' : reviewAiPrompt(preferences.value, scope.value));
     onMounted(() => heading.value?.focus());
+    function commitWeight(type: QuestionType, input?: HTMLInputElement) {
+      if (editingWeight.value !== type) return;
+      const requested = weightText.value.trim() ? Number(weightText.value) : Number.NaN;
+      const previous = preferences.value.weights[type];
+      const next = rebalanceQuestionWeights(preferences.value.weights, type, requested);
+      weightNotice.value = previous === 100 && requested < 100 && next[type] === 100
+        ? 'Enable another type before reducing the only enabled type. The active mix stays at 100%.' : '';
+      preferences.value.weights = next;
+      editingWeight.value = null;
+      if (input) input.value = String(next[type]);
+    }
+    function editWholeMix() {
+      if (editingWeight.value) commitWeight(editingWeight.value);
+      relativeTexts.value = Object.fromEntries(AI_QUESTION_TYPES.map(type => [type, String(preferences.value.weights[type])])) as Record<QuestionType, string>;
+      weightNotice.value = '';
+      editingMix.value = true;
+    }
     function go(next: typeof stage.value, back = false) { backward.value = back; stage.value = next; }
     function back() {
       candidate.value = null;
@@ -85,24 +113,50 @@ export const ReviewAiCreation = defineComponent({
             } }, [h('option', { value: 'essentials' }, 'Essentials only'), h('option', { value: 'balanced' }, 'Balanced'), h('option', { value: 'comprehensive' }, 'Comprehensive')])]),
           ]),
           h('fieldset', { class: 'review-ai-mix' }, [
-            h('legend', 'Question type percentages'),
+            h('legend', editingMix.value ? 'Set the whole mix using relative weights' : 'Question type percentages'),
             ...AI_QUESTION_TYPES.map(type => h('label', { class: 'review-ai-weight', key: type }, [
               h('span', questionTypeLabel(type)),
-              h('input', { type: 'number', min: 0, max: 100, step: 1, value: preferences.value.weights[type], 'aria-label': `${questionTypeLabel(type)} percentage`,
+              h('input', { type: 'number', min: 0, max: 100, step: 1,
+                value: editingMix.value ? relativeTexts.value[type] : editingWeight.value === type ? weightText.value : preferences.value.weights[type],
+                'aria-label': `${questionTypeLabel(type)} ${editingMix.value ? 'relative weight' : 'percentage'}`,
+                onFocus: () => {
+                  if (!editingMix.value) { editingWeight.value = type; weightText.value = String(preferences.value.weights[type]); }
+                },
                 onInput: (event: Event) => {
-                  const text = inputValue(event).trim();
-                  preferences.value.weights = rebalanceQuestionWeights(preferences.value.weights, type, text ? Number(text) : Number.NaN);
-                  // Restore empty/invalid/clamped input even when its value didn't change.
-                  if (event.target instanceof HTMLInputElement) event.target.value = String(preferences.value.weights[type]);
-                } }),
-              h('span', '%'), h('span', { class: 'study-ai-muted' }, counts.value ? `${counts.value[type]} items` : '—'),
+                  if (editingMix.value) relativeTexts.value[type] = inputValue(event);
+                  else { editingWeight.value = type; weightText.value = inputValue(event); }
+                },
+                onBlur: (event: FocusEvent) => {
+                  if (!editingMix.value) commitWeight(type, event.target instanceof HTMLInputElement ? event.target : undefined);
+                },
+                onKeydown: (event: KeyboardEvent) => {
+                  if (editingMix.value || event.key !== 'Enter') return;
+                  event.preventDefault();
+                  commitWeight(type, event.target instanceof HTMLInputElement ? event.target : undefined);
+                },
+              }),
+              h('span', editingMix.value ? normalizedMix.value ? `→ ${normalizedMix.value[type]}%` : '—' : '%'),
+              h('span', { class: 'study-ai-muted' }, displayCounts.value ? `${displayCounts.value[type]} items` : '—'),
             ])),
           ]),
-          h('p', { role: 'status', class: mixProblem.value ? 'study-ai-error' : 'study-ai-muted' }, `Total: ${total.value}%. ${mixProblem.value || 'Changes are balanced evenly across the other types. Types at 0% are excluded.'}`),
+          h('p', { role: 'status', class: mixProblem.value ? 'study-ai-error' : 'study-ai-muted' }, `Active mix: ${total.value}%. ${mixProblem.value || (editingMix.value
+            ? 'Edit all values freely, then apply the previewed percentages together. Zero stays excluded.'
+            : 'Type a percentage, then press Enter or leave the field to balance the other enabled types. Zero stays excluded.')}`),
+          editingMix.value ? h('p', { class: 'study-ai-muted' }, 'Relative weights need not total 100: for example, 2 / 1 / 1 becomes 50% / 25% / 25%. Blank or 0 excludes a type. Whole-number rounding is shown beside each field.') : null,
+          weightNotice.value ? h('p', { class: 'study-ai-muted', role: 'status' }, weightNotice.value) : null,
           h('p', { class: 'study-ai-muted' }, 'Statements are not scored. You can still import an Index Cards set using the Library’s existing Import knowledge set action.'),
-          h('div', { class: 'study-ai-actions' }, [
+          h('div', { class: 'study-ai-actions' }, editingMix.value ? [
+            h('button', { type: 'button', class: 'quiet-button', onClick: () => { editingMix.value = false; } }, 'Cancel mix edits'),
+            h('button', { type: 'button', class: 'card-primary-button', disabled: !normalizedMix.value,
+              onClick: () => { if (normalizedMix.value) { preferences.value.weights = { ...normalizedMix.value }; editingMix.value = false; } } }, 'Apply mix'),
+          ] : [
+            h('button', { type: 'button', class: 'quiet-button', onClick: () => { preferences.value.weights = equalizeQuestionWeights(preferences.value.weights); weightNotice.value = ''; } }, 'Equalize enabled types'),
+            h('button', { type: 'button', class: 'quiet-button', onClick: editWholeMix }, 'Edit whole mix'),
             h('button', { type: 'button', class: 'quiet-button', onClick: () => { preferences.value.weights = { ...DEFAULT_AI_WEIGHTS }; } }, 'Reset percentages'),
-            h('button', { type: 'button', class: 'card-primary-button', disabled: Boolean(mixProblem.value), onClick: () => go('generate') }, 'Generate prompt'),
+            h('button', { type: 'button', class: 'card-primary-button', disabled: Boolean(mixProblem.value), onClick: () => {
+              if (editingWeight.value) commitWeight(editingWeight.value);
+              if (!mixProblem.value) go('generate');
+            } }, 'Generate prompt'),
           ]),
         ] : h(AiPromptExchange, {
           idPrefix: 'review-ai', label: 'Review', prompt: prompt.value, json: json.value, problem: problem.value,

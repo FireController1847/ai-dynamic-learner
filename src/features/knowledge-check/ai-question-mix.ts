@@ -12,12 +12,14 @@ export function rebalanceQuestionWeights(weights: QuestionWeights, edited: Quest
   const valid = AI_QUESTION_TYPES.every(type => Number.isInteger(weights[type]) && weights[type] >= 0 && weights[type] <= 100) &&
     AI_QUESTION_TYPES.reduce((sum, type) => sum + weights[type], 0) === 100;
   const next = { ...(valid ? weights : DEFAULT_AI_WEIGHTS) };
-  const value = Number.isFinite(requested) ? Math.max(0, Math.min(100, Math.round(requested))) : next[edited];
+  const enabledOthers = AI_QUESTION_TYPES.filter(type => type !== edited && next[type] > 0);
+  const value = enabledOthers.length === 0 ? 100 :
+    Number.isFinite(requested) ? Math.max(0, Math.min(100, Math.round(requested))) : next[edited];
   const difference = value - next[edited];
   next[edited] = value;
   let remaining = Math.abs(difference);
   while (remaining > 0) {
-    const available = AI_QUESTION_TYPES.filter(type => type !== edited &&
+    const available = enabledOthers.filter(type =>
       (difference > 0 ? next[type] > 0 : next[type] < 100));
     const share = Math.max(1, Math.floor(remaining / available.length));
     for (const type of available) {
@@ -27,6 +29,27 @@ export function rebalanceQuestionWeights(weights: QuestionWeights, edited: Quest
     }
   }
   return next;
+}
+
+/** Turn user-entered relative weights into an exact, whole-number percentage mix. */
+export function normalizeQuestionWeights(weights: QuestionWeights): QuestionWeights | null {
+  if (AI_QUESTION_TYPES.some(type => !Number.isInteger(weights[type]) || weights[type] < 0 || weights[type] > 100)) return null;
+  const total = AI_QUESTION_TYPES.reduce((sum, type) => sum + weights[type], 0);
+  if (!total) return null;
+  const result = { ...weights };
+  const remainders = AI_QUESTION_TYPES.map((type, index) => {
+    const exact = weights[type] * 100 / total;
+    result[type] = Math.floor(exact);
+    return { type, index, remainder: exact - result[type] };
+  }).filter(entry => weights[entry.type] > 0).sort((a, b) => b.remainder - a.remainder || a.index - b.index);
+  const remaining = 100 - AI_QUESTION_TYPES.reduce((sum, type) => sum + result[type], 0);
+  for (const entry of remainders.slice(0, remaining)) result[entry.type] += 1;
+  return result;
+}
+
+export function equalizeQuestionWeights(weights: QuestionWeights): QuestionWeights {
+  return normalizeQuestionWeights(Object.fromEntries(AI_QUESTION_TYPES.map(type => [type, weights[type] > 0 ? 1 : 0])) as QuestionWeights)
+    ?? { ...DEFAULT_AI_WEIGHTS };
 }
 
 export function questionMixProblem(weights: QuestionWeights, count: number): string {
