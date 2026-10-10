@@ -20,6 +20,8 @@ export interface Question {
   explanation: string;
   context?: string;
   choices: string[];
+  /** When present, Multiple Choice uses checkboxes; legacy single-answer questions omit this. */
+  correctAnswers?: string[];
   matches?: DropdownMatch[];
   parameters?: Parameterization;
   generated?: GeneratedVariant;
@@ -48,6 +50,7 @@ export function createQuestion(type: QuestionType = 'multiple-choice'): Question
 
 export function cloneQuestion(question: Question): Question {
   return { ...question, choices: [...question.choices],
+    ...(question.correctAnswers !== undefined ? { correctAnswers: [...question.correctAnswers] } : {}),
     ...(question.parameters ? { parameters: JSON.parse(JSON.stringify(question.parameters)) as Parameterization } : {}),
     ...(question.matches ? { matches: question.matches.map(row => ({ ...row })) } : {}) };
 }
@@ -58,16 +61,21 @@ export function questionReady(question: Question): boolean {
   if (question.type === 'parameterized') return question.generated ? true : !parameterizedProblem(question);
   if (question.type === 'dropdown') return !dropdownProblem(question.matches ?? [], question.choices);
   if (question.type === 'fill-in-the-blanks') return parseFillBlankTemplate(question.prompt).answers.length > 0;
-  if (!question.answer.trim()) return false;
-  if (question.type !== 'multiple-choice') return true;
-  const choices = question.choices.map((choice) => choice.trim()).filter(Boolean);
-  return choices.length >= 2 && choices.every(Boolean) && new Set(choices).size === choices.length &&
-    choices.includes(question.answer.trim());
+  if (question.type !== 'multiple-choice') return Boolean(question.answer.trim());
+  const choices = question.choices.map(choice => choice.trim()).filter(Boolean);
+  if (choices.length < 2 || new Set(choices).size !== choices.length) return false;
+  if (question.correctAnswers !== undefined) {
+    const correct = question.correctAnswers.map(answer => answer.trim());
+    return correct.length > 0 && new Set(correct).size === correct.length &&
+      correct.every(answer => choices.includes(answer)) && !question.answer.trim();
+  }
+  return choices.includes(question.answer.trim());
 }
 
 export function questionHasContent(question: Question): boolean {
   return Boolean(question.prompt.trim() || question.explanation.trim() || question.choices.some(choice => choice.trim()) ||
-    question.answer.trim() || question.context?.trim() || question.matches?.some(row => row.label.trim() || row.answer.trim()));
+    question.answer.trim() || question.correctAnswers?.some(answer => answer.trim()) ||
+    question.context?.trim() || question.matches?.some(row => row.label.trim() || row.answer.trim()));
 }
 
 export function questionProblem(question: Question): string {
@@ -78,8 +86,14 @@ export function questionProblem(question: Question): string {
   if (question.type === 'fill-in-the-blanks') {
     return parseFillBlankTemplate(question.prompt).answers.length ? '' : 'Create at least one blank in the question.';
   }
-  if (!question.answer.trim()) return question.type === 'multiple-choice' ? 'Select a correct answer.' : 'Enter the correct answer.';
-  if (!questionReady(question)) return 'Add at least two distinct answer choices and select one as correct.';
+  if (question.type === 'multiple-choice') {
+    if (question.correctAnswers !== undefined && !question.correctAnswers.length) return 'Select at least one correct answer.';
+    if (question.correctAnswers === undefined && !question.answer.trim()) return 'Select a correct answer.';
+    if (!questionReady(question)) return 'Add at least two distinct answer choices and mark the correct choices.';
+    return '';
+  }
+  if (!question.answer.trim()) return 'Enter the correct answer.';
+  if (!questionReady(question)) return 'Complete the question and its correct answer.';
   return '';
 }
 
@@ -89,7 +103,13 @@ export function questionsForSave(questions: Question[]): Question[] {
     const problem = questionProblem(question);
     if (problem) throw new Error(`Question ${index + 1}: ${problem}`);
   }
-  return entered.map(question => ({ ...cloneQuestion(question), choices: question.choices.filter(choice => choice.trim()) }));
+  return entered.map(question => ({
+    ...cloneQuestion(question),
+    choices: question.choices.map(choice => choice.trim()).filter(Boolean),
+    ...(question.correctAnswers !== undefined
+      ? { correctAnswers: question.correctAnswers.map(answer => answer.trim()) }
+      : {}),
+  }));
 }
 
 export function questionDisplayPrompt(question: Question): string {
@@ -108,6 +128,9 @@ export function questionResponseAnswered(question: Question, response: QuestionR
   if (question.type === 'fill-in-the-blanks') {
     const answers = parseFillBlankTemplate(question.prompt).answers;
     return answers.length > 0 && Array.isArray(response) && answers.every((_answer, index) => Boolean(response[index]?.trim()));
+  }
+  if (question.type === 'multiple-choice' && question.correctAnswers !== undefined) {
+    return Array.isArray(response) && response.length > 0;
   }
   return typeof response === 'string' && Boolean(response.trim());
 }
@@ -146,6 +169,12 @@ export function answerCorrect(
     if (!template.answers.length || !Array.isArray(response)) return false;
     return fillBlankCorrectness(question, response, strictness).every(Boolean);
   }
+  if (question.type === 'multiple-choice' && question.correctAnswers !== undefined) {
+    if (!Array.isArray(response) || !question.correctAnswers.length) return false;
+    const selected = new Set(response);
+    return selected.size === question.correctAnswers.length &&
+      question.correctAnswers.every(answer => selected.has(answer));
+  }
   if (typeof response !== 'string') return false;
   if (question.type !== 'short-answer') return question.answer.trim() === response.trim();
   return isAnswerCorrect(question.answer, response, { strictness });
@@ -157,11 +186,17 @@ export function validateQuestions(value: unknown): asserts value is Question[] {
   for (const question of value as unknown[]) {
     if (!isRecord(question) || !isValidId(question.id) || ids.has(question.id) ||
         !QUESTION_TYPES.some((type) => type.id === question.type) ||
-        Object.keys(question).some((key) => !['id', 'type', 'prompt', 'answer', 'explanation', 'choices', 'matches', 'context', 'parameters'].includes(key)) ||
+        Object.keys(question).some((key) => !['id', 'type', 'prompt', 'answer', 'explanation', 'choices', 'correctAnswers', 'matches', 'context', 'parameters'].includes(key)) ||
         (Object.hasOwn(question, 'context') && (typeof question.context !== 'string' || question.context.length > MAX_QUESTION_CONTEXT)) ||
         [question.prompt, question.answer, question.explanation].some((text) => typeof text !== 'string' || text.length > MAX_TEXT) ||
         !Array.isArray(question.choices) || question.choices.length > (question.type === 'dropdown' ? MAX_DROPDOWN_CHOICES : 8) ||
         question.choices.some((choice) => typeof choice !== 'string' || choice.length > MAX_TEXT) ||
+        (Object.hasOwn(question, 'correctAnswers') &&
+          (question.type !== 'multiple-choice' || !Array.isArray(question.correctAnswers) ||
+            question.correctAnswers.length < 1 || question.correctAnswers.length > 8 ||
+            question.correctAnswers.some(answer => typeof answer !== 'string' || !answer.trim() || answer.length > MAX_TEXT) ||
+            new Set(question.correctAnswers).size !== question.correctAnswers.length ||
+            question.answer !== '')) ||
         (question.type !== 'multiple-choice' && question.type !== 'dropdown' && question.choices.length !== 0) ||
         (question.type === 'true-false' && !['', 'True', 'False'].includes(String(question.answer))) ||
         ((question.type === 'fill-in-the-blanks' || question.type === 'statement' || question.type === 'dropdown' || question.type === 'parameterized') && question.answer !== '') ||

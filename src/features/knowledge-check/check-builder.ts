@@ -75,7 +75,7 @@ export const CheckBuilder = defineComponent({
       }
       const replacement = createQuestion(type as QuestionType);
       Object.assign(question, { type: replacement.type, answer: replacement.answer, choices: replacement.choices });
-      delete question.parameters; delete draftProblems.value[question.id];
+      delete question.parameters; delete question.correctAnswers; delete draftProblems.value[question.id];
       if (replacement.parameters) { question.parameters = replacement.parameters;
         if (!question.prompt.trim()) question.prompt = replacement.prompt; }
       delete question.matches;
@@ -146,16 +146,54 @@ export const CheckBuilder = defineComponent({
               onUploadSolver: (pkg: SolverPackage) => { if (!uploadedSolvers.value.some(entry => entry.id === pkg.id && entry.solverVersion === pkg.solverVersion)) uploadedSolvers.value.push(pkg); },
               onDraftProblem: (value: string) => { draftProblems.value[question.id] = value; } }) : question.type === 'statement' ? null : question.type === 'dropdown' ? h(DropdownEditor, { question }) : question.type === 'multiple-choice' ? h('fieldset', { class: 'knowledge-choice-editor' }, [
               h('legend', 'Answer choices'),
-              h('p', { class: 'knowledge-muted' }, 'Choose the correct answer.'),
+              h('label', { class: 'knowledge-option-toggle' }, [
+                h('input', {
+                  type: 'checkbox', checked: question.correctAnswers !== undefined,
+                  onChange: (event: Event) => {
+                    if ((event.target as HTMLInputElement).checked) {
+                      question.correctAnswers = question.answer.trim() ? [question.answer] : [];
+                      question.answer = '';
+                    } else {
+                      question.answer = question.correctAnswers?.[0] ?? '';
+                      delete question.correctAnswers;
+                    }
+                  },
+                }),
+                'Allow multiple correct answers',
+              ]),
+              h('p', { class: 'knowledge-muted' }, question.correctAnswers !== undefined
+                ? 'Check every correct choice. Learners must select all correct choices and no incorrect choices.'
+                : 'Choose the one correct answer.'),
               ...question.choices.map((choice, index) => h('div', { class: 'knowledge-choice-row', key: index }, [
-                h('input', { type: 'radio', name: `correct-${question.id}`, checked: Boolean(choice) && question.answer === choice,
-                  disabled: !choice.trim(), 'aria-label': `Choice ${index + 1} is correct`, onChange: () => { question.answer = choice; } }),
+                h('input', {
+                  type: question.correctAnswers !== undefined ? 'checkbox' : 'radio',
+                  name: `correct-${question.id}`,
+                  checked: Boolean(choice) && (question.correctAnswers !== undefined
+                    ? question.correctAnswers.includes(choice) : question.answer === choice),
+                  disabled: !choice.trim(), 'aria-label': `Choice ${index + 1} is correct`,
+                  onChange: (event: Event) => {
+                    if (question.correctAnswers !== undefined) {
+                      const selected = (event.target as HTMLInputElement).checked;
+                      question.correctAnswers = selected
+                        ? [...question.correctAnswers, choice]
+                        : question.correctAnswers.filter(answer => answer !== choice);
+                    } else question.answer = choice;
+                  },
+                }),
                 h('input', { value: choice, maxlength: MAX_TEXT, 'aria-label': `Choice ${index + 1}`,
-                  onInput: (event: Event) => { const next = inputValue(event); if (choice && question.answer === choice) question.answer = next;
-                    question.choices[index] = next; } }),
+                  onInput: (event: Event) => {
+                    const next = inputValue(event);
+                    if (choice && question.answer === choice) question.answer = next;
+                    if (question.correctAnswers !== undefined && question.correctAnswers.includes(choice)) {
+                      question.correctAnswers = question.correctAnswers.map(answer => answer === choice ? next : answer);
+                    }
+                    question.choices[index] = next;
+                  } }),
                 h('button', { type: 'button', class: 'icon-button delete-button', disabled: question.choices.length <= 2,
                   title: 'Remove choice', 'aria-label': `Remove choice ${index + 1}`, onClick: () => {
-                    if (question.answer === choice) question.answer = ''; question.choices.splice(index, 1);
+                    if (question.answer === choice) question.answer = '';
+                    if (question.correctAnswers !== undefined) question.correctAnswers = question.correctAnswers.filter(answer => answer !== choice);
+                    question.choices.splice(index, 1);
                   } }, [h(Icon, { name: 'trash' })]),
               ])),
               h('button', { type: 'button', class: 'quiet-button', disabled: question.choices.length >= 8,
