@@ -434,7 +434,7 @@ export const KnowledgeSession = defineComponent({
               type: 'button', class: 'card-primary-button',
               disabled: !canCheck, 'data-review-primary': '', onClick: () => check(index),
             }, 'Check answer') : null,
-          ]) : h('p', { class: 'knowledge-muted' }, 'Feedback is held until submission. You can change your answers.'),
+          ]) : null,
           study && scored ? h('div', { class: 'knowledge-study-tools' }, [
             question.explanation || question.generated?.trace.length ? h('button', { type: 'button', class: 'quiet-button', onClick: () => {
               if (hints.value.has(question.id)) hints.value.delete(question.id); else hints.value.add(question.id);
