@@ -1,3 +1,5 @@
+import { EntryStatistics } from '../../components/entry-statistics.ts';
+import { useStatisticsVisits } from '../../components/statistics-context.ts';
 import { hasPuzzle } from './library-model.ts';
 import type { CrosswordItem, LibraryItem, PuzzleTarget, Crossword as FeatureModel } from './library-model.ts';
 import type { Puzzle } from './puzzle-model.ts';
@@ -75,8 +77,10 @@ export const Crossword = defineComponent({
     });
 
     const selection = computed(() => findItem(props.model.items, selectedId.value));
+    useStatisticsVisits('crossword', () => selection.value?.item.id ?? null, () => setupTarget.value === null);
 
-    onDeactivated(() => { settingsOpen.value = false; });
+    onDeactivated(() => { settingsOpen.value = false;
+});
 
     function updateLibraryLayout(event: MediaQueryListEvent) {
       libraryOverlay.value = event.matches;
@@ -179,6 +183,7 @@ export const Crossword = defineComponent({
         open: item.kind === 'group',
       }, [
         h('summary', { class: 'organization-summary' }, 'Location and order'),
+        item.kind === 'group' ? h(EntryStatistics, { app: 'crossword', id: item.id }) : null,
         h('div', { class: 'crossword-location' }, [
           h('label', { for: 'crossword-parent' }, 'Move to group'),
           h('select', {
@@ -256,6 +261,7 @@ export const Crossword = defineComponent({
       }, [
         h('header', { class: 'crossword-item-heading' }, [
           h('h2', { ref: workspaceHeading, tabindex: -1 }, item.name),
+          h(EntryStatistics, { app: 'crossword', id: item.id }),
           h('p', 'Crossword'),
         ]),
         hasPuzzle(item)

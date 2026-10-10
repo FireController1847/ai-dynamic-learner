@@ -14,7 +14,7 @@ Use this as a starting-file index, not a feature specification. Follow imports o
 | Tips engine/UI | `packages/tips/` |
 | Shared buttons/dialogs | `src/styles/base.css`, `src/components/use-dialog.ts`, `popup-dialog.ts` |
 | Shared AI prompt/import tabs, handoff, and animation | `src/components/ai-prompt-exchange.ts`, `src/styles/ai-prompt-exchange.css` |
-| Shared AI category discovery/history | `src/components/ai-category-picker.ts`, `src/core/ai-study-categories.ts`, `ai-category-history.ts`, `ai-json.ts` |
+| Shared GFM rendering / typography | `src/components/markdown-renderer.ts`, `markdown-content.ts`, `src/styles/markdown-content.css`; Notebook keeps its heading/outline adapter |
 | Answer strictness control | `src/components/answer-strictness-field.ts` |
 | Delete confirmation | `src/components/delete-confirmation.ts`, `src/styles/delete-confirmation.css` |
 | Shared tree behavior | `src/core/tree.ts` plus the calling feature model |
@@ -23,6 +23,8 @@ Use this as a starting-file index, not a feature specification. Follow imports o
 | Fill-in-the-blanks parsing | `src/core/fill-blank.ts` |
 | Leave warnings | `src/core/leave-guards.ts` |
 | Workspace save/load/backups | `src/app/workspace.ts`, `workspace-format.ts`, `workspace-tools.ts` |
+| Active IndexedDB Data API | `src/core/data/indexeddb.ts` for browser schema/transactions/CAS; `src/app/data/data-api.ts` for typed repository operations; `library-commands.ts`, `entry-commands.ts`, `todo-commands.ts` for transactional CRUD; `workspace-mapping.ts` for v1 import/export and relationship checks; `workspace-observer.ts` for the temporary Vue mutation bridge; `workspace-live-merge.ts` for in-place cross-tab reconciliation; see `docs/data-api-design.md` and `docs/indexeddb-design.md` |
+| Workspace / library statistics | `src/core/statistics.ts`, `src/components/statistics-context.ts`, `entry-statistics.ts`, `global-statistics.ts`, `src/styles/statistics.css`; activity events live in their owning feature/session modules |
 | Backup reminders / study suppression | `src/app/backup-reminders.ts`, `backup-reminder-policy.ts`, `backup-reminder-ui.ts`, `src/core/study-activity.ts`, `src/components/use-study-session.ts` |
 | GitHub Pages / route output | `webpack.config.mts`, `build/site-config.mts`, `build/page-metadata.mts`, `.github/workflows/deploy-pages.yml` |
 | Calculator | `src/features/calculator/` |
@@ -36,8 +38,6 @@ Use this as a starting-file index, not a feature specification. Follow imports o
 | Todo task behavior | `task-editor.ts`, `task-model.ts`, `todo-list.css` |
 | Index Cards composition/library | `src/features/index-cards/index-cards.ts`, `directory-tree.ts`, `tree-model.ts` |
 | Flash Cards | `card-set.ts`, `card-paper.ts`, `card-model.ts` |
-| Index Cards AI category flow | `ai-category-step.ts` plus the shared AI category picker/history |
-| Index Cards AI/JSON card creation | `ai-import.ts`, `ai-import-format.ts`, `fill-blank-ai-format.ts`, `ai-import.css`, `set-builder.ts`, `index-cards.ts`, `directory-tree.ts` |
 | Fill in the Blanks | `fill-blank-set.ts`, `fill-blank-paper.ts`, `fill-blank-editor.ts`, `fill-blank-model.ts` |
 | Index Cards review | `review-setup.ts`, `review-result.ts`, `card-set.ts`, `fill-blank-set.ts` |
 | Index Cards list / panel sizing | `card-list.ts`, `card-list.css`, `index-cards.ts`, `index-cards.css` |
@@ -54,7 +54,8 @@ Use this as a starting-file index, not a feature specification. Follow imports o
 | Guide Map | `map-editor.ts`, `map-graph.ts`, `map-study.ts`, `map-presentation.ts`, `guide.css` |
 | Review library/model | `src/features/knowledge-check/knowledge-check.ts`, `library.ts`, `library-model.ts` |
 | Review authoring | `check-builder.ts`, `question-model.ts`, `fill-blank-editor.ts`, `set-options*.ts` |
+| Review Dropdown matching | `dropdown-model.ts`, `dropdown-editor.ts`, `question-model.ts`, `knowledge-session.ts`, `session-settings.ts` |
+| Review Markdown context | `context-editor.ts`, `question-model.ts`, `knowledge-session.ts`, shared Markdown components |
 | Review Study/Quiz/Test | `knowledge-set.ts`, `session-setup.ts`, `session-settings.ts`, `session-intro.ts`, `session-state.ts`, `knowledge-session.ts`, `review-motion.ts`, `review-motion.css` |
 | Review imports | `import-knowledge-set.ts`, `index-cards-import-picker.ts`, `fill-blank-import-resolution.ts`, `import-index-cards.ts` |
-| Review AI creation / question mix | `ai-creation.ts`, `ai-creation.css`, `ai-import-format.ts`, `ai-question-mix.ts`, `knowledge-check.ts`, `library.ts` |
 | Responsive/touch overrides | `src/styles/mobile.css` plus the owning feature stylesheet |

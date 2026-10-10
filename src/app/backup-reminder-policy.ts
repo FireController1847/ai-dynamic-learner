@@ -6,7 +6,9 @@ export interface BackupMetadata {
   version: 1;
   intervalDays: number | null;
   lastExportAt: number | null;
-  exportedFingerprint: string | null;
+  exportedFingerprint: string | null; // Legacy metadata: retained for backward compatibility.
+  exportedAuthoredRevision: number | null;
+  exportedWorkspaceId: string | null;
   firstUnbackedAt: number | null;
   unbackedImport: boolean;
   snoozedUntil: number | null;
@@ -14,7 +16,8 @@ export interface BackupMetadata {
 
 export function defaultBackupMetadata(): BackupMetadata {
   return {
-    version: 1, intervalDays: 3, lastExportAt: null, exportedFingerprint: null,
+    version: 1, intervalDays: 3, lastExportAt: null, exportedFingerprint: null, exportedAuthoredRevision: null,
+    exportedWorkspaceId: null,
     firstUnbackedAt: null, unbackedImport: false, snoozedUntil: null,
   };
 }
@@ -40,6 +43,12 @@ export function parseBackupMetadata(text: string | null): BackupMetadata | null 
       intervalDays: fields.intervalDays as number | null,
       lastExportAt: timestamp(fields.lastExportAt),
       exportedFingerprint: fields.exportedFingerprint as string | null,
+      exportedAuthoredRevision: typeof fields.exportedAuthoredRevision === 'number' &&
+        Number.isSafeInteger(fields.exportedAuthoredRevision) && fields.exportedAuthoredRevision >= 0
+        ? fields.exportedAuthoredRevision : null,
+      exportedWorkspaceId: typeof fields.exportedWorkspaceId === 'string' &&
+        fields.exportedWorkspaceId.length > 0 && fields.exportedWorkspaceId.length <= 128
+        ? fields.exportedWorkspaceId : null,
       firstUnbackedAt: timestamp(fields.firstUnbackedAt),
       unbackedImport: fields.unbackedImport,
       snoozedUntil: timestamp(fields.snoozedUntil),

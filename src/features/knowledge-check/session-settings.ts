@@ -1,7 +1,7 @@
 import type { AnswerStrictness } from '../../../packages/@dynamic-learner/answer-matching/src/index.ts';
 import type { CheckModeId } from './check-types.ts';
 import { defaultSetOptions, type QuestionOrder, type SetOptions } from './set-options.ts';
-import type { Question } from './question-model.ts';
+import { cloneQuestion, type Question } from './question-model.ts';
 
 export interface SessionSettings {
   order: QuestionOrder;
@@ -68,8 +68,8 @@ export function prepareSessionQuestions(source: readonly Question[], settings: S
   else if (settings.order === 'shuffle') questions = shuffled(questions);
   if (settings.questionLimit !== null) questions = questions.slice(0, settings.questionLimit);
   if (settings.shuffleChoices) {
-    questions = questions.map((question) => question.type === 'multiple-choice'
-      ? { ...question, choices: shuffled(question.choices) }
+    questions = questions.map((question) => question.type === 'multiple-choice' || question.type === 'dropdown'
+      ? { ...cloneQuestion(question), choices: shuffled(question.choices) }
       : question);
   }
   return questions;

@@ -31,6 +31,15 @@ export type MathPrintNode =
       contentEnd: number;
       complete: boolean;
       content: MathPrintNode[];
+    }
+  | {
+      kind: 'power';
+      start: number;
+      end: number;
+      contentStart: number;
+      contentEnd: number;
+      complete: boolean;
+      content: MathPrintNode[];
     };
 
 export interface MathPrintTextToken {
@@ -121,6 +130,86 @@ export function lastOperandStart(expression: string) {
   return index + 1;
 }
 
+
+
+function powerSpanAt(source: string, start: number, limit = source.length) {
+  if (source[start] !== '^') return null;
+  const exponentStart = start + 1;
+  if (exponentStart >= limit) {
+    return { start, end: limit, contentStart: limit, contentEnd: limit, complete: false };
+  }
+
+  if (source[exponentStart] === '(') {
+    let depth = 1;
+    for (let index = exponentStart + 1; index < limit; index += 1) {
+      if (source[index] === '(') depth += 1;
+      else if (source[index] === ')') {
+        depth -= 1;
+        if (depth === 0) {
+          return {
+            start,
+            end: index + 1,
+            contentStart: exponentStart + 1,
+            contentEnd: index,
+            complete: true,
+          };
+        }
+      }
+    }
+    return {
+      start,
+      end: limit,
+      contentStart: exponentStart + 1,
+      contentEnd: limit,
+      complete: false,
+    };
+  }
+
+  let index = exponentStart;
+  while (source[index] === '+' || source[index] === '-') index += 1;
+
+  if (/[\d.]/.test(source[index] ?? '')) {
+    while (/[\d.]/.test(source[index] ?? '')) index += 1;
+    if (source[index] === 'E') {
+      index += 1;
+      if (source[index] === '+' || source[index] === '-') index += 1;
+      while (/\d/.test(source[index] ?? '')) index += 1;
+    }
+  } else if (/[A-Za-z]/.test(source[index] ?? '')) {
+    while (/[A-Za-z]/.test(source[index] ?? '')) index += 1;
+    if (source[index] === '(') {
+      let depth = 1;
+      index += 1;
+      while (index < limit && depth > 0) {
+        if (source[index] === '(') depth += 1;
+        else if (source[index] === ')') depth -= 1;
+        index += 1;
+      }
+    }
+  } else if (source[index] === '(') {
+    let depth = 1;
+    index += 1;
+    while (index < limit && depth > 0) {
+      if (source[index] === '(') depth += 1;
+      else if (source[index] === ')') depth -= 1;
+      index += 1;
+    }
+  }
+
+  while (source[index] === '!' || source[index] === '%') index += 1;
+  if (source[index] === '^') {
+    const nested = powerSpanAt(source, index, limit);
+    if (nested) index = nested.end;
+  }
+
+  return {
+    start,
+    end: index,
+    contentStart: exponentStart,
+    contentEnd: index,
+    complete: index > exponentStart,
+  };
+}
 
 function sqrtSpanAt(source: string, start: number, limit = source.length) {
   if (!source.startsWith('sqrt(', start)) return null;
@@ -261,7 +350,7 @@ function collectCursorPositions(nodes: MathPrintNode[], positions: number[]) {
     }
 
     positions.push(node.start);
-    if (node.kind === 'sqrt') {
+    if (node.kind === 'sqrt' || node.kind === 'power') {
       positions.push(node.contentStart, node.contentEnd, node.end);
       collectCursorPositions(node.content, positions);
       continue;
@@ -272,6 +361,61 @@ function collectCursorPositions(nodes: MathPrintNode[], positions: number[]) {
     collectCursorPositions(node.denominator, positions);
     positions.push(node.denominatorStart, node.denominatorEnd, node.end);
   }
+}
+
+
+interface StructuredExit {
+  source: string;
+  cursor: number;
+}
+
+function collectStructuredExitNodes(
+  nodes: MathPrintNode[],
+  cursor: number,
+  matches: Array<Extract<MathPrintNode, { kind: 'power' | 'sqrt' }>>,
+) {
+  for (const node of nodes) {
+    if (node.kind === 'text' || node.kind === 'fraction') {
+      if (node.kind === 'fraction') {
+        collectStructuredExitNodes(node.numerator, cursor, matches);
+        collectStructuredExitNodes(node.denominator, cursor, matches);
+      }
+      continue;
+    }
+
+    if (cursor === node.contentEnd && node.contentStart < node.contentEnd) matches.push(node);
+    collectStructuredExitNodes(node.content, cursor, matches);
+  }
+}
+
+export function exitMathPrintStructure(source: string, cursor: number): StructuredExit | null {
+  const matches: Array<Extract<MathPrintNode, { kind: 'power' | 'sqrt' }>> = [];
+  collectStructuredExitNodes(parseMathPrint(source), cursor, matches);
+  const node = matches.sort((left, right) =>
+    (left.end - left.start) - (right.end - right.start))[0];
+
+  if (!node) return null;
+
+  if (node.end > node.contentEnd) {
+    return { source, cursor: node.end };
+  }
+
+  if (node.kind === 'sqrt') {
+    const next = source.slice(0, node.end) + ')' + source.slice(node.end);
+    return { source: next, cursor: node.end + 1 };
+  }
+
+  if (source[node.start + 1] === '(') {
+    const next = source.slice(0, node.end) + ')' + source.slice(node.end);
+    return { source: next, cursor: node.end + 1 };
+  }
+
+  const next = source.slice(0, node.contentStart)
+    + '('
+    + source.slice(node.contentStart, node.contentEnd)
+    + ')'
+    + source.slice(node.contentEnd);
+  return { source: next, cursor: node.contentEnd + 2 };
 }
 
 export function mathPrintCursorPositions(source: string) {
@@ -319,7 +463,7 @@ function collectEditAtoms(nodes: MathPrintNode[], atoms: EditAtom[]) {
     }
 
     atoms.push({ start: node.start, end: node.end, replaceable: true });
-    if (node.kind === 'sqrt') {
+    if (node.kind === 'sqrt' || node.kind === 'power') {
       collectEditAtoms(node.content, atoms);
       continue;
     }
@@ -430,6 +574,27 @@ function parseRange(source: string, start: number, end: number): MathPrintNode[]
         index = span.end;
         textStart = index;
         if (!span.complete) break;
+        continue;
+      }
+    }
+
+    if (source[index] === '^') {
+      const span = powerSpanAt(source, index, end);
+      if (span) {
+        if (textStart < index) {
+          nodes.push({ kind: 'text', text: source.slice(textStart, index), start: textStart, end: index });
+        }
+        nodes.push({
+          kind: 'power',
+          start: span.start,
+          end: span.end,
+          contentStart: span.contentStart,
+          contentEnd: span.contentEnd,
+          complete: span.complete,
+          content: parseRange(source, span.contentStart, span.contentEnd),
+        });
+        index = Math.max(span.end, index + 1);
+        textStart = index;
         continue;
       }
     }

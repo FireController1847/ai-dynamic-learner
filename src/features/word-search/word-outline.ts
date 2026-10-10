@@ -20,17 +20,17 @@ export function wordOutline(start: number, end: number, size: number, key: strin
   const dy = (point?.y ?? Math.floor(end / size) + 0.5) - y;
   const angle = Math.atan2(dy, dx) * 180 / Math.PI;
   const halfLabel = word.length * 0.065;
-  const diagonal = dx !== 0 && dy !== 0;
+  const sideLabel = dy !== 0;
   const length = Math.hypot(dx, dy);
   const midpointX = x + dx / 2;
   const midpointY = y + dy / 2;
   const normalX = length ? -dy / length : 0;
   const normalY = length ? dx / length : 0;
 
-  const labelX = diagonal
+  const labelX = sideLabel
     ? midpointX + normalX * 0.62
     : Math.max(halfLabel + 0.05, Math.min(size - halfLabel - 0.05, midpointX));
-  const labelY = diagonal
+  const labelY = sideLabel
     ? midpointY + normalY * 0.62
     : Math.min(size + 0.06, Math.max(y, y + dy) + 0.6);
 
@@ -52,7 +52,7 @@ export function wordOutline(start: number, end: number, size: number, key: strin
         x: 0,
         y: 0,
         'text-anchor': 'middle',
-        'dominant-baseline': diagonal ? 'middle' : null,
+        'dominant-baseline': sideLabel ? 'middle' : null,
         direction: 'ltr',
         'unicode-bidi': 'isolate',
       }, word),

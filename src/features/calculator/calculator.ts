@@ -1,3 +1,4 @@
+import { useStatistics, useStatisticsVisits } from '../../components/statistics-context.ts';
 import { Icon } from '../../components/icon.ts';
 import { clearPreference, readNumberPreference, writeNumberPreference } from '../../core/ui-preferences.ts';
 import {
@@ -8,7 +9,7 @@ import { CalculatorModel, type HistoryEntry, type Operator } from './calculator-
 import type { DecimalPlaces, FractionParts } from './calculator-format.ts';
 
 import {
-  defineComponent, h, nextTick, onActivated, onBeforeUnmount, onDeactivated, reactive, ref,
+  defineComponent, h, nextTick, onActivated, onBeforeUnmount, onDeactivated, reactive, ref, watch,
   type VNode,
 } from 'vue';
 
@@ -24,8 +25,12 @@ export const Calculator = defineComponent({
   props: { title: { type: String, required: true } },
   setup(props) {
     const calculator = reactive(new CalculatorModel(savedDecimalPlaces()));
+    const statistics = useStatistics();
+    useStatisticsVisits('calculator', () => null, () => true, 'views', () => 'calculator');
+    watch(() => calculator.history[0], entry => { if (entry) statistics?.record('calculator', null, 'calculations'); });
     const scientificOpen = ref(false);
     const settingsOpen = ref(false);
+    const clearHistoryArmed = ref(false);
     const settingsButton = ref<HTMLButtonElement | null>(null);
     let listening = false;
 
@@ -36,6 +41,8 @@ export const Calculator = defineComponent({
       const button = target?.closest('button');
       if (button && !button.closest('.calculator-page')) return;
       if (button && (event.key === 'Enter' || event.key === ' ')) return;
+
+      clearHistoryArmed.value = false;
 
       if (/^\d$/.test(event.key)) calculator.inputDigit(event.key);
       else if (event.key === '.') calculator.inputDecimal();
@@ -80,6 +87,17 @@ export const Calculator = defineComponent({
       settingsOpen.value = false;
       await nextTick();
       settingsButton.value?.focus();
+    }
+
+    function pressClear() {
+      if (clearHistoryArmed.value) {
+        calculator.clearHistory();
+        clearHistoryArmed.value = false;
+        return;
+      }
+
+      calculator.clearAll();
+      clearHistoryArmed.value = true;
     }
 
     onActivated(startListening);
@@ -127,6 +145,16 @@ export const Calculator = defineComponent({
         h('span', { class: 'calculator-fraction-template-box' }),
       ]),
     ]);
+
+    const clearKey = () => h('button', {
+      type: 'button',
+      class: ['calculator-key', 'calculator-key--function', 'calculator-clear-key'],
+      'aria-label': clearHistoryArmed.value ? 'Clear history' : 'Clear calculator',
+      title: clearHistoryArmed.value
+        ? 'CL: Clear calculation history.'
+        : 'C: Clear the current entry. Press C twice in a row to clear history.',
+      onClick: pressClear,
+    }, clearHistoryArmed.value ? 'CL' : 'C');
 
     const stackedFraction = (fraction: FractionParts, compact = false) => h('span', {
       class: ['calculator-stacked-fraction', { 'is-compact': compact }],
@@ -203,15 +231,27 @@ export const Calculator = defineComponent({
                 calculator.setCursor(node.contentStart);
               },
             }, [
-              h('span', {
+              h('svg', {
                 class: 'calculator-radical-symbol',
+                viewBox: '0 0 12 14',
+                preserveAspectRatio: 'none',
                 'aria-hidden': 'true',
                 onPointerdown: cursor === null ? undefined : (event: PointerEvent) => {
                   event.preventDefault();
                   event.stopPropagation();
                   calculator.setCursor(calculator.overwriteMode ? node.start : node.contentStart);
                 },
-              }, '√'),
+              }, [
+                h('path', {
+                  d: 'M0.75 7.4 L3 7.4 L5.2 12.9 L11.85 0.7',
+                  fill: 'none',
+                  stroke: 'currentColor',
+                  'stroke-width': '1.45',
+                  'stroke-linecap': 'square',
+                  'stroke-linejoin': 'miter',
+                  'vector-effect': 'non-scaling-stroke',
+                }),
+              ]),
               h('span', {
                 class: ['calculator-radical-content', { 'is-active': contentActive }],
                 onPointerdown: cursor === null ? undefined : (event: PointerEvent) => {
@@ -224,6 +264,49 @@ export const Calculator = defineComponent({
                 ? [h('span', { class: 'calculator-entry-caret', 'aria-hidden': 'true' })]
                 : [h('span', { class: 'calculator-mathprint-placeholder' }, '□')]),
             ]),
+            cursor === node.end && node.end !== node.contentEnd
+              ? h('span', { class: 'calculator-entry-caret', 'aria-hidden': 'true' })
+              : null,
+          ]);
+        }
+
+
+        if (node.kind === 'power') {
+          const contentActive = cursor !== null
+            && cursor >= node.contentStart && cursor <= node.contentEnd;
+          const content = renderMathNodes(node.content, contentActive ? cursor : null);
+
+          return h('span', {
+            class: ['calculator-mathprint-power-wrap', {
+              'is-overwrite-cursor': cursor === node.start && calculator.overwriteMode,
+            }],
+          }, [
+            cursor === node.start && !calculator.overwriteMode
+              ? h('span', { class: 'calculator-entry-caret', 'aria-hidden': 'true' })
+              : null,
+            h('span', {
+              class: ['calculator-mathprint-power', {
+                'is-active': contentActive,
+                'is-editable': cursor !== null,
+              }],
+              onPointerdown: cursor === null ? undefined : (event: PointerEvent) => {
+                event.preventDefault();
+                event.stopPropagation();
+                if (calculator.overwriteMode) {
+                  calculator.setCursor(node.contentStart);
+                  return;
+                }
+                const target = event.currentTarget as HTMLElement;
+                const bounds = target.getBoundingClientRect();
+                calculator.setCursor(
+                  event.clientX < bounds.left + bounds.width / 2
+                    ? node.contentStart
+                    : node.contentEnd,
+                );
+              },
+            }, content.length
+              ? content
+              : [h('span', { class: 'calculator-mathprint-placeholder' }, '□')]),
             cursor === node.end && node.end !== node.contentEnd
               ? h('span', { class: 'calculator-entry-caret', 'aria-hidden': 'true' })
               : null,
@@ -339,7 +422,14 @@ export const Calculator = defineComponent({
       const historyEntry = calculator.visibleHistoryEntry();
       const displayFraction = calculator.displayFractionParts();
 
-      return h('section', { class: 'calculator-page', 'aria-label': props.title }, [
+      return h('section', {
+        class: 'calculator-page',
+        'aria-label': props.title,
+        onPointerdown: (event: PointerEvent) => {
+          const target = event.target instanceof Element ? event.target : null;
+          if (!target?.closest('.calculator-clear-key')) clearHistoryArmed.value = false;
+        },
+      }, [
         h('div', { class: 'calculator-layout' }, [
           h('div', { class: 'calculator-machine' }, [
             h('div', { class: 'calculator-display', 'aria-live': 'polite', 'aria-atomic': 'true' }, [
@@ -405,7 +495,7 @@ export const Calculator = defineComponent({
                 h('button', {
                   type: 'button',
                   class: 'calculator-history-arrow calculator-arrow-right',
-                  title: 'Move cursor right',
+                  title: 'Move cursor right or exit the current MathPrint field',
                   'aria-label': 'Right',
                   onClick: () => calculator.moveRight(),
                 }, '▶'),
@@ -550,8 +640,7 @@ export const Calculator = defineComponent({
               fractionTemplateKey(),
               key('%', () => calculator.inputPostfix('%'), 'function', 'Percent'),
               key('CE', () => calculator.clearEntry(), 'function', 'Clear entry'),
-              key('C', () => calculator.clearAll(), 'function', 'Clear expression',
-                'C: Clear the entry and reset fraction result mode to decimal.'),
+              clearKey(),
 
               key('7', () => calculator.inputDigit('7')),
               key('8', () => calculator.inputDigit('8')),

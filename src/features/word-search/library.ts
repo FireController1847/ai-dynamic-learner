@@ -89,7 +89,7 @@ export const WordSearchLibrary = defineComponent({
       rename(group);
     }
 
-    function requestWordSearchSetup() {
+    function chosenDestination() {
       const selected = findItem(props.items, props.selectedId);
       let parentId = null;
       let parentName = 'Top level';
@@ -103,8 +103,13 @@ export const WordSearchLibrary = defineComponent({
         parentName = findItem(props.items, selected.parentId)?.item.name ?? 'Selected group';
       }
 
-      emit('new-word-search', { parentId, parentName });
-      announcement.value = `Opened new word search setup for ${parentName}.`;
+      return { parentId, parentName };
+    }
+
+    function requestWordSearchSetup() {
+      const target = chosenDestination();
+      emit('new-word-search', target);
+      announcement.value = 'Opened new word search setup for ' + target.parentName + '.';
     }
 
     function toggle(id: string) {

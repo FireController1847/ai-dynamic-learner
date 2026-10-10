@@ -1,4 +1,5 @@
 import { useStudySession } from '../../components/use-study-session.ts';
+import { useStatistics } from '../../components/statistics-context.ts';
 import { computed, defineComponent, h, nextTick, onBeforeUnmount, onDeactivated, ref, type PropType } from 'vue';
 import { GuideTypeIcon } from './guide-type-icon.ts';
 import { connectedTopicIds, mapStudyProblem, startTopic, topicById } from './map-graph.ts';
@@ -18,10 +19,13 @@ export const GuideMapStudy = defineComponent({
   props: {
     data: { type: Object as PropType<MapGuideData>, required: true },
     guideName: { type: String, required: true },
+    statisticsId: { type: String, required: true },
   },
   emits: { edit: () => true },
   setup(props, { emit }) {
     const saved = props.data.session;
+    const statistics = useStatistics();
+    let completionRecorded = Boolean(saved && saved.visitedIds.length === props.data.topics.length);
     const started = ref(Boolean(saved && saved.openedIds.length > 0 && !saved.paused && topicById(props.data, saved.currentId)));
     useStudySession(started);
     const visited = ref(new Set(saved?.visitedIds ?? []));
@@ -172,6 +176,10 @@ export const GuideMapStudy = defineComponent({
       const next = new Set(visited.value);
       next.add(id);
       visited.value = next;
+      if (complete.value && !completionRecorded) {
+        statistics?.record('guide', props.statisticsId, 'adventuresCompleted');
+        completionRecorded = true;
+      }
     }
 
     function prepareCurrent() {
@@ -218,6 +226,8 @@ export const GuideMapStudy = defineComponent({
       if (studyProblem.value) return;
       const first = startTopic(props.data);
       if (!first) return;
+      statistics?.record('guide', props.statisticsId, 'adventuresStarted');
+      completionRecorded = false;
       visited.value = new Set();
       opened.value = new Set();
       skipped.value = new Set();
@@ -296,13 +306,23 @@ export const GuideMapStudy = defineComponent({
 
     function revealNext() {
       const topic = current.value;
-      if (!topic || visited.value.has(topic.id)) return;
+      if (!topic || skipped.value.has(topic.id)) return;
       const count = currentPoints.value.length;
       if (revealedCount.value < count) revealedCount.value += 1;
       revealedByTopic.value = { ...revealedByTopic.value, [topic.id]: revealedCount.value };
       if (revealedCount.value >= count) markVisited(topic.id);
       saveSession();
       followRevealedPoint();
+    }
+
+    function resetRevealedPoints() {
+      const topic = current.value;
+      if (!topic || revealedCount.value === 0) return;
+      revealedCount.value = 0;
+      revealedByTopic.value = { ...revealedByTopic.value, [topic.id]: 0 };
+      topicPanel.value?.scrollTo({ top: 0, behavior: 'instant' });
+      saveSession();
+      nextTick(() => { topicHeading.value?.focus({ preventScroll: true }); });
     }
 
     function skipSection() {
@@ -678,16 +698,24 @@ export const GuideMapStudy = defineComponent({
               currentPoints.value.length
                 ? h('div', { class: 'guide-study-points' }, [
                     ...revealedContent(topic),
-                    !currentVisited ? h('div', { class: 'guide-study-reveal-actions' }, [
-                      h('button', {
-                        type: 'button', class: 'quiet-button guide-study-action guide-study-reveal',
-                        onClick: revealNext,
-                      }, revealedCount.value ? 'Reveal next point →' : 'Reveal first point →'),
-                      h('button', {
-                        type: 'button', class: 'quiet-button guide-study-action guide-study-skip',
-                        onClick: skipSection,
-                      }, 'Skip section'),
-                    ]) : null,
+                    (!skipped.value.has(topic.id) && revealedCount.value < currentPoints.value.length) ||
+                    revealedCount.value > 0 ||
+                    (!currentVisited && !skipped.value.has(topic.id))
+                      ? h('div', { class: 'guide-study-reveal-actions' }, [
+                          !skipped.value.has(topic.id) && revealedCount.value < currentPoints.value.length ? h('button', {
+                            type: 'button', class: 'quiet-button guide-study-action guide-study-reveal',
+                            onClick: revealNext,
+                          }, revealedCount.value ? 'Reveal next point →' : 'Reveal first point →') : null,
+                          revealedCount.value > 0 ? h('button', {
+                            type: 'button', class: 'quiet-button guide-study-action guide-study-reset',
+                            onClick: resetRevealedPoints,
+                          }, 'Reset revealed points') : null,
+                          !currentVisited && !skipped.value.has(topic.id) ? h('button', {
+                            type: 'button', class: 'quiet-button guide-study-action guide-study-skip',
+                            onClick: skipSection,
+                          }, 'Skip section') : null,
+                        ])
+                      : null,
                   ])
                 : h('p', { class: 'guide-study-empty-topic' }, 'This topic has no bullet points. It counts as visited when you arrive.'),
               skipped.value.has(topic.id) ? h('button', {

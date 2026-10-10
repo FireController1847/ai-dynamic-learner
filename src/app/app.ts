@@ -5,6 +5,8 @@ import { features } from '../features/feature-registry.ts';
 import { NavigationDrawer } from './navigation-drawer.ts';
 import { pageHref, useNavigation } from './navigation.ts';
 import { useWorkspace } from './workspace.ts';
+import { provideStatistics } from '../components/statistics-context.ts';
+import { GlobalStatistics } from '../components/global-statistics.ts';
 import { WorkspaceTools } from './workspace-tools.ts';
 import { BackupReminderBanner } from './backup-reminder-ui.ts';
 import { ThemeMenu, type ThemeMenuHandle } from './theme-menu.ts';
@@ -15,9 +17,11 @@ import { tipsCatalog } from './tips-content.ts';
 import { Icon } from '../components/icon.ts';
 import { AppIcon } from './app-icon.ts';
 
-import { defineComponent, type PropType, computed, createApp, h, KeepAlive, nextTick, ref } from 'vue';
+import { defineComponent, type PropType, computed, createApp, h, KeepAlive, nextTick, ref, watch } from 'vue';
 
 initializeTheme();
+
+const TIPS_ENABLED = false;
 
 const homeTipsFeature = Object.freeze({ id: 'home', label: appConfig.name });
 
@@ -32,8 +36,27 @@ const App = defineComponent({
   name: 'App',
   setup() {
     const workspace = useWorkspace();
+    provideStatistics({
+      data: () => workspace.state.value.statistics,
+      setData: data => { workspace.state.value.statistics = data; },
+      inventory: () => {
+        const models = workspace.state.value.features;
+        return { notebook: models.notebook.items, 'todo-list': models['todo-list'].items,
+          'index-cards': models['index-cards'].items, 'word-search': models['word-search'].items,
+          crossword: models.crossword.items, guide: models.guide.items,
+          'knowledge-check': models['knowledge-check'].items, calculator: [] };
+      },
+    });
+    const statisticsOpen = ref(false);
+    const statisticsButton = ref<HTMLButtonElement | null>(null);
     const backupMessage = ref('');
     const backupBusy = ref(false);
+    const recoveryBusy = ref(false);
+    const confirmReload = ref(false);
+    // Never reuse a previous confirmation for a later, unrelated conflict.
+    watch(() => workspace.needsReconcile.value, needed => {
+      if (!needed) confirmReload.value = false;
+    });
     async function backUpNow() {
       if (backupBusy.value) return;
       backupBusy.value = true;
@@ -47,6 +70,37 @@ const App = defineComponent({
         backupBusy.value = false;
       }
     }
+    async function saveUnsavedDraft() {
+      if (recoveryBusy.value) return;
+      recoveryBusy.value = true;
+      backupMessage.value = '';
+      try {
+        await workspace.downloadLocalDraft();
+        backupMessage.value = 'Unsaved workspace draft download started. Confirm the file was saved before reloading.';
+      } catch (error) {
+        backupMessage.value = error instanceof Error ? error.message : 'The draft could not be downloaded.';
+      } finally {
+        recoveryBusy.value = false;
+      }
+    }
+
+    async function discardAndReload() {
+      if (recoveryBusy.value) return;
+      recoveryBusy.value = true;
+      backupMessage.value = '';
+      try {
+        await workspace.reloadSavedWorkspace();
+        if (!workspace.needsReconcile.value) {
+          confirmReload.value = false;
+          backupMessage.value = 'Loaded the latest saved workspace from IndexedDB.';
+        }
+      } catch (error) {
+        backupMessage.value = error instanceof Error ? error.message : 'Saved data could not be loaded.';
+      } finally {
+        recoveryBusy.value = false;
+      }
+    }
+
     const sidebarOpen = ref(false);
     const menuButton = ref<HTMLButtonElement | null>(null);
     const tipsExperience = ref<TipsHandle | null>(null);
@@ -56,6 +110,7 @@ const App = defineComponent({
     const { currentPath, navigate } = useNavigation(onNavigate);
     const activeFeature = computed(() => features.find((feature) => feature.path === currentPath.value));
     const tipsFeature = computed(() => {
+      if (!TIPS_ENABLED) return null;
       const feature = activeFeature.value ?? (currentPath.value === '/' ? homeTipsFeature : null);
       return feature && tipsCatalog[feature.id]?.sections.length ? feature : null;
     });
@@ -113,6 +168,11 @@ const App = defineComponent({
             : h(Icon, { name: 'document' }),
         h('h1', activeFeature.value?.label ?? (currentPath.value === '/' ? appConfig.name : 'Page not found')),
         h('div', { class: 'app-header-actions' }, [
+          h('button', {
+            ref: statisticsButton, type: 'button', class: 'quiet-button app-header-action',
+            title: 'Workspace statistics', 'aria-label': 'Open workspace statistics', 'aria-haspopup': 'dialog',
+            onClick: () => { statisticsOpen.value = true; },
+          }, [h(Icon, { name: 'statistics' }), h('span', { class: 'app-header-action-label' }, 'Statistics')]),
           workspace.backup.showIndicator.value ? h('button', {
             type: 'button',
             class: ['quiet-button', 'app-header-action', 'backup-indicator', {
@@ -161,15 +221,40 @@ const App = defineComponent({
         footer: () => h(WorkspaceTools, { workspace }),
       }),
       h(ThemeMenu, { ref: themeMenu }),
-      h(TipsExperience, {
+      TIPS_ENABLED ? h(TipsExperience, {
         ref: tipsExperience,
         feature: tipsFeature.value,
         catalog: tipsCatalog,
         storageKey: 'dynamic-learner.tips.v1',
-      }),
+      }) : null,
       workspace.storageProblem.value ? h('p', {
         class: 'workspace-storage-warning', role: 'alert',
       }, workspace.storageProblem.value) : null,
+      workspace.needsReconcile.value ? h('section', {
+        class: 'workspace-storage-warning', role: 'alert', 'aria-label': 'Unsaved workspace changes',
+      }, [
+        h('p', 'Some changes in this tab may not be saved. Download your on-screen draft before replacing it with stored data.'),
+        h('div', { class: 'workspace-actions' }, [
+          h('button', {
+            type: 'button', class: 'quiet-button', disabled: recoveryBusy.value,
+            onClick: () => { void saveUnsavedDraft(); },
+          }, recoveryBusy.value ? 'Working…' : 'Download unsaved draft'),
+          h('button', {
+            type: 'button', class: 'quiet-button', disabled: recoveryBusy.value,
+            onClick: () => {
+              if (!confirmReload.value) confirmReload.value = true;
+              else void discardAndReload();
+            },
+          }, confirmReload.value ? 'Discard draft and reload' : 'Reload saved workspace'),
+          confirmReload.value ? h('button', {
+            type: 'button', class: 'quiet-button', disabled: recoveryBusy.value,
+            onClick: () => { confirmReload.value = false; },
+          }, 'Cancel') : null,
+        ]),
+        confirmReload.value
+          ? h('p', 'Reloading discards unsaved changes in this tab. Make sure your draft has been downloaded.')
+          : null,
+      ]) : null,
       workspace.backup.problem.value ? h('p', {
         class: 'workspace-storage-warning', role: 'alert',
       }, workspace.backup.problem.value) : null,
@@ -192,12 +277,24 @@ const App = defineComponent({
           }],
           tabindex: -1,
         }, [
-          currentPath.value === '/' ? h(HomePage, { onNavigate: navigate }) : null,
-          h(KeepAlive, { key: workspace.revision.value }, {
-            default: () => activeFeature.value?.render(workspace.state.value.features) ?? null,
-          }),
+          !workspace.ready.value
+            ? h('section', { class: 'workspace-loading', role: 'status' }, [
+              h('h2', 'Workspace unavailable'),
+              h('p', workspace.storageProblem.value || 'Opening and checking your saved workspace…'),
+              h('p', 'Editing is disabled until the saved data has been loaded safely.'),
+            ])
+            : [
+              currentPath.value === '/' ? h(HomePage, { onNavigate: navigate }) : null,
+              h(KeepAlive, { key: workspace.revision.value }, {
+                default: () => activeFeature.value?.render(workspace.state.value.features) ?? null,
+              }),
+            ],
         ]),
       ]),
+      statisticsOpen.value ? h(GlobalStatistics, {
+        apps: features.map(feature => ({ id: feature.id, label: feature.label })), returnFocus: statisticsButton.value,
+        onClose: () => { statisticsOpen.value = false; },
+      }) : null,
       activeFeature.value ? h('span', {
         class: 'app-version',
       }, `v${activeFeature.value.version}`) : null,

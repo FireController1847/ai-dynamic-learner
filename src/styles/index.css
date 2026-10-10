@@ -5,6 +5,8 @@
 @import './popup-dialog.css';
 @import './library-empty-state.css';
 @import './ai-prompt-exchange.css';
+@import './statistics.css';
+@import './markdown-content.css';
 @import './shell.css';
 @import './backup-reminders.css';
 @import './theme.css';
@@ -36,7 +38,6 @@
 @import '../features/notebook/display-settings.css';
 @import '../features/todo-list/todo-list.css';
 @import '../features/index-cards/index-cards.css';
-@import '../features/index-cards/ai-import.css';
 @import '../features/index-cards/card-set.css';
 @import '../features/index-cards/fill-blank.css';
 @import '../features/index-cards/card-list.css';
@@ -52,7 +53,6 @@
 @import '../features/crossword/display-settings.css';
 @import '../features/guide/guide.css';
 @import '../features/knowledge-check/knowledge-check.css';
-@import '../features/knowledge-check/ai-creation.css';
 @import '../features/knowledge-check/knowledge-set.css';
 @import '../features/knowledge-check/review-motion.css';
 @import './mobile.css';

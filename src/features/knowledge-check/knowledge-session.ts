@@ -5,9 +5,11 @@ import type { CheckModeId } from './check-types.ts';
 import { answerCorrect, fillBlankCorrectness, questionResponseAnswered, questionScored, type Question, type QuestionResponse } from './question-model.ts';
 import { inputValue } from '../../core/dom.ts';
 import { Icon } from '../../components/icon.ts';
+import { MarkdownContent } from '../../components/markdown-content.ts';
 import { SessionIntro } from './session-intro.ts';
 import { answerStrictnessForQuestion } from './session-settings.ts';
 import { useKnowledgeSession } from './session-state.ts';
+import { dropdownCorrectness } from './dropdown-model.ts';
 import { enterReviewPanel, leaveReviewPanel, restoreReviewPanel } from './review-motion.ts';
 import { computed, defineComponent, h, ref, Transition, type PropType } from 'vue';
 
@@ -17,10 +19,11 @@ export const KnowledgeSession = defineComponent({
     item: { type: Object as PropType<CheckItem>, required: true },
     mode: { type: String as PropType<CheckModeId>, required: true },
     settings: { type: Object as PropType<import('./session-settings.ts').SessionSettings>, required: true },
+    statisticsEnabled: { type: Boolean, default: true },
   },
   emits: { back: () => true, build: () => true },
   setup(props, { emit }) {
-    const state = useKnowledgeSession(props.item, props.mode, props.settings);
+    const state = useKnowledgeSession(props.item, props.mode, props.settings, props.statisticsEnabled);
     const { questions, questionCount, options, position, responses, feedbackResponses, checked, revealed, hints, submitted, started, expired, ended,
       answered, resolved, score, scoredCount, remaining, celebrating, attempts, studyChecks, studyCorrectChecks,
       start, end, check, submit, tick } = state;
@@ -31,8 +34,10 @@ export const KnowledgeSession = defineComponent({
     function moveQuestion(next: number, wrap = false) {
       tick();
       if (submitted.value || next < 0 || next >= questions.value.length) return;
+      if (wrap) state.finishStudyPass();
       backward.value = next < position.value && !wrap;
       position.value = next;
+      if (wrap) state.resetStudyPass();
     }
 
     function reveal(id: string, content: ReturnType<typeof h> | null) {
@@ -44,7 +49,7 @@ export const KnowledgeSession = defineComponent({
     }
 
     function currentResponse(question: Question): QuestionResponse {
-      return responses.value[question.id] ?? (question.type === 'fill-in-the-blanks' ? [] : '');
+      return responses.value[question.id] ?? (question.type === 'fill-in-the-blanks' || question.type === 'dropdown' ? [] : '');
     }
 
     function textResponse(question: Question): string {
@@ -102,7 +107,15 @@ export const KnowledgeSession = defineComponent({
                 question.type === 'multiple-choice' ? 'Not quite.' : 'Not quite — here’s the answer.'),
       ];
 
-      if (question.type === 'fill-in-the-blanks') {
+      if (question.type === 'dropdown') {
+        const rows = question.matches ?? [];
+        const correctness = dropdownCorrectness(rows, submittedResponse);
+        content.push(h('p', `${correctness.filter(Boolean).length} of ${rows.length} matches correct.`));
+        content.push(h('ol', { class: 'knowledge-fill-blank-feedback-list' }, rows.map((row, index) => h('li', {
+          key: index, class: correctness[index] ? 'is-correct' : 'is-incorrect',
+        }, [h('strong', `${row.label}: ${correctness[index] ? 'Correct' : 'Incorrect'}`),
+          showAnswer ? h('span', { class: 'knowledge-fill-blank-feedback-answer' }, `Correct answer: ${row.answer}`) : null]))));
+      } else if (question.type === 'fill-in-the-blanks') {
         const template = parseFillBlankTemplate(question.prompt);
         const values = Array.isArray(submittedResponse) ? submittedResponse : [];
         const correctness = fillBlankCorrectness(
@@ -190,10 +203,10 @@ export const KnowledgeSession = defineComponent({
       if (!questionScored(question)) return null;
       const value = currentResponse(question);
       if (!Array.isArray(value)) return h('p', `Your answer: ${value || 'No answer'}`);
-      const answers = parseFillBlankTemplate(question.prompt).answers;
+      const answers = question.type === 'dropdown' ? (question.matches ?? []).map(row => row.label) : parseFillBlankTemplate(question.prompt).answers;
       return h('div', { class: 'knowledge-fill-blank-result-responses' }, [
         h('p', 'Your answers:'),
-        h('ol', answers.map((_answer, index) => h('li', { key: index }, value[index] || 'No answer'))),
+        h('ol', answers.map((answer, index) => h('li', { key: index }, `${question.type === 'dropdown' ? answer + ': ' : ''}${value[index] || 'No answer'}`))),
       ]);
     }
 
@@ -224,6 +237,7 @@ export const KnowledgeSession = defineComponent({
           showAnswers ? questions.value.map((entry, index) => h('article', { class: 'knowledge-result', key: entry.id,
             style: { '--review-delay': `${Math.min(index, 8) * 42 + 100}ms` } }, [
             h('h4', `${index + 1}. ${entry.type === 'fill-in-the-blanks' ? maskFillBlankAnswers(entry.prompt) : entry.prompt}`),
+            entry.context?.trim() ? h(MarkdownContent, { text: entry.context, class: 'knowledge-question-context' }) : null,
             questionScored(entry) ? [responseSummary(entry), feedback(entry)] :
               h('p', { class: 'knowledge-muted' }, 'Statement · Not scored'),
           ])) : h('p', 'This set is configured to show the score only.'),
@@ -264,11 +278,24 @@ export const KnowledgeSession = defineComponent({
           default: () => h('article', { class: 'knowledge-prompt', key: question.id, tabindex: -1,
             'data-review-focus': '',
             'aria-label': `Question ${position.value + 1} of ${questions.value.length}` }, [
+          question.type === 'fill-in-the-blanks' && question.context?.trim()
+            ? h(MarkdownContent, { text: question.context, class: 'knowledge-question-context' }) : null,
           question.type === 'fill-in-the-blanks'
             ? fillBlankPrompt(question, locked, showFeedback)
             : h('h3', question.prompt),
+          question.type !== 'fill-in-the-blanks' && question.context?.trim()
+            ? h(MarkdownContent, { text: question.context, class: 'knowledge-question-context' }) : null,
           question.type === 'statement' ? null : question.type === 'fill-in-the-blanks' ? null
-            : question.type === 'short-answer' ? h('label', { class: 'knowledge-field' }, ['Your answer', h('textarea', {
+            : question.type === 'dropdown' ? h('fieldset', { class: 'knowledge-dropdown-rows', disabled: locked }, [
+              h('legend', { class: 'visually-hidden' }, 'Match each row to an answer'),
+              ...(question.matches ?? []).map((row, index) => h('label', { class: 'knowledge-dropdown-row', key: index }, [
+                h('strong', row.label), h('select', {
+                  value: blankResponses(question)[index] ?? '', 'aria-label': `Answer for ${row.label}`,
+                  onChange: (event: Event) => blankResponse(question, index, inputValue(event)),
+                }, [h('option', { value: '', disabled: true }, 'Choose an answer'),
+                  ...choices.map(choice => h('option', { value: choice }, choice))]),
+              ])),
+            ]) : question.type === 'short-answer' ? h('label', { class: 'knowledge-field' }, ['Your answer', h('textarea', {
               rows: 3, value: textResponse(question), readonly: locked, maxlength: 2000,
               onInput: (event: Event) => response(question, inputValue(event)),
             })]) : h('fieldset', { class: 'knowledge-answer-choices', disabled: locked }, [h('legend', 'Your answer'),
@@ -301,7 +328,8 @@ export const KnowledgeSession = defineComponent({
               if (revealed.value.has(question.id)) revealed.value.delete(question.id); else revealed.value.add(question.id);
             }, 'aria-expanded': revealed.value.has(question.id), 'aria-controls': `answer-${question.id}` }, revealed.value.has(question.id) ? 'Hide answer' : 'Show answer'),
             reveal(`answer-${question.id}`, revealed.value.has(question.id) ? h('div', { id: `answer-${question.id}`, class: 'knowledge-study-answer' },
-              question.type === 'fill-in-the-blanks' ? [h('p', 'Answers:'), fillBlankAnswerKey(question)] : [h('p', `Answer: ${question.answer}`)]) : null),
+              question.type === 'dropdown' ? [h('p', 'Answers:'), h('ul', (question.matches ?? []).map(row => h('li', `${row.label}: ${row.answer}`)))] :
+                question.type === 'fill-in-the-blanks' ? [h('p', 'Answers:'), fillBlankAnswerKey(question)] : [h('p', `Answer: ${question.answer}`)]) : null),
           ]) : null,
         ]),
         }),

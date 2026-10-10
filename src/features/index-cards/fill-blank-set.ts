@@ -10,6 +10,8 @@ import { FillBlankEditor } from './fill-blank-editor.ts';
 import { FillBlankPaper, type FillBlankPaperHandle } from './fill-blank-paper.ts';
 import { FillBlankReviewSetup, type FillBlankSessionMode } from './fill-blank-review-setup.ts';
 import { ReviewResult } from './review-result.ts';
+import { EntryStatistics } from '../../components/entry-statistics.ts';
+import { useStatistics, useStatisticsVisits } from '../../components/statistics-context.ts';
 import { fillBlankResponseCorrectness, parseFillBlankTemplate, type AnswerStrictness } from './fill-blank-model.ts';
 
 import { defineComponent, type PropType, computed, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, reactive, ref, watch } from 'vue';
@@ -75,6 +77,9 @@ export const FillBlankSet = defineComponent({
     });
     const index = computed(() => Math.max(0, orderedCards.value.findIndex((card) => card.id === currentId.value)));
     const current = computed(() => orderedCards.value[index.value]);
+    const statistics = useStatistics();
+    useStatisticsVisits('index-cards', () => props.set.id, () => !reviewResult.value && !props.tutorialReview,
+      'cardViews', () => current.value?.id ?? null);
     const atLimit = computed(() => props.totalCards >= MAX_CARDS);
 
     watch(() => props.set.cards.length, (length) => {
@@ -281,6 +286,7 @@ export const FillBlankSet = defineComponent({
     }
 
     async function startReview(mode: FillBlankSessionMode, order: ReviewOrder) {
+      if (mode === 'review' && !props.tutorialReview) statistics?.record('index-cards', props.set.id, 'reviewStarts');
       reviewScores.clear();
       reviewResult.value = null;
       reviewActive.value = true;
@@ -306,6 +312,7 @@ export const FillBlankSet = defineComponent({
     }
 
     async function finishReview() {
+      if (!reviewActive.value) return;
       if (sessionMode.value === 'view') {
         resetReviewView();
         reviewNotice.value = 'View finished. You are back to browsing in saved order.';
@@ -314,6 +321,7 @@ export const FillBlankSet = defineComponent({
         return;
       }
 
+      if (!props.tutorialReview) statistics?.record('index-cards', props.set.id, 'reviews');
       const cards = [...orderedCards.value];
       const total = cards.reduce((sum, card) => sum + parseFillBlankTemplate(card.front).answers.length, 0);
       const correct = cards.reduce((sum, card) => sum + (reviewScores.get(card.id)?.correct ?? 0), 0);
@@ -464,6 +472,7 @@ export const FillBlankSet = defineComponent({
                 : `${position} · ${blankCount} ${blankCount === 1 ? 'blank' : 'blanks'}`),
             ]),
             h('div', { class: 'card-review-session-actions' }, reviewActive.value ? [
+              h(EntryStatistics, { app: 'index-cards', id: props.set.id }),
               h('button', {
                 ref: reviewButton, type: 'button', class: 'quiet-button card-review-button',
                 'aria-haspopup': 'dialog', onClick: () => { reviewSetupOpen.value = true; },
@@ -474,6 +483,7 @@ export const FillBlankSet = defineComponent({
                 onClick: endReview,
               }, sessionMode.value === 'view' ? 'End view' : 'End review'),
             ] : [
+              h(EntryStatistics, { app: 'index-cards', id: props.set.id }),
               h('button', {
                 ref: reviewButton, type: 'button', class: 'quiet-button card-review-button',
                 'aria-haspopup': 'dialog', onClick: () => openSessionSetup('review'),

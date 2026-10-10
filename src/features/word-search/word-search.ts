@@ -1,3 +1,5 @@
+import { EntryStatistics } from '../../components/entry-statistics.ts';
+import { useStatisticsVisits } from '../../components/statistics-context.ts';
 import { hasPuzzle } from './library-model.ts';
 import type { PuzzleTarget, WordSearchItem } from './library-model.ts';
 import type { Puzzle } from './puzzle-model.ts';
@@ -72,7 +74,8 @@ export const WordSearch = defineComponent({
     const settingsOpen = ref(false);
     const displayOptions = computed(() => resolvedDisplayOptions(props.model.display));
     let settingsTrigger: HTMLElement | null = null;
-    onDeactivated(() => { settingsOpen.value = false; });
+    onDeactivated(() => { settingsOpen.value = false;
+});
 
     function openSettings(trigger: EventTarget | null) {
       settingsTrigger = trigger instanceof HTMLElement ? trigger : null;
@@ -86,6 +89,7 @@ export const WordSearch = defineComponent({
     }
 
     const selection = computed(() => findItem(props.model.items, selectedId.value));
+    useStatisticsVisits('word-search', () => selection.value?.item.id ?? null, () => setupTarget.value === null);
 
     function updateLibraryLayout(event: MediaQueryListEvent) {
       libraryOverlay.value = event.matches;
@@ -230,6 +234,7 @@ export const WordSearch = defineComponent({
         open: item.kind === 'group',
       }, [
         h('summary', { class: 'organization-summary' }, 'Location and order'),
+        item.kind === 'group' ? h(EntryStatistics, { app: 'word-search', id: item.id }) : null,
         h('div', { class: 'word-search-location' }, [
           h('label', { for: 'word-search-parent' }, 'Move to group'),
           h('select', {
@@ -305,6 +310,11 @@ export const WordSearch = defineComponent({
       }, [
         h('header', { class: 'word-search-item-heading' }, [
           h('h2', { ref: workspaceHeading, tabindex: -1 }, item.name),
+          h('span', { class: 'word-search-entry-statistics', title: 'Lifetime activity for this word search' }, [
+            h(EntryStatistics, { app: 'word-search', id: item.id, metric: 'gamesCompleted' }),
+            h(EntryStatistics, { app: 'word-search', id: item.id, metric: 'wordsSolved' }),
+            h(EntryStatistics, { app: 'word-search', id: item.id, metric: 'wordAttempts' }),
+          ]),
           h('p', 'Word search'),
         ]),
         hasPuzzle(item)

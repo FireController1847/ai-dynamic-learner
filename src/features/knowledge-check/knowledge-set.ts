@@ -17,6 +17,7 @@ import { defineComponent, h, onDeactivated, ref, Transition, type PropType } fro
 export const KnowledgeSet = defineComponent({
   name: 'KnowledgeSet',
   props: { item: { type: Object as PropType<CheckItem>, required: true }, initialBuilder: Boolean,
+    statisticsEnabled: { type: Boolean, default: true },
     initialMode: { type: String as PropType<CheckModeId | null>, default: null } },
   setup(props) {
     const mode = ref<CheckModeId | null>(props.initialMode);
@@ -48,7 +49,7 @@ export const KnowledgeSet = defineComponent({
         onCancel: () => { building.value = false; message.value = ''; },
       });
       if (!mode.value) return h(ModePicker, {
-        key: 'mode-picker', setName: props.item.name, onChoose: chooseMode, onBuild: openBuilder,
+        key: 'mode-picker', setName: props.item.name, statisticsId: props.item.id, onChoose: chooseMode, onBuild: openBuilder,
       });
       if (!sessionSettings.value) return h(SessionSetup, {
         key: `setup-${revision.value}-${mode.value}`,
@@ -60,6 +61,7 @@ export const KnowledgeSet = defineComponent({
       });
       return h(KnowledgeSession, {
         key: `session-${revision.value}-${mode.value}`, item: props.item, mode: mode.value, settings: sessionSettings.value,
+        statisticsEnabled: props.statisticsEnabled,
         onBack: () => {
           if (mode.value === 'test') mode.value = null;
           else sessionSettings.value = null;

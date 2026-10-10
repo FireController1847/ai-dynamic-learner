@@ -157,7 +157,7 @@ export const SessionSetup = defineComponent({
             checked: custom.value.shuffleChoices,
             onChange: (event: Event) => { custom.value.shuffleChoices = (event.target as HTMLInputElement).checked; },
           }),
-          'Shuffle multiple-choice answer choices',
+          'Shuffle multiple-choice and dropdown choices',
         ]),
         h(AnswerStrictnessField, {
           id: 'quiz-short-answer-strictness',

@@ -89,7 +89,7 @@ export const CrosswordLibrary = defineComponent({
       rename(group);
     }
 
-    function requestCrosswordSetup() {
+    function chosenDestination() {
       const selected = findItem(props.items, props.selectedId);
       let parentId: string | null = null;
       let parentName = 'Top level';
@@ -103,8 +103,13 @@ export const CrosswordLibrary = defineComponent({
         parentName = findItem(props.items, selected.parentId)?.item.name ?? 'Selected group';
       }
 
-      emit('new-crossword', { parentId, parentName });
-      announcement.value = `Opened new crossword setup for ${parentName}.`;
+      return { parentId, parentName };
+    }
+
+    function requestCrosswordSetup() {
+      const target = chosenDestination();
+      emit('new-crossword', target);
+      announcement.value = 'Opened new crossword setup for ' + target.parentName + '.';
     }
 
     function toggle(id: string) {

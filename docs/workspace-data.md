@@ -4,12 +4,13 @@ The source validators are canonical. This document records only the durable back
 
 ## Top-level contract
 
-Workspace persistence is owned by `src/app/workspace.ts` and `workspace-format.ts`.
+The live workspace is stored as granular records in IndexedDB (`src/core/data/indexeddb.ts`), coordinated by `src/app/data/data-api.ts` and the transitional `src/app/data/workspace-observer.ts`. `workspace-format.ts` remains the portable JSON v1 interchange contract.
 
 ```ts
 interface Workspace {
   format: 'dynamic-learner';
   version: 1;
+  statistics?: StatisticsData;
   features: {
     notebook: Notebook;
     'todo-list': TodoLists;
@@ -22,7 +23,7 @@ interface Workspace {
 }
 ```
 
-The browser-local key is `dynamic-learner.workspace.v1`. JSON backups and saved workspace data are limited to 32 MiB.
+The legacy browser-local key `dynamic-learner.workspace.v1` is used only as a read-only migration/recovery source. IndexedDB `dynamic-learner-data` is authoritative after successful staged migration. The 128 MiB cap applies to uploaded JSON backups, **not** to ongoing IndexedDB writes; compressed backup support and a revised import limit remain separate work.
 
 Uploaded or persisted data is untrusted: parse as `unknown`, reject unsupported top-level fields/version/format, then delegate to feature validators before replacing live state. Invalid replacement never partially mutates the current workspace.
 
@@ -54,6 +55,14 @@ Do not duplicate feature schemas in `workspace-format.ts`; it coordinates them.
 
 ## Saved vs transient state
 
+Statistics are durable workspace data, included in JSON backups. The optional `statistics` field contains a version-1 ledger with an ISO `startedAt`, per-app counters, and per-entry counters/last-activity timestamps keyed by canonical library IDs. Old backups without it normalize to empty statistics; malformed counters, unknown fields/apps/metrics, invalid IDs/timestamps, and oversized entry ledgers are rejected before replacement. Counters are non-negative safe integers. Deleting an entry removes its detailed row while retaining lifetime app/global totals; group totals roll up current descendants without double-counting global activity.
+
+Tracking starts with this feature; earlier activity is not fabricated. Opening visible library content increments an open count, including returning to an app or restoring it after reload; rerenders, edits, flips, and opening Statistics do not count as another entry visit. Index Cards counts card visits separately from completed review passes. Study passes count when every question has been visited and the learner loops or ends/leaves the session. Quiz/Test counts increment once on submission (including timeout), not on abandoned sessions; assessed question/correct totals ignore Statements. Puzzle and adventure completions increment once per run, without recounting already completed restored sessions. Todo counts explicit task-completion actions. Calculator counts successful history additions. Known tutorial review sessions do not contribute learning counters.
+
+Statistics-only changes are excluded from authored-work fingerprints used by backup reminders, while remaining part of a downloaded backup. Upload replaces the complete ledger with the uploaded workspace's history; it does not merge or duplicate counts.
+
+Word Search additionally records lifetime `wordsSolved` and `wordAttempts` counters per entry and globally. Each submitted selection counts as an attempt, including misses, invalid lines, and already-found words; canceled selections and actions blocked during loading or answer reveal do not count. A word is solved only when newly added to the current run's found list. Restarting permits solving those words again. Existing backups without these optional counters display zero; saved found-word progress is not retroactively counted.
+
 Backups contain authored user content and saved feature preferences. They do **not** automatically contain transient/browser UI state.
 
 Examples normally outside backups: active dialog, most review/study progress, temporary shuffle order, current side of a card, selected navigation tab, theme preference, Tips completion, panel widths/collapse state, and other local UI conveniences.
@@ -64,21 +73,29 @@ If a feature intentionally persists a presentation option as part of its model (
 
 ## Storage failure behavior
 
-If the existing saved workspace cannot be parsed, leave that stored copy untouched and warn the user. If saving later fails because browser storage is unavailable/full, keep the live in-memory state and tell the user to download a backup.
+Changes committed in another tab are broadcast as invalidations and fetched from the same-origin IndexedDB database. For normal updates to the **same workspace**, the app applies the newly saved data **in place** to existing Vue objects, including items added, deleted, reordered, or edited. Current editors stay mounted, so users can keep working in one tab while changes appear in the other. Each tab retains its own selected library item instead of following the other tab's navigation. Active study sessions defer incoming data until they end.
 
-Workspace replacement revalidates a copy, clears protected-storage mode only after validation succeeds, increments the workspace revision, and then saves.
+Before integrating a remote snapshot, the app flushes pending local saves and checks for any additional typing that occurred while the snapshot was loading. Independent edits synchronize automatically. If both tabs race to save incompatible changes to the **same record**, revision checks still reject the stale write; the on-screen draft is preserved with an explicit export/recovery option. A full workspace restore is not a live merge and continues to require special protection for locally focused drafts.
+
+When a record save or cross-tab reconciliation fails, the app preserves the visible in-memory workspace and offers **Download unsaved draft**. The user can then explicitly confirm **Discard draft and reload** to load the latest committed IndexedDB workspace; it never silently merges or overwrites simultaneous edits to the same record. Another tab upgrading the IndexedDB schema produces a warning advising a draft download and page reload.
+
+
+
+If the legacy JSON cannot be parsed or IndexedDB fails to initialize, editing is blocked; the existing saved copy is never erased. A valid user-confirmed upload may recover a failed initialization by staging and activating a verified replacement without deleting the previous copy. After cutover, individual record writes commit through IndexedDB transactions. A failed save retains the in-memory user work and exposes an emergency backup path, without claiming it was saved to IndexedDB.
+
+Backup replacement validates the entire workspace first, stages and independently verifies all records under a new workspace ID, then atomically switches the active-workspace pointer. Stale tabs' writes against the previous workspace are rejected.
 
 ## Backup UI
 
-Download emits the current validated workspace as JSON with a timestamped filename. Upload reads a file, validates it, and replaces the entire workspace only after user review/confirmation in the UI.
+Download captures a consistent IndexedDB snapshot and emits the validated v1 workspace as timestamped JSON; in-memory emergency export is available if a record save fails. Upload reads and validates JSON, stages it, and replaces the active workspace only after user review/confirmation in the UI.
 
 Keep import/export behavior centralized; features should not invent separate whole-workspace formats.
 
 ## Backup reminder tracking
 
-`dynamic-learner.backup-reminders.v1` is a separate browser-local preference/history key, not part of the workspace contract or the JSON export. It stores the last initiated backup-download time, a SHA-256 fingerprint of the exported authored workspace, the start of the current unbacked-activity period, snooze state, and reminder frequency (default 3 days; off is allowed).
+`dynamic-learner.backup-reminders.v1` is a separate browser-local preference/history key, not part of the workspace contract or JSON export. It now stores the **last exported workspace identity and authored revision**, the last initiated backup-download time, the start of unbacked activity, snooze state and reminder frequency (default 3 days; off is allowed). Old SHA-256 fingerprint metadata is accepted for compatibility but no longer recomputed on ordinary edits.
 
-The reminder service compares the current workspace with that exported snapshot. Navigation selection alone does not count as new authored work. An imported workspace is always flagged as needing a fresh backup even if its content matches an earlier download. The browser cannot confirm that a generated download was saved, so UI wording describes downloads as *started*, never as verified backups. Empty workspaces do not trigger reminders.
+The reminder service compares committed authored revisions with the exact revision included in the exported snapshot. Statistics and navigation selection do not count as authored changes. An imported workspace is always flagged as needing a fresh backup even if its revision happens to match an earlier export. The browser cannot confirm that a generated download was saved, so UI wording describes downloads as *started*, never as verified backups. Empty workspaces do not trigger reminders.
 
 First-time work starts the clock when saved content appears; already-stored work without metadata gets a quiet immediate reminder instead of a fabricated export date. Urgency rises after 1, 2, and 3 configured intervals. Dismissal lasts the current session; snoozing lasts 24 hours without changing backup history. Study/review sessions suppress the banner; the overdue header indicator remains available.
 
@@ -101,7 +118,15 @@ Import validation enforces card/name/text limits and remaining workspace capacit
 
 ## Review AI import
 
-Review AI creation chooses overall-subject scope or one category using the shared category picker/history, then configures a question count and integer percentage weights totaling 100%. Defaults are 60% multiple choice, 25% true/false, 15% fill in the blanks, and 0% short answer/statements. The requested count is allocated by largest remainder with a stable type order; disabled types stay at zero. These generation preferences are transient, independent of saved assessment/session settings.
+Every Review question may carry an optional plain-string `context` field of up to 12,000 characters containing GFM Markdown. Older questions without it remain valid. Context is supporting/descriptive material, separate from the required plain-text `prompt` and answer/explanation fields; it has no scoring or readiness effect except that an entered context makes a draft meaningful and still requires a complete question. Markdown is sanitized and converted into allowlisted VNodes at display time, never stored as trusted HTML. Context travels with normal backups and AI imports.
+
+Study/Quiz/Test show context beneath the question title. Fill-in-the-Blanks keeps its canonical blank-aware prompt and shows optional context above it; Markdown does not replace blank parsing or answer matching. Full results and AI previews also render context; score-only Test results keep question content hidden. Builder context previews use the same shared renderer as Notebook, including tables, lists, code, links, task lists, and strikethrough.
+
+Review also supports `dropdown` matching questions. They use one shared `choices` list (2–20 distinct non-empty choices when ready) and a `matches` array of 1–20 `{ label, answer }` rows. Row labels must be distinct and non-empty; every correct row answer must match a choice. The top-level `answer` remains empty. `matches` is allowed only on Dropdown questions; old question types/backups remain unchanged. Builder drafts deep-copy rows so canceling edits cannot change a saved set.
+
+Dropdown responses are ordered arrays of selected choice text. The question is answered after every row has a selection and scores one point only when every match is correct; feedback reports individual matches. Choices may be reused across rows. Saved answer-choice shuffling also shuffles Dropdown options once per session while retaining label order and answer mappings. Study hints/reveals, Quiz attempts/locking, and Test result visibility apply normally. AI creation includes a Dropdown percentage, defaulting to 5%; generated Dropdown JSON supplies `choices` and `matches` without a top-level answer.
+
+Review AI creation chooses overall-subject scope or one category using the shared category picker/history, then configures a question count and integer percentage weights always totaling 100%. Editing one weight immediately redistributes its change evenly across the other types, respecting 0–100 bounds and assigning whole-point rounding remainders in a stable type order. Decreasing a weight can enable previously zero-weight types; increasing one draws only from types with available weight. Empty or invalid input retains the current weight, and numeric input is rounded/clamped before the complete mix is replaced atomically. Defaults are 58% multiple choice, 23% true/false, 14% fill in the blanks, 5% Dropdown, and 0% short answer/statements. The requested count is allocated by largest remainder with a stable type order; disabled types stay at zero. These generation preferences are transient, independent of saved assessment/session settings.
 
 A content-only `dynamic-learner-review` version-1 response includes a `title`, `description`, and `questions`. Each item uses only fields supported by its type. Multiple-choice answers must match a distinct choice; true/false answers use `True`/`False`; fill-in-the-blanks answers remain embedded in valid `{{answer}}` markers with visible context. Statements have no answer, choices, or explanation. Strict import validation enforces the selected item count and type allocation, creates local IDs, and applies the canonical question validator/readiness rules before insertion.
 

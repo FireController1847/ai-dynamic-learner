@@ -2,9 +2,9 @@ import {
   completeTrailingClosures, evaluateExpression, formatExpression, type AngleMode,
 } from './expression-engine.ts';
 import {
-  backspaceMathPrint, createFractionTemplate, createRoundTemplate, deleteMathPrintForward, endsValue, fractionContextAt,
-  lastOperandStart, moveFractionCursor, moveMathPrintCursor, normaliseMathPrintCursor,
-  overwriteRangeAtCursor, parenthesesBalancedEnoughToClose,
+  backspaceMathPrint, createFractionTemplate, createRoundTemplate, deleteMathPrintForward, endsValue,
+  exitMathPrintStructure, fractionContextAt, lastOperandStart, moveFractionCursor, moveMathPrintCursor,
+  normaliseMathPrintCursor, overwriteRangeAtCursor, parenthesesBalancedEnoughToClose,
 } from './calculator-entry.ts';
 import {
   formatNumber, fractionForValue, fractionPartsForValue, normaliseNumber,
@@ -473,7 +473,25 @@ export class CalculatorModel {
   }
 
   moveRight() {
-    this.moveHorizontal('right');
+    if (this.justEvaluated) return;
+    this.recoverError();
+    this.dismissHistory();
+
+    const fraction = fractionContextAt(this.expression, this.cursor);
+    if (fraction?.field === 'denominator' && this.cursor === fraction.denominatorEnd) {
+      this.cursor = fraction.close + 1;
+      return;
+    }
+
+    const exited = exitMathPrintStructure(this.expression, this.cursor);
+    if (exited) {
+      this.expression = exited.source;
+      this.cursor = exited.cursor;
+      this.refreshPreview();
+      return;
+    }
+
+    this.cursor = moveMathPrintCursor(this.expression, this.cursor, 'right');
   }
 
   moveLeft() {
