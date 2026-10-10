@@ -70,18 +70,34 @@ export const KnowledgeSession = defineComponent({
         ? feedbackResponses.value[question.id] ?? currentResponse(question) : currentResponse(question);
     }
 
+    function prepareAnswerEdit(question: Question) {
+      if (props.mode === 'study') {
+        checked.value.delete(question.id);
+      } else if (props.mode === 'quiz' && options.value.presentation === 'one-at-a-time' &&
+          options.value.allowBack && checked.value.has(question.id)) {
+        // Once a completed Quiz answer changes, it is no longer checked. Give
+        // the revised response a fresh attempt window rather than silently
+        // regrading it or showing stale correctness feedback.
+        checked.value.delete(question.id);
+        delete attempts.value[question.id];
+        delete feedbackResponses.value[question.id];
+      }
+    }
+
     function response(question: Question, value: string) {
       tick(); if (submitted.value || state.submitting.value || state.generating.value) return;
+      if (textResponse(question) === value) return;
+      prepareAnswerEdit(question);
       responses.value[question.id] = value;
-      if (props.mode === 'study') checked.value.delete(question.id);
     }
 
     function blankResponse(question: Question, index: number, value: string) {
       tick(); if (submitted.value || state.submitting.value || state.generating.value) return;
       const next = [...blankResponses(question)];
+      if (next[index] === value) return;
+      prepareAnswerEdit(question);
       next[index] = value;
       responses.value[question.id] = next;
-      if (props.mode === 'study') checked.value.delete(question.id);
     }
 
     function fillBlankAnswerKey(question: Question) {
@@ -239,7 +255,9 @@ export const KnowledgeSession = defineComponent({
       const attemptCount = attempts.value[question.id] ?? 0;
       const quizRetrying = props.mode === 'quiz' && attemptCount > 0 && !wasChecked;
       const showFeedback = wasChecked || quizRetrying;
-      const locked = props.mode === 'quiz' && wasChecked;
+      const revisableQuiz = props.mode === 'quiz' && options.value.presentation === 'one-at-a-time' &&
+        options.value.allowBack;
+      const locked = props.mode === 'quiz' && wasChecked && !revisableQuiz;
       const scored = questionScored(question);
       const correct = scored && answerCorrect(
         question,

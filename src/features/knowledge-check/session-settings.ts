@@ -36,7 +36,7 @@ export function settingsForMode(options: SetOptions | undefined, mode: CheckMode
       order: 'forward',
       presentation: 'scroll',
       allowBack: true,
-      questionLimit: null,
+      questionLimit: saved.assessmentQuestionLimit,
       shuffleChoices: false,
       shortAnswerStrictness: saved.shortAnswerStrictness,
       fillBlankAnswerStrictness: saved.fillBlankAnswerStrictness,
@@ -68,8 +68,32 @@ function shuffled<T>(values: readonly T[]): T[] {
   return result;
 }
 
-export function prepareSessionQuestions(source: readonly Question[], settings: SessionSettings): Question[] {
-  let questions = [...source];
+/**
+ * Select one question from each contiguous slice of the authored order.
+ * For 60 questions and a cap of 25, this samples across 25 sections of
+ * roughly 2–3 questions each without duplicates or front-loading the set.
+ */
+export function sampleStudyQuestions<T>(source: readonly T[], limit: number): T[] {
+  if (limit >= source.length) return [...source];
+  const chosen: T[] = [];
+  for (let section = 0; section < limit; section += 1) {
+    const start = Math.floor(section * source.length / limit);
+    const end = Math.floor((section + 1) * source.length / limit);
+    chosen.push(source[start + Math.floor(Math.random() * (end - start))]!);
+  }
+  return chosen;
+}
+
+export function prepareSessionQuestions(
+  source: readonly Question[],
+  settings: SessionSettings,
+  evenlySampledStudy = false,
+): Question[] {
+  // Study samples the authored order before changing its display order so
+  // Reverse and Shuffle still cover the whole source instead of one end.
+  let questions = evenlySampledStudy && settings.questionLimit !== null && source.length > settings.questionLimit
+    ? sampleStudyQuestions(source, settings.questionLimit)
+    : [...source];
   if (settings.order === 'backward') questions.reverse();
   else if (settings.order === 'shuffle') questions = shuffled(questions);
   if (settings.questionLimit !== null) questions = questions.slice(0, settings.questionLimit);

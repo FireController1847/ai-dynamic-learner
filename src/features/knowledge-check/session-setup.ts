@@ -66,9 +66,13 @@ export const SessionSetup = defineComponent({
 
     if (props.mode === 'study') {
       return () => h('section', { class: 'knowledge-session knowledge-session-setup', 'aria-label': 'Study setup' }, [
-        h('p', { class: 'knowledge-session-setup-step' }, `Set up Study · ${props.questionCount} ${props.questionCount === 1 ? 'question' : 'questions'}`),
+        h('p', { class: 'knowledge-session-setup-step' },
+          `Set up Study · ${Math.min(props.questionCount, defaults.questionLimit ?? props.questionCount)} questions per session · ${props.questionCount} available`),
         h('h2', 'What order should the questions use?'),
-        h('p', { class: 'knowledge-session-setup-description' }, 'Choose an order for this Study session. Answer strictness comes from this knowledge set’s saved options.'),
+        h('p', { class: 'knowledge-session-setup-description' },
+          defaults.questionLimit !== null && props.questionCount > defaults.questionLimit
+            ? `A balanced sample of ${defaults.questionLimit} questions will be randomly selected across the whole set. Choose their display order below.`
+            : 'Choose an order for this Study session. Answer strictness comes from this knowledge set’s saved options.'),
         h('fieldset', { class: 'knowledge-session-choices' }, [
           h('legend', { class: 'visually-hidden' }, 'Study question order'),
           orderChoice('forward', 'In order', 'Start with the first question and continue normally.', studyOrder.value, () => { studyOrder.value = 'forward'; }, 'study-question-order'),

@@ -200,7 +200,9 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
           if (previous) lastSignatures.set(template.id, signature(previous)); } catch { /* A removed solver cannot block a new run. */ }
       }
     }
-    templates = prepareSessionQuestions(availableQuestions.value, { ...settings, shuffleChoices: false }).map(cloneQuestion);
+    templates = prepareSessionQuestions(
+      availableQuestions.value, { ...settings, shuffleChoices: false }, mode === 'study',
+    ).map(cloneQuestion);
     instances = {};
     seeds = Object.fromEntries(templates.map(question => [question.id, newVariantSeed()])); generatedIds.clear();
     questions.value = templates.map(cloneQuestion);
