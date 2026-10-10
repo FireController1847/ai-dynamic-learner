@@ -164,10 +164,10 @@ export const ReviewAiCreation = defineComponent({
               h('span', editingMix.value ? normalizedMix.value ? `→ ${normalizedMix.value[type]}%` : '—' : '%'),
               h('span', { class: 'study-ai-muted' }, displayCounts.value ? `${displayCounts.value[type]} items` : '—'),
             ])),
-          ]),
+          ]) : null,
           preferences.value.mixMode === 'custom' ? h('p', { role: 'status', class: mixProblem.value ? 'study-ai-error' : 'study-ai-muted' }, `Active mix: ${total.value}%. ${mixProblem.value || (editingMix.value
             ? 'Edit all values freely, then apply the previewed percentages together. Zero stays excluded.'
-            : 'Type a percentage, then press Enter or leave the field to balance the other enabled types. Zero stays excluded.')}`),
+            : 'Type a percentage, then press Enter or leave the field to balance the other enabled types. Zero stays excluded.')}`) : null,
           preferences.value.mixMode === 'custom' && editingMix.value ? h('p', { class: 'study-ai-muted' }, 'Relative weights need not total 100: for example, 2 / 1 / 1 becomes 50% / 25% / 25%. Blank or 0 excludes a type. Whole-number rounding is shown beside each field.') : null,
           preferences.value.mixMode === 'custom' && editingMix.value && !normalizedMix.value ? h('p', { class: 'study-ai-error', role: 'status' }, 'Use whole weights from 0 to 100, with at least one type above 0.') : null,
           preferences.value.mixMode === 'custom' && weightNotice.value ? h('p', { class: 'study-ai-muted', role: 'status' }, weightNotice.value) : null,

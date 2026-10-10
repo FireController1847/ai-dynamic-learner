@@ -95,3 +95,7 @@ Multiple Choice remains single-answer by default. In the question builder, **All
 Test question cards do not repeat the pre-start overview's explanation that feedback is held until submission or that answers remain editable. This reminder appears only on the session introduction, not beneath each active question.
 
 The Multiple Choice builder positions its correct-choice radio buttons and checkboxes identically next to the answer text fields; only explicit text inputs receive full-width form-control styling. Checkboxes never stretch, shift the answer fields, or inherit text-field padding.
+
+## Review AI question-type strategy
+
+The AI knowledge-set creation workflow offers a choice of **Custom percentages** (the default and existing flow) or **Let AI choose** after selecting scope. Custom keeps its interactive percentage editor, type enable/disable behavior, rounding, and imported-mix warnings. AI choice hides the percentage editor and asks the AI to select a content-appropriate distribution of supported types, including omitting types that do not fit, without fixed type quotas. Total question count and coverage remain user-controlled in both modes. The AI's response is still validated question by question and discrepancies from the requested total are warned about, but AI-chosen distributions never produce percentage-mismatch warnings. The import preview labels AI-selected mixes accurately. Switching between modes retains the custom percentages without silently modifying them.

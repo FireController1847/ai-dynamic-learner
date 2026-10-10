@@ -96,3 +96,5 @@ Study question selection: `session-settings.ts` uses contiguous-section sampling
 
 
 Fill-in-the-Blanks number matching is centralized in `src/core/fill-blank.ts` for both Review and Index Cards. A fully parseable finite numeric expected answer (allowing comma separators, signed decimals and scientific notation) bypasses all fuzzy/linguistic/semantic text heuristics and requires the submitted value to be numerically identical. Comparison uses canonical decimal digits and exponents to avoid IEEE-754 rounding collisions. Nonnumeric blanks retain the configured text matcher and adjacent and/or swap handling.
+
+Review AI generation uses `ReviewAiPreferences.mixMode` (`custom` or `ai`) as transient configuration in `ai-creation.ts`, with conditional prompt generation/import warning policy in `ai-import-format.ts`. Count validity is independent of weights; custom mode allocates/compares type quotas, while AI mode presents all supported question-type schemas and validates generated questions without a quota. Neither mode changes persisted question records or workspace format.
