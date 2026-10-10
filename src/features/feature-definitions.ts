@@ -67,7 +67,7 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'index-cards', label: 'Index Cards', path: '/index-cards/', icon: 'cards',
     group: 'applications',
-    version: '1.18.0',
+    version: '1.18.1',
     image: 'assets/app-icons/index-cards.png',
     description: 'Create flash cards or fill-in-the-blanks sets, then review or view them at your own pace.',
   },
@@ -115,7 +115,7 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'knowledge-check', label: 'Review', path: '/knowledge-check/', icon: 'checklist',
     group: 'mastery',
-    version: '1.17.0',
+    version: '1.17.1',
     image: 'assets/app-icons/knowledge-check.png',
     description: 'Make knowledge sets to study, quiz yourself, or take a test.',
     metadata: {

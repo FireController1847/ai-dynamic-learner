@@ -1,4 +1,4 @@
-import { fillBlankCorrectness, type FillBlankTemplate } from '../../core/fill-blank.ts';
+import { fillBlankAnswerMatches, fillBlankCorrectness, type FillBlankTemplate } from '../../core/fill-blank.ts';
 import {
   DEFAULT_ANSWER_STRICTNESS,
   answerSimilarity,
@@ -30,7 +30,8 @@ export function isFillBlankAnswerCorrect(
   response: string,
   strictness: AnswerStrictness = DEFAULT_ANSWER_STRICTNESS,
 ): boolean {
-  return isAnswerCorrect(answer, response, { strictness });
+  return fillBlankAnswerMatches(answer, response,
+    (expected, submitted) => isAnswerCorrect(expected, submitted, { strictness }));
 }
 
 export function fillBlankResponseCorrectness(

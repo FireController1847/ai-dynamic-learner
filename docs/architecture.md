@@ -93,3 +93,6 @@ Study question selection: `session-settings.ts` uses contiguous-section sampling
 
 
 `parameterized-session.ts` is also Review's validated, bounded browser-local session persistence layer. Explicit Study and untimed Quiz pauses serialize the existing session fields, including static-only question sets, using `paused: true`; the mode picker only advertises snapshots with this flag. `knowledge-set.ts` routes the paused mode directly back to the saved effective settings, and `knowledge-session.ts` resumes rather than rebuilding the randomized session. Ordinary sessions cease being marked paused on resume; automatic generated-session interruption recovery remains separate.
+
+
+Fill-in-the-Blanks number matching is centralized in `src/core/fill-blank.ts` for both Review and Index Cards. A fully parseable finite numeric expected answer (allowing comma separators, signed decimals and scientific notation) bypasses all fuzzy/linguistic/semantic text heuristics and requires the submitted value to be numerically identical. Comparison uses canonical decimal digits and exponents to avoid IEEE-754 rounding collisions. Nonnumeric blanks retain the configured text matcher and adjacent and/or swap handling.
