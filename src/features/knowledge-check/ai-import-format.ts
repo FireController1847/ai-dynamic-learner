@@ -26,7 +26,7 @@ export function reviewAiPrompt(preferences: ReviewAiPreferences, scope: AiCardSc
     statement: { type: 'statement', prompt: 'Gold has the chemical symbol Au.' },
   };
   const quality: Record<keyof QuestionWeights, string> = {
-    'multiple-choice': `- Multiple choice: normally four distinct, plausible choices, exactly one correct. Put the correct choice's exact text in answer. Avoid giveaway wording, arbitrary tricks, "all of the above", and always putting the correct answer first. Mix the answer positions.`,
+    'multiple-choice': `- Multiple choice: normally four distinct, plausible choices and one correct answer in answer. When the source clearly supports a select-all question, optionally use correctAnswers (an array of correct choice texts) instead of answer; all and only those choices must be selected. Avoid giveaway wording, arbitrary tricks, "all of the above", and always putting the correct answer first. Mix answer positions.`,
     'true-false': `- True/false: one clear factual claim, with answer exactly "True" or "False". Include both outcomes when useful, without ambiguous qualifiers or trick statements.`,
     'fill-in-the-blanks': `- Fill in the blanks: {{answer}} markers inside concise, contextual statements. Almost always one word per blank; 2–3 only for an indivisible term. For separate items use {{letters}} and {{numbers}} or {{letters}} or {{numbers}}, preserving the source meaning. Keep meaningful context visible; several related blanks are welcome. Keep terminology and blank boundaries consistent throughout, never alternating a full term like "nullword" with "null" for the same concept. Keep {{answer}} markers only in "prompt"; optional Markdown context is background material and must not replace the blank-aware prompt.`,
     'short-answer': `- Short answer: a specific quick-recall question with an answer of 1–5 words, not an essay or a list.`,
@@ -35,7 +35,7 @@ export function reviewAiPrompt(preferences: ReviewAiPreferences, scope: AiCardSc
     parameterized: PARAMETERIZED_AI_GUIDANCE,
   };
   const fields: Record<keyof QuestionWeights, string> = {
-    'multiple-choice': 'Use only type/prompt/choices/answer/optional explanation on multiple choice.',
+    'multiple-choice': 'By default, use type/prompt/choices/answer/optional explanation. To make a multi-select question, replace answer with a correctAnswers array listing all correct choice texts; do not include both fields.',
     'true-false': 'Use type/prompt/answer/optional explanation on true/false; omit choices.',
     'short-answer': 'Use type/prompt/answer/optional explanation on short answer; omit choices.',
     'dropdown': 'On Dropdown use type/prompt/choices/matches/optional explanation, with correct answers inside the matching rows and no top-level answer.',
@@ -96,7 +96,7 @@ export function parseReviewAiImport(text: string, preferences: ReviewAiPreferenc
     }
     const type = AI_QUESTION_TYPES.find(type => type === entry.type)!;
     const fields = type === 'parameterized' ? ['type', 'prompt', 'parameters', 'explanation'] : type === 'statement' ? ['type', 'prompt'] : type === 'dropdown' ? ['type', 'prompt', 'choices', 'matches', 'explanation'] : type === 'fill-in-the-blanks' ? ['type', 'prompt', 'explanation'] :
-      type === 'multiple-choice' ? ['type', 'prompt', 'answer', 'choices', 'explanation'] : ['type', 'prompt', 'answer', 'explanation'];
+      type === 'multiple-choice' ? ['type', 'prompt', 'answer', 'correctAnswers', 'choices', 'explanation'] : ['type', 'prompt', 'answer', 'explanation'];
     fields.push('context');
     if (Object.keys(entry).some(key => !fields.includes(key)) ||
         (Object.hasOwn(entry, 'context') && (typeof entry.context !== 'string' || entry.context.length > MAX_QUESTION_CONTEXT)) ||
@@ -108,7 +108,14 @@ export function parseReviewAiImport(text: string, preferences: ReviewAiPreferenc
     question.explanation = typeof entry.explanation === 'string' ? entry.explanation.trim() : '';
     if (typeof entry.context === 'string') question.context = entry.context.trim();
     if (type === 'parameterized') question.parameters = resolveAiParameters(entry.parameters, packages);
-    if (type !== 'parameterized' && type !== 'statement' && type !== 'fill-in-the-blanks' && type !== 'dropdown') {
+    if (type === 'multiple-choice' && Object.hasOwn(entry, 'correctAnswers')) {
+      if (Object.hasOwn(entry, 'answer') || !Array.isArray(entry.correctAnswers) ||
+          entry.correctAnswers.length < 1 || entry.correctAnswers.length > 8 ||
+          entry.correctAnswers.some(answer => typeof answer !== 'string' || !answer.trim() || answer.length > MAX_TEXT)) {
+        throw new Error(`Item ${index + 1} needs 1–8 valid correct choices, without a separate answer field.`);
+      }
+      question.correctAnswers = entry.correctAnswers.map((answer: string) => answer.trim());
+    } else if (type !== 'parameterized' && type !== 'statement' && type !== 'fill-in-the-blanks' && type !== 'dropdown') {
       if (typeof entry.answer !== 'string' || !entry.answer.trim() || entry.answer.length > MAX_TEXT) throw new Error(`Item ${index + 1} needs a short correct answer.`);
       question.answer = entry.answer.trim();
     }
@@ -132,7 +139,7 @@ export function parseReviewAiImport(text: string, preferences: ReviewAiPreferenc
         throw new Error(`Item ${index + 1} needs valid {{answer}} blanks with visible context.`);
       }
     }
-    if (!questionReady(question)) throw new Error(`Item ${index + 1} is incomplete or its correct answer does not match a distinct choice.`);
+    if (!questionReady(question)) throw new Error(`Item ${index + 1} is incomplete or its correct answer(s) do not match distinct choices.`);
     return question;
   });
   for (const pkg of packages) {

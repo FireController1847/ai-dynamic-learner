@@ -155,3 +155,6 @@ Study and untimed Quiz can explicitly pause and resume on the same browser. The 
 
 
 Review session snapshot `flagged?: string[]` stores session-only flagged question IDs alongside answers, checks and hints. Validation accepts the missing field in older snapshots, but rejects unknown, repeated, or malformed question IDs. Flags are restored with Pause/Resume and generated-question recovery; they are never part of authored knowledge sets or graded scores.
+
+
+Review Multiple Choice adds an optional `correctAnswers: string[]` question property. Absence means the legacy single-answer `answer: string` and radio-button response; presence switches to checkbox responses and requires `answer: ''`. This remains an optional backward-compatible field in workspace question records and paused-session templates; selected responses already use the existing `string | string[]` representation. Review AI JSON import accepts `correctAnswers` instead of `answer` for multi-answer Multiple Choice, while existing imports remain unchanged.
