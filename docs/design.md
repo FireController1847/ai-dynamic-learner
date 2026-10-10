@@ -66,3 +66,8 @@ Review pre-session setup follows the same choice-card language as Index Cards re
 
 
 Review Statements display authored text as a normal session item with no answer control, feedback, hint/reveal tools, or score effect; navigation simply continues to the next item. Fill-in-the-Blanks Index Card imports surface a modal resolver when selected sources contain visible cards without blanks. Every affected card independently chooses **Convert to Statement** or **Discard**, and those decisions remain reviewable from the source row before creation.
+
+
+## Review question presentation
+
+Review Study displays all questions in one vertical list by default; each card shows its own “Question N of M” label, its answer controls, and its own Check answer/feedback/hints. Quiz and Test authors separately select either **All questions (vertical scroll)** (the default) or **One at a time** in Set options. Quiz may override its saved presentation in Customize Settings; Test uses its saved layout. One-at-a-time Quiz/Test may disable returning to earlier questions; this is enforced by navigation state and reflected in the overview. Scrolling Test still holds feedback until final submission. Statement items remain unscored, and scores/attempts stay per question regardless of layout.

@@ -73,7 +73,7 @@ Webpack emits hashed JS/CSS bundles and copies `src/assets/` recursively to `dis
 
 ## Review session configuration
 
-Review keeps saved assessment defaults in the knowledge set but transient per-session choices outside persistence. `session-settings.ts` converts saved options into mode-specific runtime settings and prepares a stable question/choice order when a session starts. `session-setup.ts` owns pre-session choices: Study always chooses an order, Quiz chooses saved defaults or temporary customization, and Test bypasses customization and uses saved builder settings exactly.
+Review keeps saved assessment defaults in the knowledge set but transient per-session choices outside persistence. Study always uses the all-questions scrolling layout; Quiz/Test persist separate scroll-or-one-at-a-time layouts and backward-navigation settings in `set-options.ts`. A Quiz may temporarily override its saved layout through Customize Settings; Test has no session override. `knowledge-session.ts` renders question controls from one shared per-question renderer in either a complete vertical list or one-at-a-time flow. `session-state.ts` accepts per-question check targets and prepares all generated variants before starting scrolling sessions, including on resume; older saved parameterized sessions retain one-at-a-time presentation by default. `session-settings.ts` converts saved options into mode-specific runtime settings and prepares a stable question/choice order when a session starts. `session-setup.ts` owns pre-session choices: Study always chooses an order, Quiz chooses saved defaults or temporary customization, and Test bypasses customization and uses saved builder settings exactly.
 
 
 ## Review Statements and Fill-in-the-Blanks import resolution

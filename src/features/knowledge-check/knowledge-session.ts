@@ -382,7 +382,7 @@ export const KnowledgeSession = defineComponent({
           h('div', { class: 'knowledge-session-navigation knowledge-scroll-footer' }, [
             props.mode === 'study'
               ? h('button', { type: 'button', class: 'quiet-button knowledge-keep-studying', onClick: () => {
-                state.finishStudyPass();
+                state.completeStudyScrollPass();
                 scrollSession.value?.querySelector<HTMLElement>('.knowledge-prompt')?.scrollIntoView({ block: 'start' });
                 state.resetStudyPass();
               } }, ['Keep studying', h(Icon, { name: 'chevron' })])
@@ -394,6 +394,9 @@ export const KnowledgeSession = defineComponent({
           ]),
         ]);
       }
+      const study = props.mode === 'study';
+      const scored = questionScored(question);
+      const wasChecked = checked.value.has(question.id);
       return h('section', { key: 'questions', class: ['knowledge-session', { 'is-backward': backward.value }], 'data-mode': props.mode, 'aria-label': `${props.mode} questions` }, [
         state.storageMessage.value ? h('p', { role: 'status', class: 'knowledge-message' }, state.storageMessage.value) : null,
         h('div', { class: 'knowledge-session-progress' }, [h('p', `Question ${position.value + 1} of ${questions.value.length}`),

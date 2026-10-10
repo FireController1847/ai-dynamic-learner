@@ -170,6 +170,12 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
       studyPassRecorded = true; persist();
     }
   }
+  function completeStudyScrollPass() {
+    if (mode !== 'study' || options.value.presentation !== 'scroll' || !started.value) return;
+    // Reaching Keep studying at the end of the list completes one pass without grading anything.
+    studyVisited = new Set(questions.value.map(question => question.id));
+    finishStudyPass();
+  }
   watch(position, async () => {
     const index = position.value, currentEpoch = epoch;
     if (!started.value || !await ensureQuestion(index, true) || currentEpoch !== epoch) return;
@@ -293,5 +299,5 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
   return { questions, questionCount, options, position, responses, feedbackResponses, checked, revealed, hints, submitted, started, expired, ended,
     active, answered, resolved, score, scoredCount, remaining, celebrating, attempts, studyChecks, studyCorrectChecks,
     generationError, generating, submitting, storageMessage, resumable, resume,
-    start, end, check, submit, leave, tick, finishStudyPass, resetStudyPass };
+    start, end, check, submit, leave, tick, finishStudyPass, completeStudyScrollPass, resetStudyPass };
 }
