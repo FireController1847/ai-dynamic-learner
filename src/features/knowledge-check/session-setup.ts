@@ -26,8 +26,6 @@ export const SessionSetup = defineComponent({
     const quizChoice = ref<QuizSetupChoice>('default');
     const customizing = ref(false);
     const custom = ref<SessionSettings>({ ...defaults });
-    const limited = ref(custom.value.questionLimit !== null);
-    const customLimit = ref(custom.value.questionLimit ?? Math.min(10, Math.max(1, props.questionCount)));
 
     function orderChoice(order: QuestionOrder, label: string, description: string, value: QuestionOrder, onSelect: () => void, name: string) {
       return h('label', { class: 'knowledge-session-choice', key: order }, [
@@ -60,8 +58,8 @@ export const SessionSetup = defineComponent({
     }
 
     function emitCustomQuiz() {
-      custom.value.questionLimit = limited.value ? Math.max(1, Math.min(props.questionCount, customLimit.value || 1)) : null;
-      emit('continue', { ...custom.value });
+      // The creator's shared question limit applies to every mode.
+      emit('continue', { ...custom.value, questionLimit: defaults.questionLimit });
     }
 
     if (props.mode === 'study') {
@@ -111,7 +109,7 @@ export const SessionSetup = defineComponent({
               }),
               h('span', [
                 h('strong', 'Customize Settings'),
-                h('span', { class: 'knowledge-session-choice-description' }, 'Temporarily change layout, navigation, order, question count, answer-choice shuffling, answer strictness, or allowed attempts.'),
+                h('span', { class: 'knowledge-session-choice-description' }, 'Temporarily change layout, navigation, order, answer-choice shuffling, answer strictness, or allowed attempts. The question limit is fixed by the creator.'),
               ]),
             ]),
           ]),
@@ -132,7 +130,8 @@ export const SessionSetup = defineComponent({
       return h('section', { class: 'knowledge-session knowledge-session-setup', 'aria-label': 'Customize Quiz settings' }, [
         h('p', { class: 'knowledge-session-setup-step' }, 'Customize Quiz · Session only'),
         h('h2', 'Customize Quiz settings'),
-        h('p', { class: 'knowledge-session-setup-description' }, 'These changes apply only to this Quiz and do not change the saved knowledge set.'),
+        h('p', { class: 'knowledge-session-setup-description' },
+          'These changes apply only to this Quiz. The question limit remains fixed by the knowledge-set creator.'),
         h('fieldset', { class: 'knowledge-session-choices' }, [
           h('legend', 'Question order'),
           orderChoice('forward', 'In order', 'Use the original question order.', custom.value.order, () => { custom.value.order = 'forward'; }, 'quiz-question-order'),
@@ -151,22 +150,6 @@ export const SessionSetup = defineComponent({
             type: 'checkbox', checked: custom.value.allowBack,
             onChange: (event: Event) => { custom.value.allowBack = (event.target as HTMLInputElement).checked; },
           }), 'Allow going back to earlier questions',
-        ]) : null,
-        h('label', { class: 'knowledge-option-toggle' }, [
-          h('input', {
-            type: 'checkbox',
-            checked: limited.value,
-            onChange: (event: Event) => { limited.value = (event.target as HTMLInputElement).checked; },
-          }),
-          'Limit the number of questions',
-        ]),
-        limited.value ? h('label', { class: 'knowledge-field' }, [
-          'Questions in this Quiz',
-          h('input', {
-            type: 'number', min: 1, max: Math.max(1, props.questionCount), step: 1,
-            value: customLimit.value,
-            onInput: (event: Event) => { customLimit.value = Number(inputValue(event)); },
-          }),
         ]) : null,
         h('label', { class: 'knowledge-option-toggle' }, [
           h('input', {

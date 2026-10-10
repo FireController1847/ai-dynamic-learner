@@ -12,7 +12,7 @@ import { answerStrictnessForQuestion } from './session-settings.ts';
 import { useKnowledgeSession } from './session-state.ts';
 import { dropdownCorrectness } from './dropdown-model.ts';
 import { enterReviewPanel, leaveReviewPanel, restoreReviewPanel } from './review-motion.ts';
-import { computed, defineComponent, h, ref, Transition, type PropType } from 'vue';
+import { computed, defineComponent, h, onMounted, ref, Transition, type PropType } from 'vue';
 
 export const KnowledgeSession = defineComponent({
   name: 'KnowledgeSession',
@@ -21,8 +21,9 @@ export const KnowledgeSession = defineComponent({
     mode: { type: String as PropType<CheckModeId>, required: true },
     settings: { type: Object as PropType<import('./session-settings.ts').SessionSettings>, required: true },
     statisticsEnabled: { type: Boolean, default: true },
+    autoResume: Boolean,
   },
-  emits: { back: () => true, build: () => true },
+  emits: { back: () => true, build: () => true, paused: () => true },
   setup(props, { emit }) {
     const state = useKnowledgeSession(props.item, props.mode, props.settings, props.statisticsEnabled);
     const { questions, questionCount, options, position, responses, feedbackResponses, checked, revealed, hints, submitted, started, expired, ended,
@@ -32,6 +33,24 @@ export const KnowledgeSession = defineComponent({
     const fillBlankPrimaryButton = ref<HTMLButtonElement | null>(null);
     const backward = ref(false);
     const scrollSession = ref<HTMLElement | null>(null);
+    onMounted(() => { if (props.autoResume) void state.resume(); });
+
+    function pauseSession() {
+      if (state.pause()) emit('paused');
+    }
+
+    const canPause = computed(() => props.statisticsEnabled && (props.mode === 'study' ||
+      (props.mode === 'quiz' && options.value.timeLimitMinutes === null)));
+    function sessionEndControls() {
+      const endButton = h('button', { type: 'button', class: 'quiet-button',
+        onClick: props.mode === 'study' ? end : state.leave },
+      props.mode === 'study' ? 'End studying' : props.mode === 'quiz' ? 'End quiz' : 'End test');
+      return [
+        canPause.value ? h('button', { type: 'button', class: 'quiet-button',
+          onClick: pauseSession }, props.mode === 'study' ? 'Pause Studying' : 'Pause Quiz') : null,
+        endButton,
+      ];
+    }
 
     function moveQuestion(next: number, wrap = false) {
       tick();
@@ -391,9 +410,7 @@ export const KnowledgeSession = defineComponent({
               `${studyCorrectChecks.value} / ${studyChecks.value} checks correct · ${studyChecks.value ? Math.round(studyCorrectChecks.value / studyChecks.value * 100) : 0}%`) : null,
             remaining.value !== null ? h('p', { class: ['knowledge-timer', { 'is-low': remaining.value <= 60 }], role: 'timer', 'aria-live': 'off' },
               `Time left: ${Math.floor(remaining.value / 60)}:${String(remaining.value % 60).padStart(2, '0')}`) : null,
-            props.mode === 'study' ? h('button', { type: 'button', class: 'quiet-button', onClick: end }, 'End studying')
-              : h('button', { type: 'button', class: 'quiet-button', onClick: state.leave },
-                props.mode === 'test' ? 'End test' : 'End quiz'),
+            ...sessionEndControls(),
           ]),
           h('div', { class: 'knowledge-scroll-questions' }, questions.value.map((entry, index) =>
             renderQuestion(entry, index, true))),
@@ -423,8 +440,7 @@ export const KnowledgeSession = defineComponent({
             `${studyCorrectChecks.value} / ${studyChecks.value} checks correct · ${studyChecks.value ? Math.round(studyCorrectChecks.value / studyChecks.value * 100) : 0}%`) : null,
           remaining.value !== null ? h('p', { class: ['knowledge-timer', { 'is-low': remaining.value <= 60 }], role: 'timer', 'aria-live': 'off' },
             `Time left: ${Math.floor(remaining.value / 60)}:${String(remaining.value % 60).padStart(2, '0')}`) : null,
-          study ? h('button', { type: 'button', class: 'quiet-button', onClick: end }, 'End studying') :
-            h('button', { type: 'button', class: 'quiet-button', onClick: state.leave }, props.mode === 'test' ? 'End test' : 'End quiz'),
+          ...sessionEndControls(),
           h('div', { class: 'knowledge-progress-track', 'aria-hidden': 'true' }, [
             h('span', { style: { width: `${(position.value + 1) / questions.value.length * 100}%` } }),
           ])]),
