@@ -1,3 +1,4 @@
+import { useStudySession } from '../../components/use-study-session.ts';
 import type { CardSet as CardSetModel } from './tree-model.ts';
 import type { Card, CardSide } from './card-model.ts';
 import type { ReviewOrder, ReviewSettings } from './review-setup.ts';
@@ -8,6 +9,8 @@ import { CardList, type CardListHandle } from './card-list.ts';
 import { CardPaper } from './card-paper.ts';
 import { ReviewSetup } from './review-setup.ts';
 import { ReviewResult } from './review-result.ts';
+import { EntryStatistics } from '../../components/entry-statistics.ts';
+import { useStatistics, useStatisticsVisits } from '../../components/statistics-context.ts';
 
 import { defineComponent, type PropType, computed, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, reactive, ref, watch } from 'vue';
 
@@ -34,6 +37,7 @@ export const CardSet = defineComponent({
     const reviewOrder = ref<ReviewOrder>('forward');
     const reviewSetupOpen = ref(false);
     const reviewActive = ref(false);
+    useStudySession(reviewActive);
     const reviewNotice = ref('');
     const reviewGrades = reactive(new Map<string, boolean>());
     const reviewResult = ref<{ correct: number; total: number } | null>(null);
@@ -55,6 +59,9 @@ export const CardSet = defineComponent({
     });
     const index = computed(() => Math.max(0, orderedCards.value.findIndex((card) => card.id === currentId.value)));
     const current = computed(() => orderedCards.value[index.value]);
+    const statistics = useStatistics();
+    useStatisticsVisits('index-cards', () => props.set.id, () => !reviewResult.value && !props.tutorialReview,
+      'cardViews', () => current.value?.id ?? null);
     const atLimit = computed(() => props.totalCards >= MAX_CARDS);
 
     watch(() => props.set.cards.length, (length) => {
@@ -161,6 +168,7 @@ export const CardSet = defineComponent({
     }
 
     async function startReview(settings: ReviewSettings) {
+      if (!props.tutorialReview) statistics?.record('index-cards', props.set.id, 'reviewStarts');
       reviewGrades.clear();
       reviewResult.value = null;
       reviewActive.value = true;
@@ -185,6 +193,8 @@ export const CardSet = defineComponent({
     }
 
     async function finishReview() {
+      if (!reviewActive.value) return;
+      if (!props.tutorialReview) statistics?.record('index-cards', props.set.id, 'reviews');
       const cards = [...orderedCards.value];
       reviewResult.value = {
         correct: cards.filter((card) => reviewGrades.get(card.id) === true).length,
@@ -282,6 +292,7 @@ export const CardSet = defineComponent({
               : `${position} · ${reviewNotice.value || 'Edit either side'}`),
           ]),
           h('div', { class: 'card-review-session-actions' }, [
+            h(EntryStatistics, { app: 'index-cards', id: props.set.id }),
             h('button', {
               ref: reviewButton, type: 'button', class: 'quiet-button card-review-button', 'aria-haspopup': 'dialog',
               onClick: () => { reviewSetupOpen.value = true; },

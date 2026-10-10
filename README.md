@@ -1,7 +1,7 @@
 <!-- If you are an AI coding agent working in this repository, start with [`AGENTS.md`](https://github.com/FireController1847/ai-dynamic-learner/blob/main/AGENTS.md). -->
 
 <p align="center">
-  <img src="src/assets/dynamic-learner.png" alt="Dynamic Learner" width="104">
+  <img src="src/assets/app-icons/dynamic-learner.png" alt="Dynamic Learner" width="104">
 </p>
 
 <h1 align="center">Dynamic Learner</h1>
@@ -49,14 +49,14 @@ The current application includes:
 
 | Tool | What it does |
 | --- | --- |
-| **Calculator** | Uses a MathPrint-style scientific entry display with editable stacked fractions, expression history navigation, normal precedence, scientific functions, DEG/RAD and fraction/decimal modes, configurable decimal places, memory controls, and a reusable session-history panel. |
+| **Calculator** | Uses a MathPrint-style scientific entry display with clickable cursor editing, editable stacked fractions, insert/backspace/delete controls, expression history navigation, normal precedence, scientific functions, explicit decimal-place rounding, DEG/RAD and fraction/decimal modes, configurable display precision, memory controls, and a reusable session-history panel. |
 | **Notebook** | Organizes documents into a nested library. Write on Lined Paper with automatic overflow pages, use Markdown source and preview, or combine expressions and visual drawing on Graph Paper with point coordinates, line measurements, and closed-region areas. Customize appearance separately for each paper type. |
 | **Todo List** | Lined-paper tasks with adjustable fonts and alignment, checkboxes, centered section priorities, and shared section-name prefixes. Lists are organized by creation date and gradually fade into an archive with configurable expiry. |
 | **Index Cards** | Creates nested study sets in Flash Cards or Fill in the Blanks mode, with editable card content, guided review, per-mode appearance controls, and resumable workspace storage. |
 | **Word Search** | Builds custom word-search puzzles with configurable difficulty and appearance, saved grids, hints, answer reveal, and persistent progress. |
 | **Crossword** | Builds custom crosswords from answer-and-clue pairs, automatically arranges Across and Down entries, and saves typed progress with checking, hints, reveals, and display controls. |
-| **Study Guide** | Builds lightweight titled bullet lists or connected topic maps. Map study walks the route stop by stop, revealing points, tracking visited topics, branching, and backtracking as needed. |
-| **Review** | Builds grouped knowledge sets with multiple-choice, true/false, and short-answer questions. Study with hints and retries, take a Quiz with immediate feedback, or start a Test with optional timing and answer review. |
+| **Guide** | Builds lightweight titled bullet lists or connected topic maps. Map study walks the route stop by stop, revealing points, tracking visited topics, branching, and backtracking as needed. |
+| **Review** | Builds grouped knowledge sets with multiple-choice, true/false, short-answer, and fill-in-the-blanks questions. Study with hints and retries, take a Quiz with immediate feedback, or start a Test with optional timing and answer review. |
 
 The interface uses a Fluent-inspired visual language with neutral surfaces, compact controls, blue accents, and responsive layouts. The tools are meant to feel related without forcing every feature into the same interaction model.
 
@@ -67,6 +67,8 @@ The latest published GitHub Pages snapshot is available here:
 **[Open Dynamic Learner →](https://firecontroller1847.github.io/ai-dynamic-learner/)**
 
 GitHub Pages is deployed manually, so the published site may occasionally lag behind the latest commit on `main`.
+
+Older `/study-guide/` bookmarks redirect to `/guide/`. Existing workspaces and AI imports from before the Guide rename remain supported.
 
 Opening an app with a library selects its first entry in library order. Todo List follows your chosen date order and opens Archive when only past lists remain. Select or create a group to see its creation screen, then use the button there to add an entry inside that group.
 

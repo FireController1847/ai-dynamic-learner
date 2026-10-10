@@ -1,6 +1,6 @@
 import type { Card } from './card-model.ts';
 import { inputValue } from '../../core/dom.ts';
-import { isFillBlankAnswerCorrect, parseFillBlankTemplate } from './fill-blank-model.ts';
+import { DEFAULT_ANSWER_STRICTNESS, fillBlankResponseCorrectness, parseFillBlankTemplate, type AnswerStrictness } from './fill-blank-model.ts';
 
 import { defineComponent, type PropType, h } from 'vue';
 
@@ -14,7 +14,9 @@ export const FillBlankPaper = defineComponent({
     card: { type: Object as PropType<Card>, required: true },
     position: { type: Number, required: true },
     responses: { type: Array as PropType<string[]>, required: true },
+    answerStrictness: { type: Number as PropType<AnswerStrictness>, default: DEFAULT_ANSWER_STRICTNESS },
     verified: Boolean,
+    viewAnswers: Boolean,
     side: { type: String as PropType<'front' | 'back'>, default: 'front' },
     resultReviewIndex: { type: Number as PropType<number | null>, default: null },
   },
@@ -53,6 +55,11 @@ export const FillBlankPaper = defineComponent({
 
     return () => {
       const template = parseFillBlankTemplate(props.card.front);
+      const correctness = fillBlankResponseCorrectness(
+        template,
+        props.responses,
+        props.answerStrictness,
+      );
 
       const prompt = h('div', {
         class: 'card-face card-face--front fill-blank-face fill-blank-review-card',
@@ -61,14 +68,26 @@ export const FillBlankPaper = defineComponent({
       }, [
         h('div', { class: 'card-face-heading' }, [
           h('span', { class: 'fill-blank-review-title' }, title()),
-          h('span', { class: 'card-face-side' }, 'Prompt'),
+          h('span', { class: 'card-face-side' }, props.viewAnswers ? 'View' : 'Prompt'),
           h('span', { class: 'card-face-number', 'aria-hidden': 'true' }, String(props.position).padStart(2, '0')),
         ]),
         h('div', {
           class: 'fill-blank-writing',
-          'aria-label': `Fill in the blanks for card ${props.position}`,
+          'aria-label': props.viewAnswers
+            ? `Completed fill in the blanks card ${props.position}`
+            : `Fill in the blanks for card ${props.position}`,
         }, template.segments.map((segment) => {
           if (segment.type === 'text') return h('span', { class: 'fill-blank-text' }, segment.text);
+
+          if (props.viewAnswers) {
+            return h('span', {
+              key: `view-blank-${segment.index}`,
+              class: 'fill-blank-review-blank fill-blank-view-blank',
+            }, [
+              blankNumber(segment.index),
+              h('span', { class: 'fill-blank-view-answer' }, segment.answer),
+            ]);
+          }
 
           const response = props.responses[segment.index] ?? '';
           const width = Math.max(6, Math.min(28, response.length + 1));
@@ -118,7 +137,7 @@ export const FillBlankPaper = defineComponent({
           if (segment.type === 'text') return h('span', { class: 'fill-blank-text' }, segment.text);
 
           const response = props.responses[segment.index] ?? '';
-          const correct = isFillBlankAnswerCorrect(segment.answer, response);
+          const correct = correctness[segment.index] ?? false;
           const reviewing = props.resultReviewIndex === segment.index;
           return h('span', {
             key: `result-${segment.index}`,

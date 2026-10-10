@@ -1,4 +1,10 @@
-export interface KnowledgeCheckLibraryHandle { reveal(id: string): void; focusToggle(): void; focusNewKnowledgeCheck(): void }
+export interface KnowledgeCheckLibraryHandle {
+  reveal(id: string): void;
+  focusToggle(): void;
+  focusNewKnowledgeCheck(): void;
+  focusImportKnowledgeCheck(): void;
+  focusAiCreation(): void;
+}
 import type { VNode } from 'vue';
 import type { LibraryItem, MovePosition } from './library-model.ts';
 import { inputValue } from '../../core/dom.ts';
@@ -19,7 +25,14 @@ export const KnowledgeCheckLibrary = defineComponent({
     collapsed: Boolean,
     beforeChange: { type: Function as PropType<() => boolean>, default: () => true },
   },
-  emits: { 'select': (_id: string | null) => true, 'open-item': () => true, 'toggle-library': () => true, 'new-check': (_target: { parentId: string | null; parentName: string; selectedId?: string | null }) => true },
+  emits: {
+    'select': (_id: string | null) => true,
+    'open-item': () => true,
+    'toggle-library': () => true,
+    'new-check': (_target: { parentId: string | null; parentName: string; selectedId?: string | null }) => true,
+    'import-check': (_target: { parentId: string | null; parentName: string; selectedId?: string | null }) => true,
+    'ai-check': (_target: { parentId: string | null; parentName: string; selectedId?: string | null }) => true,
+  },
   setup(props, { emit, expose, slots }) {
     const expanded = ref(new Set<string>());
     const editingId = ref<string | null>(null);
@@ -30,7 +43,9 @@ export const KnowledgeCheckLibrary = defineComponent({
     const announcement = ref('');
     const pendingDelete = ref<LibraryItem | null>(null);
     const createGroupButton = ref<HTMLButtonElement | null>(null);
+    const aiButton = ref<HTMLButtonElement | null>(null);
     const createKnowledgeCheckButton = ref<HTMLButtonElement | null>(null);
+    const importKnowledgeCheckButton = ref<HTMLButtonElement | null>(null);
     const collapseButton = ref<HTMLButtonElement | null>(null);
     const labels = new Map<string | null, HTMLElement>();
     let deleteTrigger: HTMLElement | null = null;
@@ -92,7 +107,7 @@ export const KnowledgeCheckLibrary = defineComponent({
       rename(group);
     }
 
-    function requestKnowledgeCheckSetup() {
+    function setupTarget() {
       const selected = findItem(props.items, props.selectedId);
       let parentId: string | null = null;
       let parentName = 'Top level';
@@ -106,8 +121,19 @@ export const KnowledgeCheckLibrary = defineComponent({
         parentName = findItem(props.items, selected.parentId)?.item.name ?? 'Selected group';
       }
 
-      emit('new-check', { parentId, parentName, selectedId: props.selectedId });
-      announcement.value = `Opened new check setup for ${parentName}.`;
+      return { parentId, parentName, selectedId: props.selectedId };
+    }
+
+    function requestKnowledgeCheckSetup() {
+      const target = setupTarget();
+      emit('new-check', target);
+      announcement.value = `Opened new knowledge set setup for ${target.parentName}.`;
+    }
+
+    function requestKnowledgeCheckImport() {
+      const target = setupTarget();
+      emit('import-check', target);
+      announcement.value = `Opened knowledge set import for ${target.parentName}.`;
     }
 
     function toggle(id: string) {
@@ -127,6 +153,8 @@ export const KnowledgeCheckLibrary = defineComponent({
       reveal,
       focusToggle: () => collapseButton.value?.focus(),
       focusNewKnowledgeCheck: () => createKnowledgeCheckButton.value?.focus(),
+      focusImportKnowledgeCheck: () => importKnowledgeCheckButton.value?.focus(),
+      focusAiCreation: () => aiButton.value?.focus(),
     });
 
     function endDrag() {
@@ -310,6 +338,10 @@ export const KnowledgeCheckLibrary = defineComponent({
         h('h3', 'Library'),
         h('div', { class: 'knowledge-check-library-actions' }, [
           h('button', {
+            ref: aiButton, type: 'button', class: 'icon-button', title: 'Create knowledge set with AI',
+            'aria-label': 'Create knowledge set with AI', onClick: () => emit('ai-check', setupTarget()),
+          }, [h(Icon, { name: 'ai' })]),
+          h('button', {
             ref: createGroupButton,
             type: 'button', class: 'icon-button', title: 'New group',
             'aria-label': 'New group', onClick: createGroupRelativeToSelection,
@@ -319,6 +351,11 @@ export const KnowledgeCheckLibrary = defineComponent({
             type: 'button', class: 'icon-button', title: 'New knowledge set',
             'aria-label': 'New knowledge set', onClick: requestKnowledgeCheckSetup,
           }, [h(Icon, { name: 'checklist' })]),
+          h('button', {
+            ref: importKnowledgeCheckButton,
+            type: 'button', class: 'icon-button', title: 'Import knowledge set',
+            'aria-label': 'Import knowledge set', onClick: requestKnowledgeCheckImport,
+          }, [h(Icon, { name: 'upload' })]),
           h('button', {
             ref: collapseButton,
             type: 'button', class: 'icon-button', title: 'Minimize library',

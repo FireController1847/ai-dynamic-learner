@@ -2,7 +2,11 @@ import { defaultSetOptions, validateSetOptions, type SetOptions } from './set-op
 import { SetOptionsEditor } from './set-options-editor.ts';
 import type { CheckItem } from './library-model.ts';
 import { MAX_NAME_LENGTH } from './library-model.ts';
-import { createQuestion, questionHasContent, questionProblem, questionsForSave, MAX_QUESTIONS, MAX_TEXT, QUESTION_TYPES, type Question, type QuestionType } from './question-model.ts';
+import { cloneQuestion, createQuestion, questionDisplayPrompt, questionHasContent, questionProblem, questionsForSave, MAX_QUESTIONS, MAX_TEXT, QUESTION_TYPES, type Question, type QuestionType } from './question-model.ts';
+import { DropdownEditor } from './dropdown-editor.ts';
+import { QuestionContextEditor } from './context-editor.ts';
+import { ReviewFillBlankEditor } from './fill-blank-editor.ts';
+import { restoreFillBlankAnswers } from '../../core/fill-blank.ts';
 import { inputValue } from '../../core/dom.ts';
 import { Icon } from '../../components/icon.ts';
 import { DeleteConfirmation } from '../../components/delete-confirmation.ts';
@@ -17,10 +21,10 @@ export const CheckBuilder = defineComponent({
   emits: { save: (_name: string, _questions: Question[], _options: SetOptions) => true, cancel: () => true },
   setup(props, { emit }) {
     const name = ref(props.item?.name ?? 'New knowledge set');
-    const questions = ref<Question[]>(props.item?.questions.map((question) => ({ ...question, choices: [...question.choices] })) ?? []);
+    const questions = ref<Question[]>(props.item?.questions.map(cloneQuestion) ?? []);
     const selected = ref(0);
     const tab = ref<'questions' | 'options'>('questions');
-    const options = ref<SetOptions>({ ...(props.item?.options ?? defaultSetOptions()) });
+    const options = ref<SetOptions>({ ...defaultSetOptions(), ...props.item?.options });
     const message = ref('');
     const invalid = computed(() => questions.value.findIndex(question => questionHasContent(question) && Boolean(questionProblem(question))));
     const optionsProblem = computed(() => {
@@ -56,8 +60,15 @@ export const CheckBuilder = defineComponent({
     function changeType(question: Question, event: Event) {
       const type = inputValue(event);
       if (!QUESTION_TYPES.some((entry) => entry.id === type)) return;
+      if (question.type === 'fill-in-the-blanks' && type !== 'fill-in-the-blanks') {
+        question.prompt = restoreFillBlankAnswers(question.prompt);
+      }
       const replacement = createQuestion(type as QuestionType);
       Object.assign(question, { type: replacement.type, answer: replacement.answer, choices: replacement.choices });
+      delete question.matches;
+      if (replacement.matches) question.matches = replacement.matches;
+      if (replacement.type === 'statement') question.explanation = '';
+      message.value = '';
     }
     function textField(label: string, key: 'prompt' | 'answer' | 'explanation', question: Question) {
       return h('label', { class: 'knowledge-field' }, [label, h('textarea', {
@@ -89,7 +100,7 @@ export const CheckBuilder = defineComponent({
         invalid.value >= 0 ? h('p', { class: 'knowledge-message', role: 'status' }, `Question ${invalid.value + 1}: ${questionProblem(questions.value[invalid.value]!)}`) : null,
         message.value ? h('p', { class: 'knowledge-message', role: 'alert' }, message.value) : null,
         optionsProblem.value ? h('p', { class: 'knowledge-message', role: 'alert' }, optionsProblem.value) : null,
-        tab.value === 'options' ? h(SetOptionsEditor, { options: options.value }) : h('div', { class: 'knowledge-builder-layout' }, [
+        tab.value === 'options' ? h(SetOptionsEditor, { options: options.value, questionCount: questions.value.length }) : h('div', { class: 'knowledge-builder-layout' }, [
           h('aside', { class: 'knowledge-question-list', 'aria-label': 'Questions' }, [
             h('div', { class: 'knowledge-builder-header' }, [h('h3', `Questions (${questions.value.length})`),
               h('button', { type: 'button', class: 'icon-button', title: 'Add question', 'aria-label': 'Add question',
@@ -97,7 +108,7 @@ export const CheckBuilder = defineComponent({
             ...questions.value.map((entry, index) => h('button', { key: entry.id, type: 'button',
               class: ['knowledge-question-row', { 'is-selected': index === selected.value }],
               'aria-pressed': index === selected.value, onClick: () => { if (index === selected.value || canLeaveQuestion()) selected.value = index; } },
-            `${index + 1}. ${entry.prompt.trim() || 'Untitled question'}`)),
+            `${index + 1}. ${questionDisplayPrompt(entry).trim() || 'Untitled question'}`)),
             !questions.value.length ? h('p', { class: 'knowledge-muted' }, 'Add your first question.') : null,
           ]),
           question ? h('div', { class: 'knowledge-question-editor', key: question.id }, [
@@ -108,15 +119,17 @@ export const CheckBuilder = defineComponent({
                   onClick: () => { if (!canLeaveQuestion()) return; const index = selected.value; questions.value.splice(index, 1);
                     questions.value.splice(index + direction, 0, question); selected.value += direction; } }, direction < 0 ? 'Move up' : 'Move down')),
                 h('button', { type: 'button', class: 'icon-button delete-button', 'aria-label': 'Delete question', title: 'Delete question',
-                  onClick: () => { if (question.prompt.trim() || question.explanation.trim() ||
-                    (question.type !== 'true-false' && question.answer.trim()) || question.choices.some((choice) => choice.trim())) pendingDelete.value = question;
+                  onClick: () => { if (questionHasContent(question)) pendingDelete.value = question;
                     else removeQuestion(question); } }, [h(Icon, { name: 'trash' })]),
               ])]),
             h('label', { class: 'knowledge-field' }, ['Question type', h('select', {
               value: question.type, onChange: (event: Event) => changeType(question, event),
             }, QUESTION_TYPES.map((type) => h('option', { value: type.id }, type.label)))]),
-            textField('Question', 'prompt', question),
-            question.type === 'multiple-choice' ? h('fieldset', { class: 'knowledge-choice-editor' }, [
+            question.type === 'fill-in-the-blanks'
+              ? h(ReviewFillBlankEditor, { question, onMessage: (value: string) => { message.value = value; } })
+              : textField(question.type === 'statement' ? 'Statement' : 'Question', 'prompt', question),
+            h(QuestionContextEditor, { key: question.id, question }),
+            question.type === 'statement' ? null : question.type === 'dropdown' ? h(DropdownEditor, { question }) : question.type === 'multiple-choice' ? h('fieldset', { class: 'knowledge-choice-editor' }, [
               h('legend', 'Answer choices'),
               h('p', { class: 'knowledge-muted' }, 'Choose the correct answer.'),
               ...question.choices.map((choice, index) => h('div', { class: 'knowledge-choice-row', key: index }, [
@@ -134,12 +147,13 @@ export const CheckBuilder = defineComponent({
                 onClick: () => question.choices.push('') }, 'Add choice'),
             ]) : question.type === 'true-false' ? h('label', { class: 'knowledge-field' }, ['Correct answer', h('select', {
               value: question.answer, onChange: (event: Event) => { question.answer = inputValue(event); },
-            }, [h('option', { value: '', disabled: true }, 'Select the correct answer'), ...['True', 'False'].map((answer) => h('option', { value: answer }, answer))])]) : textField('Expected answer', 'answer', question),
-            textField('Explanation (optional)', 'explanation', question),
+            }, [h('option', { value: '', disabled: true }, 'Select the correct answer'), ...['True', 'False'].map((answer) => h('option', { value: answer }, answer))])])
+              : question.type === 'fill-in-the-blanks' ? null : textField('Expected answer', 'answer', question),
+            question.type === 'statement' ? null : textField('Explanation (optional)', 'explanation', question),
           ]) : h('div', { class: 'knowledge-question-editor knowledge-builder-empty' }, [h(Icon, { name: 'cards' }),
             h('h3', 'Add a question.'), h('button', { type: 'button', class: 'card-primary-button', onClick: addQuestion }, 'Add question')]),
         ]),
-        pendingDelete.value ? h(DeleteConfirmation, { itemName: pendingDelete.value.prompt.trim() || 'Untitled question', itemLabel: 'question',
+        pendingDelete.value ? h(DeleteConfirmation, { itemName: questionDisplayPrompt(pendingDelete.value).trim() || 'Untitled question', itemLabel: 'question',
           detail: 'The question and its answer will be removed from this set.', confirmLabel: 'Delete question',
           onCancel: () => { pendingDelete.value = null; }, onConfirm: () => { if (pendingDelete.value) removeQuestion(pendingDelete.value); } }) : null,
       ]);

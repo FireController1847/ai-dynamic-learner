@@ -1,6 +1,11 @@
 import type { CardDisplayOptions, DisplayOptions } from './display-options.ts';
+import {
+  DEFAULT_ANSWER_STRICTNESS,
+  type AnswerStrictness,
+} from './fill-blank-model.ts';
 import type { SetModeId } from './set-modes.ts';
 import { inputValue } from '../../core/dom.ts';
+import { AnswerStrictnessField } from '../../components/answer-strictness-field.ts';
 import { useDialog } from '../../components/use-dialog.ts';
 import {
   DISPLAY_FIELDS, defaultCardDisplayOptions, displayForMode, displayStyles, resolvedDisplayOptions,
@@ -18,9 +23,14 @@ export const DisplaySettings = defineComponent({
   name: 'DisplaySettings',
   props: {
     options: { type: Object as PropType<DisplayOptions>, required: true },
+    answerStrictness: { type: Number as PropType<AnswerStrictness>, default: DEFAULT_ANSWER_STRICTNESS },
     initialTab: { type: String as PropType<SetModeId>, default: 'flash-cards' },
   },
-  emits: { 'update': (_options: DisplayOptions) => true, 'close': () => true },
+  emits: {
+    'update': (_options: DisplayOptions) => true,
+    'update-answer-strictness': (_strictness: AnswerStrictness) => true,
+    'close': () => true,
+  },
   setup(props, { emit }) {
     const { dialog } = useDialog();
     const tab = ref<SetModeId>(props.initialTab);
@@ -144,7 +154,7 @@ export const DisplaySettings = defineComponent({
         onCancel: (event: Event) => { event.preventDefault(); emit('close'); },
       }, [
         h('header', { class: 'display-settings-header' }, [
-          h('h2', { id: 'display-settings-title' }, 'Index Cards display options'),
+          h('h2', { id: 'display-settings-title' }, 'Index Cards settings'),
           h('button', {
             type: 'button',
             class: 'quiet-button',
@@ -153,7 +163,7 @@ export const DisplaySettings = defineComponent({
           }, 'Done'),
         ]),
         h('p', { class: 'display-settings-description' },
-          'Each study mode has its own appearance settings. Changes save automatically and are included in backups.'),
+          'Each study mode has its own appearance settings. Fill in the Blanks also has answer-matching behavior. Changes save automatically and are included in backups.'),
         h('div', { class: 'index-cards-display-tabs', role: 'tablist', 'aria-label': 'Study mode' },
           SET_MODES.map((mode, index) => h('button', {
             type: 'button',
@@ -173,12 +183,20 @@ export const DisplaySettings = defineComponent({
           hidden: tab.value !== mode.id,
           tabindex: 0,
         }, tab.value !== mode.id ? [] : [
-          h('div', { class: 'display-settings-fields' }, DISPLAY_FIELDS.filter((field) =>
-            field.key !== 'blankLength' || mode.id === 'fill-in-the-blanks').map(control)),
+          h('div', { class: 'display-settings-fields' }, [
+            ...DISPLAY_FIELDS.filter((field) =>
+              field.key !== 'blankLength' || mode.id === 'fill-in-the-blanks').map(control),
+            mode.id === 'fill-in-the-blanks' ? h(AnswerStrictnessField, {
+              id: 'index-cards-answer-strictness',
+              value: props.answerStrictness,
+              fieldClass: 'display-setting',
+              onChange: (value: AnswerStrictness) => emit('update-answer-strictness', value),
+            }) : null,
+          ]),
           h('p', { class: 'display-settings-description' },
             'Text size changes the letters, not the line spacing. Positive vertical offsets move text down. Card size keeps the 5:3 shape and fits the available space.'),
           mode.id === 'fill-in-the-blanks' ? h('p', { class: 'display-settings-description' },
-            'Tiny starts at two character widths; Short starts at four. Both use tighter spacing. Medium matches the answer’s width. Long uses the original blank lengths. Review blanks grow as you type.') : null,
+            'Tiny starts at two character widths; Short starts at four. Both use tighter spacing. Medium matches the answer’s width. Long uses the original blank lengths. Review blanks grow as you type. Answer strictness applies to every Fill-in-the-Blanks set: 1 is exact, 2 adds spelling tolerance, 3 adds linguistic equivalents, and 4 adds conservative semantic equivalents.') : null,
           mode.id === 'fill-in-the-blanks' ? fillBlankPreview(current) : flashPreview(current),
           h('button', {
             type: 'button',

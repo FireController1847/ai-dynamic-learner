@@ -1,3 +1,4 @@
+import { useStatistics } from '../../components/statistics-context.ts';
 import type { ConfiguredCrossword } from './library-model.ts';
 import type { DisplayOptions } from './display-options.ts';
 import type { PuzzleGridHandle } from './puzzle-grid.ts';
@@ -7,7 +8,7 @@ import { generatePuzzle } from './puzzle-generator.ts';
 import { PuzzleGrid } from './puzzle-grid.ts';
 import { defaultDisplayOptions, displayStyles } from './display-options.ts';
 
-import { defineComponent, type PropType, computed, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref } from 'vue';
+import { defineComponent, type PropType, computed, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue';
 
 export const PuzzleGame = defineComponent({
   name: 'CrosswordPuzzleGame',
@@ -41,6 +42,14 @@ export const PuzzleGame = defineComponent({
       game.value?.placements.filter((placement) => placementSolved(game.value!, placement)).map(({ answer }) => answer) ?? [],
     ));
     const complete = computed(() => Boolean(game.value && gameComplete(game.value)));
+    const statistics = useStatistics();
+    let completionRecorded = complete.value;
+    watch(complete, value => {
+      if (value && !completionRecorded) {
+        completionRecorded = true;
+        statistics?.record('crossword', props.item.id, 'gamesCompleted');
+      }
+    }, { flush: 'sync' });
     const activePlacement = computed(() => activeCell.value === null || !game.value
       ? null
       : answerForCell(game.value, activeCell.value, direction.value));
@@ -141,6 +150,8 @@ export const PuzzleGame = defineComponent({
       try {
         const result = await generatePuzzle(props.item.puzzle, request.signal);
         if (!result || request.signal.aborted) return;
+        completionRecorded = false;
+        statistics?.record('crossword', props.item.id, 'gamesStarted');
         props.item.game = result;
         gridVersion.value += 1;
         selectInitialCell();
@@ -289,6 +300,8 @@ export const PuzzleGame = defineComponent({
       if (action === 'new') {
         await generate();
       } else if (game.value) {
+        completionRecorded = false;
+        statistics?.record('crossword', props.item.id, 'gamesStarted');
         clearGame(game.value);
         revealed.value = false;
         showIncorrect.value = false;

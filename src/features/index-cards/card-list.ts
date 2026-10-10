@@ -1,7 +1,7 @@
 import type { Card, CardSide } from './card-model.ts';
 import { Icon } from '../../components/icon.ts';
 import { cardTitle } from './card-model.ts';
-import { maskFillBlankAnswers } from './fill-blank-model.ts';
+import { maskFillBlankAnswers, restoreFillBlankAnswers } from './fill-blank-model.ts';
 
 import { defineComponent, type PropType, h, nextTick, onMounted, ref, watch } from 'vue';
 
@@ -16,6 +16,7 @@ export const CardList = defineComponent({
     previewSide: { type: String as PropType<CardSide>, default: 'front' },
     orderLabel: { type: String, default: 'Forward · front first' },
     maskBlanks: Boolean,
+    showBlankAnswers: Boolean,
     hidden: Boolean,
   },
   emits: { 'select': (_id: string) => true, 'add': () => true, 'hide': () => true },
@@ -90,10 +91,13 @@ export const CardList = defineComponent({
           h('span', { class: 'card-list-copy' }, [
             h('span', { class: 'card-list-title', title: cardTitle(card, `Card ${index + 1}`, props.previewSide) }, cardTitle(card, `Card ${index + 1}`, props.previewSide)),
             h('span', { class: 'card-list-preview' }, (
-              props.maskBlanks && props.previewSide === 'front'
-                ? maskFillBlankAnswers(card.front)
-                : card[props.previewSide]
-            ).trim().replace(/\s+/g, ' ').slice(0, 160) || (props.maskBlanks ? 'Empty card' : `Blank ${props.previewSide}`)),
+              props.previewSide === 'front' && props.showBlankAnswers
+                ? restoreFillBlankAnswers(card.front)
+                : props.maskBlanks && props.previewSide === 'front'
+                  ? maskFillBlankAnswers(card.front)
+                  : card[props.previewSide]
+            ).trim().replace(/\s+/g, ' ').slice(0, 160) ||
+              (props.maskBlanks || props.showBlankAnswers ? 'Empty card' : `Blank ${props.previewSide}`)),
           ]),
         ])]),
       )) : h('p', { class: 'card-list-empty' }, 'Your cards will appear here.'),

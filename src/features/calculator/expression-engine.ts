@@ -22,6 +22,14 @@ function factorial(value: number) {
   return finite(result);
 }
 
+function roundTo(value: number, places: number) {
+  if (!Number.isInteger(places) || places < 0 || places > 15) {
+    throw new Error('Round requires 0 to 15 decimal places.');
+  }
+  const factor = 10 ** places;
+  return finite(Math.sign(value) * Math.round((Math.abs(value) + Number.EPSILON) * factor) / factor);
+}
+
 function toRadians(value: number, mode: AngleMode) {
   return mode === 'DEG' ? value * Math.PI / 180 : value;
 }
@@ -150,6 +158,14 @@ class Parser {
         return finite(numerator / denominator);
       }
 
+      if (identifier === 'round') {
+        const value = this.parseExpression();
+        if (!this.match(',')) throw new Error('Round decimal places are missing.');
+        const places = this.parseExpression();
+        if (!this.match(')')) throw new Error('Missing closing parenthesis.');
+        return roundTo(value, places);
+      }
+
       const value = this.parseExpression();
       if (!this.match(')')) throw new Error('Missing closing parenthesis.');
       return applyFunction(identifier, value, this.context.angleMode);
@@ -220,6 +236,22 @@ class Parser {
   private isLetter(character: string | undefined): character is string {
     return Boolean(character && /[A-Za-z]/.test(character));
   }
+}
+
+
+export function completeTrailingClosures(source: string) {
+  let depth = 0;
+
+  for (const character of source) {
+    if (character === '(') {
+      depth += 1;
+    } else if (character === ')') {
+      if (depth === 0) return source;
+      depth -= 1;
+    }
+  }
+
+  return depth > 0 ? `${source}${')'.repeat(depth)}` : source;
 }
 
 export function evaluateExpression(source: string, context: EvaluationContext) {

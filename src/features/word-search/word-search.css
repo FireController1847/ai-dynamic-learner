@@ -195,6 +195,8 @@
   background: var(--page-background);
 }
 .word-search-item-heading h2 { flex: 1; min-width: 0; font-size: 16px; line-height: 22px; }
+.word-search-entry-statistics { display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px; }
+.word-search-entry-statistics .entry-statistics + .entry-statistics::before { content:'·';margin-right:6px;color:var(--text-secondary); }
 .word-search-item-heading p { margin: 0; color: var(--text-secondary); font-size: 12px; }
 .word-search-eyebrow { margin-bottom: 0; color: var(--brand-text) !important; font-size: 12px; font-weight: 600; }
 .word-search-organization:not(.library-group-organization) {

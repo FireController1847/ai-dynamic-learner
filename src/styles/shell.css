@@ -27,6 +27,7 @@
 .app-header h1 { min-width: 0; overflow: hidden; font-size: 16px; line-height: 22px; text-overflow: ellipsis; white-space: nowrap; }
 .app-header-actions { display: flex; align-items: center; gap: 4px; margin-left: auto; }
 .app-header-action { border-color: transparent; background: transparent; font-weight: 500; }
+.app-icon-picture { display: inline-flex; flex: 0 0 auto; line-height: 0; }
 .app-logo { display: block; flex: 0 0 auto; object-fit: contain; }
 .app-header-logo { width: 28px; height: 28px; margin-left: 2px; }
 .menu-toggle {

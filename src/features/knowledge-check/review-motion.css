@@ -1,0 +1,417 @@
+/* Review motion: presentation only. Session state/timers never depend on animation completion. */
+
+.knowledge-workspace-view-enter-active,
+.knowledge-workspace-view-leave-active,
+.knowledge-view-enter-active,
+.knowledge-view-leave-active {
+  transition:
+    opacity 220ms var(--ease-out),
+    transform 220ms var(--ease-out);
+}
+.knowledge-workspace-view-enter-from,
+.knowledge-view-enter-from {
+  opacity: 0;
+  transform: translateY(10px) scale(.992);
+}
+.knowledge-workspace-view-leave-to,
+.knowledge-view-leave-to {
+  opacity: 0;
+  transform: translateY(-6px) scale(.996);
+}
+
+.knowledge-question-enter-active,
+.knowledge-question-leave-active {
+  transition:
+    opacity 220ms var(--ease-out),
+    transform 240ms var(--ease-out);
+}
+.knowledge-question-enter-from {
+  opacity: 0;
+  transform: translateX(28px) scale(.992);
+}
+.knowledge-question-leave-to {
+  opacity: 0;
+  transform: translateX(-20px) scale(.996);
+}
+.knowledge-session.is-backward .knowledge-question-enter-from {
+  transform: translateX(-28px) scale(.992);
+}
+.knowledge-session.is-backward .knowledge-question-leave-to {
+  transform: translateX(20px) scale(.996);
+}
+
+.knowledge-progress-track {
+  flex: 0 0 100%;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--surface-hover);
+  overflow: hidden;
+}
+.knowledge-progress-track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--brand);
+  transition: width 280ms var(--ease-out);
+}
+
+.knowledge-prompt {
+  transform-origin: 50% 24%;
+}
+.knowledge-prompt .knowledge-answer-choice {
+  position: relative;
+  overflow: hidden;
+  transition:
+    border-color var(--motion-fast),
+    background-color var(--motion-fast),
+    box-shadow var(--motion-fast),
+    transform var(--motion-fast);
+  animation: knowledge-choice-arrive 260ms var(--ease-out) both;
+  animation-delay: var(--review-delay, 0ms);
+}
+.knowledge-answer-choice:hover:not(.is-selected) {
+  transform: translateY(-1px);
+}
+.knowledge-answer-choice:active {
+  transform: translateY(0) scale(.995);
+}
+.knowledge-answer-choice.is-selected {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--brand) 12%, transparent);
+}
+.knowledge-answer-choice.is-correct {
+  border-color: var(--success);
+  background: color-mix(in srgb, var(--success) 10%, var(--page-background));
+  animation: knowledge-choice-correct 420ms var(--ease-out) both;
+}
+.knowledge-answer-choice.is-incorrect {
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 8%, var(--page-background));
+  animation: knowledge-choice-incorrect 360ms var(--ease-out) both;
+}
+.knowledge-choice-marker {
+  display: grid;
+  place-items: center;
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  margin-left: auto;
+  border-radius: 50%;
+  color: var(--brand-text);
+  font-size: 13px;
+  font-weight: 700;
+  opacity: 0;
+  transform: scale(.35) rotate(-18deg);
+  transition:
+    opacity var(--motion-fast),
+    transform 180ms var(--ease-out),
+    background-color var(--motion-fast),
+    color var(--motion-fast);
+}
+.knowledge-answer-choice.is-selected .knowledge-choice-marker {
+  opacity: 1;
+  transform: scale(1) rotate(0);
+  background: var(--brand-tint);
+}
+.knowledge-answer-choice.is-correct .knowledge-choice-marker {
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 14%, transparent);
+}
+.knowledge-answer-choice.is-incorrect .knowledge-choice-marker {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+
+.knowledge-fill-blank-input {
+  transition:
+    width var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast),
+    background-color var(--motion-fast),
+    box-shadow var(--motion-fast),
+    transform var(--motion-fast);
+}
+.knowledge-fill-blank-input.is-correct {
+  border-bottom-color: var(--success);
+  background: color-mix(in srgb, var(--success) 10%, transparent);
+  animation: knowledge-blank-correct 420ms var(--ease-out);
+}
+.knowledge-fill-blank-input.is-incorrect {
+  border-bottom-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+  animation: knowledge-blank-incorrect 360ms var(--ease-out);
+}
+
+.knowledge-feedback-enter-active,
+.knowledge-feedback-leave-active {
+  overflow: hidden;
+  transition:
+    opacity 180ms var(--ease-out),
+    transform 200ms var(--ease-out);
+}
+.knowledge-feedback-enter-from {
+  opacity: 0;
+  transform: translateY(8px) scale(.992);
+}
+.knowledge-feedback-leave-to {
+  opacity: 0;
+  transform: translateY(-4px) scale(.996);
+}
+.knowledge-feedback.is-correct:not(.is-celebrating) {
+  animation: knowledge-feedback-correct 420ms var(--ease-out);
+}
+.knowledge-feedback.is-incorrect {
+  animation: knowledge-feedback-incorrect 360ms var(--ease-out);
+}
+
+.knowledge-reveal {
+  display: grid;
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    grid-template-rows 220ms var(--ease-out),
+    opacity 180ms var(--ease-out),
+    transform 220ms var(--ease-out);
+}
+.knowledge-reveal-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+.knowledge-reveal-enter-from,
+.knowledge-reveal-leave-to {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transform: translateY(-6px);
+}
+.knowledge-study-tools > button {
+  transition:
+    background-color var(--motion-fast),
+    border-color var(--motion-fast),
+    color var(--motion-fast),
+    transform var(--motion-fast);
+}
+.knowledge-study-tools > button:hover {
+  transform: translateY(-1px);
+}
+.knowledge-study-tools > button[aria-expanded='true'] {
+  color: var(--brand-text);
+  background: var(--brand-tint);
+}
+
+.knowledge-study-score {
+  animation: knowledge-score-tick 260ms var(--ease-out);
+}
+.knowledge-timer.is-low {
+  animation: knowledge-timer-warning 1.15s ease-in-out infinite;
+}
+
+.knowledge-session-choice {
+  transform-origin: center;
+  transition:
+    background-color var(--motion-fast),
+    border-color var(--motion-fast),
+    box-shadow var(--motion-fast),
+    transform var(--motion-fast);
+  animation: knowledge-setup-choice-arrive 260ms var(--ease-out) both;
+}
+.knowledge-session-choice:nth-of-type(2) { animation-delay: 35ms; }
+.knowledge-session-choice:nth-of-type(3) { animation-delay: 70ms; }
+.knowledge-session-choice:nth-of-type(4) { animation-delay: 105ms; }
+.knowledge-session-choice:hover { transform: translateY(-1px); }
+.knowledge-session-choice:active { transform: scale(.995); }
+.knowledge-session-choice:has(input:checked) {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 12px color-mix(in srgb, var(--brand) 12%, transparent);
+}
+.knowledge-session-choice input:checked {
+  animation: knowledge-radio-pop 220ms var(--ease-out);
+}
+
+.knowledge-session-intro .knowledge-intro-art {
+  animation: knowledge-intro-art-arrive 420ms var(--ease-out) both;
+}
+.knowledge-session-intro .knowledge-intro-sheet {
+  animation: knowledge-intro-sheet-arrive 520ms var(--ease-out) both;
+}
+.knowledge-session-intro .knowledge-intro-badge {
+  animation: knowledge-intro-badge-arrive 420ms 120ms var(--ease-out) both;
+}
+.knowledge-session-intro .knowledge-intro-title,
+.knowledge-session-intro .knowledge-intro-pills,
+.knowledge-session-intro .knowledge-intro-details,
+.knowledge-session-intro .knowledge-intro-actions,
+.knowledge-session-intro .knowledge-intro-note {
+  animation: knowledge-intro-copy-arrive 300ms var(--ease-out) both;
+}
+.knowledge-session-intro .knowledge-intro-pills { animation-delay: 55ms; }
+.knowledge-session-intro .knowledge-intro-details { animation-delay: 90ms; }
+.knowledge-session-intro .knowledge-intro-actions { animation-delay: 125ms; }
+.knowledge-session-intro .knowledge-intro-note { animation-delay: 150ms; }
+
+.knowledge-session-results .knowledge-results-heading {
+  animation: knowledge-results-heading-arrive 360ms var(--ease-out) both;
+}
+.knowledge-session-results .knowledge-score {
+  transform-origin: left center;
+  animation: knowledge-results-score-pop 480ms 70ms var(--ease-out) both;
+}
+.knowledge-session-results .knowledge-result {
+  animation: knowledge-result-arrive 300ms var(--ease-out) both;
+  animation-delay: var(--review-delay, 100ms);
+}
+.knowledge-session-results > .card-primary-button {
+  animation: knowledge-result-arrive 300ms 180ms var(--ease-out) both;
+}
+
+@keyframes knowledge-choice-arrive {
+  from { opacity: 0; transform: translateY(7px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes knowledge-choice-correct {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--success) 28%, transparent); }
+  42% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--success) 12%, transparent); }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+@keyframes knowledge-choice-incorrect {
+  0%, 100% { transform: translateY(-1px) translateX(0); }
+  28% { transform: translateY(-1px) translateX(-4px); }
+  55% { transform: translateY(-1px) translateX(3px); }
+  78% { transform: translateY(-1px) translateX(-2px); }
+}
+@keyframes knowledge-blank-correct {
+  0% { box-shadow: 0 2px 0 color-mix(in srgb, var(--success) 0%, transparent); }
+  45% { box-shadow: 0 4px 0 color-mix(in srgb, var(--success) 22%, transparent); }
+  100% { box-shadow: 0 2px 0 transparent; }
+}
+@keyframes knowledge-blank-incorrect {
+  0%, 100% { transform: translateX(0); }
+  30% { transform: translateX(-3px); }
+  60% { transform: translateX(3px); }
+  82% { transform: translateX(-1px); }
+}
+@keyframes knowledge-feedback-correct {
+  0% { box-shadow: inset 0 0 0 transparent; }
+  45% { box-shadow: inset 0 0 0 999px color-mix(in srgb, var(--success) 7%, transparent); }
+  100% { box-shadow: inset 0 0 0 transparent; }
+}
+@keyframes knowledge-feedback-incorrect {
+  0%, 100% { transform: translateX(0); }
+  28% { transform: translateX(-3px); }
+  55% { transform: translateX(2px); }
+  78% { transform: translateX(-1px); }
+}
+@keyframes knowledge-score-tick {
+  0% { opacity: .55; transform: translateY(3px) scale(.98); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes knowledge-timer-warning {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .58; }
+}
+@keyframes knowledge-setup-choice-arrive {
+  from { opacity: 0; transform: translateY(7px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes knowledge-radio-pop {
+  0% { transform: scale(.65); }
+  65% { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+@keyframes knowledge-intro-art-arrive {
+  from { opacity: 0; transform: scale(.82) rotate(-4deg); }
+  to { opacity: 1; transform: scale(1) rotate(0); }
+}
+@keyframes knowledge-intro-sheet-arrive {
+  from { opacity: 0; transform: translateY(10px) rotate(-12deg) scale(.9); }
+  70% { opacity: 1; transform: translateY(-2px) rotate(-4deg) scale(1.02); }
+  to { opacity: 1; transform: translateY(0) rotate(-6deg) scale(1); }
+}
+@keyframes knowledge-intro-badge-arrive {
+  from { opacity: 0; transform: scale(.45) rotate(-16deg); }
+  70% { opacity: 1; transform: scale(1.12) rotate(5deg); }
+  to { opacity: 1; transform: scale(1) rotate(0); }
+}
+@keyframes knowledge-intro-copy-arrive {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes knowledge-results-heading-arrive {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes knowledge-results-score-pop {
+  from { opacity: 0; transform: scale(.82); }
+  65% { opacity: 1; transform: scale(1.06); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes knowledge-result-arrive {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .knowledge-workspace-view-enter-active,
+  .knowledge-workspace-view-leave-active,
+  .knowledge-view-enter-active,
+  .knowledge-view-leave-active,
+  .knowledge-question-enter-active,
+  .knowledge-question-leave-active,
+  .knowledge-feedback-enter-active,
+  .knowledge-feedback-leave-active,
+  .knowledge-reveal,
+  .knowledge-progress-track > span,
+  .knowledge-prompt .knowledge-answer-choice,
+  .knowledge-choice-marker,
+  .knowledge-fill-blank-input,
+  .knowledge-study-tools > button,
+  .knowledge-session-choice {
+    transition: none !important;
+  }
+
+  .knowledge-prompt .knowledge-answer-choice,
+  .knowledge-answer-choice.is-correct,
+  .knowledge-answer-choice.is-incorrect,
+  .knowledge-fill-blank-input.is-correct,
+  .knowledge-fill-blank-input.is-incorrect,
+  .knowledge-feedback.is-correct,
+  .knowledge-feedback.is-incorrect,
+  .knowledge-study-score,
+  .knowledge-timer.is-low,
+  .knowledge-session-choice,
+  .knowledge-session-choice input:checked,
+  .knowledge-session-intro .knowledge-intro-art,
+  .knowledge-session-intro .knowledge-intro-sheet,
+  .knowledge-session-intro .knowledge-intro-badge,
+  .knowledge-session-intro .knowledge-intro-title,
+  .knowledge-session-intro .knowledge-intro-pills,
+  .knowledge-session-intro .knowledge-intro-details,
+  .knowledge-session-intro .knowledge-intro-actions,
+  .knowledge-session-intro .knowledge-intro-note,
+  .knowledge-session-results .knowledge-results-heading,
+  .knowledge-session-results .knowledge-score,
+  .knowledge-session-results .knowledge-result,
+  .knowledge-session-results > .card-primary-button {
+    animation: none !important;
+  }
+
+  .knowledge-workspace-view-enter-from,
+  .knowledge-workspace-view-leave-to,
+  .knowledge-view-enter-from,
+  .knowledge-view-leave-to,
+  .knowledge-question-enter-from,
+  .knowledge-question-leave-to,
+  .knowledge-session.is-backward .knowledge-question-enter-from,
+  .knowledge-session.is-backward .knowledge-question-leave-to,
+  .knowledge-feedback-enter-from,
+  .knowledge-feedback-leave-to,
+  .knowledge-reveal-enter-from,
+  .knowledge-reveal-leave-to {
+    opacity: 1;
+    transform: none;
+  }
+
+  .knowledge-reveal-enter-from,
+  .knowledge-reveal-leave-to {
+    grid-template-rows: 1fr;
+  }
+}

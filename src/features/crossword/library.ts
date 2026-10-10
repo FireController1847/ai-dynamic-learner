@@ -18,7 +18,7 @@ export const CrosswordLibrary = defineComponent({
     selectedId: { type: String as PropType<string | null>, default: null },
     collapsed: Boolean,
   },
-  emits: { 'select': (_id: string | null) => true, 'open-item': () => true, 'toggle-library': () => true, 'new-crossword': (_target: { parentId: string | null; parentName: string }) => true },
+  emits: { 'select': (_id: string | null) => true, 'open-item': () => true, 'toggle-library': () => true, 'new-crossword': (_target: { parentId: string | null; parentName: string }) => true, 'open-ai': (_target: { parentId: string | null; parentName: string }) => true },
   setup(props, { emit, expose, slots }) {
     const expanded = ref(new Set<string>());
     const editingId = ref<string | null>(null);
@@ -89,7 +89,7 @@ export const CrosswordLibrary = defineComponent({
       rename(group);
     }
 
-    function requestCrosswordSetup() {
+    function chosenDestination() {
       const selected = findItem(props.items, props.selectedId);
       let parentId: string | null = null;
       let parentName = 'Top level';
@@ -103,8 +103,19 @@ export const CrosswordLibrary = defineComponent({
         parentName = findItem(props.items, selected.parentId)?.item.name ?? 'Selected group';
       }
 
-      emit('new-crossword', { parentId, parentName });
-      announcement.value = `Opened new crossword setup for ${parentName}.`;
+      return { parentId, parentName };
+    }
+
+    function requestCrosswordSetup() {
+      const target = chosenDestination();
+      emit('new-crossword', target);
+      announcement.value = 'Opened new crossword setup for ' + target.parentName + '.';
+    }
+
+    function requestAiSetup() {
+      const target = chosenDestination();
+      emit('open-ai', target);
+      announcement.value = 'Opened crossword AI creation for ' + target.parentName + '.';
     }
 
     function toggle(id: string) {
@@ -303,6 +314,10 @@ export const CrosswordLibrary = defineComponent({
       h('div', { class: 'crossword-library-toolbar' }, [
         h('h3', 'Library'),
         h('div', { class: 'crossword-library-actions' }, [
+          h('button', {
+            type: 'button', class: 'icon-button', title: 'Create crossword with AI',
+            'aria-label': 'Create crossword with AI', onClick: requestAiSetup,
+          }, [h(Icon, { name: 'ai' })]),
           h('button', {
             ref: createGroupButton,
             type: 'button', class: 'icon-button', title: 'New group',

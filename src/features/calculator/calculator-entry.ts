@@ -22,7 +22,72 @@ export type MathPrintNode =
       denominatorEnd: number;
       numerator: MathPrintNode[];
       denominator: MathPrintNode[];
+    }
+  | {
+      kind: 'sqrt';
+      start: number;
+      end: number;
+      contentStart: number;
+      contentEnd: number;
+      complete: boolean;
+      content: MathPrintNode[];
+    }
+  | {
+      kind: 'power';
+      start: number;
+      end: number;
+      contentStart: number;
+      contentEnd: number;
+      complete: boolean;
+      content: MathPrintNode[];
     };
+
+export interface MathPrintTextToken {
+  raw: string;
+  display: string;
+  start: number;
+  end: number;
+}
+
+const DISPLAY_TOKENS: readonly [string, string][] = [
+  ['asin(', 'sin⁻¹('],
+  ['acos(', 'cos⁻¹('],
+  ['atan(', 'tan⁻¹('],
+  ['sqrt(', '√('],
+  ['round(', 'rnd('],
+  ['^(-1)', '⁻¹'],
+  ['^(2)', '²'],
+  ['ans', 'Ans'],
+  ['pi', 'π'],
+  ['sin(', 'sin('],
+  ['cos(', 'cos('],
+  ['tan(', 'tan('],
+  ['log(', 'log('],
+  ['ln(', 'ln('],
+  ['abs(', 'abs('],
+];
+
+export function tokenizeMathPrintText(text: string, start: number): MathPrintTextToken[] {
+  const tokens: MathPrintTextToken[] = [];
+  let offset = 0;
+
+  while (offset < text.length) {
+    const matched = DISPLAY_TOKENS.find(([raw]) => text.startsWith(raw, offset));
+    if (matched) {
+      const [raw, display] = matched;
+      tokens.push({ raw, display, start: start + offset, end: start + offset + raw.length });
+      offset += raw.length;
+      continue;
+    }
+
+    const raw = text[offset];
+    const display = raw === '*' ? '×' : raw === '/' ? '÷' : raw === '-' ? '−' : raw;
+    tokens.push({ raw, display, start: start + offset, end: start + offset + 1 });
+    offset += 1;
+  }
+
+  return tokens;
+}
 
 export function endsValue(expression: string) {
   return /[\d)!%]$/.test(expression) || /(?:pi|e|ans)$/.test(expression);
@@ -63,6 +128,118 @@ export function lastOperandStart(expression: string) {
 
   while (index >= 0 && /[\d.]/.test(expression[index] ?? '')) index -= 1;
   return index + 1;
+}
+
+
+
+function powerSpanAt(source: string, start: number, limit = source.length) {
+  if (source[start] !== '^') return null;
+  const exponentStart = start + 1;
+  if (exponentStart >= limit) {
+    return { start, end: limit, contentStart: limit, contentEnd: limit, complete: false };
+  }
+
+  if (source[exponentStart] === '(') {
+    let depth = 1;
+    for (let index = exponentStart + 1; index < limit; index += 1) {
+      if (source[index] === '(') depth += 1;
+      else if (source[index] === ')') {
+        depth -= 1;
+        if (depth === 0) {
+          return {
+            start,
+            end: index + 1,
+            contentStart: exponentStart + 1,
+            contentEnd: index,
+            complete: true,
+          };
+        }
+      }
+    }
+    return {
+      start,
+      end: limit,
+      contentStart: exponentStart + 1,
+      contentEnd: limit,
+      complete: false,
+    };
+  }
+
+  let index = exponentStart;
+  while (source[index] === '+' || source[index] === '-') index += 1;
+
+  if (/[\d.]/.test(source[index] ?? '')) {
+    while (/[\d.]/.test(source[index] ?? '')) index += 1;
+    if (source[index] === 'E') {
+      index += 1;
+      if (source[index] === '+' || source[index] === '-') index += 1;
+      while (/\d/.test(source[index] ?? '')) index += 1;
+    }
+  } else if (/[A-Za-z]/.test(source[index] ?? '')) {
+    while (/[A-Za-z]/.test(source[index] ?? '')) index += 1;
+    if (source[index] === '(') {
+      let depth = 1;
+      index += 1;
+      while (index < limit && depth > 0) {
+        if (source[index] === '(') depth += 1;
+        else if (source[index] === ')') depth -= 1;
+        index += 1;
+      }
+    }
+  } else if (source[index] === '(') {
+    let depth = 1;
+    index += 1;
+    while (index < limit && depth > 0) {
+      if (source[index] === '(') depth += 1;
+      else if (source[index] === ')') depth -= 1;
+      index += 1;
+    }
+  }
+
+  while (source[index] === '!' || source[index] === '%') index += 1;
+  if (source[index] === '^') {
+    const nested = powerSpanAt(source, index, limit);
+    if (nested) index = nested.end;
+  }
+
+  return {
+    start,
+    end: index,
+    contentStart: exponentStart,
+    contentEnd: index,
+    complete: index > exponentStart,
+  };
+}
+
+function sqrtSpanAt(source: string, start: number, limit = source.length) {
+  if (!source.startsWith('sqrt(', start)) return null;
+  const open = start + 4;
+  let depth = 1;
+
+  for (let index = open + 1; index < limit; index += 1) {
+    const character = source[index];
+    if (character === '(') depth += 1;
+    else if (character === ')') {
+      depth -= 1;
+      if (depth === 0) {
+        return {
+          start,
+          open,
+          close: index,
+          end: index + 1,
+          complete: true,
+        };
+      }
+    }
+  }
+
+  return {
+    start,
+    open,
+    close: limit,
+    end: limit,
+    complete: false,
+  };
 }
 
 function fractionSpanAt(source: string, start: number) {
@@ -129,6 +306,29 @@ export function createFractionTemplate(source: string, cursor: number) {
   };
 }
 
+
+export function createRoundTemplate(source: string, cursor: number) {
+  const before = source.slice(0, cursor);
+  const after = source.slice(cursor);
+
+  if (endsValue(before)) {
+    const start = lastOperandStart(before);
+    const value = before.slice(start);
+    const prefix = before.slice(0, start);
+    const template = `round(${value},)`;
+    return {
+      source: `${prefix}${template}${after}`,
+      cursor: prefix.length + 7 + value.length,
+    };
+  }
+
+  const template = 'round(,)';
+  return {
+    source: `${before}${template}${after}`,
+    cursor: before.length + 7,
+  };
+}
+
 export function moveFractionCursor(source: string, cursor: number, direction: 'up' | 'down' | 'right') {
   const context = fractionContextAt(source, cursor);
   if (!context) return null;
@@ -139,6 +339,167 @@ export function moveFractionCursor(source: string, cursor: number, direction: 'u
   return null;
 }
 
+
+function collectCursorPositions(nodes: MathPrintNode[], positions: number[]) {
+  for (const node of nodes) {
+    if (node.kind === 'text') {
+      for (const token of tokenizeMathPrintText(node.text, node.start)) {
+        positions.push(token.start, token.end);
+      }
+      continue;
+    }
+
+    positions.push(node.start);
+    if (node.kind === 'sqrt' || node.kind === 'power') {
+      positions.push(node.contentStart, node.contentEnd, node.end);
+      collectCursorPositions(node.content, positions);
+      continue;
+    }
+
+    collectCursorPositions(node.numerator, positions);
+    positions.push(node.numeratorStart, node.numeratorEnd);
+    collectCursorPositions(node.denominator, positions);
+    positions.push(node.denominatorStart, node.denominatorEnd, node.end);
+  }
+}
+
+
+interface StructuredExit {
+  source: string;
+  cursor: number;
+}
+
+function collectStructuredExitNodes(
+  nodes: MathPrintNode[],
+  cursor: number,
+  matches: Array<Extract<MathPrintNode, { kind: 'power' | 'sqrt' }>>,
+) {
+  for (const node of nodes) {
+    if (node.kind === 'text' || node.kind === 'fraction') {
+      if (node.kind === 'fraction') {
+        collectStructuredExitNodes(node.numerator, cursor, matches);
+        collectStructuredExitNodes(node.denominator, cursor, matches);
+      }
+      continue;
+    }
+
+    if (cursor === node.contentEnd && node.contentStart < node.contentEnd) matches.push(node);
+    collectStructuredExitNodes(node.content, cursor, matches);
+  }
+}
+
+export function exitMathPrintStructure(source: string, cursor: number): StructuredExit | null {
+  const matches: Array<Extract<MathPrintNode, { kind: 'power' | 'sqrt' }>> = [];
+  collectStructuredExitNodes(parseMathPrint(source), cursor, matches);
+  const node = matches.sort((left, right) =>
+    (left.end - left.start) - (right.end - right.start))[0];
+
+  if (!node) return null;
+
+  if (node.end > node.contentEnd) {
+    return { source, cursor: node.end };
+  }
+
+  if (node.kind === 'sqrt') {
+    const next = source.slice(0, node.end) + ')' + source.slice(node.end);
+    return { source: next, cursor: node.end + 1 };
+  }
+
+  if (source[node.start + 1] === '(') {
+    const next = source.slice(0, node.end) + ')' + source.slice(node.end);
+    return { source: next, cursor: node.end + 1 };
+  }
+
+  const next = source.slice(0, node.contentStart)
+    + '('
+    + source.slice(node.contentStart, node.contentEnd)
+    + ')'
+    + source.slice(node.contentEnd);
+  return { source: next, cursor: node.contentEnd + 2 };
+}
+
+export function mathPrintCursorPositions(source: string) {
+  const positions = [0, source.length];
+  collectCursorPositions(parseMathPrint(source), positions);
+  return [...new Set(positions)]
+    .filter((position) => position >= 0 && position <= source.length)
+    .sort((left, right) => left - right);
+}
+
+export function normaliseMathPrintCursor(source: string, cursor: number) {
+  const positions = mathPrintCursorPositions(source);
+  return positions.reduce((nearest, position) =>
+    Math.abs(position - cursor) < Math.abs(nearest - cursor) ? position : nearest, positions[0] ?? 0);
+}
+
+export function moveMathPrintCursor(source: string, cursor: number, direction: 'left' | 'right') {
+  const positions = mathPrintCursorPositions(source);
+  const current = normaliseMathPrintCursor(source, cursor);
+  const index = Math.max(0, positions.indexOf(current));
+  if (direction === 'left') return positions[Math.max(0, index - 1)] ?? 0;
+  return positions[Math.min(positions.length - 1, index + 1)] ?? source.length;
+}
+
+interface EditAtom {
+  start: number;
+  end: number;
+  replaceable: boolean;
+}
+
+function collectEditAtoms(nodes: MathPrintNode[], atoms: EditAtom[]) {
+  for (const node of nodes) {
+    if (node.kind === 'text') {
+      for (const token of tokenizeMathPrintText(node.text, node.start)) {
+        atoms.push({
+          start: token.start,
+          end: token.end,
+          replaceable: !token.raw.endsWith('(')
+            && !['(', ')', ','].includes(token.raw)
+            && token.raw !== '^(-1)'
+            && token.raw !== '^(2)',
+        });
+      }
+      continue;
+    }
+
+    atoms.push({ start: node.start, end: node.end, replaceable: true });
+    if (node.kind === 'sqrt' || node.kind === 'power') {
+      collectEditAtoms(node.content, atoms);
+      continue;
+    }
+    collectEditAtoms(node.numerator, atoms);
+    collectEditAtoms(node.denominator, atoms);
+  }
+}
+
+function mathPrintEditAtoms(source: string) {
+  const atoms: EditAtom[] = [];
+  collectEditAtoms(parseMathPrint(source), atoms);
+  return atoms.sort((left, right) => left.start - right.start || right.end - left.end);
+}
+
+export function overwriteRangeAtCursor(source: string, cursor: number) {
+  const atom = mathPrintEditAtoms(source)
+    .find((candidate) => candidate.start === cursor && candidate.replaceable);
+  return atom ? { start: atom.start, end: atom.end } : null;
+}
+
+export function deleteMathPrintForward(source: string, cursor: number) {
+  if (cursor >= source.length) return { source, cursor };
+
+  const atom = mathPrintEditAtoms(source)
+    .find((candidate) => candidate.start >= cursor);
+
+  if (!atom) return { source, cursor };
+  return {
+    source: source.slice(0, atom.start) + source.slice(atom.end),
+    cursor: normaliseMathPrintCursor(
+      source.slice(0, atom.start) + source.slice(atom.end),
+      atom.start,
+    ),
+  };
+}
+
 export function backspaceMathPrint(source: string, cursor: number) {
   if (cursor <= 0) return { source, cursor };
 
@@ -147,22 +508,20 @@ export function backspaceMathPrint(source: string, cursor: number) {
     return { source, cursor: context.numeratorEnd };
   }
   if (context?.field === 'numerator' && cursor === context.numeratorStart) {
-    return {
-      source: source.slice(0, context.start) + source.slice(context.close + 1),
-      cursor: context.start,
-    };
+    const next = source.slice(0, context.start) + source.slice(context.close + 1);
+    return { source: next, cursor: normaliseMathPrintCursor(next, context.start) };
   }
 
-  for (let index = 0; index < source.length; index += 1) {
-    const span = fractionSpanAt(source, index);
-    if (!span) continue;
-    if (span.close === cursor - 1) return { source, cursor: span.comma + 1 };
-    index = span.close;
-  }
+  const atoms = mathPrintEditAtoms(source)
+    .filter((atom) => atom.end <= cursor)
+    .sort((left, right) => right.end - left.end || right.start - left.start);
+  const atom = atoms[0];
+  if (!atom) return { source, cursor };
 
+  const next = source.slice(0, atom.start) + source.slice(atom.end);
   return {
-    source: source.slice(0, cursor - 1) + source.slice(cursor),
-    cursor: cursor - 1,
+    source: next,
+    cursor: normaliseMathPrintCursor(next, atom.start),
   };
 }
 
@@ -194,6 +553,52 @@ function parseRange(source: string, start: number, end: number): MathPrintNode[]
         continue;
       }
     }
+
+    if (source.startsWith('sqrt(', index)) {
+      const span = sqrtSpanAt(source, index, end);
+      if (span) {
+        if (textStart < index) {
+          nodes.push({ kind: 'text', text: source.slice(textStart, index), start: textStart, end: index });
+        }
+        const contentStart = span.open + 1;
+        const contentEnd = span.close;
+        nodes.push({
+          kind: 'sqrt',
+          start: span.start,
+          end: span.end,
+          contentStart,
+          contentEnd,
+          complete: span.complete,
+          content: parseRange(source, contentStart, contentEnd),
+        });
+        index = span.end;
+        textStart = index;
+        if (!span.complete) break;
+        continue;
+      }
+    }
+
+    if (source[index] === '^') {
+      const span = powerSpanAt(source, index, end);
+      if (span) {
+        if (textStart < index) {
+          nodes.push({ kind: 'text', text: source.slice(textStart, index), start: textStart, end: index });
+        }
+        nodes.push({
+          kind: 'power',
+          start: span.start,
+          end: span.end,
+          contentStart: span.contentStart,
+          contentEnd: span.contentEnd,
+          complete: span.complete,
+          content: parseRange(source, span.contentStart, span.contentEnd),
+        });
+        index = Math.max(span.end, index + 1);
+        textStart = index;
+        continue;
+      }
+    }
+
     index += 1;
   }
 

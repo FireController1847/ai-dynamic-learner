@@ -1,0 +1,420 @@
+import type { Workspace } from '../workspace-format.ts';
+import { validateWorkspaceValue } from '../workspace-format.ts';
+import type { DataOperation, DataStoreName, IndexedRow, IndexedDataStore } from '../../core/data/indexeddb.ts';
+
+/**
+ * Workspace-v1 compatibility mapping. The browser database is deliberately not
+ * a serialized Workspace: each document, card, task, question, and puzzle has
+ * a separate row. This converter is used for initial migration and backups.
+ */
+export type DataRow = Extract<DataOperation, { type: 'put' }>;
+const LIBRARY_APPS = ['notebook', 'index-cards', 'word-search', 'crossword', 'guide', 'knowledge-check'] as const;
+
+function copy<T>(value: T): T {
+  // Imported/exported v1 data is JSON by contract. Avoid transferring Vue
+  // proxies to IndexedDB; do not use this for every normal keystroke.
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
+export function workspaceRows(workspaceId: string, workspace: Workspace): DataRow[] {
+  const rows: DataRow[] = [];
+  const add = (store: DataStoreName, key: IDBValidKey, value: IndexedRow) => {
+    rows.push({ store, type: 'put', key, value, expectedRevision: null });
+  };
+  const scoped = (store: DataStoreName, key: IDBValidKey[], value: IndexedRow) =>
+    add(store, key, { workspaceId, ...value });
+  const features = workspace.features;
+
+  // Feature-state fields are saved separately from the ordered item arrays.
+  for (const [app, feature] of Object.entries(features)) {
+    const { items: _items, ...settings } = feature as unknown as { items: unknown[]; [key: string]: unknown };
+    scoped('featureState', [workspaceId, app], { app, ...copy(settings) });
+  }
+
+  function library(app: string, items: readonly Record<string, unknown>[], parentKey = '@root'): void {
+    scoped('collections', [workspaceId, app, parentKey], {
+      app, parentId: parentKey, children: items.map(item => item.id),
+    });
+    items.forEach((item, position) => {
+      const { id, kind, name } = item;
+      if (typeof id !== 'string' || typeof kind !== 'string' || typeof name !== 'string') {
+        throw new Error('Cannot store a library item without a valid ID, type and name.');
+      }
+      scoped('libraryNodes', [workspaceId, app, id], { app, id, kind, name, parentKey, position });
+      if (kind === 'group') {
+        library(app, item.children as Record<string, unknown>[], id);
+        return;
+      }
+      if (app === 'notebook') {
+        scoped('notebookDocuments', [workspaceId, id], {
+          id, type: item.type, data: copy(item.data),
+        });
+      } else if (app === 'index-cards') {
+        scoped('indexCardSets', [workspaceId, id], {
+          id, ...(Object.hasOwn(item, 'mode') ? { mode: item.mode } : {}),
+        });
+        const cards = item.cards as Record<string, unknown>[];
+        scoped('collections', [workspaceId, 'index-cards:cards', id], {
+          app: 'index-cards:cards', parentId: id, children: cards.map(card => card.id),
+        });
+        cards.forEach((card, cardPosition) => {
+          const cardId = String(card.id);
+          scoped('indexCards', [workspaceId, id, cardId], { setId: id, ...copy(card), position: cardPosition });
+        });
+      } else if (app === 'word-search') {
+        scoped('wordSearches', [workspaceId, id], {
+          id, ...(Object.hasOwn(item, 'puzzle') ? { puzzle: copy(item.puzzle) } : {}),
+          ...(Object.hasOwn(item, 'boardRotation') ? { boardRotation: item.boardRotation } : {}),
+        });
+        if (Object.hasOwn(item, 'game')) scoped('wordSearchGames', [workspaceId, id], { id, game: copy(item.game) });
+      } else if (app === 'crossword') {
+        scoped('crosswords', [workspaceId, id], {
+          id, ...(Object.hasOwn(item, 'puzzle') ? { puzzle: copy(item.puzzle) } : {}),
+        });
+        if (Object.hasOwn(item, 'game')) scoped('crosswordGames', [workspaceId, id], { id, game: copy(item.game) });
+      } else if (app === 'guide') {
+        const data = copy(item.data as Record<string, unknown>);
+        if (item.mode === 'map' && Object.hasOwn(data, 'session')) {
+          scoped('guideSessions', [workspaceId, id], { id, session: data.session });
+          delete data.session;
+        }
+        scoped('guides', [workspaceId, id], { id, mode: item.mode, data });
+      } else if (app === 'knowledge-check') {
+        scoped('reviewSets', [workspaceId, id], {
+          id, ...(Object.hasOwn(item, 'mode') ? { mode: item.mode } : {}),
+          ...(Object.hasOwn(item, 'options') ? { options: copy(item.options) } : {}),
+        });
+        scoped('collections', [workspaceId, 'knowledge-check:questions', id], {
+          app: 'knowledge-check:questions', parentId: id,
+          children: (item.questions as Record<string, unknown>[]).map(question => question.id),
+        });
+        (item.questions as Record<string, unknown>[]).forEach((question, questionPosition) => {
+          const questionId = String(question.id);
+          scoped('reviewQuestions', [workspaceId, id, questionId], {
+            setId: id, ...copy(question), position: questionPosition,
+          });
+        });
+      }
+    });
+  }
+
+  for (const app of LIBRARY_APPS) {
+    library(app, features[app].items as unknown as Record<string, unknown>[]);
+  }
+
+  scoped('collections', [workspaceId, 'todo-list', '@root'], {
+    app: 'todo-list', parentId: '@root', children: features['todo-list'].items.map(item => item.id),
+  });
+  features['todo-list'].items.forEach((list, position) => {
+    const { sections, ...fields } = list;
+    scoped('todoLists', [workspaceId, list.id], { ...copy(fields), position, hasSections: Object.hasOwn(list, 'sections') });
+    if (sections) scoped('collections', [workspaceId, 'todo-list:sections', list.id], {
+      app: 'todo-list:sections', parentId: list.id, children: sections.map(section => section.id),
+    });
+    sections?.forEach((section, sectionPosition) => {
+      const { tasks, ...sectionFields } = section;
+      scoped('todoSections', [workspaceId, list.id, section.id], {
+        listId: list.id, ...copy(sectionFields), position: sectionPosition,
+      });
+      scoped('collections', [workspaceId, 'todo-list:tasks', list.id + '/' + section.id], {
+        app: 'todo-list:tasks', parentId: list.id + '/' + section.id,
+        children: tasks.map(task => task.id),
+      });
+      tasks.forEach((task, taskPosition) => {
+        scoped('todoTasks', [workspaceId, list.id, section.id, task.id], {
+          listId: list.id, sectionId: section.id, ...copy(task), position: taskPosition,
+        });
+      });
+    });
+  });
+
+  if (workspace.statistics) {
+    const stats = workspace.statistics;
+    // statisticsMeta uses the scalar workspaceId key (not [workspaceId]).
+    // Keep migration, structural reconciliation and optimistic revisions aligned.
+    add('statisticsMeta', workspaceId, { workspaceId, version: stats.version, startedAt: stats.startedAt });
+    for (const [app, record] of Object.entries(stats.apps)) {
+      if (!record) continue;
+      scoped('statisticsApps', [workspaceId, app], { app, counts: copy(record.counts) });
+      for (const [id, entry] of Object.entries(record.entries)) {
+        scoped('statisticsEntries', [workspaceId, app, id], {
+          app, id, counts: copy(entry.counts), lastActivityAt: entry.lastActivityAt,
+        });
+      }
+    }
+  }
+  return rows;
+}
+
+type Item = Record<string, unknown>;
+type Stored = IndexedRow & { id?: string; app?: string; parentKey?: string; position?: number; kind?: string; name?: string };
+function own(row: IndexedRow | undefined, field: string): boolean {
+  return !!row && Object.hasOwn(row, field);
+}
+function value<T>(rows: ReadonlyMap<string, IndexedRow>, id: string): T | undefined {
+  return rows.get(id) as T | undefined;
+}
+function indexed(rows: readonly Stored[]): Map<string, IndexedRow> {
+  return new Map(rows.filter(r => typeof r.id === 'string').map(r => [r.id as string, r]));
+}
+const ordering = (a: Stored, b: Stored) => (a.position ?? 0) - (b.position ?? 0);
+
+export const WORKSPACE_RECORD_STORES: readonly DataStoreName[] = [
+    'featureState', 'libraryNodes', 'collections', 'notebookDocuments', 'indexCardSets', 'indexCards',
+    'wordSearches', 'wordSearchGames', 'crosswords', 'crosswordGames', 'guides', 'guideSessions',
+    'reviewSets', 'reviewQuestions', 'todoLists', 'todoSections', 'todoTasks',
+    'statisticsMeta', 'statisticsApps', 'statisticsEntries',
+];
+
+export async function hydrateWorkspace(store: Pick<IndexedDataStore, 'all'> & Partial<Pick<IndexedDataStore, 'snapshot'>>, workspaceId: string): Promise<Workspace> {
+  const stores = [...WORKSPACE_RECORD_STORES];
+  const snapshot = store.snapshot
+    ? await store.snapshot<Stored>(stores, workspaceId)
+    : new Map<DataStoreName, Stored[]>(await Promise.all(stores.map(async name =>
+        [name, await store.all<Stored>(name)] as [DataStoreName, Stored[]])));
+  const data = new Map<DataStoreName, Stored[]>(stores.map(name => [
+    name, (snapshot.get(name) ?? []).filter(row => row.workspaceId === workspaceId),
+  ]));
+  const getRows = (name: DataStoreName): Stored[] => data.get(name) ?? [];
+  const byId = (name: DataStoreName) => indexed(getRows(name));
+  const documents = byId('notebookDocuments');
+  const indexSets = byId('indexCardSets');
+  const wordSearches = byId('wordSearches'), wordGames = byId('wordSearchGames');
+  const crosswords = byId('crosswords'), crosswordGames = byId('crosswordGames');
+  const guides = byId('guides'), guideSessions = byId('guideSessions');
+  const reviewSets = byId('reviewSets');
+
+  const unwrap = (row: Stored, exclusions: readonly string[]): Item => Object.fromEntries(
+    Object.entries(row).filter(([key]) => !['workspaceId', 'revision', ...exclusions].includes(key))
+  );
+  const featureState = new Map(getRows('featureState').map(row => [row.app, unwrap(row, ['app'])]));
+  const featureModels: Record<string, Item> = {};
+  for (const app of [...LIBRARY_APPS, 'todo-list']) featureModels[app] = { items: [], ...featureState.get(app) };
+
+  const groups = getRows('libraryNodes');
+  for (const app of LIBRARY_APPS) {
+    const nodes = groups.filter(node => node.app === app);
+    const nodeById = new Map<string, Item>();
+    for (const row of nodes) {
+      const id = row.id!;
+      let item: Item = { id, kind: row.kind, name: row.name };
+      if (row.kind === 'group') item = { ...item, children: [] };
+      else if (app === 'notebook') {
+        const body = value<Stored>(documents, id);
+        if (!body) throw new Error('The Notebook document body is missing.');
+        item = { ...item, type: body.type, data: body.data };
+      } else if (app === 'index-cards') {
+        const set = value<Stored>(indexSets, id);
+        if (!set) throw new Error('An Index Card set is missing.');
+        item = { ...item, ...(own(set, 'mode') ? { mode: set.mode } : {}),
+          cards: getRows('indexCards').filter(card => card.setId === id).sort(ordering)
+            .map(card => unwrap(card, ['setId', 'position'])) };
+      } else if (app === 'word-search') {
+        const puzzle = value<Stored>(wordSearches, id), game = value<Stored>(wordGames, id);
+        if (!puzzle) throw new Error('A Word Search puzzle record is missing.');
+        item = { ...item, ...(own(puzzle, 'puzzle') ? { puzzle: puzzle.puzzle } : {}),
+          ...(own(puzzle, 'boardRotation') ? { boardRotation: puzzle.boardRotation } : {}),
+          ...(own(game, 'game') ? { game: game!.game } : {}) };
+      } else if (app === 'crossword') {
+        const puzzle = value<Stored>(crosswords, id), game = value<Stored>(crosswordGames, id);
+        if (!puzzle) throw new Error('A Crossword puzzle record is missing.');
+        item = { ...item, ...(own(puzzle, 'puzzle') ? { puzzle: puzzle.puzzle } : {}),
+          ...(own(game, 'game') ? { game: game!.game } : {}) };
+      } else if (app === 'guide') {
+        const guide = value<Stored>(guides, id), session = value<Stored>(guideSessions, id);
+        if (!guide) throw new Error('A Guide body is missing.');
+        item = { ...item, mode: guide.mode, data: {
+          ...(guide.data as Item), ...(own(session, 'session') ? { session: session!.session } : {}),
+        } };
+      } else if (app === 'knowledge-check') {
+        const set = value<Stored>(reviewSets, id);
+        if (!set) throw new Error('A Review set is missing.');
+        item = { ...item, ...(own(set, 'mode') ? { mode: set.mode } : {}),
+          ...(own(set, 'options') ? { options: set.options } : {}),
+          questions: getRows('reviewQuestions').filter(question => question.setId === id).sort(ordering)
+            .map(question => unwrap(question, ['setId', 'position'])) };
+      }
+      nodeById.set(id, item);
+    }
+    const root: Item[] = [];
+    for (const node of [...nodes].sort(ordering)) {
+      const parent = node.parentKey === '@root' ? null : nodeById.get(node.parentKey ?? '');
+      const target = parent === null ? root : parent?.children;
+      if (!Array.isArray(target)) throw new Error('A saved library has an invalid parent.');
+      target.push(nodeById.get(node.id!)!);
+    }
+    // A parent cycle can leave otherwise valid nodes unreachable from the
+    // root. Reject it instead of silently dropping that content on export.
+    const reachable = new Set<string>();
+    const pending = [...root];
+    while (pending.length) {
+      const item = pending.pop()!;
+      const id = item.id as string;
+      if (reachable.has(id)) throw new Error('A saved library contains a duplicate or cyclic entry.');
+      reachable.add(id);
+      if (Array.isArray(item.children)) pending.push(...item.children as Item[]);
+    }
+    if (reachable.size !== nodes.length) throw new Error('Saved library content is orphaned or cyclic.');
+    featureModels[app]!.items = root;
+  }
+
+  // Validate ownership before rebuilding a JSON backup. Otherwise a dangling
+  // content row (from a failed old write or a bug) is silently omitted on
+  // export and appears permanently lost once that backup is restored.
+  const leafIds = (app: string) => new Set(groups
+    .filter(row => row.app === app && row.kind !== 'group').map(row => row.id));
+  const verifyContents = (store: DataStoreName, app: string, required: boolean) => {
+    const owners = leafIds(app);
+    const seen = new Set<string>();
+    for (const row of getRows(store)) {
+      const id = row.id;
+      if (!id || !owners.has(id) || seen.has(id)) {
+        throw new Error('Saved ' + store + ' contains an orphaned or duplicate record.');
+      }
+      seen.add(id);
+    }
+    if (required && owners.size !== seen.size) {
+      throw new Error('Saved ' + app + ' content is missing from ' + store + '.');
+    }
+  };
+  verifyContents('notebookDocuments', 'notebook', true);
+  verifyContents('indexCardSets', 'index-cards', true);
+  verifyContents('wordSearches', 'word-search', true);
+  verifyContents('wordSearchGames', 'word-search', false);
+  verifyContents('crosswords', 'crossword', true);
+  verifyContents('crosswordGames', 'crossword', false);
+  verifyContents('guides', 'guide', true);
+  verifyContents('guideSessions', 'guide', false);
+  verifyContents('reviewSets', 'knowledge-check', true);
+
+  for (const [app, store] of [['index-cards', 'indexCards'],
+    ['knowledge-check', 'reviewQuestions']] as const) {
+    const ownerIds = leafIds(app);
+    const childIds = new Set<string>();
+    for (const row of getRows(store)) {
+      const id = row.id, parent = row.setId;
+      const scopedId = JSON.stringify([parent, id]);
+      if (!id || typeof parent !== 'string' || !ownerIds.has(parent) || childIds.has(scopedId)) {
+        throw new Error('Saved ' + store + ' contains an orphaned or duplicate child.');
+      }
+      // The database key is [workspaceId, setId, id]. Different sets may
+      // legitimately contain the same card or question ID.
+      childIds.add(scopedId);
+    }
+  }
+
+  const expectedCollections = new Map<string, string[]>();
+  function recordOrder(app: string, parentId: string, ids: string[]) {
+    const key = JSON.stringify([app, parentId]);
+    if (expectedCollections.has(key)) throw new Error('Duplicate saved collection.');
+    expectedCollections.set(key, ids);
+  }
+  for (const app of LIBRARY_APPS) {
+    const nodes = groups.filter(row => row.app === app);
+    const parents = new Set([ '@root',
+      ...nodes.filter(row => row.kind === 'group').map(row => row.id!) ]);
+    for (const parent of parents) {
+      recordOrder(app, parent, nodes.filter(node => node.parentKey === parent)
+        .sort(ordering).map(node => node.id!));
+    }
+  }
+  for (const row of getRows('indexCardSets')) {
+    recordOrder('index-cards:cards', row.id!,
+      getRows('indexCards').filter(card => card.setId === row.id).sort(ordering).map(card => card.id!));
+  }
+  for (const row of getRows('reviewSets')) {
+    recordOrder('knowledge-check:questions', row.id!,
+      getRows('reviewQuestions').filter(q => q.setId === row.id).sort(ordering).map(q => q.id!));
+  }
+  const todoRows = getRows('todoLists');
+  recordOrder('todo-list', '@root', todoRows.sort(ordering).map(list => list.id!));
+  for (const list of todoRows) {
+    const sections = getRows('todoSections').filter(section => section.listId === list.id).sort(ordering);
+    if (list.hasSections) {
+      recordOrder('todo-list:sections', list.id!, sections.map(section => section.id!));
+    } else if (sections.length) {
+      throw new Error('A Todo List has sections despite lacking a section collection.');
+    }
+    for (const section of sections) {
+      const tasks = getRows('todoTasks').filter(task =>
+        task.listId === list.id && task.sectionId === section.id).sort(ordering);
+      recordOrder('todo-list:tasks', list.id + '/' + section.id, tasks.map(task => task.id!));
+    }
+  }
+  for (const section of getRows('todoSections')) {
+    if (!todoRows.some(list => list.id === section.listId)) throw new Error('An orphaned Todo section was found.');
+  }
+  for (const task of getRows('todoTasks')) {
+    if (!getRows('todoSections').some(section =>
+      section.listId === task.listId && section.id === task.sectionId)) {
+      throw new Error('An orphaned Todo task was found.');
+    }
+  }
+  const actualCollections = getRows('collections');
+  if (actualCollections.length !== expectedCollections.size) {
+    throw new Error('The database is missing saved library ordering records.');
+  }
+  for (const collection of actualCollections) {
+    const children = collection.children;
+    if (typeof collection.app !== 'string' || typeof collection.parentId !== 'string' ||
+        !Array.isArray(children)) throw new Error('Invalid library collection.');
+    const expected = expectedCollections.get(JSON.stringify([collection.app, collection.parentId]));
+    if (!expected || expected.length !== children.length ||
+        expected.some((id, i) => id !== children[i])) {
+      throw new Error('Saved collection ordering does not match its content.');
+    }
+  }
+
+  const lists = getRows('todoLists').sort(ordering);
+  featureModels['todo-list']!.items = lists.map(list => {
+    const sections = getRows('todoSections').filter(s => s.listId === list.id).sort(ordering);
+    return { ...unwrap(list, ['position', 'hasSections']),
+      ...(list.hasSections ? { sections: sections.map(section => ({
+        ...unwrap(section, ['listId', 'position']),
+        tasks: getRows('todoTasks').filter(task => task.listId === list.id && task.sectionId === section.id)
+          .sort(ordering).map(task => unwrap(task, ['listId', 'sectionId', 'position'])),
+      })) } : {}),
+    };
+  });
+
+  // Statistics metadata is required whenever counters exist. Without this
+  // check, a dangling entry silently disappears from portable JSON exports.
+  const statsAppIds = new Set<string>();
+  const statsApps = getRows('statisticsApps');
+  for (const app of statsApps) {
+    if (typeof app.app !== 'string' || statsAppIds.has(app.app)) {
+      throw new Error('Duplicate or invalid statistics application.');
+    }
+    statsAppIds.add(app.app);
+  }
+  for (const entry of getRows('statisticsEntries')) {
+    if (typeof entry.app !== 'string' || !statsAppIds.has(entry.app)) {
+      throw new Error('An orphaned statistics entry was found.');
+    }
+  }
+  if (getRows('statisticsMeta').length > 1 ||
+      (!getRows('statisticsMeta').length &&
+        (statsApps.length || getRows('statisticsEntries').length))) {
+    throw new Error('Saved statistics metadata is missing or duplicated.');
+  }
+
+  const stats = getRows('statisticsMeta')[0];
+  const statistics = stats ? {
+    version: stats.version, startedAt: stats.startedAt,
+    apps: Object.fromEntries(getRows('statisticsApps').map(app => [app.app, {
+      counts: app.counts,
+      entries: Object.fromEntries(getRows('statisticsEntries')
+        .filter(entry => entry.app === app.app)
+        .map(entry => [entry.id, { counts: entry.counts, lastActivityAt: entry.lastActivityAt }])),
+    }])),
+  } : undefined;
+
+  // Reuse the authoritative compatibility validators, including migrations for
+  // historical optional fields. No full JSON serialization is needed to read
+  // the database; export constructs it only when the user requests a backup.
+  return validateWorkspaceValue({
+    format: 'dynamic-learner', version: 1,
+    ...(statistics ? { statistics } : {}),
+    features: featureModels,
+  });
+}

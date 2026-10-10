@@ -1,3 +1,5 @@
+import { EntryStatistics } from '../../components/entry-statistics.ts';
+import { useStatisticsVisits } from '../../components/statistics-context.ts';
 import type { DocumentTarget } from './library-model.ts';
 import type { DocumentTypeId } from './document-types.ts';
 import type { ImportedDocument } from './library.ts';
@@ -84,6 +86,7 @@ export const Notebook = defineComponent({
     }
 
     const selection = computed(() => findItem(props.model.items, selectedId.value));
+    useStatisticsVisits('notebook', () => selection.value?.item.id ?? null, () => creationTarget.value === null);
 
     watch(() => selection.value?.item, (item) => {
       if (item?.kind === 'document') props.model.lastSelectedDocumentId = item.id;
@@ -249,6 +252,7 @@ export const Notebook = defineComponent({
         open: item.kind === 'group',
       }, [
         h('summary', { class: 'organization-summary' }, 'Location and order'),
+        item.kind === 'group' ? h(EntryStatistics, { app: 'notebook', id: item.id }) : null,
         h('div', { class: 'item-location' }, [
           h('label', { for: 'notebook-parent' }, 'Move to group'),
           h('select', {
@@ -369,6 +373,7 @@ export const Notebook = defineComponent({
         }, [
           selection.value?.item.kind === 'document' ? h('header', { class: 'item-heading' }, [
             h('h2', selection.value.item.name),
+            h(EntryStatistics, { app: 'notebook', id: selection.value.item.id }),
             h('p', { class: 'item-summary' }, 'Document'),
           ]) : null,
           selection.value?.item.kind === 'document'

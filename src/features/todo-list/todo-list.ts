@@ -1,3 +1,4 @@
+import { useStatisticsVisits } from '../../components/statistics-context.ts';
 import { computed, defineComponent, h, nextTick, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref, watch, type PropType } from 'vue';
 import { defaultTodoDisplay, type TodoDisplay } from './display-options.ts';
 import { TodoTaskEditor } from './task-editor.ts';
@@ -55,6 +56,7 @@ export const TodoList = defineComponent({
     });
     const display = computed(() => props.model.display ?? defaultTodoDisplay());
     const selected = computed(() => props.model.items.find(item => item.id === selectedId.value) ?? null);
+    useStatisticsVisits('todo-list', () => selected.value?.id ?? null);
     const archiveCount = computed(() => archivedItems.value.length);
     function changeLayout(event: MediaQueryListEvent) {
       overlay.value = event.matches; panel.resizing.value = false;

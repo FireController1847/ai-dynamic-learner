@@ -1,27 +1,34 @@
+import { EntryStatistics } from '../../components/entry-statistics.ts';
+import { useStatisticsVisits } from '../../components/statistics-context.ts';
 import type { DirectoryTreeHandle } from './directory-tree.ts';
 import type { LibraryItem, SetTarget } from './tree-model.ts';
 import type { SetModeId } from './set-modes.ts';
 interface CreationTarget extends SetTarget { destination: string }
 interface CardSetHandle { focusCardListToggle(): void }
 import { addTutorialActionListener, type TutorialRequest } from '../../../packages/tips/src/index.ts';
-import type { IndexCards as FeatureModel } from './tree-model.ts';
+import { resolvedIndexCardSettings, type IndexCards as FeatureModel } from './tree-model.ts';
 import { inputValue } from '../../core/dom.ts';
 import { DirectoryTree } from './directory-tree.ts';
 import { SetBuilder } from './set-builder.ts';
+import { type IndexCardsAiImportValue } from './ai-import.ts';
+import { IndexCardsAiCreation } from './ai-category-step.ts';
+import { FLASH_CARDS_IMPORT_FORMAT, parseFlashCardsAiImport } from './ai-import-format.ts';
+import { FILL_BLANK_IMPORT_FORMAT, parseFillBlankAiImport } from './fill-blank-ai-format.ts';
 import { getSetMode } from './set-modes.ts';
 import { CardSet } from './card-set.ts';
 import { FillBlankSet } from './fill-blank-set.ts';
 import { DisplaySettings } from './display-settings.ts';
 import { displayForMode, displayStyles, resolvedDisplayOptions } from './display-options.ts';
+import type { AnswerStrictness } from './fill-blank-model.ts';
 import { Icon } from '../../components/icon.ts';
 import { LibraryEmptyState } from '../../components/library-empty-state.ts';
 import { useLibrarySelection } from '../../components/use-library-selection.ts';
 import { usePersistedPanelResize } from '../../components/use-persisted-panel-resize.ts';
 import { canMove, countCards, createItem, deleteItem, findItem, firstEntry, groupOptions, insertSet, moveItem } from './tree-model.ts';
-import { createCard } from './card-model.ts';
+import { createCard, MAX_CARDS } from './card-model.ts';
 import { clearPreference, readNumberPreference, writeNumberPreference } from '../../core/ui-preferences.ts';
 
-import { defineComponent, type PropType, computed, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue';
+import { defineComponent, type PropType, computed, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref, Transition, watch } from 'vue';
 
 const MIN_LIBRARY_WIDTH = 248;
 const LIBRARY_WIDTH_KEY = 'dynamic-learner.ui.index-cards.library-width';
@@ -35,10 +42,12 @@ export const IndexCards = defineComponent({
   },
   setup(props) {
     const creationTarget = ref<CreationTarget | null>(null);
+    const aiTarget = ref<CreationTarget | null>(null);
+    const aiMode = ref<SetModeId | null>(null);
     const selectedId = useLibrarySelection({
       firstId: () => firstEntry(props.model.items)?.id ?? null,
       hasItem: (id) => findItem(props.model.items, id) !== null,
-      enabled: () => creationTarget.value === null,
+      enabled: () => creationTarget.value === null && aiTarget.value === null,
       onAutoSelect: (id) => {
         tree.value?.reveal(id);
         if (libraryOverlay.value) libraryCollapsed.value = true;
@@ -88,7 +97,8 @@ export const IndexCards = defineComponent({
     const tutorialFillBlankReviewSetId = ref<string | null>(null);
     const settingsButton = ref<HTMLButtonElement | null>(null);
     const displayOptions = computed(() => resolvedDisplayOptions(props.model.display));
-    onDeactivated(() => { settingsOpen.value = false; });
+    const indexCardSettings = computed(() => resolvedIndexCardSettings(props.model.settings));
+    onDeactivated(() => { settingsOpen.value = false; aiTarget.value = null; });
 
     async function closeSettings() {
       settingsOpen.value = false;
@@ -96,6 +106,8 @@ export const IndexCards = defineComponent({
       settingsButton.value?.focus();
     }
     const selection = computed(() => findItem(props.model.items, selectedId.value));
+    useStatisticsVisits('index-cards', () => selection.value?.item.id ?? null, () => creationTarget.value === null && aiTarget.value === null &&
+      selection.value?.item.id !== tutorialReviewSetId.value && selection.value?.item.id !== tutorialFillBlankReviewSetId.value);
     const selectedMode = computed<SetModeId>(() =>
       selection.value?.item.kind === 'set' ? selection.value.item.mode ?? 'flash-cards' : 'flash-cards');
     const activeDisplay = computed(() => displayForMode(displayOptions.value, selectedMode.value));
@@ -147,6 +159,7 @@ export const IndexCards = defineComponent({
     }
 
     function beginSetCreation() {
+      aiTarget.value = null;
       const current = selection.value;
       let destination = 'Top level';
       if (current?.item.kind === 'group') destination = current.item.name;
@@ -172,6 +185,48 @@ export const IndexCards = defineComponent({
       creationTarget.value = null;
       tree.value?.reveal(item.id);
       nextTick(() => tree.value?.beginRename(item.id));
+    }
+
+    function beginAiImport() {
+      beginSetCreation();
+      aiTarget.value = creationTarget.value;
+      aiMode.value = null;
+      creationTarget.value = null;
+    }
+
+    async function cancelAiImport() {
+      aiTarget.value = null;
+      message.value = '';
+      await nextTick();
+      if (libraryCollapsed.value) showLibraryButton.value?.focus();
+      else tree.value?.focusAiImport();
+    }
+
+    function importAiCards(value: IndexCardsAiImportValue) {
+      if (!aiTarget.value || value.mode !== aiMode.value) return;
+      try {
+        // Revalidate the payload and current capacity before mutating the library.
+        const serialized = JSON.stringify({
+          format: value.mode === 'flash-cards' ? FLASH_CARDS_IMPORT_FORMAT : FILL_BLANK_IMPORT_FORMAT,
+          version: 1, ...value.data,
+        });
+        const cards = value.mode === 'flash-cards'
+          ? parseFlashCardsAiImport(serialized).cards.map(card => createCard({ front: card.question, back: card.answer }))
+          : parseFillBlankAiImport(serialized).cards.map(card => createCard({ front: card.text }));
+        if (countCards(props.model.items) + cards.length > MAX_CARDS) {
+          throw new Error(`A workspace supports up to ${MAX_CARDS} cards. Import fewer cards or remove existing cards first.`);
+        }
+        const item = insertSet(props.model.items, aiTarget.value, value.mode);
+        item.name = value.data.title.trim();
+        item.cards = cards;
+        selectedId.value = item.id;
+        aiTarget.value = null;
+        tree.value?.reveal(item.id);
+        message.value = `Imported ${item.name}.`;
+        nextTick(() => layout.value?.querySelector<HTMLElement>('.card-face--front textarea, .fill-blank-visual-editor')?.focus());
+      } catch (error) {
+        message.value = error instanceof Error ? error.message : String(error);
+      }
     }
 
     function moveToGroup(event: Event) {
@@ -322,7 +377,7 @@ export const IndexCards = defineComponent({
           'aria-expanded': false, 'aria-controls': 'index-cards-library',
           onClick: () => setLibraryCollapsed(false),
         }, [h(Icon, { name: 'panel-open' })]) : null,
-        !creationTarget.value && selection.value?.item.kind === 'set' && cardListCollapsed.value ? h('button', {
+        !creationTarget.value && !aiTarget.value && selection.value?.item.kind === 'set' && cardListCollapsed.value ? h('button', {
           ref: showCardsButton, type: 'button', class: 'icon-button card-list-floating-toggle',
           title: 'Show cards', 'aria-label': 'Show cards',
           'aria-expanded': false, 'aria-controls': 'index-cards-card-list',
@@ -337,7 +392,8 @@ export const IndexCards = defineComponent({
           collapsed: libraryCollapsed.value,
           onToggleLibrary: () => setLibraryCollapsed(true),
           onNewSet: beginSetCreation,
-          onSelect: (id) => { selectedId.value = id; creationTarget.value = null; message.value = ''; },
+          onOpenAiImport: beginAiImport,
+          onSelect: (id) => { selectedId.value = id; creationTarget.value = null; aiTarget.value = null; message.value = ''; },
           onOpenItem: () => { if (libraryOverlay.value) setLibraryCollapsed(true); },
         }, {
           footer: () => h('button', {
@@ -362,28 +418,41 @@ export const IndexCards = defineComponent({
           onDblclick: resetLibraryWidth,
         }) : null,
         h('section', {
-          class: ['index-cards-detail', { 'is-set': selection.value?.item.kind === 'set' }],
-          'aria-label': creationTarget.value ? 'Choose an Index Cards mode' : selection.value ? 'Selected item' : 'Index Cards getting started',
+          'data-ai-scroll-region': '',
+          class: ['index-cards-detail', { 'is-set': !creationTarget.value && !aiTarget.value && selection.value?.item.kind === 'set' }],
+          'aria-label': aiTarget.value ? 'Create Index Cards with AI' : creationTarget.value ? 'Choose an Index Cards mode' : selection.value ? 'Selected item' : 'Index Cards getting started',
           inert: libraryOverlay.value && !libraryCollapsed.value,
         }, [
+          aiTarget.value ? h(Transition, { name: 'ai-workflow-step', mode: 'out-in' }, {
+            default: () => aiTarget.value && aiMode.value ? h(IndexCardsAiCreation, {
+              key: aiMode.value, mode: aiMode.value,
+              destination: aiTarget.value.destination, remainingCards: MAX_CARDS - totalCards.value,
+              onCancel: cancelAiImport,
+              onBack: () => { aiMode.value = null; message.value = ''; }, onImport: importAiCards,
+            }) : aiTarget.value ? h(SetBuilder, {
+              key: 'ai-modes', ai: true, destination: aiTarget.value.destination,
+              onCreate: (mode: SetModeId) => { aiMode.value = mode; }, onCancel: cancelAiImport,
+            }) : null,
+          }) : null,
           creationTarget.value ? h(SetBuilder, {
             destination: creationTarget.value.destination,
             onCreate: createSet,
             onCancel: cancelSetCreation,
           }) : null,
-          creationTarget.value && message.value
+          (creationTarget.value || aiTarget.value) && message.value
             ? h('p', { class: 'index-cards-builder-error', role: 'alert' }, message.value)
             : null,
-          !creationTarget.value && selection.value?.item.kind === 'set' ? h('header', { class: 'item-heading' }, [
+          !creationTarget.value && !aiTarget.value && selection.value?.item.kind === 'set' ? h('header', { class: 'item-heading' }, [
             h('h2', selection.value.item.name),
             h('p', { class: 'item-summary' }, `${getSetMode(selection.value.item.mode)?.label ?? 'Flash Cards'} · ${selection.value.item.cards.length} cards`),
           ]) : null,
-          !creationTarget.value && selection.value?.item.kind === 'set'
+          !creationTarget.value && !aiTarget.value && selection.value?.item.kind === 'set'
             ? selectedMode.value === 'fill-in-the-blanks'
               ? h(FillBlankSet, {
                 key: selection.value.item.id,
                 ref: activeSet,
                 set: selection.value.item,
+                answerStrictness: indexCardSettings.value.answerStrictness,
                 totalCards: totalCards.value,
                 cardListWidth: cardListWidth.value, cardListCollapsed: cardListCollapsed.value,
                 onToggleCardList: () => setCardListCollapsed(true),
@@ -402,7 +471,7 @@ export const IndexCards = defineComponent({
                 onResizeCardList: setCardListWidth,
                 onResetCardList: resetCardListWidth,
               })
-            : !creationTarget.value ? h(LibraryEmptyState, {
+            : !creationTarget.value && !aiTarget.value ? h(LibraryEmptyState, {
             class: { 'has-organization': selection.value !== null },
             icon: 'cards',
             title: selection.value?.item.name ?? 'Build your index-card library',
@@ -410,12 +479,13 @@ export const IndexCards = defineComponent({
             actionLabel: 'New set',
             onCreate: beginSetCreation,
           }) : null,
-          !creationTarget.value && selection.value ? h('details', {
+          !creationTarget.value && !aiTarget.value && selection.value ? h('details', {
             key: `organization-${selection.value.item.id}`,
             class: ['item-organization', { 'library-group-organization': selection.value.item.kind === 'group' }],
             open: selection.value.item.kind === 'group',
           }, [
           h('summary', { class: 'organization-summary' }, 'Location and order'),
+          selection.value.item.kind === 'group' ? h(EntryStatistics, { app: 'index-cards', id: selection.value.item.id }) : null,
           h('div', { class: 'item-location' }, [
             h('label', { for: 'index-cards-parent' }, 'Move to group'),
             h('select', {
@@ -445,8 +515,12 @@ export const IndexCards = defineComponent({
       ]),
       settingsOpen.value ? h(DisplaySettings, {
         options: displayOptions.value,
+        answerStrictness: indexCardSettings.value.answerStrictness,
         initialTab: selectedMode.value,
         onUpdate: (options) => { props.model.display = options; },
+        onUpdateAnswerStrictness: (answerStrictness: AnswerStrictness) => {
+          props.model.settings = { ...indexCardSettings.value, answerStrictness };
+        },
         onClose: closeSettings,
       }) : null,
     ]);

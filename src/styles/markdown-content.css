@@ -1,0 +1,69 @@
+.markdown-content { min-width:0;white-space:normal;overflow-wrap:anywhere;line-height:1.6; }
+:is(.markdown-preview, .markdown-content) > :first-child { margin-top: 0; }
+:is(.markdown-preview, .markdown-content) > :last-child { margin-bottom: 0; }
+:is(.markdown-preview, .markdown-content) h1,
+:is(.markdown-preview, .markdown-content) h2,
+:is(.markdown-preview, .markdown-content) h3,
+:is(.markdown-preview, .markdown-content) h4,
+:is(.markdown-preview, .markdown-content) h5,
+:is(.markdown-preview, .markdown-content) h6 { margin: 1.35em 0 0.55em; line-height: 1.25; }
+:is(.markdown-preview, .markdown-content) h1 { font-size: 2em; }
+:is(.markdown-preview, .markdown-content) h2 { font-size: 1.55em; border-bottom: 1px solid var(--border-color); padding-bottom: 0.28em; }
+:is(.markdown-preview, .markdown-content) h3 { font-size: 1.28em; }
+:is(.markdown-preview, .markdown-content) p,
+:is(.markdown-preview, .markdown-content) ul,
+:is(.markdown-preview, .markdown-content) ol,
+:is(.markdown-preview, .markdown-content) blockquote,
+:is(.markdown-preview, .markdown-content) pre { margin: 0 0 1em; }
+:is(.markdown-preview, .markdown-content) ul,
+:is(.markdown-preview, .markdown-content) ol { padding-left: 1.6em; }
+:is(.markdown-preview, .markdown-content) blockquote {
+  padding: 0 1em;
+  border-left: 0.25em solid var(--control-border);
+  color: var(--text-secondary);
+}
+:is(.markdown-preview, .markdown-content) blockquote > :first-child { margin-top: 0; }
+:is(.markdown-preview, .markdown-content) blockquote > :last-child { margin-bottom: 0; }
+:is(.markdown-preview, .markdown-content) code {
+  padding: 0.14em 0.35em;
+  border-radius: 4px;
+  background: var(--surface-subtle);
+  font-family: ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', monospace;
+  font-size: 0.92em;
+}
+:is(.markdown-preview, .markdown-content) pre {
+  overflow: auto;
+  padding: 14px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  background: var(--surface-subtle);
+}
+:is(.markdown-preview, .markdown-content) pre code { padding: 0; background: transparent; }
+:is(.markdown-preview, .markdown-content) a { color: var(--brand-text); }
+:is(.markdown-preview, .markdown-content) img { max-width: 100%; height: auto; }
+:is(.markdown-preview, .markdown-content) table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  margin: 0 0 1em;
+  border-collapse: collapse;
+}
+:is(.markdown-preview, .markdown-content) th,
+:is(.markdown-preview, .markdown-content) td { padding: 8px 12px; border: 1px solid var(--border-color); }
+:is(.markdown-preview, .markdown-content) th { background: var(--surface-subtle); }
+:is(.markdown-preview, .markdown-content) th:not([align]),
+:is(.markdown-preview, .markdown-content) td:not([align]) { text-align: left; }
+:is(.markdown-preview, .markdown-content) li > ul,
+:is(.markdown-preview, .markdown-content) li > ol { margin-bottom: 0; }
+:is(.markdown-preview, .markdown-content) .markdown-task-item { list-style: none; }
+:is(.markdown-preview, .markdown-content) input[type="checkbox"] {
+  width: 1em;
+  height: 1em;
+  margin: 0 0.4em 0 -1.4em;
+  accent-color: var(--brand);
+  vertical-align: middle;
+}
+:is(.markdown-preview, .markdown-content) details { margin-bottom: 1em; }
+:is(.markdown-preview, .markdown-content) summary { cursor: pointer; }
+:is(.markdown-preview, .markdown-content) kbd { padding: 0.1em 0.3em; border: 1px solid var(--border-color); border-radius: 4px; }
+:is(.markdown-preview, .markdown-content) hr { margin:1.6em 0;border:0;border-top:1px solid var(--border-color); }

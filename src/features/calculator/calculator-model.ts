@@ -1,9 +1,10 @@
 import {
-  evaluateExpression, formatExpression, type AngleMode,
+  completeTrailingClosures, evaluateExpression, formatExpression, type AngleMode,
 } from './expression-engine.ts';
 import {
-  backspaceMathPrint, createFractionTemplate, endsValue, fractionContextAt,
-  lastOperandStart, moveFractionCursor, parenthesesBalancedEnoughToClose,
+  backspaceMathPrint, createFractionTemplate, createRoundTemplate, deleteMathPrintForward, endsValue,
+  exitMathPrintStructure, fractionContextAt, lastOperandStart, moveFractionCursor, moveMathPrintCursor,
+  normaliseMathPrintCursor, overwriteRangeAtCursor, parenthesesBalancedEnoughToClose,
 } from './calculator-entry.ts';
 import {
   formatNumber, fractionForValue, fractionPartsForValue, normaliseNumber,
@@ -32,6 +33,7 @@ export class CalculatorModel {
   angleMode: AngleMode = 'DEG';
   lastAnswer = 0;
   justEvaluated = false;
+  overwriteMode = false;
   decimalPlaces: DecimalPlaces;
   displayMode: 'decimal' | 'fraction' = 'decimal';
   private displayValue = 0;
@@ -99,15 +101,38 @@ export class CalculatorModel {
     this.historyIndex = null;
   }
 
+  recoverError() {
+    if (!this.hasError) return false;
+    this.hasError = false;
+    this.justEvaluated = false;
+    this.display = this.formatResult(this.displayValue);
+    return true;
+  }
+
+  toggleOverwriteMode() {
+    if (this.justEvaluated) return;
+    this.recoverError();
+    this.dismissHistory();
+    this.overwriteMode = !this.overwriteMode;
+  }
+
+  setCursor(position: number) {
+    if (this.justEvaluated) return;
+    this.recoverError();
+    this.dismissHistory();
+    this.cursor = normaliseMathPrintCursor(this.expression, position);
+  }
+
+  moveHorizontal(direction: 'left' | 'right') {
+    if (this.justEvaluated) return;
+    this.recoverError();
+    this.dismissHistory();
+    this.cursor = moveMathPrintCursor(this.expression, this.cursor, direction);
+  }
+
   private prepareValue() {
     this.dismissHistory();
-    if (this.hasError) {
-      this.expression = '';
-      this.cursor = 0;
-      this.showValue(0);
-      this.hasError = false;
-      this.justEvaluated = false;
-    }
+    this.recoverError();
     if (this.justEvaluated) {
       this.expression = '';
       this.cursor = 0;
@@ -115,10 +140,23 @@ export class CalculatorModel {
     }
   }
 
-  private insert(text: string) {
-    if (this.expression.length + text.length > MAX_EXPRESSION_LENGTH) return false;
-    this.expression = this.expression.slice(0, this.cursor) + text + this.expression.slice(this.cursor);
-    this.cursor += text.length;
+  private insert(text: string, forceInsert = false) {
+    const overwrite = this.overwriteMode && !forceInsert
+      ? overwriteRangeAtCursor(this.expression, this.cursor)
+      : null;
+    const replacedLength = overwrite ? overwrite.end - overwrite.start : 0;
+    if (this.expression.length - replacedLength + text.length > MAX_EXPRESSION_LENGTH) return false;
+
+    if (overwrite) {
+      this.expression = this.expression.slice(0, overwrite.start)
+        + text
+        + this.expression.slice(overwrite.end);
+      this.cursor = overwrite.start + text.length;
+    } else {
+      this.expression = this.expression.slice(0, this.cursor) + text + this.expression.slice(this.cursor);
+      this.cursor += text.length;
+    }
+
     this.refreshPreview();
     return true;
   }
@@ -135,7 +173,7 @@ export class CalculatorModel {
       return;
     }
     try {
-      this.showValue(evaluateExpression(this.expression, this.context()));
+      this.showValue(evaluateExpression(completeTrailingClosures(this.expression), this.context()));
       this.hasError = false;
     } catch {
       // Incomplete MathPrint templates and operators retain the last valid value.
@@ -153,6 +191,7 @@ export class CalculatorModel {
     this.expression = '';
     this.cursor = 0;
     this.historyIndex = null;
+    this.overwriteMode = false;
     this.showValue(0);
     this.hasError = false;
     this.justEvaluated = false;
@@ -160,11 +199,7 @@ export class CalculatorModel {
 
   clearEntry() {
     this.dismissHistory();
-    if (this.hasError) {
-      this.hasError = false;
-      this.refreshPreview();
-      return;
-    }
+    this.recoverError();
     if (this.justEvaluated) {
       this.expression = '';
       this.cursor = 0;
@@ -193,17 +228,24 @@ export class CalculatorModel {
 
   backspace() {
     this.dismissHistory();
-    if (this.hasError) {
-      this.hasError = false;
-      this.refreshPreview();
-      return;
-    }
+    this.recoverError();
     if (this.justEvaluated) {
       this.justEvaluated = false;
       this.cursor = this.expression.length;
     }
 
     const edited = backspaceMathPrint(this.expression, this.cursor);
+    this.expression = edited.source;
+    this.cursor = edited.cursor;
+    this.refreshPreview();
+  }
+
+  deleteForward() {
+    this.dismissHistory();
+    if (this.justEvaluated) return;
+    this.recoverError();
+
+    const edited = deleteMathPrintForward(this.expression, this.cursor);
     this.expression = edited.source;
     this.cursor = edited.cursor;
     this.refreshPreview();
@@ -234,6 +276,22 @@ export class CalculatorModel {
     if (!currentNumber.includes('.')) this.insert('.');
   }
 
+  inputComma() {
+    this.dismissHistory();
+    this.recoverError();
+    if (this.justEvaluated) return;
+
+    if (this.expression[this.cursor] === ',') {
+      this.cursor += 1;
+      return;
+    }
+
+    const before = this.expression.slice(0, this.cursor);
+    if (!endsValue(before) || before.endsWith(',')) return;
+
+    this.insert(',', true);
+  }
+
   inputFraction() {
     this.prepareValue();
     const template = createFractionTemplate(this.expression, this.cursor);
@@ -243,8 +301,17 @@ export class CalculatorModel {
     this.refreshPreview();
   }
 
+  inputRound() {
+    this.prepareValue();
+    const template = createRoundTemplate(this.expression, this.cursor);
+    if (template.source.length > MAX_EXPRESSION_LENGTH) return;
+    this.expression = template.source;
+    this.cursor = template.cursor;
+    this.refreshPreview();
+  }
+
   chooseOperator(operator: Operator) {
-    if (this.hasError) return;
+    this.recoverError();
     this.dismissHistory();
 
     if (this.justEvaluated) {
@@ -304,7 +371,7 @@ export class CalculatorModel {
   }
 
   inputPostfix(operator: '!' | '%') {
-    if (this.hasError) return;
+    this.recoverError();
     this.dismissHistory();
     if (this.justEvaluated) {
       this.expression = 'ans';
@@ -315,7 +382,7 @@ export class CalculatorModel {
   }
 
   inputPowerShortcut(power: '2' | '-1') {
-    if (this.hasError) return;
+    this.recoverError();
     this.dismissHistory();
     if (this.justEvaluated) {
       this.expression = 'ans';
@@ -332,7 +399,7 @@ export class CalculatorModel {
   }
 
   toggleSign() {
-    if (this.hasError) return;
+    this.recoverError();
     this.dismissHistory();
     if (this.justEvaluated) {
       this.expression = 'ans';
@@ -364,7 +431,10 @@ export class CalculatorModel {
     if (!this.expression) return;
 
     try {
-      const result = normaliseNumber(evaluateExpression(this.expression, this.context()));
+      const result = normaliseNumber(evaluateExpression(
+        completeTrailingClosures(this.expression),
+        this.context(),
+      ));
       const source = this.expression;
       this.history.unshift({
         id: ++this.historyId,
@@ -383,7 +453,8 @@ export class CalculatorModel {
   }
 
   moveVertical(direction: 'up' | 'down') {
-    if (!this.justEvaluated && !this.hasError) {
+    if (!this.justEvaluated) {
+      this.recoverError();
       const moved = moveFractionCursor(this.expression, this.cursor, direction);
       if (moved !== null) {
         this.cursor = moved;
@@ -402,9 +473,29 @@ export class CalculatorModel {
   }
 
   moveRight() {
-    if (this.justEvaluated || this.hasError) return;
-    const moved = moveFractionCursor(this.expression, this.cursor, 'right');
-    if (moved !== null) this.cursor = moved;
+    if (this.justEvaluated) return;
+    this.recoverError();
+    this.dismissHistory();
+
+    const fraction = fractionContextAt(this.expression, this.cursor);
+    if (fraction?.field === 'denominator' && this.cursor === fraction.denominatorEnd) {
+      this.cursor = fraction.close + 1;
+      return;
+    }
+
+    const exited = exitMathPrintStructure(this.expression, this.cursor);
+    if (exited) {
+      this.expression = exited.source;
+      this.cursor = exited.cursor;
+      this.refreshPreview();
+      return;
+    }
+
+    this.cursor = moveMathPrintCursor(this.expression, this.cursor, 'right');
+  }
+
+  moveLeft() {
+    this.moveHorizontal('left');
   }
 
   recallHistorySelection() {
