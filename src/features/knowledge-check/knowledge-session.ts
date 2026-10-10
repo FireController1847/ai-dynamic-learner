@@ -92,8 +92,13 @@ export const KnowledgeSession = defineComponent({
     }
 
     function flagRail() {
-      const entries = questions.value.map((question, index) => ({ question, index }))
-        .filter(({ question }) => flagged.value.has(question.id));
+      // Set insertion order reflects when the learner marked each question.
+      // Removing and re-adding a flag intentionally moves it to the end.
+      const indices = new Map(questions.value.map((question, index) => [question.id, index]));
+      const entries = [...flagged.value].flatMap((id) => {
+        const index = indices.get(id);
+        return index === undefined ? [] : [{ question: questions.value[index]!, index }];
+      });
       if (!entries.length) return null;
       return h('nav', { class: 'knowledge-flag-rail', 'aria-label': 'Flagged questions' }, [
         h('div', { class: 'knowledge-flag-rail-items' }, entries.map(({ question, index }) => {
@@ -108,7 +113,7 @@ export const KnowledgeSession = defineComponent({
               `Flagged question ${index + 1} (navigation unavailable)`,
             'aria-current': options.value.presentation === 'one-at-a-time' && index === position.value ? 'true' : undefined,
             onClick: () => jumpToFlag(index),
-          }, [h(Icon, { name: 'flag' }), h('span', { class: 'knowledge-flag-jump-number' }, String(index + 1))]);
+          }, [h(Icon, { name: 'bookmark' }), h('span', { class: 'knowledge-flag-jump-number' }, String(index + 1))]);
         })),
       ]);
     }
@@ -341,19 +346,17 @@ export const KnowledgeSession = defineComponent({
             'data-review-question-index': index,
             'data-review-focus': '',
             'aria-label': `Question ${index + 1} of ${questions.value.length}` }, [
-          h('div', { class: 'knowledge-question-heading' }, [
-            scroll ? h('p', { class: 'knowledge-question-number' },
-              `Question ${index + 1} of ${questions.value.length}`) : h('span', { 'aria-hidden': 'true' }),
-            h('button', {
-              type: 'button',
-              class: ['knowledge-flag-toggle', { 'is-flagged': flagged.value.has(question.id) }],
-              'aria-label': flagged.value.has(question.id)
-                ? `Remove flag from question ${index + 1}` : `Flag question ${index + 1}`,
-              'aria-pressed': flagged.value.has(question.id),
-              title: flagged.value.has(question.id) ? 'Remove flag' : 'Flag for later',
-              onClick: () => state.toggleFlag(question.id),
-            }, h(Icon, { name: 'flag' })),
-          ]),
+          scroll ? h('p', { class: 'knowledge-question-number' },
+            `Question ${index + 1} of ${questions.value.length}`) : null,
+          h('button', {
+            type: 'button',
+            class: ['knowledge-flag-toggle', { 'is-flagged': flagged.value.has(question.id) }],
+            'aria-label': flagged.value.has(question.id)
+              ? `Remove bookmark from question ${index + 1}` : `Bookmark question ${index + 1}`,
+            'aria-pressed': flagged.value.has(question.id),
+            title: flagged.value.has(question.id) ? 'Remove bookmark' : 'Bookmark for later',
+            onClick: () => state.toggleFlag(question.id),
+          }, h(Icon, { name: 'bookmark' })),
           question.type === 'fill-in-the-blanks' && question.context?.trim()
             ? h(MarkdownContent, { text: question.context, class: 'knowledge-question-context' }) : null,
           question.type === 'fill-in-the-blanks'
@@ -461,7 +464,7 @@ export const KnowledgeSession = defineComponent({
       if (options.value.presentation === 'scroll') {
         return h('section', {
           key: 'questions', ref: scrollSession,
-          class: ['knowledge-session knowledge-scroll-session', { 'knowledge-session-with-flags': flagged.value.size > 0 }],
+          class: 'knowledge-session knowledge-scroll-session knowledge-session-with-rail',
           'data-mode': props.mode, 'aria-label': `${props.mode} questions`,
         }, [
           h('div', { class: 'knowledge-session-body' }, [
@@ -500,9 +503,7 @@ export const KnowledgeSession = defineComponent({
       const scored = questionScored(question);
       const wasChecked = checked.value.has(question.id);
       return h('section', { key: 'questions',
-        class: ['knowledge-session', {
-          'is-backward': backward.value, 'knowledge-session-with-flags': flagged.value.size > 0,
-        }],
+        class: ['knowledge-session knowledge-session-with-rail', { 'is-backward': backward.value }],
         'data-mode': props.mode, 'aria-label': `${props.mode} questions` }, [
         h('div', { class: 'knowledge-session-body' }, [
         state.storageMessage.value ? h('p', { role: 'status', class: 'knowledge-message' }, state.storageMessage.value) : null,

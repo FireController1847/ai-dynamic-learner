@@ -264,23 +264,21 @@
 }
 
 
-/* Session-only flags stay outside question cards while remaining inside Review. */
-.knowledge-question-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 30px;
-  margin-bottom: 6px;
+/* Bookmark controls overlay the existing card padding instead of adding a header. */
+.knowledge-prompt { position: relative; }
+.knowledge-prompt > h3,
+.knowledge-prompt > .knowledge-fill-blank-prompt {
+  padding-inline-end: 36px;
 }
-.knowledge-question-heading .knowledge-question-number { margin: 0; }
 .knowledge-flag-toggle {
+  position: absolute;
+  top: clamp(12px, 2vw, 20px);
+  right: clamp(12px, 2vw, 20px);
   display: grid;
   place-items: center;
-  flex: 0 0 32px;
-  width: 32px;
-  height: 32px;
-  padding: 5px;
+  width: 30px;
+  height: 30px;
+  padding: 4px;
   border: 1px solid transparent;
   border-radius: var(--radius);
   background: transparent;
@@ -288,7 +286,7 @@
   cursor: pointer;
   transition: color var(--motion-fast), background-color var(--motion-fast), border-color var(--motion-fast);
 }
-.knowledge-flag-toggle .ui-icon { width: 20px; height: 20px; }
+.knowledge-flag-toggle .ui-icon { width: 19px; height: 19px; }
 .knowledge-flag-toggle:hover, .knowledge-flag-toggle:focus-visible {
   color: var(--brand);
   background: var(--brand-tint);
@@ -298,19 +296,31 @@
   background: var(--brand-tint);
   border-color: var(--brand);
 }
-.knowledge-flag-toggle.is-flagged .ui-icon { fill: color-mix(in srgb, var(--brand) 16%, transparent); }
-.knowledge-session-with-flags {
-  width: min(1040px, 100%);
+.knowledge-flag-toggle.is-flagged .ui-icon { fill: color-mix(in srgb, var(--brand) 20%, transparent); }
+
+/* Reserve the right-hand bookmark lane throughout the session.
+   Never resize/recenter a question when the first bookmark is added. */
+.knowledge-session-with-rail {
+  width: min(1180px, 100%);
   display: grid;
   grid-template-columns: minmax(0, 1fr) 44px;
+  gap: clamp(20px, 5vw, 68px);
   align-items: start;
-  gap: clamp(8px, 2vw, 16px);
 }
-.knowledge-session-body { min-width: 0; }
+.knowledge-session-with-rail .knowledge-session-body {
+  min-width: 0;
+  width: 100%;
+  max-width: 940px;
+  margin-inline: auto;
+}
+.knowledge-session-with-rail:not(.knowledge-scroll-session) .knowledge-session-body {
+  max-width: 820px;
+}
 .knowledge-flag-rail {
   position: sticky;
   top: 72px;
   min-width: 0;
+  align-self: start;
 }
 .knowledge-flag-rail-items {
   display: grid;
@@ -341,10 +351,10 @@
 }
 .knowledge-flag-jump-number {
   position: absolute;
-  left: 14px;
-  top: 10px;
-  min-width: 17px;
-  font-size: 10px;
+  left: 0;
+  right: 0;
+  top: 11px;
+  font-size: 11px;
   line-height: 15px;
   font-weight: 700;
   text-align: center;
@@ -362,14 +372,16 @@
   outline-offset: 2px;
 }
 @media (max-width: 560px) {
-  .knowledge-session-with-flags {
+  .knowledge-session-with-rail {
     grid-template-columns: minmax(0, 1fr) 36px;
     gap: 4px;
   }
   .knowledge-flag-jump { width: 34px; }
   .knowledge-flag-jump .ui-icon { width: 32px; height: 32px; }
-  .knowledge-flag-jump-number { left: 12px; }
   .knowledge-flag-rail { top: 56px; }
+  .knowledge-flag-toggle { top: 10px; right: 10px; }
+  .knowledge-prompt > h3,
+  .knowledge-prompt > .knowledge-fill-blank-prompt { padding-inline-end: 30px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .knowledge-flag-toggle { transition: none; }
