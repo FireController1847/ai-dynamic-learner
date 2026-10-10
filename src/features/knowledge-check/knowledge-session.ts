@@ -127,7 +127,8 @@ export const KnowledgeSession = defineComponent({
     }
 
     function currentResponse(question: Question): QuestionResponse {
-      return responses.value[question.id] ?? (question.type === 'fill-in-the-blanks' || question.type === 'dropdown' || question.type === 'parameterized' ? [] : '');
+      return responses.value[question.id] ?? (question.type === 'fill-in-the-blanks' || question.type === 'dropdown' ||
+        question.type === 'parameterized' || (question.type === 'multiple-choice' && question.correctAnswers !== undefined) ? [] : '');
     }
 
     function textResponse(question: Question): string {
@@ -164,6 +165,17 @@ export const KnowledgeSession = defineComponent({
       if (textResponse(question) === value) return;
       prepareAnswerEdit(question);
       responses.value[question.id] = value;
+    }
+
+    function toggleChoiceResponse(question: Question, choice: string, selected: boolean) {
+      tick();
+      if (submitted.value || state.submitting.value || state.generating.value) return;
+      const existing = blankResponses(question);
+      if (existing.includes(choice) === selected) return;
+      prepareAnswerEdit(question);
+      responses.value[question.id] = selected
+        ? [...existing, choice]
+        : existing.filter(value => value !== choice);
     }
 
     function blankResponse(question: Question, index: number, value: string) {
@@ -310,6 +322,9 @@ export const KnowledgeSession = defineComponent({
       if (!questionScored(question)) return null;
       const value = currentResponse(question);
       if (!Array.isArray(value)) return h('p', `Your answer: ${value || 'No answer'}`);
+      if (question.type === 'multiple-choice' && question.correctAnswers !== undefined) {
+        return h('p', `Your answers: ${value.length ? value.join(', ') : 'No answer'}`);
+      }
       const answers = question.type === 'parameterized' ? (question.generated?.answers ?? []).map(answer => answer.label) : question.type === 'dropdown' ? (question.matches ?? []).map(row => row.label) : parseFillBlankTemplate(question.prompt).answers;
       return h('div', { class: 'knowledge-fill-blank-result-responses' }, [
         h('p', 'Your answers:'),
@@ -341,6 +356,10 @@ export const KnowledgeSession = defineComponent({
       );
       const choices = question.type === 'true-false' ? ['True', 'False'] : question.choices.filter(choice => choice.trim());
       const canCheck = scored && (question.type === 'fill-in-the-blanks' || questionResponseAnswered(question, currentResponse(question)));
+      const multiChoice = question.type === 'multiple-choice' && question.correctAnswers !== undefined;
+      const currentSelections = multiChoice ? blankResponses(question) : [textResponse(question)];
+      const checkedSelections = multiChoice && Array.isArray(feedbackResponse(question))
+        ? feedbackResponse(question) as string[] : [feedbackResponse(question)];
 
           return h('article', { class: 'knowledge-prompt', key: question.id, tabindex: -1,
             'data-review-question-index': index,
@@ -383,17 +402,29 @@ export const KnowledgeSession = defineComponent({
             ]) : question.type === 'short-answer' ? h('label', { class: 'knowledge-field' }, ['Your answer', h('textarea', {
               rows: 3, value: textResponse(question), readonly: locked, maxlength: 2000,
               onInput: (event: Event) => response(question, inputValue(event)),
-            })]) : h('fieldset', { class: 'knowledge-answer-choices', disabled: locked }, [h('legend', 'Your answer'),
-              ...choices.map((choice, index) => h('label', { class: ['knowledge-answer-choice', {
-                'is-selected': textResponse(question) === choice,
-                'is-correct': showFeedback && !quizRetrying && choice === question.answer,
-                'is-incorrect': showFeedback && textResponse(question) === choice && choice !== question.answer &&
-                  (!quizRetrying || feedbackResponse(question) === choice),
-              }], key: index, style: { '--review-delay': `${Math.min(index, 6) * 34}ms` } }, [
-                h('input', { type: 'radio', name: `response-${question.id}`, checked: textResponse(question) === choice,
-                  onChange: () => response(question, choice) }), h('span', choice),
-                h('span', { class: 'knowledge-choice-marker', 'aria-hidden': 'true' }, textResponse(question) === choice ? '✓' : ''),
-              ]))]),
+            })]) : h('fieldset', { class: 'knowledge-answer-choices', disabled: locked }, [
+              h('legend', multiChoice ? 'Select all that apply' : 'Your answer'),
+              ...choices.map((choice, index) => {
+                const selected = currentSelections.includes(choice);
+                const expected = multiChoice ? question.correctAnswers!.includes(choice) : question.answer === choice;
+                return h('label', { class: ['knowledge-answer-choice', {
+                  'is-selected': selected,
+                  'is-correct': showFeedback && !quizRetrying && expected,
+                  'is-incorrect': showFeedback && !expected && checkedSelections.includes(choice),
+                }], key: index, style: { '--review-delay': `${Math.min(index, 6) * 34}ms` } }, [
+                  h('input', {
+                    type: multiChoice ? 'checkbox' : 'radio',
+                    name: `response-${question.id}`, checked: selected,
+                    onChange: (event: Event) => {
+                      if (multiChoice) toggleChoiceResponse(question, choice, (event.target as HTMLInputElement).checked);
+                      else response(question, choice);
+                    },
+                  }),
+                  h('span', choice),
+                  h('span', { class: 'knowledge-choice-marker', 'aria-hidden': 'true' }, selected ? '✓' : ''),
+                ]);
+              }),
+            ]),
           !scored ? null : props.mode !== 'test' ? h('div', {}, [
             h(Transition, { name: 'knowledge-feedback', mode: 'out-in', onBeforeLeave: leaveReviewPanel, onLeaveCancelled: restoreReviewPanel }, {
               default: () => showFeedback ? h('div', { key: `${question.id}-${attemptCount}` }, [feedback(question, study ? correct : !quizRetrying)]) : null,
@@ -418,7 +449,9 @@ export const KnowledgeSession = defineComponent({
             reveal(`answer-${question.id}`, revealed.value.has(question.id) ? h('div', { id: `answer-${question.id}`, class: 'knowledge-study-answer' },
               question.type === 'parameterized' ? [h('p', 'Answers:'), h('ul', (question.generated?.answers ?? []).map(answer => h('li', `${answer.label}: ${answer.text}`)))] :
               question.type === 'dropdown' ? [h('p', 'Answers:'), h('ul', (question.matches ?? []).map(row => h('li', `${row.label}: ${row.answer}`)))] :
-                question.type === 'fill-in-the-blanks' ? [h('p', 'Answers:'), fillBlankAnswerKey(question)] : [h('p', `Answer: ${question.answer}`)]) : null),
+                question.type === 'fill-in-the-blanks' ? [h('p', 'Answers:'), fillBlankAnswerKey(question)] :
+                multiChoice ? [h('p', 'Correct answers:'), h('ul', question.correctAnswers!.map(answer => h('li', answer)))] :
+                [h('p', `Answer: ${question.answer}`)]) : null),
           ]) : null,
       ]);
     }
