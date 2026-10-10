@@ -39,7 +39,7 @@ Each feature owns its saved model and runtime validation:
 - Word Search: `src/features/word-search/library-model.ts` plus puzzle/game/display models.
 - Crossword: `src/features/crossword/library-model.ts` plus puzzle/game/display models.
 - Guide: `src/features/guide/library-model.ts`. Each Map guide can optionally save a resumable adventure with the current stop, opened/completed/skipped stop IDs, per-stop revealed bullet counts, and paused status. This progress travels with workspace backups; old maps without it start fresh.
-- Review: `src/features/knowledge-check/library-model.ts`, question/options models. Statement items persist in the same ordered question array but carry only display text and are non-scorable. Review set options persist independent Short Answer and Fill-in-the-Blanks strictness levels, shared Quiz/Test assessment defaults (question order, optional question limit, and multiple-choice choice shuffling), Quiz attempts per question, and Test-only time/result settings. Older saved sets normalize missing strictness fields to level 4 and other missing fields to compatible defaults.
+- Review: `src/features/knowledge-check/library-model.ts`, question/options models. Statement items persist in the same ordered question array but carry only display text and are non-scorable. Review set options persist separate Quiz/Test presentation (all questions or one at a time) and one-at-a-time backward-navigation preferences, defaulting to scrolling for existing sets. Review set options persist independent Short Answer and Fill-in-the-Blanks strictness levels, shared Quiz/Test assessment defaults (question order, optional question limit, and multiple-choice choice shuffling), Quiz attempts per question, and Test-only time/result settings. Older saved sets normalize missing strictness fields to level 4 and other missing fields to compatible defaults.
 
 Do not duplicate feature schemas in `workspace-format.ts`; it coordinates them.
 
@@ -147,3 +147,14 @@ A solver reference may additionally contain `package`, a version-1 `dynamic-lear
 Generated-session snapshots now optionally include validated `instances` keyed by question ID, with seed/attempt, scalar values, rendered text, formatted answers/tolerances, choices, and trace. Instance seeds, answer keys/order, and formatting/tolerances must match the saved template. Older seed-only snapshots remain compatible; new snapshots replay the observed instance rather than invoking uploaded code again. Storage remains bounded and outside workspace backups.
 
 Review AI import optionally accepts up to 20 solver packages in a top-level `solvers` array, resolving id/version references into embedded packages atomically before creating a set. Missing, duplicate, conflicting, or malformed packages are rejected; valid unused packages produce a warning and are omitted. The Parameterized mix weight defaults to 0%; prior percentage defaults stay unchanged.
+
+
+## Paused Review sessions
+
+Study and untimed Quiz can explicitly pause and resume on the same browser. The existing bounded `dynamic-learner.review.generated-session.v1:<setId>:<mode>` snapshot format adds an optional `paused` flag. For ordinary (non-parameterized) question sets, snapshot validation permits saved templates **only** when `paused: true`; historical automatically saved parameterized sessions remain compatible. Snapshots retain ordered templates, selected answers, checked feedback/attempts, hints/reveals, session settings, and Study counters. Resume consumes ordinary paused snapshots so the mode picker doesn't falsely report them as paused while live. Test never offers Pause; builder edits invalidate previous Study/Quiz pauses to prevent stale questions from reappearing. Pause data is browser-local transient session state, not part of workspace backups.
+
+
+Review session snapshot `flagged?: string[]` stores session-only flagged question IDs alongside answers, checks and hints. Validation accepts the missing field in older snapshots, but rejects unknown, repeated, or malformed question IDs. Flags are restored with Pause/Resume and generated-question recovery; they are never part of authored knowledge sets or graded scores.
+
+
+Review Multiple Choice adds an optional `correctAnswers: string[]` question property. Absence means the legacy single-answer `answer: string` and radio-button response; presence switches to checkbox responses and requires `answer: ''`. This remains an optional backward-compatible field in workspace question records and paused-session templates; selected responses already use the existing `string | string[]` representation. Review AI JSON import accepts `correctAnswers` instead of `answer` for multi-answer Multiple Choice, while existing imports remain unchanged.

@@ -66,3 +66,38 @@ Review pre-session setup follows the same choice-card language as Index Cards re
 
 
 Review Statements display authored text as a normal session item with no answer control, feedback, hint/reveal tools, or score effect; navigation simply continues to the next item. Fill-in-the-Blanks Index Card imports surface a modal resolver when selected sources contain visible cards without blanks. Every affected card independently chooses **Convert to Statement** or **Discard**, and those decisions remain reviewable from the source row before creation.
+
+
+## Review question presentation
+
+Review Study displays all questions in one vertical list by default; each card shows its own “Question N of M” label, its answer controls, and its own Check answer/feedback/hints. Quiz and Test authors separately select either **All questions (vertical scroll)** (the default) or **One at a time** in Set options. Quiz may override its saved presentation in Customize Settings; Test uses its saved layout. One-at-a-time Quiz/Test may disable returning to earlier questions; this is enforced by navigation state and reflected in the overview. Scrolling Test still holds feedback until final submission. Statement items remain unscored, and scores/attempts stay per question regardless of layout.
+
+
+Study respects the knowledge set's optional shared question limit. When available questions exceed that limit, each Study session divides the authored sequence into that many contiguous, nearly equal sections and randomly selects one question per section. In-order, reverse-order, and shuffled presentation apply **after** selection. Revisited, finalized one-at-a-time Quiz answers can be edited if the creator permits backward navigation; editing clears prior feedback and restarts that question's attempt window, requiring a new Check answer before moving forward. The same ability is not added to forward-only Quiz or scrolling Quiz layouts.
+
+
+## Review pause and resume
+
+Question limits are creator-only across Study, Quiz, and Test. The Quiz Customize Settings flow never shows or changes that shared limit. An active Study or untimed Quiz presents **Pause Studying** / **Pause Quiz** immediately to the left of **End studying** / **End quiz** in either question layout. Pausing saves the current question order and session progress to this browser before returning to the Review mode picker, whose corresponding card becomes **Resume Study** or **Resume Quiz**. Resume skips setup and restores the saved state. Test stays end-only, with no Pause option. A failed save keeps the session open and displays the error; End discards saved state.
+
+
+## Review question flags
+
+During Study, Quiz, and Test, each question card has a small toggleable top-right flag, independent of the authored knowledge set and of scoring. Flagged question numbers appear in a compact sticky rail to the right of the session content; clicking a number scrolls to that question in the full-list presentation or changes the active question in one-at-a-time mode. Jump controls honor existing forward-only restrictions and Quiz check-before-next requirements rather than bypassing them. The rail reserves space consistently, even with no bookmarked questions, and its compact numbered bookmarks are shown in the order they were selected (unmarking and marking again moves one to the bottom). The right lane is deliberately separated from the cards with a wider gap on desktop. A bookmark ribbon replaces the literal flag graphic; its per-card toggle overlays existing card padding without inserting a tall header or shifting question content. Jump controls are keyboard-accessible with descriptive labels. Reduced-motion preferences disable smooth scrolling. Flags persist in paused/recoverable browser-local session snapshots and are cleared on a fresh session or End.
+
+One-at-a-time Review does not render a disabled Previous button at the beginning of a session or when backward navigation is disallowed. The remaining primary navigation control stays right-aligned.
+
+
+## Review Multiple Choice with multiple correct answers
+
+Multiple Choice remains single-answer by default. In the question builder, **Allow multiple correct answers** changes the correct-choice indicators from radio buttons to checkboxes; previously selected answers are carried across toggle changes. During Study, Quiz, and Test the question presents checkboxes with a **Select all that apply** legend. At least one option must be selected before checking, and correctness requires an exact set match: all correct answers and no incorrect extras. Review score counts one question, not one point per selected option, and Quiz attempts are per check as before. Study's Show answer lists the selected correct choices. Results show the learner's selected choices.
+
+Test question cards do not repeat the pre-start overview's explanation that feedback is held until submission or that answers remain editable. This reminder appears only on the session introduction, not beneath each active question.
+
+The Multiple Choice builder positions its correct-choice radio buttons and checkboxes identically next to the answer text fields; only explicit text inputs receive full-width form-control styling. Checkboxes never stretch, shift the answer fields, or inherit text-field padding.
+
+## Review AI question-type strategy
+
+The AI knowledge-set creation workflow offers a choice of **Custom percentages** (the default and existing flow) or **Let AI choose** after selecting scope. Custom keeps its interactive percentage editor, type enable/disable behavior, rounding, and imported-mix warnings. AI choice hides the percentage editor and asks the AI to select a content-appropriate distribution of supported types, including omitting types that do not fit, without fixed type quotas. Total question count and coverage remain user-controlled in both modes. The AI's response is still validated question by question and discrepancies from the requested total are warned about, but AI-chosen distributions never produce percentage-mismatch warnings. The import preview labels AI-selected mixes accurately. Switching between modes retains the custom percentages without silently modifying them.
+
+In **Let AI choose**, the generated prompt strongly prioritizes fully valid procedural/Parameterized questions whenever source-backed numeric concepts can be varied and computed, avoids multi-word Fill in the Blanks answers, minimizes ambiguous Short Answer questions, and encourages an appropriate balance of single-answer and multi-answer Multiple Choice. None of these preferences force unsupported facts, invalid solvers, meaningless generated parameters, or artificial multiple correct answers; exact user-specified percentages continue to control Custom mode.

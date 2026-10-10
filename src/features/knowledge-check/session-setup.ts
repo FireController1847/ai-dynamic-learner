@@ -4,7 +4,7 @@ import { AnswerStrictnessField } from '../../components/answer-strictness-field.
 import type { CheckItem } from './library-model.ts';
 import type { CheckModeId } from './check-types.ts';
 import { QUESTION_ORDER_LABELS, settingsForMode, type SessionSettings } from './session-settings.ts';
-import type { QuestionOrder } from './set-options.ts';
+import type { QuestionOrder, QuestionPresentation } from './set-options.ts';
 import { inputValue } from '../../core/dom.ts';
 
 type QuizSetupChoice = 'default' | 'customize';
@@ -26,8 +26,6 @@ export const SessionSetup = defineComponent({
     const quizChoice = ref<QuizSetupChoice>('default');
     const customizing = ref(false);
     const custom = ref<SessionSettings>({ ...defaults });
-    const limited = ref(custom.value.questionLimit !== null);
-    const customLimit = ref(custom.value.questionLimit ?? Math.min(10, Math.max(1, props.questionCount)));
 
     function orderChoice(order: QuestionOrder, label: string, description: string, value: QuestionOrder, onSelect: () => void, name: string) {
       return h('label', { class: 'knowledge-session-choice', key: order }, [
@@ -49,7 +47,7 @@ export const SessionSetup = defineComponent({
       const count = defaults.questionLimit === null
         ? 'all questions'
         : `up to ${defaults.questionLimit} questions`;
-      return `${QUESTION_ORDER_LABELS[defaults.order]}, ${count}, ${defaults.shuffleChoices ? 'shuffled' : 'original'} answer-choice order, Short Answer strictness ${defaults.shortAnswerStrictness}, Fill in the Blanks strictness ${defaults.fillBlankAnswerStrictness}, ${defaults.quizAttempts} ${defaults.quizAttempts === 1 ? 'attempt' : 'attempts'} per question.`;
+      return `${defaults.presentation === 'scroll' ? 'All questions' : 'One at a time'}, ${QUESTION_ORDER_LABELS[defaults.order]}, ${count}, ${defaults.shuffleChoices ? 'shuffled' : 'original'} answer-choice order, Short Answer strictness ${defaults.shortAnswerStrictness}, Fill in the Blanks strictness ${defaults.fillBlankAnswerStrictness}, ${defaults.quizAttempts} ${defaults.quizAttempts === 1 ? 'attempt' : 'attempts'} per question.`;
     }
 
     function emitStudy() {
@@ -60,15 +58,19 @@ export const SessionSetup = defineComponent({
     }
 
     function emitCustomQuiz() {
-      custom.value.questionLimit = limited.value ? Math.max(1, Math.min(props.questionCount, customLimit.value || 1)) : null;
-      emit('continue', { ...custom.value });
+      // The creator's shared question limit applies to every mode.
+      emit('continue', { ...custom.value, questionLimit: defaults.questionLimit });
     }
 
     if (props.mode === 'study') {
       return () => h('section', { class: 'knowledge-session knowledge-session-setup', 'aria-label': 'Study setup' }, [
-        h('p', { class: 'knowledge-session-setup-step' }, `Set up Study · ${props.questionCount} ${props.questionCount === 1 ? 'question' : 'questions'}`),
+        h('p', { class: 'knowledge-session-setup-step' },
+          `Set up Study · ${Math.min(props.questionCount, defaults.questionLimit ?? props.questionCount)} questions per session · ${props.questionCount} available`),
         h('h2', 'What order should the questions use?'),
-        h('p', { class: 'knowledge-session-setup-description' }, 'Choose an order for this Study session. Answer strictness comes from this knowledge set’s saved options.'),
+        h('p', { class: 'knowledge-session-setup-description' },
+          defaults.questionLimit !== null && props.questionCount > defaults.questionLimit
+            ? `A balanced sample of ${defaults.questionLimit} questions will be randomly selected across the whole set. Choose their display order below.`
+            : 'Choose an order for this Study session. Answer strictness comes from this knowledge set’s saved options.'),
         h('fieldset', { class: 'knowledge-session-choices' }, [
           h('legend', { class: 'visually-hidden' }, 'Study question order'),
           orderChoice('forward', 'In order', 'Start with the first question and continue normally.', studyOrder.value, () => { studyOrder.value = 'forward'; }, 'study-question-order'),
@@ -107,7 +109,7 @@ export const SessionSetup = defineComponent({
               }),
               h('span', [
                 h('strong', 'Customize Settings'),
-                h('span', { class: 'knowledge-session-choice-description' }, 'Temporarily change order, question count, answer-choice shuffling, answer strictness, or allowed attempts.'),
+                h('span', { class: 'knowledge-session-choice-description' }, 'Temporarily change layout, navigation, order, answer-choice shuffling, answer strictness, or allowed attempts. The question limit is fixed by the creator.'),
               ]),
             ]),
           ]),
@@ -128,28 +130,26 @@ export const SessionSetup = defineComponent({
       return h('section', { class: 'knowledge-session knowledge-session-setup', 'aria-label': 'Customize Quiz settings' }, [
         h('p', { class: 'knowledge-session-setup-step' }, 'Customize Quiz · Session only'),
         h('h2', 'Customize Quiz settings'),
-        h('p', { class: 'knowledge-session-setup-description' }, 'These changes apply only to this Quiz and do not change the saved knowledge set.'),
+        h('p', { class: 'knowledge-session-setup-description' },
+          'These changes apply only to this Quiz. The question limit remains fixed by the knowledge-set creator.'),
         h('fieldset', { class: 'knowledge-session-choices' }, [
           h('legend', 'Question order'),
           orderChoice('forward', 'In order', 'Use the original question order.', custom.value.order, () => { custom.value.order = 'forward'; }, 'quiz-question-order'),
           orderChoice('backward', 'Reverse order', 'Run the saved question order backward.', custom.value.order, () => { custom.value.order = 'backward'; }, 'quiz-question-order'),
           orderChoice('shuffle', 'Shuffle', 'Use a new random question order.', custom.value.order, () => { custom.value.order = 'shuffle'; }, 'quiz-question-order'),
         ]),
-        h('label', { class: 'knowledge-option-toggle' }, [
+        h('label', { class: 'knowledge-field' }, ['Question layout', h('select', {
+          value: custom.value.presentation,
+          onChange: (event: Event) => { custom.value.presentation = inputValue(event) as QuestionPresentation; },
+        }, [
+          h('option', { value: 'scroll' }, 'All questions (vertical scroll)'),
+          h('option', { value: 'one-at-a-time' }, 'One at a time'),
+        ])]),
+        custom.value.presentation === 'one-at-a-time' ? h('label', { class: 'knowledge-option-toggle' }, [
           h('input', {
-            type: 'checkbox',
-            checked: limited.value,
-            onChange: (event: Event) => { limited.value = (event.target as HTMLInputElement).checked; },
-          }),
-          'Limit the number of questions',
-        ]),
-        limited.value ? h('label', { class: 'knowledge-field' }, [
-          'Questions in this Quiz',
-          h('input', {
-            type: 'number', min: 1, max: Math.max(1, props.questionCount), step: 1,
-            value: customLimit.value,
-            onInput: (event: Event) => { customLimit.value = Number(inputValue(event)); },
-          }),
+            type: 'checkbox', checked: custom.value.allowBack,
+            onChange: (event: Event) => { custom.value.allowBack = (event.target as HTMLInputElement).checked; },
+          }), 'Allow going back to earlier questions',
         ]) : null,
         h('label', { class: 'knowledge-option-toggle' }, [
           h('input', {

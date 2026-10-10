@@ -53,8 +53,14 @@ export function equalizeQuestionWeights(weights: QuestionWeights): QuestionWeigh
     ?? { ...DEFAULT_AI_WEIGHTS };
 }
 
+export function questionCountProblem(count: number): string {
+  return Number.isInteger(count) && count >= 1 && count <= MAX_QUESTIONS
+    ? '' : `Choose 1–${MAX_QUESTIONS} questions.`;
+}
+
 export function questionMixProblem(weights: QuestionWeights, count: number): string {
-  if (!Number.isInteger(count) || count < 1 || count > MAX_QUESTIONS) return `Choose 1–${MAX_QUESTIONS} questions.`;
+  const countProblem = questionCountProblem(count);
+  if (countProblem) return countProblem;
   if (AI_QUESTION_TYPES.some(type => !Number.isInteger(weights[type]) || weights[type] < 0 || weights[type] > 100)) {
     return 'Each percentage must be a whole number from 0 to 100.';
   }

@@ -36,6 +36,7 @@ export const SessionIntro = defineComponent({
         h('div', { class: 'knowledge-intro-pills', 'aria-label': 'Session details' }, [
           pill('cards', `${props.count} ${props.count === 1 ? 'question' : 'questions'}`),
           pill('shuffle', QUESTION_ORDER_LABELS[settings.order]),
+          pill('cards', settings.presentation === 'scroll' ? 'All questions visible' : 'One at a time'),
           pill(test ? 'clock' : study ? 'lightbulb' : 'check',
             test
               ? settings.timeLimitMinutes !== null
@@ -51,6 +52,10 @@ export const SessionIntro = defineComponent({
           h('p', study ? 'Try an answer before checking. Use explanations as hints, reveal an answer when stuck, and retry as often as you like. The Study score is only a running practice statistic.' :
             test ? 'Answer independently. Revisit and change responses before submitting; feedback stays hidden during the Test.' :
               `Check each answer for immediate feedback. You have up to ${settings.quizAttempts} ${settings.quizAttempts === 1 ? 'attempt' : 'attempts'} per question; a correct answer or the final allowed attempt locks it before you move on.`),
+          settings.presentation === 'one-at-a-time' && !settings.allowBack && !study
+            ? h('p', 'You cannot return to previous questions once you move forward.') : null,
+          settings.presentation === 'scroll' && !test
+            ? h('p', 'All questions appear in a scrollable list, each with its own question number and Check answer button where applicable.') : null,
           settings.shuffleChoices && !study ? h('p', 'Multiple-choice and dropdown choices will be shuffled for this session.') : null,
           test ? h('p', settings.timeLimitMinutes !== null ? 'The clock starts only when you press Start test. When time runs out, your current answers are submitted.' : 'There is no clock. Submit when you are ready.') : null,
           test ? h('p', settings.showTestAnswers ? 'Results include your score and a review of correct/wrong answers.' : 'This Test shows your score only; answers and explanations remain hidden.') : null,
@@ -69,10 +74,14 @@ export const SessionIntro = defineComponent({
             h(Icon, { name: 'chevron' }),
           ]),
         ]),
-        h('p', { class: 'knowledge-muted knowledge-intro-note' }, props.item.questions.some(question => question.type === 'parameterized') ?
-          'Generated questions stay stable during a session. Interrupted sessions are saved on this browser; starting again creates fresh variants. End the session to discard its saved progress.' : study ?
-          'Press End studying whenever you are ready. Starting again begins a fresh practice session.' :
-          'Leaving this set or switching modes will end an active session. Answers are not saved between sessions.'),
+        h('p', { class: 'knowledge-muted knowledge-intro-note' },
+          study
+            ? 'Use Pause Studying to save your current progress on this browser, or End studying to discard it.'
+            : !test && settings.timeLimitMinutes === null
+              ? 'Use Pause Quiz to save your answers on this browser, or End quiz to discard them.'
+              : props.item.questions.some(question => question.type === 'parameterized')
+                ? 'Generated questions stay stable during this session; interruption recovery is browser-local. Ending discards saved progress.'
+                : 'Leaving or switching modes ends the active Test. Test answers are not preserved after ending.'),
       ]);
     };
   },

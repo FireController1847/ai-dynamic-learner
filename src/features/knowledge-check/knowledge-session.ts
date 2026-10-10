@@ -12,7 +12,7 @@ import { answerStrictnessForQuestion } from './session-settings.ts';
 import { useKnowledgeSession } from './session-state.ts';
 import { dropdownCorrectness } from './dropdown-model.ts';
 import { enterReviewPanel, leaveReviewPanel, restoreReviewPanel } from './review-motion.ts';
-import { computed, defineComponent, h, ref, Transition, type PropType } from 'vue';
+import { computed, defineComponent, h, onMounted, ref, Transition, type PropType } from 'vue';
 
 export const KnowledgeSession = defineComponent({
   name: 'KnowledgeSession',
@@ -21,24 +21,101 @@ export const KnowledgeSession = defineComponent({
     mode: { type: String as PropType<CheckModeId>, required: true },
     settings: { type: Object as PropType<import('./session-settings.ts').SessionSettings>, required: true },
     statisticsEnabled: { type: Boolean, default: true },
+    autoResume: Boolean,
   },
-  emits: { back: () => true, build: () => true },
+  emits: { back: () => true, build: () => true, paused: () => true },
   setup(props, { emit }) {
     const state = useKnowledgeSession(props.item, props.mode, props.settings, props.statisticsEnabled);
     const { questions, questionCount, options, position, responses, feedbackResponses, checked, revealed, hints, submitted, started, expired, ended,
-      answered, resolved, score, scoredCount, remaining, celebrating, attempts, studyChecks, studyCorrectChecks,
+      answered, resolved, score, scoredCount, remaining, celebrating, attempts, flagged, studyChecks, studyCorrectChecks,
       start, end, check, submit, tick } = state;
     useStudySession(computed(() => started.value && !submitted.value && !ended.value));
     const fillBlankPrimaryButton = ref<HTMLButtonElement | null>(null);
     const backward = ref(false);
+    const scrollSession = ref<HTMLElement | null>(null);
+    onMounted(() => { if (props.autoResume) void state.resume(); });
+
+    function pauseSession() {
+      if (state.pause()) emit('paused');
+    }
+
+    const canPause = computed(() => props.statisticsEnabled && (props.mode === 'study' ||
+      (props.mode === 'quiz' && options.value.timeLimitMinutes === null)));
+    function sessionEndControls() {
+      const endButton = h('button', { type: 'button', class: 'quiet-button',
+        onClick: props.mode === 'study' ? end : state.leave },
+      props.mode === 'study' ? 'End studying' : props.mode === 'quiz' ? 'End quiz' : 'End test');
+      return [
+        canPause.value ? h('button', { type: 'button', class: 'quiet-button',
+          onClick: pauseSession }, props.mode === 'study' ? 'Pause Studying' : 'Pause Quiz') : null,
+        endButton,
+      ];
+    }
 
     function moveQuestion(next: number, wrap = false) {
       tick();
       if (submitted.value || state.generating.value || state.submitting.value || next < 0 || next >= questions.value.length) return;
+      if (next < position.value && props.mode !== 'study' && options.value.presentation === 'one-at-a-time' && !options.value.allowBack) return;
       if (wrap) state.finishStudyPass();
       backward.value = next < position.value && !wrap;
       position.value = next;
       if (wrap) state.resetStudyPass();
+    }
+
+    function canJumpToFlag(index: number): boolean {
+      if (index < 0 || index >= questions.value.length || submitted.value ||
+          state.generating.value || state.submitting.value) return false;
+      if (options.value.presentation === 'scroll' || props.mode === 'study') return true;
+      if (index < position.value && !options.value.allowBack) return false;
+      // Do not bypass the Quiz's per-question Check answer requirement.
+      const current = questions.value[position.value];
+      if (props.mode === 'quiz' && index > position.value && current &&
+          questionScored(current) && !checked.value.has(current.id)) return false;
+      return true;
+    }
+
+    function jumpToFlag(index: number) {
+      if (!canJumpToFlag(index)) return;
+      if (options.value.presentation === 'one-at-a-time') {
+        moveQuestion(index);
+        return;
+      }
+      const card = scrollSession.value?.querySelector<HTMLElement>(
+        `[data-review-question-index="${index}"]`,
+      );
+      if (!card) return;
+      card.scrollIntoView({
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+        block: 'start',
+      });
+      card.focus({ preventScroll: true });
+    }
+
+    function flagRail() {
+      // Set insertion order reflects when the learner marked each question.
+      // Removing and re-adding a flag intentionally moves it to the end.
+      const indices = new Map(questions.value.map((question, index) => [question.id, index]));
+      const entries = [...flagged.value].flatMap((id) => {
+        const index = indices.get(id);
+        return index === undefined ? [] : [{ question: questions.value[index]!, index }];
+      });
+      if (!entries.length) return null;
+      return h('nav', { class: 'knowledge-flag-rail', 'aria-label': 'Flagged questions' }, [
+        h('div', { class: 'knowledge-flag-rail-items' }, entries.map(({ question, index }) => {
+          const accessible = canJumpToFlag(index);
+          return h('button', {
+            type: 'button', key: question.id,
+            class: ['knowledge-flag-jump', { 'is-current': options.value.presentation === 'one-at-a-time' && index === position.value }],
+            disabled: !accessible,
+            title: accessible ? `Go to flagged question ${index + 1}` :
+              `Question ${index + 1} cannot be revisited in this mode`,
+            'aria-label': accessible ? `Go to flagged question ${index + 1}` :
+              `Flagged question ${index + 1} (navigation unavailable)`,
+            'aria-current': options.value.presentation === 'one-at-a-time' && index === position.value ? 'true' : undefined,
+            onClick: () => jumpToFlag(index),
+          }, [h(Icon, { name: 'bookmark' }), h('span', { class: 'knowledge-flag-jump-number' }, String(index + 1))]);
+        })),
+      ]);
     }
 
     function reveal(id: string, content: ReturnType<typeof h> | null) {
@@ -50,7 +127,8 @@ export const KnowledgeSession = defineComponent({
     }
 
     function currentResponse(question: Question): QuestionResponse {
-      return responses.value[question.id] ?? (question.type === 'fill-in-the-blanks' || question.type === 'dropdown' || question.type === 'parameterized' ? [] : '');
+      return responses.value[question.id] ?? (question.type === 'fill-in-the-blanks' || question.type === 'dropdown' ||
+        question.type === 'parameterized' || (question.type === 'multiple-choice' && question.correctAnswers !== undefined) ? [] : '');
     }
 
     function textResponse(question: Question): string {
@@ -68,18 +146,45 @@ export const KnowledgeSession = defineComponent({
         ? feedbackResponses.value[question.id] ?? currentResponse(question) : currentResponse(question);
     }
 
+    function prepareAnswerEdit(question: Question) {
+      if (props.mode === 'study') {
+        checked.value.delete(question.id);
+      } else if (props.mode === 'quiz' && options.value.presentation === 'one-at-a-time' &&
+          options.value.allowBack && checked.value.has(question.id)) {
+        // Once a completed Quiz answer changes, it is no longer checked. Give
+        // the revised response a fresh attempt window rather than silently
+        // regrading it or showing stale correctness feedback.
+        checked.value.delete(question.id);
+        delete attempts.value[question.id];
+        delete feedbackResponses.value[question.id];
+      }
+    }
+
     function response(question: Question, value: string) {
       tick(); if (submitted.value || state.submitting.value || state.generating.value) return;
+      if (textResponse(question) === value) return;
+      prepareAnswerEdit(question);
       responses.value[question.id] = value;
-      if (props.mode === 'study') checked.value.delete(question.id);
+    }
+
+    function toggleChoiceResponse(question: Question, choice: string, selected: boolean) {
+      tick();
+      if (submitted.value || state.submitting.value || state.generating.value) return;
+      const existing = blankResponses(question);
+      if (existing.includes(choice) === selected) return;
+      prepareAnswerEdit(question);
+      responses.value[question.id] = selected
+        ? [...existing, choice]
+        : existing.filter(value => value !== choice);
     }
 
     function blankResponse(question: Question, index: number, value: string) {
       tick(); if (submitted.value || state.submitting.value || state.generating.value) return;
       const next = [...blankResponses(question)];
+      if (next[index] === value) return;
+      prepareAnswerEdit(question);
       next[index] = value;
       responses.value[question.id] = next;
-      if (props.mode === 'study') checked.value.delete(question.id);
     }
 
     function fillBlankAnswerKey(question: Question) {
@@ -172,7 +277,11 @@ export const KnowledgeSession = defineComponent({
       } else if (blankIndex < blankCount - 1) {
         inputs[blankIndex + 1]?.focus();
       } else {
-        fillBlankPrimaryButton.value?.click();
+        const card = (event.currentTarget as HTMLElement).closest('.knowledge-prompt');
+        const cardAction = card?.querySelector<HTMLButtonElement>('[data-review-primary]');
+        if (cardAction) cardAction.click();
+        else if (options.value.presentation === 'one-at-a-time') fillBlankPrimaryButton.value?.click();
+        else (card?.nextElementSibling as HTMLElement | null)?.focus();
       }
     }
 
@@ -213,6 +322,9 @@ export const KnowledgeSession = defineComponent({
       if (!questionScored(question)) return null;
       const value = currentResponse(question);
       if (!Array.isArray(value)) return h('p', `Your answer: ${value || 'No answer'}`);
+      if (question.type === 'multiple-choice' && question.correctAnswers !== undefined) {
+        return h('p', `Your answers: ${value.length ? value.join(', ') : 'No answer'}`);
+      }
       const answers = question.type === 'parameterized' ? (question.generated?.answers ?? []).map(answer => answer.label) : question.type === 'dropdown' ? (question.matches ?? []).map(row => row.label) : parseFillBlankTemplate(question.prompt).answers;
       return h('div', { class: 'knowledge-fill-blank-result-responses' }, [
         h('p', 'Your answers:'),
@@ -225,6 +337,123 @@ export const KnowledgeSession = defineComponent({
       const unanswered = scoredCount.value - answered.value;
       if (unanswered && !window.confirm(`Submit with ${unanswered} unanswered ${unanswered === 1 ? 'question' : 'questions'}? These will count as incorrect.`)) return;
       tick(); if (!submitted.value) submit();
+    }
+
+    function renderQuestion(question: Question, index: number, scroll: boolean) {
+      const study = props.mode === 'study';
+      const wasChecked = checked.value.has(question.id);
+      const attemptCount = attempts.value[question.id] ?? 0;
+      const quizRetrying = props.mode === 'quiz' && attemptCount > 0 && !wasChecked;
+      const showFeedback = wasChecked || quizRetrying;
+      const revisableQuiz = props.mode === 'quiz' && options.value.presentation === 'one-at-a-time' &&
+        options.value.allowBack;
+      const locked = props.mode === 'quiz' && wasChecked && !revisableQuiz;
+      const scored = questionScored(question);
+      const correct = scored && answerCorrect(
+        question,
+        currentResponse(question),
+        answerStrictnessForQuestion(options.value, question.type),
+      );
+      const choices = question.type === 'true-false' ? ['True', 'False'] : question.choices.filter(choice => choice.trim());
+      const canCheck = scored && (question.type === 'fill-in-the-blanks' || questionResponseAnswered(question, currentResponse(question)));
+      const multiChoice = question.type === 'multiple-choice' && question.correctAnswers !== undefined;
+      const currentSelections = multiChoice ? blankResponses(question) : [textResponse(question)];
+      const checkedSelections = multiChoice && Array.isArray(feedbackResponse(question))
+        ? feedbackResponse(question) as string[] : [feedbackResponse(question)];
+
+          return h('article', { class: 'knowledge-prompt', key: question.id, tabindex: -1,
+            'data-review-question-index': index,
+            'data-review-focus': '',
+            'aria-label': `Question ${index + 1} of ${questions.value.length}` }, [
+          scroll ? h('p', { class: 'knowledge-question-number' },
+            `Question ${index + 1} of ${questions.value.length}`) : null,
+          h('button', {
+            type: 'button',
+            class: ['knowledge-flag-toggle', { 'is-flagged': flagged.value.has(question.id) }],
+            'aria-label': flagged.value.has(question.id)
+              ? `Remove bookmark from question ${index + 1}` : `Bookmark question ${index + 1}`,
+            'aria-pressed': flagged.value.has(question.id),
+            title: flagged.value.has(question.id) ? 'Remove bookmark' : 'Bookmark for later',
+            onClick: () => state.toggleFlag(question.id),
+          }, h(Icon, { name: 'bookmark' })),
+          question.type === 'fill-in-the-blanks' && question.context?.trim()
+            ? h(MarkdownContent, { text: question.context, class: 'knowledge-question-context' }) : null,
+          question.type === 'fill-in-the-blanks'
+            ? fillBlankPrompt(question, locked, showFeedback)
+            : h('h3', question.prompt),
+          question.type !== 'fill-in-the-blanks' && question.context?.trim()
+            ? h(MarkdownContent, { text: question.context, class: 'knowledge-question-context' }) : null,
+          question.type === 'parameterized' ? h('div', { class: 'knowledge-parameterized-answers' }, (question.generated?.answers ?? []).map((answer, index) => h('label', { class: 'knowledge-field', key: answer.key }, [
+            answer.label, h('input', { type: 'text', inputmode: answer.matching === 'numeric' ? 'decimal' : undefined,
+              value: blankResponses(question)[index] ?? '', readonly: locked, autocomplete: 'off', maxlength: 2000,
+              onInput: (event: Event) => blankResponse(question, index, inputValue(event)),
+            }),
+          ]))) : null,
+          question.type === 'parameterized' ? null : question.type === 'statement' ? null : question.type === 'fill-in-the-blanks' ? null
+            : question.type === 'dropdown' ? h('fieldset', { class: 'knowledge-dropdown-rows', disabled: locked }, [
+              h('legend', { class: 'visually-hidden' }, 'Match each row to an answer'),
+              ...(question.matches ?? []).map((row, index) => h('label', { class: 'knowledge-dropdown-row', key: index }, [
+                h('strong', row.label), h('select', {
+                  value: blankResponses(question)[index] ?? '', 'aria-label': `Answer for ${row.label}`,
+                  onChange: (event: Event) => blankResponse(question, index, inputValue(event)),
+                }, [h('option', { value: '', disabled: true }, 'Choose an answer'),
+                  ...choices.map(choice => h('option', { value: choice }, choice))]),
+              ])),
+            ]) : question.type === 'short-answer' ? h('label', { class: 'knowledge-field' }, ['Your answer', h('textarea', {
+              rows: 3, value: textResponse(question), readonly: locked, maxlength: 2000,
+              onInput: (event: Event) => response(question, inputValue(event)),
+            })]) : h('fieldset', { class: 'knowledge-answer-choices', disabled: locked }, [
+              h('legend', multiChoice ? 'Select all that apply' : 'Your answer'),
+              ...choices.map((choice, index) => {
+                const selected = currentSelections.includes(choice);
+                const expected = multiChoice ? question.correctAnswers!.includes(choice) : question.answer === choice;
+                return h('label', { class: ['knowledge-answer-choice', {
+                  'is-selected': selected,
+                  'is-correct': showFeedback && !quizRetrying && expected,
+                  'is-incorrect': showFeedback && !expected && checkedSelections.includes(choice),
+                }], key: index, style: { '--review-delay': `${Math.min(index, 6) * 34}ms` } }, [
+                  h('input', {
+                    type: multiChoice ? 'checkbox' : 'radio',
+                    name: `response-${question.id}`, checked: selected,
+                    onChange: (event: Event) => {
+                      if (multiChoice) toggleChoiceResponse(question, choice, (event.target as HTMLInputElement).checked);
+                      else response(question, choice);
+                    },
+                  }),
+                  h('span', choice),
+                  h('span', { class: 'knowledge-choice-marker', 'aria-hidden': 'true' }, selected ? '✓' : ''),
+                ]);
+              }),
+            ]),
+          !scored ? null : props.mode !== 'test' ? h('div', {}, [
+            h(Transition, { name: 'knowledge-feedback', mode: 'out-in', onBeforeLeave: leaveReviewPanel, onLeaveCancelled: restoreReviewPanel }, {
+              default: () => showFeedback ? h('div', { key: `${question.id}-${attemptCount}` }, [feedback(question, study ? correct : !quizRetrying)]) : null,
+            }),
+            !(props.mode === 'quiz' && wasChecked) ? h('button', {
+              ref: question.type === 'fill-in-the-blanks' && !scroll ? fillBlankPrimaryButton : undefined,
+              type: 'button', class: 'card-primary-button',
+              disabled: !canCheck, 'data-review-primary': '', onClick: () => check(index),
+            }, 'Check answer') : null,
+          ]) : null,
+          study && scored ? h('div', { class: 'knowledge-study-tools' }, [
+            question.explanation || question.generated?.trace.length ? h('button', { type: 'button', class: 'quiet-button', onClick: () => {
+              if (hints.value.has(question.id)) hints.value.delete(question.id); else hints.value.add(question.id);
+            }, 'aria-expanded': hints.value.has(question.id), 'aria-controls': `hint-${question.id}` }, hints.value.has(question.id) ? 'Hide explanation' : 'Use explanation as a hint') : null,
+            reveal(`hint-${question.id}`, hints.value.has(question.id) ? h('div', { id: `hint-${question.id}`, class: 'knowledge-study-answer' }, [
+              question.explanation ? h('p', question.explanation) : null,
+              question.generated?.trace.length ? h('ol', question.generated.trace.map(line => h('li', line))) : null,
+            ]) : null),
+            h('button', { type: 'button', class: 'quiet-button', onClick: () => {
+              if (revealed.value.has(question.id)) revealed.value.delete(question.id); else revealed.value.add(question.id);
+            }, 'aria-expanded': revealed.value.has(question.id), 'aria-controls': `answer-${question.id}` }, revealed.value.has(question.id) ? 'Hide answer' : 'Show answer'),
+            reveal(`answer-${question.id}`, revealed.value.has(question.id) ? h('div', { id: `answer-${question.id}`, class: 'knowledge-study-answer' },
+              question.type === 'parameterized' ? [h('p', 'Answers:'), h('ul', (question.generated?.answers ?? []).map(answer => h('li', `${answer.label}: ${answer.text}`)))] :
+              question.type === 'dropdown' ? [h('p', 'Answers:'), h('ul', (question.matches ?? []).map(row => h('li', `${row.label}: ${row.answer}`)))] :
+                question.type === 'fill-in-the-blanks' ? [h('p', 'Answers:'), fillBlankAnswerKey(question)] :
+                multiChoice ? [h('p', 'Correct answers:'), h('ul', question.correctAnswers!.map(answer => h('li', answer)))] :
+                [h('p', `Answer: ${question.answer}`)]) : null),
+          ]) : null,
+      ]);
     }
 
     function renderSession() {
@@ -265,22 +494,51 @@ export const KnowledgeSession = defineComponent({
         ]);
       }
       if (!question) return null;
+      if (options.value.presentation === 'scroll') {
+        return h('section', {
+          key: 'questions', ref: scrollSession,
+          class: 'knowledge-session knowledge-scroll-session knowledge-session-with-rail',
+          'data-mode': props.mode, 'aria-label': `${props.mode} questions`,
+        }, [
+          h('div', { class: 'knowledge-session-body' }, [
+          state.storageMessage.value ? h('p', { role: 'status', class: 'knowledge-message' }, state.storageMessage.value) : null,
+          h('div', { class: 'knowledge-session-progress' }, [
+            h('p', `${questions.value.length} ${questions.value.length === 1 ? 'question' : 'questions'} in this session`),
+            props.mode === 'study'
+              ? h('p', 'Practice freely — hints and retries welcome')
+              : h('p', `${props.mode === 'quiz' ? resolved.value - (questions.value.length - scoredCount.value) : answered.value} of ${scoredCount.value} ${props.mode === 'quiz' ? 'checked' : 'answered'}`),
+            props.mode === 'study' ? h('p', { class: 'knowledge-study-score' },
+              `${studyCorrectChecks.value} / ${studyChecks.value} checks correct · ${studyChecks.value ? Math.round(studyCorrectChecks.value / studyChecks.value * 100) : 0}%`) : null,
+            remaining.value !== null ? h('p', { class: ['knowledge-timer', { 'is-low': remaining.value <= 60 }], role: 'timer', 'aria-live': 'off' },
+              `Time left: ${Math.floor(remaining.value / 60)}:${String(remaining.value % 60).padStart(2, '0')}`) : null,
+            ...sessionEndControls(),
+          ]),
+          h('div', { class: 'knowledge-scroll-questions' }, questions.value.map((entry, index) =>
+            renderQuestion(entry, index, true))),
+          h('div', { class: 'knowledge-session-navigation knowledge-scroll-footer' }, [
+            props.mode === 'study'
+              ? h('button', { type: 'button', class: 'quiet-button knowledge-keep-studying', onClick: () => {
+                state.completeStudyScrollPass();
+                scrollSession.value?.querySelector<HTMLElement>('.knowledge-prompt')?.scrollIntoView({ block: 'start' });
+                state.resetStudyPass();
+              } }, ['Keep studying', h(Icon, { name: 'chevron' })])
+              : h('button', {
+                type: 'button', class: 'card-primary-button',
+                disabled: state.submitting.value || (props.mode === 'quiz' && resolved.value !== questions.value.length),
+                onClick: props.mode === 'test' ? submitTest : () => submit(),
+              }, props.mode === 'test' ? 'Submit test' : 'See results'),
+          ]),
+          ]),
+          flagRail(),
+        ]);
+      }
       const study = props.mode === 'study';
-      const wasChecked = checked.value.has(question.id);
-      const attemptCount = attempts.value[question.id] ?? 0;
-      const quizRetrying = props.mode === 'quiz' && attemptCount > 0 && !wasChecked;
-      const showFeedback = wasChecked || quizRetrying;
-      const locked = props.mode === 'quiz' && wasChecked;
       const scored = questionScored(question);
-      const correct = scored && answerCorrect(
-        question,
-        currentResponse(question),
-        answerStrictnessForQuestion(options.value, question.type),
-      );
-      const choices = question.type === 'true-false' ? ['True', 'False'] : question.choices.filter(choice => choice.trim());
-      const canCheck = scored && (question.type === 'fill-in-the-blanks' || questionResponseAnswered(question, currentResponse(question)));
-
-      return h('section', { key: 'questions', class: ['knowledge-session', { 'is-backward': backward.value }], 'data-mode': props.mode, 'aria-label': `${props.mode} questions` }, [
+      const wasChecked = checked.value.has(question.id);
+      return h('section', { key: 'questions',
+        class: ['knowledge-session knowledge-session-with-rail', { 'is-backward': backward.value }],
+        'data-mode': props.mode, 'aria-label': `${props.mode} questions` }, [
+        h('div', { class: 'knowledge-session-body' }, [
         state.storageMessage.value ? h('p', { role: 'status', class: 'knowledge-message' }, state.storageMessage.value) : null,
         h('div', { class: 'knowledge-session-progress' }, [h('p', `Question ${position.value + 1} of ${questions.value.length}`),
           study ? h('p', 'Practice freely — hints and retries welcome') : h('p', `${answered.value} answered`),
@@ -288,85 +546,24 @@ export const KnowledgeSession = defineComponent({
             `${studyCorrectChecks.value} / ${studyChecks.value} checks correct · ${studyChecks.value ? Math.round(studyCorrectChecks.value / studyChecks.value * 100) : 0}%`) : null,
           remaining.value !== null ? h('p', { class: ['knowledge-timer', { 'is-low': remaining.value <= 60 }], role: 'timer', 'aria-live': 'off' },
             `Time left: ${Math.floor(remaining.value / 60)}:${String(remaining.value % 60).padStart(2, '0')}`) : null,
-          study ? h('button', { type: 'button', class: 'quiet-button', onClick: end }, 'End studying') :
-            h('button', { type: 'button', class: 'quiet-button', onClick: state.leave }, props.mode === 'test' ? 'End test' : 'End quiz'),
+          ...sessionEndControls(),
           h('div', { class: 'knowledge-progress-track', 'aria-hidden': 'true' }, [
             h('span', { style: { width: `${(position.value + 1) / questions.value.length * 100}%` } }),
           ])]),
         questions.value.length < props.item.questions.length ? h('p', { class: 'knowledge-muted' }, 'This older set contains unfinished questions. Complete them in the builder to include them.') : null,
         h(Transition, { name: 'knowledge-question', mode: 'out-in', onBeforeLeave: leaveReviewPanel,
           onLeaveCancelled: restoreReviewPanel, onAfterEnter: enterReviewPanel }, {
-          default: () => h('article', { class: 'knowledge-prompt', key: question.id, tabindex: -1,
-            'data-review-focus': '',
-            'aria-label': `Question ${position.value + 1} of ${questions.value.length}` }, [
-          question.type === 'fill-in-the-blanks' && question.context?.trim()
-            ? h(MarkdownContent, { text: question.context, class: 'knowledge-question-context' }) : null,
-          question.type === 'fill-in-the-blanks'
-            ? fillBlankPrompt(question, locked, showFeedback)
-            : h('h3', question.prompt),
-          question.type !== 'fill-in-the-blanks' && question.context?.trim()
-            ? h(MarkdownContent, { text: question.context, class: 'knowledge-question-context' }) : null,
-          question.type === 'parameterized' ? h('div', { class: 'knowledge-parameterized-answers' }, (question.generated?.answers ?? []).map((answer, index) => h('label', { class: 'knowledge-field', key: answer.key }, [
-            answer.label, h('input', { type: 'text', inputmode: answer.matching === 'numeric' ? 'decimal' : undefined,
-              value: blankResponses(question)[index] ?? '', readonly: locked, autocomplete: 'off', maxlength: 2000,
-              onInput: (event: Event) => blankResponse(question, index, inputValue(event)),
-            }),
-          ]))) : null,
-          question.type === 'parameterized' ? null : question.type === 'statement' ? null : question.type === 'fill-in-the-blanks' ? null
-            : question.type === 'dropdown' ? h('fieldset', { class: 'knowledge-dropdown-rows', disabled: locked }, [
-              h('legend', { class: 'visually-hidden' }, 'Match each row to an answer'),
-              ...(question.matches ?? []).map((row, index) => h('label', { class: 'knowledge-dropdown-row', key: index }, [
-                h('strong', row.label), h('select', {
-                  value: blankResponses(question)[index] ?? '', 'aria-label': `Answer for ${row.label}`,
-                  onChange: (event: Event) => blankResponse(question, index, inputValue(event)),
-                }, [h('option', { value: '', disabled: true }, 'Choose an answer'),
-                  ...choices.map(choice => h('option', { value: choice }, choice))]),
-              ])),
-            ]) : question.type === 'short-answer' ? h('label', { class: 'knowledge-field' }, ['Your answer', h('textarea', {
-              rows: 3, value: textResponse(question), readonly: locked, maxlength: 2000,
-              onInput: (event: Event) => response(question, inputValue(event)),
-            })]) : h('fieldset', { class: 'knowledge-answer-choices', disabled: locked }, [h('legend', 'Your answer'),
-              ...choices.map((choice, index) => h('label', { class: ['knowledge-answer-choice', {
-                'is-selected': textResponse(question) === choice,
-                'is-correct': showFeedback && !quizRetrying && choice === question.answer,
-                'is-incorrect': showFeedback && textResponse(question) === choice && choice !== question.answer &&
-                  (!quizRetrying || feedbackResponse(question) === choice),
-              }], key: index, style: { '--review-delay': `${Math.min(index, 6) * 34}ms` } }, [
-                h('input', { type: 'radio', name: `response-${question.id}`, checked: textResponse(question) === choice,
-                  onChange: () => response(question, choice) }), h('span', choice),
-                h('span', { class: 'knowledge-choice-marker', 'aria-hidden': 'true' }, textResponse(question) === choice ? '✓' : ''),
-              ]))]),
-          !scored ? null : props.mode !== 'test' ? h('div', {}, [
-            h(Transition, { name: 'knowledge-feedback', mode: 'out-in', onBeforeLeave: leaveReviewPanel, onLeaveCancelled: restoreReviewPanel }, {
-              default: () => showFeedback ? h('div', { key: `${question.id}-${attemptCount}` }, [feedback(question, study ? correct : !quizRetrying)]) : null,
-            }),
-            !locked ? h('button', {
-              ref: question.type === 'fill-in-the-blanks' ? fillBlankPrimaryButton : undefined,
-              type: 'button', class: 'card-primary-button',
-              disabled: !canCheck, onClick: check,
-            }, 'Check answer') : null,
-          ]) : h('p', { class: 'knowledge-muted' }, 'Feedback is held until submission. You can change your answers.'),
-          study && scored ? h('div', { class: 'knowledge-study-tools' }, [
-            question.explanation || question.generated?.trace.length ? h('button', { type: 'button', class: 'quiet-button', onClick: () => {
-              if (hints.value.has(question.id)) hints.value.delete(question.id); else hints.value.add(question.id);
-            }, 'aria-expanded': hints.value.has(question.id), 'aria-controls': `hint-${question.id}` }, hints.value.has(question.id) ? 'Hide explanation' : 'Use explanation as a hint') : null,
-            reveal(`hint-${question.id}`, hints.value.has(question.id) ? h('div', { id: `hint-${question.id}`, class: 'knowledge-study-answer' }, [
-              question.explanation ? h('p', question.explanation) : null,
-              question.generated?.trace.length ? h('ol', question.generated.trace.map(line => h('li', line))) : null,
-            ]) : null),
-            h('button', { type: 'button', class: 'quiet-button', onClick: () => {
-              if (revealed.value.has(question.id)) revealed.value.delete(question.id); else revealed.value.add(question.id);
-            }, 'aria-expanded': revealed.value.has(question.id), 'aria-controls': `answer-${question.id}` }, revealed.value.has(question.id) ? 'Hide answer' : 'Show answer'),
-            reveal(`answer-${question.id}`, revealed.value.has(question.id) ? h('div', { id: `answer-${question.id}`, class: 'knowledge-study-answer' },
-              question.type === 'parameterized' ? [h('p', 'Answers:'), h('ul', (question.generated?.answers ?? []).map(answer => h('li', `${answer.label}: ${answer.text}`)))] :
-              question.type === 'dropdown' ? [h('p', 'Answers:'), h('ul', (question.matches ?? []).map(row => h('li', `${row.label}: ${row.answer}`)))] :
-                question.type === 'fill-in-the-blanks' ? [h('p', 'Answers:'), fillBlankAnswerKey(question)] : [h('p', `Answer: ${question.answer}`)]) : null),
-          ]) : null,
-        ]),
+          default: () => renderQuestion(question, position.value, false),
         }),
-        h('div', { class: 'knowledge-session-navigation' }, [
-          h('button', { type: 'button', class: 'quiet-button', disabled: position.value === 0,
-            onClick: () => moveQuestion(position.value - 1) }, 'Previous'),
+        h('div', {
+          class: ['knowledge-session-navigation', {
+            'is-forward-only': position.value === 0 || (props.mode !== 'study' && !options.value.allowBack),
+          }],
+        }, [
+          position.value > 0 && (props.mode === 'study' || options.value.allowBack)
+            ? h('button', { type: 'button', class: 'quiet-button',
+              onClick: () => moveQuestion(position.value - 1) }, 'Previous')
+            : null,
           position.value < questions.value.length - 1 ? h('button', {
             ref: question.type === 'fill-in-the-blanks' && props.mode === 'test' ? fillBlankPrimaryButton : undefined,
             type: 'button', class: 'card-primary-button',
@@ -385,6 +582,8 @@ export const KnowledgeSession = defineComponent({
                 onClick: () => moveQuestion(0, true),
               }, ['Keep studying', h(Icon, { name: 'chevron' })]),
         ]),
+        ]),
+        flagRail(),
       ]);
     }
     return () => h(Transition, { name: 'knowledge-view', mode: 'out-in', onBeforeLeave: leaveReviewPanel,

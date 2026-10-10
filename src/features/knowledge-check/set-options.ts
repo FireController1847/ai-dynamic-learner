@@ -8,6 +8,8 @@ import { MAX_QUESTIONS, MAX_TEXT } from './question-model.ts';
 
 export const DEFAULT_QUIZ_ATTEMPTS = 3;
 export type QuestionOrder = 'forward' | 'backward' | 'shuffle';
+export type QuestionPresentation = 'scroll' | 'one-at-a-time';
+export const QUESTION_PRESENTATIONS: readonly QuestionPresentation[] = ['scroll', 'one-at-a-time'];
 const QUESTION_ORDERS: readonly QuestionOrder[] = ['forward', 'backward', 'shuffle'];
 
 export interface SetOptions {
@@ -18,6 +20,10 @@ export interface SetOptions {
   assessmentQuestionLimit: number | null;
   shuffleChoices: boolean;
   quizAttempts: number;
+  quizPresentation: QuestionPresentation;
+  quizAllowBack: boolean;
+  testPresentation: QuestionPresentation;
+  testAllowBack: boolean;
   timeLimitMinutes: number | null;
   showTestAnswers: boolean;
 }
@@ -31,6 +37,10 @@ export function defaultSetOptions(): SetOptions {
     assessmentQuestionLimit: null,
     shuffleChoices: false,
     quizAttempts: DEFAULT_QUIZ_ATTEMPTS,
+    quizPresentation: 'scroll',
+    quizAllowBack: true,
+    testPresentation: 'scroll',
+    testAllowBack: true,
     timeLimitMinutes: null,
     showTestAnswers: true,
   };
@@ -53,6 +63,9 @@ export function validateSetOptions(value: unknown): asserts value is SetOptions 
           value.assessmentQuestionLimit < 1 || value.assessmentQuestionLimit > MAX_QUESTIONS)) ||
       typeof value.shuffleChoices !== 'boolean' ||
       typeof value.quizAttempts !== 'number' || !Number.isInteger(value.quizAttempts) || value.quizAttempts < 1 ||
+      !QUESTION_PRESENTATIONS.includes(value.quizPresentation as QuestionPresentation) ||
+      !QUESTION_PRESENTATIONS.includes(value.testPresentation as QuestionPresentation) ||
+      typeof value.quizAllowBack !== 'boolean' || typeof value.testAllowBack !== 'boolean' ||
       typeof value.showTestAnswers !== 'boolean' ||
       (value.timeLimitMinutes !== null && (typeof value.timeLimitMinutes !== 'number' || !Number.isInteger(value.timeLimitMinutes) ||
         value.timeLimitMinutes < 1 || value.timeLimitMinutes > 1440))) {

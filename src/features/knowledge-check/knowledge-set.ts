@@ -11,6 +11,7 @@ import { KnowledgeSession } from './knowledge-session.ts';
 import { SessionSetup } from './session-setup.ts';
 import { settingsForMode, type SessionSettings } from './session-settings.ts';
 import { questionReady } from './question-model.ts';
+import { clearSession, pausedSessionSettings } from './parameterized-session.ts';
 import { enterReviewPanel, leaveReviewPanel, restoreReviewPanel } from './review-motion.ts';
 import { defineComponent, h, onDeactivated, ref, Transition, type PropType } from 'vue';
 
@@ -22,15 +23,22 @@ export const KnowledgeSet = defineComponent({
   setup(props) {
     const mode = ref<CheckModeId | null>(props.initialMode);
     const building = ref(props.initialBuilder);
+    const initialPause = props.statisticsEnabled && props.initialMode !== 'test' && props.initialMode !== null
+      ? pausedSessionSettings(props.item.id, props.initialMode) : null;
+    const resumeRequested = ref(Boolean(initialPause));
     const sessionSettings = ref<SessionSettings | null>(
-      props.initialMode === 'test' ? settingsForMode(props.item.options, 'test') : null);
+      initialPause ?? (props.initialMode === 'test' ? settingsForMode(props.item.options, 'test') : null));
     const revision = ref(0);
     const message = ref('');
-    onDeactivated(() => { mode.value = null; sessionSettings.value = null; });
+    onDeactivated(() => { mode.value = null; sessionSettings.value = null; resumeRequested.value = false; });
     function chooseMode(next: CheckModeId) {
       if (mode.value !== next && !requestLeave()) return;
       mode.value = next;
-      sessionSettings.value = next === 'test' ? settingsForMode(props.item.options, 'test') : null;
+      const snapshotSettings = props.statisticsEnabled && next !== 'test'
+        ? pausedSessionSettings(props.item.id, next) : null;
+      resumeRequested.value = Boolean(snapshotSettings);
+      sessionSettings.value = snapshotSettings ?? (next === 'test'
+        ? settingsForMode(props.item.options, 'test') : null);
     }
     function openBuilder() { if (requestLeave()) building.value = true; }
     function save(name: string, questions: Question[], options: SetOptions) {
@@ -39,6 +47,9 @@ export const KnowledgeSet = defineComponent({
         const ready = questionsForSave(questions);
         if (!name.trim() || name.length > MAX_NAME_LENGTH) throw new Error('Enter a name of 1–120 characters.');
         props.item.name = name.trim(); props.item.questions = ready; props.item.options = { ...options };
+        clearSession(props.item.id, 'study');
+        clearSession(props.item.id, 'quiz');
+        resumeRequested.value = false;
         sessionSettings.value = mode.value === 'test' ? settingsForMode(props.item.options, 'test') : null;
         building.value = false; revision.value += 1; message.value = '';
       } catch (error) { message.value = error instanceof Error ? error.message : String(error); }
@@ -49,7 +60,10 @@ export const KnowledgeSet = defineComponent({
         onCancel: () => { building.value = false; message.value = ''; },
       });
       if (!mode.value) return h(ModePicker, {
-        key: 'mode-picker', setName: props.item.name, statisticsId: props.item.id, onChoose: chooseMode, onBuild: openBuilder,
+        key: 'mode-picker', setName: props.item.name, statisticsId: props.item.id,
+        pausedStudy: props.statisticsEnabled && Boolean(pausedSessionSettings(props.item.id, 'study')),
+        pausedQuiz: props.statisticsEnabled && Boolean(pausedSessionSettings(props.item.id, 'quiz')),
+        onChoose: chooseMode, onBuild: openBuilder,
       });
       if (!sessionSettings.value) return h(SessionSetup, {
         key: `setup-${revision.value}-${mode.value}`,
@@ -57,12 +71,22 @@ export const KnowledgeSet = defineComponent({
         mode: mode.value,
         questionCount: props.item.questions.filter(questionReady).length,
         onBack: () => { mode.value = null; },
-        onContinue: (settings: SessionSettings) => { sessionSettings.value = settings; },
+        onContinue: (settings: SessionSettings) => {
+          resumeRequested.value = false;
+          sessionSettings.value = settings;
+        },
       });
       return h(KnowledgeSession, {
         key: `session-${revision.value}-${mode.value}`, item: props.item, mode: mode.value, settings: sessionSettings.value,
         statisticsEnabled: props.statisticsEnabled,
+        autoResume: resumeRequested.value,
+        onPaused: () => {
+          mode.value = null;
+          sessionSettings.value = null;
+          resumeRequested.value = false;
+        },
         onBack: () => {
+          resumeRequested.value = false;
           if (mode.value === 'test') mode.value = null;
           else sessionSettings.value = null;
         },

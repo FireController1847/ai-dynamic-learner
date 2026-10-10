@@ -37,3 +37,34 @@ test('swapped blank pairs still use the configured answer strictness', () => {
   assert.deepEqual(fillBlankCorrectness(template, ['started', 'combined'], matcher(4)), [true, true]);
   assert.deepEqual(fillBlankCorrectness(template, ['started', 'combined'], matcher(3)), [false, false]);
 });
+
+test('numeric blanks compare values exactly without fuzzy or linguistic matching', () => {
+  const template = parseFillBlankTemplate('{{25,000,000}}');
+  for (const strictness of [1, 2, 3, 4] as const) {
+    assert.deepEqual(fillBlankCorrectness(template, ['1000000'], matcher(strictness)), [false]);
+    assert.deepEqual(fillBlankCorrectness(template, ['25,000,000'], matcher(strictness)), [true]);
+    assert.deepEqual(fillBlankCorrectness(template, ['25000000'], matcher(strictness)), [true]);
+    assert.deepEqual(fillBlankCorrectness(template, ['25,000,000.0'], matcher(strictness)), [true]);
+    assert.deepEqual(fillBlankCorrectness(template, ['25000000.1'], matcher(strictness)), [false]);
+    assert.deepEqual(fillBlankCorrectness(template, ['25000000 people'], matcher(strictness)), [false]);
+  }
+});
+
+test('decimal, signed, and exponential numeric blanks compare by exact value', () => {
+  const template = parseFillBlankTemplate('{{-0.25}} {{1e3}} {{.75}} {{0}}');
+  assert.deepEqual(fillBlankCorrectness(template, ['-.2500', '1,000', '0.750', '-0']), [true, true, true, true]);
+  assert.deepEqual(fillBlankCorrectness(template, ['-.2501', '999', '0.76', '1']), [false, false, false, false]);
+});
+
+test('large integers never become equal through floating-point rounding', () => {
+  assert.deepEqual(
+    fillBlankCorrectness(parseFillBlankTemplate('{{9,007,199,254,740,992}}'), ['9007199254740993'], matcher(4)),
+    [false],
+  );
+});
+
+test('non-numeric blanks retain configured text matching and swapped order', () => {
+  assert.deepEqual(fillBlankCorrectness(parseFillBlankTemplate('{{running}} and {{25,000}}'), ['25000', 'runing'], matcher(4)), [true, true]);
+  assert.deepEqual(fillBlankCorrectness(parseFillBlankTemplate('{{running}}'), ['runing'], matcher(1)), [false]);
+  assert.deepEqual(fillBlankCorrectness(parseFillBlankTemplate('{{running}}'), ['runing'], matcher(4)), [true]);
+});
