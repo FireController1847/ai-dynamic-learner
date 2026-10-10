@@ -4,6 +4,7 @@ import type { CheckItem } from './library-model.ts';
 import type { CheckModeId } from './check-types.ts';
 import { answerCorrect, fillBlankCorrectness, questionResponseAnswered, questionScored, type Question, type QuestionResponse } from './question-model.ts';
 import { inputValue } from '../../core/dom.ts';
+import { setWhiteboardBlocked } from '../../core/whiteboard-access.ts';
 import { Icon } from '../../components/icon.ts';
 import { MarkdownContent } from '../../components/markdown-content.ts';
 import { SessionIntro } from './session-intro.ts';
@@ -11,7 +12,7 @@ import { answerStrictnessForQuestion } from './session-settings.ts';
 import { useKnowledgeSession } from './session-state.ts';
 import { dropdownCorrectness } from './dropdown-model.ts';
 import { enterReviewPanel, leaveReviewPanel, restoreReviewPanel } from './review-motion.ts';
-import { computed, defineComponent, h, ref, Transition, type PropType } from 'vue';
+import { computed, defineComponent, h, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref, Transition, type PropType } from 'vue';
 
 export const KnowledgeSession = defineComponent({
   name: 'KnowledgeSession',
@@ -23,6 +24,16 @@ export const KnowledgeSession = defineComponent({
   },
   emits: { back: () => true, build: () => true },
   setup(props, { emit }) {
+    const whiteboardBlockToken = Symbol('review-session-whiteboard');
+    const blocksWhiteboard = props.mode === 'quiz' || props.mode === 'test';
+    const setWhiteboardAccess = (blocked: boolean) => {
+      if (blocksWhiteboard) setWhiteboardBlocked(whiteboardBlockToken, blocked);
+    };
+    onMounted(() => setWhiteboardAccess(true));
+    onActivated(() => setWhiteboardAccess(true));
+    onDeactivated(() => setWhiteboardAccess(false));
+    onBeforeUnmount(() => setWhiteboardAccess(false));
+
     const state = useKnowledgeSession(props.item, props.mode, props.settings, props.statisticsEnabled);
     const { questions, questionCount, options, position, responses, feedbackResponses, checked, revealed, hints, submitted, started, expired, ended,
       answered, resolved, score, scoredCount, remaining, celebrating, attempts, studyChecks, studyCorrectChecks,

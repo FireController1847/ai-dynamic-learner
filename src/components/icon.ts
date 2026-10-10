@@ -32,6 +32,8 @@ const paths: Record<string, string> = {
   upload: 'M12 16V4m-5 5 5-5 5 5M4 16v5h16v-5',
   lightbulb: 'M9 18h6M10 22h4M8.5 15.2A7 7 0 1 1 15.5 15.2C14.5 16.1 14 16.9 14 18h-4c0-1.1-.5-1.9-1.5-2.8Z',
   ai: 'M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5ZM19 13l.8 2.2L22 16l-2.2.8L19 19l-.8-2.2L16 16l2.2-.8ZM5 15l.7 1.8L8 17.5l-2.3.7L5 20l-.7-1.8L2 17.5l2.3-.7Z',
+  whiteboard: 'M3 4h18v14H3ZM7 21h10M12 18v3M6.5 8.5h11M7.5 13c2-2 4 2 6 0 1-.7 2-.7 3 0',
+  eraser: 'M5 6h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2ZM3 14h18',
 };
 
 export const Icon = defineComponent({

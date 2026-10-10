@@ -16,8 +16,10 @@ import { TipsExperience } from '../../packages/tips/src/index.ts';
 import { tipsCatalog } from './tips-content.ts';
 import { Icon } from '../components/icon.ts';
 import { AppIcon } from './app-icon.ts';
+import { Whiteboard, type WhiteboardHandle } from '../components/whiteboard.ts';
+import { subscribeWhiteboardBlocked } from '../core/whiteboard-access.ts';
 
-import { defineComponent, type PropType, computed, createApp, h, KeepAlive, nextTick, ref, watch } from 'vue';
+import { defineComponent, type PropType, computed, createApp, h, KeepAlive, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 
 initializeTheme();
 
@@ -105,6 +107,8 @@ const App = defineComponent({
     const menuButton = ref<HTMLButtonElement | null>(null);
     const tipsExperience = ref<TipsHandle | null>(null);
     const themeMenu = ref<ThemeMenuHandle | null>(null);
+    const whiteboard = ref<WhiteboardHandle | null>(null);
+    const whiteboardBlocked = ref(false);
     const main = ref<HTMLElement | null>(null);
     let focusContentOnClose = false;
     const { currentPath, navigate } = useNavigation(onNavigate);
@@ -114,6 +118,11 @@ const App = defineComponent({
       const feature = activeFeature.value ?? (currentPath.value === '/' ? homeTipsFeature : null);
       return feature && tipsCatalog[feature.id]?.sections.length ? feature : null;
     });
+    const unsubscribeWhiteboard = subscribeWhiteboardBlocked(blocked => {
+      whiteboardBlocked.value = blocked;
+      if (blocked) whiteboard.value?.close();
+    });
+    onBeforeUnmount(unsubscribeWhiteboard);
     function closeSidebar() {
       focusContentOnClose = false;
       sidebarOpen.value = false;
@@ -185,6 +194,17 @@ const App = defineComponent({
           ]) : null,
           h('button', {
             type: 'button',
+            class: 'quiet-button app-header-action whiteboard-trigger',
+            disabled: whiteboardBlocked.value,
+            title: whiteboardBlocked.value ? 'Whiteboard unavailable during Quiz and Test' : 'Open whiteboard',
+            'aria-label': whiteboardBlocked.value ? 'Whiteboard unavailable during Quiz and Test' : 'Open whiteboard',
+            onClick: (event: MouseEvent) => whiteboard.value?.open(event.currentTarget),
+          }, [
+            h(Icon, { name: 'whiteboard' }),
+            h('span', { class: 'app-header-action-label' }, 'Whiteboard'),
+          ]),
+          h('button', {
+            type: 'button',
             class: 'quiet-button app-header-action theme-trigger',
             title: 'Theme settings',
             'aria-haspopup': 'dialog',
@@ -218,6 +238,7 @@ const App = defineComponent({
       }, {
         footer: () => h(WorkspaceTools, { workspace }),
       }),
+      h(Whiteboard, { ref: whiteboard, disabled: whiteboardBlocked.value }),
       h(ThemeMenu, { ref: themeMenu }),
       TIPS_ENABLED ? h(TipsExperience, {
         ref: tipsExperience,

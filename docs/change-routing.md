@@ -10,6 +10,7 @@ Use this as a starting-file index, not a feature specification. Follow imports o
 | App artwork / visible icons | `src/app/app-icon.ts`, `src/assets/app-icons/`, `src/styles/shell.css` |
 | Header / shell / navigation drawer | `src/app/app.ts`, `navigation-drawer.ts`, `navigation.ts`, `src/styles/shell.css` |
 | Theme registry/settings | `src/app/theme.ts`, `theme-menu.ts`, `theme-picker.ts`, `src/styles/themes.css`, `theme.css` |
+| Whiteboard overlay | `src/components/whiteboard.ts`, `src/styles/whiteboard.css`, `src/core/whiteboard-access.ts`; shell trigger/lifetime in `src/app/app.ts`, Review Quiz/Test blocking in `src/features/knowledge-check/knowledge-session.ts` |
 | Tips content | `src/app/tips-content.ts` and feature-specific Tips adapters |
 | Tips engine/UI | `packages/tips/` |
 | Shared buttons/dialogs | `src/styles/base.css`, `src/components/use-dialog.ts`, `popup-dialog.ts` |
