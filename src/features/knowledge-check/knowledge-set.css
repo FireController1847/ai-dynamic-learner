@@ -262,3 +262,115 @@
   .knowledge-scroll-questions { gap: 12px; }
   .knowledge-scroll-footer > button { width: 100%; }
 }
+
+
+/* Session-only flags stay outside question cards while remaining inside Review. */
+.knowledge-question-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 30px;
+  margin-bottom: 6px;
+}
+.knowledge-question-heading .knowledge-question-number { margin: 0; }
+.knowledge-flag-toggle {
+  display: grid;
+  place-items: center;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  padding: 5px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color var(--motion-fast), background-color var(--motion-fast), border-color var(--motion-fast);
+}
+.knowledge-flag-toggle .ui-icon { width: 20px; height: 20px; }
+.knowledge-flag-toggle:hover, .knowledge-flag-toggle:focus-visible {
+  color: var(--brand);
+  background: var(--brand-tint);
+}
+.knowledge-flag-toggle.is-flagged {
+  color: var(--brand);
+  background: var(--brand-tint);
+  border-color: var(--brand);
+}
+.knowledge-flag-toggle.is-flagged .ui-icon { fill: color-mix(in srgb, var(--brand) 16%, transparent); }
+.knowledge-session-with-flags {
+  width: min(1040px, 100%);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  align-items: start;
+  gap: clamp(8px, 2vw, 16px);
+}
+.knowledge-session-body { min-width: 0; }
+.knowledge-flag-rail {
+  position: sticky;
+  top: 72px;
+  min-width: 0;
+}
+.knowledge-flag-rail-items {
+  display: grid;
+  gap: 6px;
+  max-height: calc(100dvh - 100px);
+  padding: 2px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.knowledge-flag-jump {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  color: var(--brand);
+  background: transparent;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+.knowledge-flag-jump .ui-icon {
+  width: 35px;
+  height: 35px;
+  fill: var(--brand-tint);
+}
+.knowledge-flag-jump-number {
+  position: absolute;
+  left: 14px;
+  top: 10px;
+  min-width: 17px;
+  font-size: 10px;
+  line-height: 15px;
+  font-weight: 700;
+  text-align: center;
+}
+.knowledge-flag-jump:hover:not(:disabled), .knowledge-flag-jump.is-current {
+  border-color: var(--brand);
+  background: var(--brand-tint);
+}
+.knowledge-flag-jump:disabled {
+  opacity: .35;
+  cursor: not-allowed;
+}
+.knowledge-flag-jump:focus-visible, .knowledge-flag-toggle:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+@media (max-width: 560px) {
+  .knowledge-session-with-flags {
+    grid-template-columns: minmax(0, 1fr) 36px;
+    gap: 4px;
+  }
+  .knowledge-flag-jump { width: 34px; }
+  .knowledge-flag-jump .ui-icon { width: 32px; height: 32px; }
+  .knowledge-flag-jump-number { left: 12px; }
+  .knowledge-flag-rail { top: 56px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .knowledge-flag-toggle { transition: none; }
+}

@@ -11,7 +11,7 @@ import { seededRandom } from '../../core/parameterized/random.ts';
 export interface ParameterizedSessionSnapshot {
   version: 1; instances?: Record<string, GeneratedVariant>; templates: Question[]; seeds: Record<string, string>; settings: SessionSettings;
   position: number; responses: Record<string, QuestionResponse>; feedbackResponses: Record<string, QuestionResponse>;
-  checked: string[]; revealed: string[]; hints: string[]; attempts: Record<string, number>;
+  checked: string[]; revealed: string[]; hints: string[]; flagged?: string[]; attempts: Record<string, number>;
   submitted: boolean; expired: boolean; deadline: number | null; paused?: boolean;
   studyChecks: number; studyCorrectChecks: number; studyVisited: string[]; studyPassRecorded: boolean;
 }
@@ -20,7 +20,7 @@ export const sessionStorageKey = (id: string, mode: string) => `dynamic-learner.
 function natural(value: unknown): value is number { return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0; }
 export function validateSessionSnapshot(value: unknown): asserts value is ParameterizedSessionSnapshot {
   if (!isRecord(value) || value.version !== 1 || Object.keys(value).some(key => ![
-    'version','instances','templates','seeds','settings','position','responses','feedbackResponses','checked','revealed','hints','attempts',
+    'version','instances','templates','seeds','settings','position','responses','feedbackResponses','checked','revealed','hints','flagged','attempts',
     'submitted','expired','deadline','paused','studyChecks','studyCorrectChecks','studyVisited','studyPassRecorded',
   ].includes(key))) throw new Error('Unsupported saved generated session.');
   validateQuestions(value.templates);
@@ -47,8 +47,9 @@ export function validateSessionSnapshot(value: unknown): asserts value is Parame
       !natural(value.studyCorrectChecks) || value.studyCorrectChecks > value.studyChecks ||
       typeof value.submitted !== 'boolean' || typeof value.expired !== 'boolean' || typeof value.studyPassRecorded !== 'boolean' ||
       value.deadline !== null && (!natural(value.deadline) || value.deadline > 8640000000000000)) throw new Error('Invalid saved session progress.');
-  for (const key of ['checked','revealed','hints','studyVisited']) {
+  for (const key of ['checked','revealed','hints','studyVisited','flagged']) {
     const list = value[key];
+    if (key === 'flagged' && list === undefined) continue;
     if (!Array.isArray(list) || list.length > ids.size || new Set(list).size !== list.length || list.some(id => typeof id !== 'string' || !ids.has(id))) throw new Error('Invalid saved session flags.');
   }
   for (const key of ['responses','feedbackResponses']) {

@@ -25,6 +25,7 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
   const checked = ref(new Set<string>());
   const revealed = ref(new Set<string>());
   const hints = ref(new Set<string>());
+  const flagged = ref(new Set<string>());
   const submitted = ref(false);
   const started = ref(false);
   const expired = ref(false);
@@ -81,7 +82,8 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
         version: 1, templates, instances: { ...instances }, seeds: { ...seeds },
         settings: { ...options.value }, position: position.value, paused: paused.value,
         responses: { ...responses.value }, feedbackResponses: { ...feedbackResponses.value }, checked: [...checked.value],
-        revealed: [...revealed.value], hints: [...hints.value], attempts: { ...attempts.value }, submitted: submitted.value,
+        revealed: [...revealed.value], hints: [...hints.value], flagged: [...flagged.value],
+        attempts: { ...attempts.value }, submitted: submitted.value,
         expired: expired.value, deadline: deadline.value, studyChecks: studyChecks.value, studyCorrectChecks: studyCorrectChecks.value,
         studyVisited: [...studyVisited], studyPassRecorded,
       };
@@ -142,6 +144,7 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
     }
     responses.value = { ...snapshot.responses }; feedbackResponses.value = { ...snapshot.feedbackResponses };
     checked.value = new Set(snapshot.checked); revealed.value = new Set(snapshot.revealed); hints.value = new Set(snapshot.hints);
+    flagged.value = new Set(snapshot.flagged ?? []);
     attempts.value = { ...snapshot.attempts }; studyChecks.value = snapshot.studyChecks; studyCorrectChecks.value = snapshot.studyCorrectChecks;
     studyVisited = new Set(snapshot.studyVisited); studyPassRecorded = snapshot.studyPassRecorded;
     submitted.value = snapshot.submitted; expired.value = snapshot.expired; deadline.value = snapshot.deadline;
@@ -159,7 +162,7 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
       }
     }
   }
-  watch([responses, feedbackResponses, checked, revealed, hints, attempts, position, submitted, deadline, studyChecks, studyCorrectChecks], persist, { deep: true });
+  watch([responses, feedbackResponses, checked, revealed, hints, flagged, attempts, position, submitted, deadline, studyChecks, studyCorrectChecks], persist, { deep: true });
 
   function clearCelebration() {
     if (celebrationTimer !== null) window.clearTimeout(celebrationTimer);
@@ -216,7 +219,8 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
       try { localStorage.removeItem(storageKey); saved = null; resumable.value = false; }
       catch { storageMessage.value = 'Previous paused session could not be cleared.'; }
     }
-    responses.value = {}; checked.value = new Set(); revealed.value = new Set(); hints.value = new Set(); attempts.value = {};
+    responses.value = {}; checked.value = new Set(); revealed.value = new Set(); hints.value = new Set();
+    flagged.value = new Set(); attempts.value = {};
     feedbackResponses.value = {};
     studyChecks.value = 0; studyCorrectChecks.value = 0;
     runtimeSettings.value = { ...settings };
@@ -262,7 +266,8 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
     try { if (statisticsEnabled) localStorage.removeItem(storageKey); } catch { storageMessage.value = 'Saved session could not be cleared.'; }
     saved = null; resumable.value = false; paused.value = false; generationError.value = '';
     started.value = false; submitted.value = false; deadline.value = null; ended.value = true; clearCelebration();
-    responses.value = {}; checked.value = new Set(); revealed.value = new Set(); hints.value = new Set(); attempts.value = {};
+    responses.value = {}; checked.value = new Set(); revealed.value = new Set(); hints.value = new Set();
+    flagged.value = new Set(); attempts.value = {};
     feedbackResponses.value = {};
     studyChecks.value = 0; studyCorrectChecks.value = 0; questions.value = []; position.value = 0;
   }
@@ -271,6 +276,13 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
     if (!active.value) return true;
     if (!window.confirm(`Leave this ${mode === 'test' ? 'Test' : 'Quiz'}? This will end your session and discard its answers.`)) return false;
     end(); return true;
+  }
+  function toggleFlag(id: string) {
+    if (!started.value || submitted.value || !questions.value.some(question => question.id === id)) return;
+    const next = new Set(flagged.value);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    flagged.value = next;
   }
   function check(index = position.value) {
     tick();
@@ -340,7 +352,8 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
   });
   onBeforeUnmount(() => { finishStudyPass(); persist(); resetGeneration(); detach(); });
   return { questions, questionCount, options, position, responses, feedbackResponses, checked, revealed, hints, submitted, started, expired, ended,
-    active, answered, resolved, score, scoredCount, remaining, celebrating, attempts, studyChecks, studyCorrectChecks,
+    active, answered, resolved, score, scoredCount, remaining, celebrating, attempts, flagged, toggleFlag,
+    studyChecks, studyCorrectChecks,
     generationError, generating, submitting, storageMessage, resumable, resume,
     start, pause, end, check, submit, leave, tick, finishStudyPass, completeStudyScrollPass, resetStudyPass };
 }

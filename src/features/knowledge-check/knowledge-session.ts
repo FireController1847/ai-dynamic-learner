@@ -27,7 +27,7 @@ export const KnowledgeSession = defineComponent({
   setup(props, { emit }) {
     const state = useKnowledgeSession(props.item, props.mode, props.settings, props.statisticsEnabled);
     const { questions, questionCount, options, position, responses, feedbackResponses, checked, revealed, hints, submitted, started, expired, ended,
-      answered, resolved, score, scoredCount, remaining, celebrating, attempts, studyChecks, studyCorrectChecks,
+      answered, resolved, score, scoredCount, remaining, celebrating, attempts, flagged, studyChecks, studyCorrectChecks,
       start, end, check, submit, tick } = state;
     useStudySession(computed(() => started.value && !submitted.value && !ended.value));
     const fillBlankPrimaryButton = ref<HTMLButtonElement | null>(null);
@@ -60,6 +60,57 @@ export const KnowledgeSession = defineComponent({
       backward.value = next < position.value && !wrap;
       position.value = next;
       if (wrap) state.resetStudyPass();
+    }
+
+    function canJumpToFlag(index: number): boolean {
+      if (index < 0 || index >= questions.value.length || submitted.value ||
+          state.generating.value || state.submitting.value) return false;
+      if (options.value.presentation === 'scroll' || props.mode === 'study') return true;
+      if (index < position.value && !options.value.allowBack) return false;
+      // Do not bypass the Quiz's per-question Check answer requirement.
+      const current = questions.value[position.value];
+      if (props.mode === 'quiz' && index > position.value && current &&
+          questionScored(current) && !checked.value.has(current.id)) return false;
+      return true;
+    }
+
+    function jumpToFlag(index: number) {
+      if (!canJumpToFlag(index)) return;
+      if (options.value.presentation === 'one-at-a-time') {
+        moveQuestion(index);
+        return;
+      }
+      const card = scrollSession.value?.querySelector<HTMLElement>(
+        `[data-review-question-index="${index}"]`,
+      );
+      if (!card) return;
+      card.scrollIntoView({
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+        block: 'start',
+      });
+      card.focus({ preventScroll: true });
+    }
+
+    function flagRail() {
+      const entries = questions.value.map((question, index) => ({ question, index }))
+        .filter(({ question }) => flagged.value.has(question.id));
+      if (!entries.length) return null;
+      return h('nav', { class: 'knowledge-flag-rail', 'aria-label': 'Flagged questions' }, [
+        h('div', { class: 'knowledge-flag-rail-items' }, entries.map(({ question, index }) => {
+          const accessible = canJumpToFlag(index);
+          return h('button', {
+            type: 'button', key: question.id,
+            class: ['knowledge-flag-jump', { 'is-current': options.value.presentation === 'one-at-a-time' && index === position.value }],
+            disabled: !accessible,
+            title: accessible ? `Go to flagged question ${index + 1}` :
+              `Question ${index + 1} cannot be revisited in this mode`,
+            'aria-label': accessible ? `Go to flagged question ${index + 1}` :
+              `Flagged question ${index + 1} (navigation unavailable)`,
+            'aria-current': options.value.presentation === 'one-at-a-time' && index === position.value ? 'true' : undefined,
+            onClick: () => jumpToFlag(index),
+          }, [h(Icon, { name: 'flag' }), h('span', { class: 'knowledge-flag-jump-number' }, String(index + 1))]);
+        })),
+      ]);
     }
 
     function reveal(id: string, content: ReturnType<typeof h> | null) {
@@ -290,7 +341,19 @@ export const KnowledgeSession = defineComponent({
             'data-review-question-index': index,
             'data-review-focus': '',
             'aria-label': `Question ${index + 1} of ${questions.value.length}` }, [
-          scroll ? h('p', { class: 'knowledge-question-number' }, `Question ${index + 1} of ${questions.value.length}`) : null,
+          h('div', { class: 'knowledge-question-heading' }, [
+            scroll ? h('p', { class: 'knowledge-question-number' },
+              `Question ${index + 1} of ${questions.value.length}`) : h('span', { 'aria-hidden': 'true' }),
+            h('button', {
+              type: 'button',
+              class: ['knowledge-flag-toggle', { 'is-flagged': flagged.value.has(question.id) }],
+              'aria-label': flagged.value.has(question.id)
+                ? `Remove flag from question ${index + 1}` : `Flag question ${index + 1}`,
+              'aria-pressed': flagged.value.has(question.id),
+              title: flagged.value.has(question.id) ? 'Remove flag' : 'Flag for later',
+              onClick: () => state.toggleFlag(question.id),
+            }, h(Icon, { name: 'flag' })),
+          ]),
           question.type === 'fill-in-the-blanks' && question.context?.trim()
             ? h(MarkdownContent, { text: question.context, class: 'knowledge-question-context' }) : null,
           question.type === 'fill-in-the-blanks'
@@ -397,9 +460,11 @@ export const KnowledgeSession = defineComponent({
       if (!question) return null;
       if (options.value.presentation === 'scroll') {
         return h('section', {
-          key: 'questions', ref: scrollSession, class: 'knowledge-session knowledge-scroll-session',
+          key: 'questions', ref: scrollSession,
+          class: ['knowledge-session knowledge-scroll-session', { 'knowledge-session-with-flags': flagged.value.size > 0 }],
           'data-mode': props.mode, 'aria-label': `${props.mode} questions`,
         }, [
+          h('div', { class: 'knowledge-session-body' }, [
           state.storageMessage.value ? h('p', { role: 'status', class: 'knowledge-message' }, state.storageMessage.value) : null,
           h('div', { class: 'knowledge-session-progress' }, [
             h('p', `${questions.value.length} ${questions.value.length === 1 ? 'question' : 'questions'} in this session`),
@@ -427,12 +492,19 @@ export const KnowledgeSession = defineComponent({
                 onClick: props.mode === 'test' ? submitTest : () => submit(),
               }, props.mode === 'test' ? 'Submit test' : 'See results'),
           ]),
+          ]),
+          flagRail(),
         ]);
       }
       const study = props.mode === 'study';
       const scored = questionScored(question);
       const wasChecked = checked.value.has(question.id);
-      return h('section', { key: 'questions', class: ['knowledge-session', { 'is-backward': backward.value }], 'data-mode': props.mode, 'aria-label': `${props.mode} questions` }, [
+      return h('section', { key: 'questions',
+        class: ['knowledge-session', {
+          'is-backward': backward.value, 'knowledge-session-with-flags': flagged.value.size > 0,
+        }],
+        'data-mode': props.mode, 'aria-label': `${props.mode} questions` }, [
+        h('div', { class: 'knowledge-session-body' }, [
         state.storageMessage.value ? h('p', { role: 'status', class: 'knowledge-message' }, state.storageMessage.value) : null,
         h('div', { class: 'knowledge-session-progress' }, [h('p', `Question ${position.value + 1} of ${questions.value.length}`),
           study ? h('p', 'Practice freely — hints and retries welcome') : h('p', `${answered.value} answered`),
@@ -470,6 +542,8 @@ export const KnowledgeSession = defineComponent({
                 onClick: () => moveQuestion(0, true),
               }, ['Keep studying', h(Icon, { name: 'chevron' })]),
         ]),
+        ]),
+        flagRail(),
       ]);
     }
     return () => h(Transition, { name: 'knowledge-view', mode: 'out-in', onBeforeLeave: leaveReviewPanel,

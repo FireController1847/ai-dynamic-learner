@@ -79,3 +79,8 @@ Study respects the knowledge set's optional shared question limit. When availabl
 ## Review pause and resume
 
 Question limits are creator-only across Study, Quiz, and Test. The Quiz Customize Settings flow never shows or changes that shared limit. An active Study or untimed Quiz presents **Pause Studying** / **Pause Quiz** immediately to the left of **End studying** / **End quiz** in either question layout. Pausing saves the current question order and session progress to this browser before returning to the Review mode picker, whose corresponding card becomes **Resume Study** or **Resume Quiz**. Resume skips setup and restores the saved state. Test stays end-only, with no Pause option. A failed save keeps the session open and displays the error; End discards saved state.
+
+
+## Review question flags
+
+During Study, Quiz, and Test, each question card has a small toggleable top-right flag, independent of the authored knowledge set and of scoring. Flagged question numbers appear in a compact sticky rail to the right of the session content; clicking a number scrolls to that question in the full-list presentation or changes the active question in one-at-a-time mode. Jump controls honor existing forward-only restrictions and Quiz check-before-next requirements rather than bypassing them. The flag rail is omitted when no questions are flagged and is keyboard-accessible with descriptive labels. Reduced-motion preferences disable smooth scrolling. Flags persist in paused/recoverable browser-local session snapshots and are cleared on a fresh session or End.

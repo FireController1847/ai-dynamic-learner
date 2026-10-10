@@ -152,3 +152,6 @@ Review AI import optionally accepts up to 20 solver packages in a top-level `sol
 ## Paused Review sessions
 
 Study and untimed Quiz can explicitly pause and resume on the same browser. The existing bounded `dynamic-learner.review.generated-session.v1:<setId>:<mode>` snapshot format adds an optional `paused` flag. For ordinary (non-parameterized) question sets, snapshot validation permits saved templates **only** when `paused: true`; historical automatically saved parameterized sessions remain compatible. Snapshots retain ordered templates, selected answers, checked feedback/attempts, hints/reveals, session settings, and Study counters. Resume consumes ordinary paused snapshots so the mode picker doesn't falsely report them as paused while live. Test never offers Pause; builder edits invalidate previous Study/Quiz pauses to prevent stale questions from reappearing. Pause data is browser-local transient session state, not part of workspace backups.
+
+
+Review session snapshot `flagged?: string[]` stores session-only flagged question IDs alongside answers, checks and hints. Validation accepts the missing field in older snapshots, but rejects unknown, repeated, or malformed question IDs. Flags are restored with Pause/Resume and generated-question recovery; they are never part of authored knowledge sets or graded scores.
