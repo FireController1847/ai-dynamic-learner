@@ -389,3 +389,6 @@
 @media (prefers-reduced-motion: reduce) {
   .knowledge-flag-toggle { transition: none; }
 }
+
+/* Keep the primary navigation action right-aligned when Previous is unavailable. */
+.knowledge-session-navigation.is-forward-only { justify-content: flex-end; }

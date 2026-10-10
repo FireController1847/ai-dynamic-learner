@@ -522,9 +522,15 @@ export const KnowledgeSession = defineComponent({
           onLeaveCancelled: restoreReviewPanel, onAfterEnter: enterReviewPanel }, {
           default: () => renderQuestion(question, position.value, false),
         }),
-        h('div', { class: 'knowledge-session-navigation' }, [
-          h('button', { type: 'button', class: 'quiet-button', disabled: position.value === 0 || (props.mode !== 'study' && !options.value.allowBack),
-            onClick: () => moveQuestion(position.value - 1) }, 'Previous'),
+        h('div', {
+          class: ['knowledge-session-navigation', {
+            'is-forward-only': position.value === 0 || (props.mode !== 'study' && !options.value.allowBack),
+          }],
+        }, [
+          position.value > 0 && (props.mode === 'study' || options.value.allowBack)
+            ? h('button', { type: 'button', class: 'quiet-button',
+              onClick: () => moveQuestion(position.value - 1) }, 'Previous')
+            : null,
           position.value < questions.value.length - 1 ? h('button', {
             ref: question.type === 'fill-in-the-blanks' && props.mode === 'test' ? fillBlankPrimaryButton : undefined,
             type: 'button', class: 'card-primary-button',
