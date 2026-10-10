@@ -313,11 +313,11 @@
 .knowledge-session-with-rail .knowledge-session-body {
   min-width: 0;
   width: 100%;
-  max-width: calc(940px - 2 * clamp(20px, 4vw, 40px));
+  max-width: calc(940px - clamp(20px, 4vw, 40px) - clamp(20px, 4vw, 40px));
   margin-inline: auto;
 }
 .knowledge-session-with-rail:not(.knowledge-scroll-session) .knowledge-session-body {
-  max-width: calc(820px - 2 * clamp(20px, 4vw, 40px));
+  max-width: calc(820px - clamp(20px, 4vw, 40px) - clamp(20px, 4vw, 40px));
 }
 .knowledge-flag-rail {
   position: sticky;
