@@ -28,9 +28,11 @@
   .ai-exchange-copy.is-copied { animation:none; }
 }
 
-.study-ai-workspace { display:grid;gap:20px;width:min(900px,100%);margin-inline:auto;padding:clamp(28px,5vw,56px); }
+.study-ai-workspace { display:grid;gap:20px;width:min(900px,100%);min-width:0;margin-inline:auto;padding:clamp(28px,5vw,56px);container-type:inline-size; }
 .library-collapsed .study-ai-workspace { padding-top:48px; }
-.study-ai-header { display:flex;align-items:flex-start;justify-content:space-between;gap:20px; }
+.study-ai-header { display:grid;justify-content:stretch;gap:12px;min-width:0; }
+.study-ai-header > :first-child { min-width:0;overflow-wrap:anywhere; }
+.study-ai-header > .study-ai-actions { justify-content:flex-start;justify-self:start; }
 .study-ai-header h2 { margin:0 0 8px;font-size:24px;line-height:30px; }
 .study-ai-header p { margin:0 0 8px; }
 .study-ai-actions { display:flex;align-items:center;flex-wrap:wrap;gap:8px; }
@@ -47,4 +49,14 @@
 .study-ai-history li button { display:flex;flex-wrap:wrap;align-items:center;gap:8px;width:100%;text-align:left;white-space:normal;overflow-wrap:anywhere; }
 .study-ai-history li button strong { flex:1;min-width:0; }
 .study-ai-history li button .study-ai-muted { flex-basis:100%; }
-@media(max-width:700px),(max-width:1100px) and (pointer:coarse) { .study-ai-workspace { padding:48px 20px 20px; } .study-ai-header { flex-wrap:wrap; } }
+@media(max-width:700px),(max-width:1100px) and (pointer:coarse) {
+  .study-ai-workspace { padding:48px 20px 20px; }
+}
+@container (max-width:540px) {
+  .study-ai-header h2 { overflow-wrap:anywhere; }
+  .study-ai-actions > button { min-height:var(--control-height); }
+}
+@media (pointer:coarse) {
+  .study-ai-workspace input:not([type='checkbox']):not([type='radio']),
+  .study-ai-workspace select, .ai-exchange-panel textarea { font-size:16px; }
+}

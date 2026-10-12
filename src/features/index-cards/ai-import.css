@@ -1,8 +1,9 @@
 .flash-ai-workspace {
   display: grid; gap: 20px; width: min(900px, 100%); margin-inline: auto;
   padding: clamp(28px, 5vw, 56px);
+  container-type: inline-size;
 }
-.flash-ai-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+.flash-ai-header { display: grid; align-items: start; gap: 12px; min-width: 0; }
 .flash-ai-header > div { min-width: 0; }
 .flash-ai-header h2 { margin: 0 0 8px; font-size: 24px; line-height: 30px; }
 .flash-ai-header p { margin: 0 0 8px; }
@@ -43,3 +44,11 @@
   .flash-ai-header { flex-wrap: wrap; }
   .flash-ai-options { grid-template-columns: 1fr; }
 }
+
+/* The visible editor pane may be narrow even on a wide display. */
+@container (max-width: 640px) {
+  .flash-ai-options { grid-template-columns: minmax(0, 1fr); }
+  .flash-ai-header > .flash-ai-actions { justify-content: flex-start; }
+  .flash-ai-actions > button { min-height: var(--control-height); }
+}
+@media (pointer: coarse) { .flash-ai-options select { font-size: 16px; } }

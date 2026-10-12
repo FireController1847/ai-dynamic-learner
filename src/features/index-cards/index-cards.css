@@ -156,6 +156,7 @@
 
 
 .index-cards-builder {
+  container-type: inline-size;
   display: grid;
   gap: 28px;
   width: min(860px, 100%);
@@ -248,4 +249,16 @@
     text-align: left;
   }
   .index-cards-mode-icon { width: 76px; height: 76px; }
+}
+
+/* Narrow workspace panes need the same builder layout as narrow viewports. */
+@container (max-width: 740px) {
+  .index-cards-mode-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .index-cards-mode-card {
+    grid-template-columns: auto minmax(0, 1fr);
+    min-height: 0; justify-items: start; align-items: center;
+    gap: 16px; text-align: left;
+  }
+  .index-cards-mode-icon { width: 64px; height: 64px; }
+  .index-cards-builder-actions { justify-content: flex-start; flex-wrap: wrap; gap: 8px; }
 }

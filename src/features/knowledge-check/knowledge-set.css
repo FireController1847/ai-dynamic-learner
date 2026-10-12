@@ -495,3 +495,26 @@
   .knowledge-question-import .knowledge-builder-header { align-items: stretch; }
   .knowledge-question-import .knowledge-builder-header > button { width: 100%; }
 }
+
+/* The Review pane can be narrow even when the browser remains desktop-wide. */
+@container (max-width: 900px) {
+  .knowledge-builder-layout { grid-template-columns: minmax(0, 1fr); }
+  .knowledge-question-list { border-right: 0; border-bottom: 1px solid var(--border-color); padding: 16px 0; }
+  .knowledge-question-editor { padding: 20px 0 0; }
+}
+@container (max-width: 660px) {
+  .knowledge-set-toolbar { gap: 8px; padding: 10px 12px; }
+  .knowledge-set-toolbar > button { margin-left: 0; }
+  .knowledge-builder-header { align-items: flex-start; }
+  .knowledge-session-setup-actions, .knowledge-results-top-actions { justify-content: flex-start; }
+  .knowledge-dropdown-row { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .knowledge-dropdown-editor-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .knowledge-dropdown-editor-row .knowledge-field { grid-column: 1; }
+  .knowledge-dropdown-editor-row > button { grid-column: 2; grid-row: 1 / 3; }
+}
+@container (max-width: 420px) {
+  .knowledge-mode-control { flex-wrap: wrap; min-width: 0; }
+  .knowledge-mode-control select { min-width: 0; max-width: 100%; }
+  .knowledge-session-setup-actions > button { flex: 1 1 120px; min-width: 0; }
+  .knowledge-scroll-footer > button { width: 100%; }
+}

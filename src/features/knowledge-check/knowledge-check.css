@@ -384,7 +384,7 @@
 }
 
 
-.knowledge-import-builder { min-height: 100%; }
+.knowledge-import-builder { min-height: 100%; container-type: inline-size; }
 .knowledge-import-sync-note {
   display: flex;
   align-items: flex-start;
@@ -837,4 +837,32 @@
 }
 .knowledge-parameterized-preview dd {
   margin: 0;
+}
+
+/* Review imports adapt to the content area after the library takes its width. */
+@container (max-width: 840px) {
+  .knowledge-import-item { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .knowledge-import-item-options { grid-column: 2 / -1; }
+  .knowledge-import-section-heading, .knowledge-import-picker-header {
+    flex-wrap: wrap; justify-content: flex-start;
+  }
+  .knowledge-import-section-heading > *, .knowledge-import-picker-header > * { min-width: 0; }
+}
+@container (max-width: 600px) {
+  .knowledge-import-item {
+    grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 10px;
+  }
+  .knowledge-import-item-order { grid-row: 1 / 3; }
+  .knowledge-import-item-actions, .knowledge-import-item-options { grid-column: 2; }
+  .knowledge-import-item-options { grid-template-columns: minmax(0, 1fr); }
+  .knowledge-import-item-options > p { grid-column: auto; }
+  .knowledge-import-source-card { grid-template-columns: auto minmax(0, 1fr); }
+  .knowledge-import-source-add, .knowledge-import-coming-soon { grid-column: 2; justify-self: start; }
+  .knowledge-import-picker-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .knowledge-import-picker-header > button { width: auto; max-width: 100%; }
+}
+@media (max-width: 560px) {
+  .knowledge-import-resolution { padding: 16px; }
+  .knowledge-import-resolution-footer { justify-content: flex-start; }
+  .knowledge-import-resolution-footer > button { min-height: var(--control-height); }
 }

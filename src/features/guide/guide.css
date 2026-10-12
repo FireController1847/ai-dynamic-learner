@@ -236,3 +236,22 @@
   .guide-study-bullet, .guide-route line.is-invalid { animation: none; }
   .guide-route line.is-invalid { opacity: 1; }
 }
+
+/* Guide setup and AI authoring respond to their pane, not the window. */
+.guide-ai-workspace, .guide-builder { container-type: inline-size; }
+.guide-ai-header { display: grid; justify-content: stretch; gap: 12px; min-width: 0; }
+.guide-ai-header > :first-child { min-width: 0; overflow-wrap: anywhere; }
+.guide-ai-header > .guide-ai-actions { justify-content: flex-start; justify-self: start; }
+@container (max-width: 720px) {
+  .guide-mode-grid, .guide-ai-options { grid-template-columns: minmax(0, 1fr); }
+  .guide-mode-card {
+    grid-template-columns: auto minmax(0, 1fr); min-height: 0;
+    align-items: center; justify-items: start; text-align: left;
+  }
+  .guide-mode-icon { width: 64px; height: 64px; }
+  .guide-builder-actions { justify-content: flex-start; flex-wrap: wrap; gap: 8px; }
+}
+@media (pointer: coarse) {
+  .guide-ai-workspace input:not([type='checkbox']):not([type='radio']),
+  .guide-ai-workspace select, .guide-ai-workspace textarea { font-size: 16px; }
+}
