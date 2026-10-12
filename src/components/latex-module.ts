@@ -3,6 +3,7 @@ import type { TokenizerExtension } from 'marked';
 
 /** Shared LaTeX tokenization for the Markdown lexer. Code blocks stay literal. */
 type MathToken = { type: string; raw: string; text: string };
+type MathExtension = TokenizerExtension & { renderer(token: MathToken): string };
 const MAX_TEX_LENGTH = 4000;
 
 /** Encode TeX in a placeholder attribute, never unescaped user HTML. */
@@ -11,7 +12,7 @@ function placeholder(tex: string, display: boolean): string {
   return '<' + tag + ' data-dl-latex="' + encodeURIComponent(tex) + '"></' + tag + '>';
 }
 
-const displayMath: TokenizerExtension = {
+const displayMath: MathExtension = {
   name: 'dl-display-math',
   level: 'block',
   start: (src: string) => {
@@ -29,11 +30,11 @@ const displayMath: TokenizerExtension = {
     return { type: 'dl-display-math', raw: src.slice(0, end + close.length), text };
   },
   renderer(token) {
-    return placeholder((token as MathToken).text, true);
+    return placeholder(token.text, true);
   },
 };
 
-const inlineMath: TokenizerExtension = {
+const inlineMath: MathExtension = {
   name: 'dl-inline-math',
   level: 'inline',
   start: (src: string) => {
@@ -61,11 +62,11 @@ const inlineMath: TokenizerExtension = {
     }
   },
   renderer(token) {
-    return placeholder((token as MathToken).text, false);
+    return placeholder(token.text, false);
   },
 };
 
-export const markdownMathExtensions: TokenizerExtension[] = [displayMath, inlineMath];
+export const markdownMathExtensions: MathExtension[] = [displayMath, inlineMath];
 
 /** Only sanitized math placeholders call this; KaTeX runs with trust disabled. */
 export function renderLatexAttribute(encoded: string, display: boolean): string | null {
