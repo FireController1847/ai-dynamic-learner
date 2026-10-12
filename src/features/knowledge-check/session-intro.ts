@@ -11,8 +11,9 @@ export const SessionIntro = defineComponent({
   props: { item: { type: Object as PropType<CheckItem>, required: true },
     mode: { type: String as PropType<CheckModeId>, required: true },
     settings: { type: Object as PropType<SessionSettings>, required: true },
-    count: { type: Number, required: true }, ended: Boolean, resumable: Boolean, message: String },
-  emits: { back: () => true, start: () => true, resume: () => true },
+    count: { type: Number, required: true }, ended: Boolean, resumable: Boolean, message: String,
+    savedCompleted: Boolean, lastQuizAvailable: Boolean },
+  emits: { back: () => true, start: () => true, resume: () => true, 'review-last': () => true },
   setup(props, { emit }) {
     return () => {
       const test = props.mode === 'test';
@@ -69,7 +70,15 @@ export const SessionIntro = defineComponent({
         h('div', { class: 'knowledge-intro-actions' }, [
           h('button', { type: 'button', class: 'quiet-button',
             onClick: () => emit('back') }, 'Back'),
-          props.resumable ? h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('resume') }, 'Resume saved session') : null,
+          props.resumable && !props.savedCompleted
+            ? h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('resume') }, 'Resume saved session')
+            : null,
+          props.mode === 'quiz' && props.lastQuizAvailable
+            ? h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('review-last') }, 'Review last quiz')
+            : null,
+          props.resumable && props.savedCompleted && !props.lastQuizAvailable
+            ? h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('resume') }, 'Review last quiz')
+            : null,
           h('button', { type: 'button', class: 'card-primary-button', disabled: !props.count,
             onClick: () => emit('start') }, [
             study ? 'Start studying' : `Start ${mode.label.toLowerCase()}`,

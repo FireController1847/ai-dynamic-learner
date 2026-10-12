@@ -63,6 +63,7 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
   const inFlight = new Map<string, Promise<boolean>>();
   const storageMessage = ref('');
   const resumable = ref(false);
+  const savedCompleted = ref(false);
   const paused = ref(false);
   const storageKey = sessionStorageKey(item.id, mode);
   let templates: Question[] = [];
@@ -73,7 +74,7 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
   const signature = (question: Question) => JSON.stringify([question.type, question.prompt, question.context,
     question.explanation, question.answer, [...question.choices].sort(), question.matches,
     question.generated?.answers.map(answer => [answer.key, answer.label, answer.text, answer.value])]);
-  try { if (statisticsEnabled) { saved = readSession(storageKey); resumable.value = Boolean(saved); } }
+  try { if (statisticsEnabled) { saved = readSession(storageKey); resumable.value = Boolean(saved); savedCompleted.value = Boolean(saved?.submitted); } }
   catch (error) { storageMessage.value = `Saved session unavailable: ${error instanceof Error ? error.message : String(error)}`; }
   function persist(): boolean {
     if (!statisticsEnabled || !started.value ||
@@ -89,7 +90,7 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
         studyVisited: [...studyVisited], studyPassRecorded,
       };
       writeSession(storageKey, snapshot);
-      saved = snapshot; resumable.value = true; storageMessage.value = '';
+      saved = snapshot; resumable.value = true; savedCompleted.value = snapshot.submitted; storageMessage.value = '';
       return true;
     } catch (error) {
       storageMessage.value = `Session could not be saved: ${error instanceof Error ? error.message : String(error)}`;
@@ -157,7 +158,7 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
       // A resumed session is live again, not still paused on the mode picker.
       try {
         localStorage.removeItem(storageKey);
-        saved = null; resumable.value = false;
+        saved = null; resumable.value = false; savedCompleted.value = false;
       } catch (error) {
         storageMessage.value = `Could not clear paused state: ${error instanceof Error ? error.message : String(error)}`;
       }
@@ -236,7 +237,7 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
     resetGeneration(); started.value = false; paused.value = false;
     // Starting fresh replaces any paused static snapshot from an earlier run.
     if (saved?.paused && !saved.templates.some(question => question.type === 'parameterized')) {
-      try { localStorage.removeItem(storageKey); saved = null; resumable.value = false; }
+      try { localStorage.removeItem(storageKey); saved = null; resumable.value = false; savedCompleted.value = false; }
       catch { storageMessage.value = 'Previous paused session could not be cleared.'; }
     }
     responses.value = {}; checked.value = new Set(); revealed.value = new Set(); hints.value = new Set();
@@ -284,7 +285,7 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
   function end() {
     finishStudyPass(); resetGeneration(); instances = {};
     try { if (statisticsEnabled) localStorage.removeItem(storageKey); } catch { storageMessage.value = 'Saved session could not be cleared.'; }
-    saved = null; resumable.value = false; paused.value = false; generationError.value = '';
+    saved = null; resumable.value = false; savedCompleted.value = false; paused.value = false; generationError.value = '';
     started.value = false; submitted.value = false; deadline.value = null; ended.value = true; clearCelebration();
     responses.value = {}; checked.value = new Set(); revealed.value = new Set(); hints.value = new Set();
     flagged.value = new Set(); attempts.value = {};
@@ -374,6 +375,6 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
   return { questions, questionCount, options, position, responses, feedbackResponses, checked, revealed, hints, submitted, started, expired, ended,
     active, answered, resolved, score, scoredCount, remaining, celebrating, attempts, flagged, toggleFlag,
     studyChecks, studyCorrectChecks,
-    generationError, generating, submitting, storageMessage, resumable, resume,
+    generationError, generating, submitting, storageMessage, resumable, savedCompleted, resume,
     start, pause, end, check, submit, leave, tick, showHistory, finishStudyPass, completeStudyScrollPass, resetStudyPass };
 }

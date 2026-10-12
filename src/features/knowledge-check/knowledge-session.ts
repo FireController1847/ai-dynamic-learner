@@ -8,6 +8,7 @@ import { inputValue } from '../../core/dom.ts';
 import { Icon } from '../../components/icon.ts';
 import { MarkdownContent } from '../../components/markdown-content.ts';
 import { SessionIntro } from './session-intro.ts';
+import type { ReviewAttempt } from './attempt-history.ts';
 import { answerStrictnessForQuestion } from './session-settings.ts';
 import { useKnowledgeSession } from './session-state.ts';
 import { dropdownCorrectness } from './dropdown-model.ts';
@@ -22,10 +23,13 @@ export const KnowledgeSession = defineComponent({
     settings: { type: Object as PropType<import('./session-settings.ts').SessionSettings>, required: true },
     statisticsEnabled: { type: Boolean, default: true },
     autoResume: Boolean,
+    historyAttempt: { type: Object as PropType<ReviewAttempt | null>, default: null },
+    lastQuizAvailable: Boolean,
   },
-  emits: { back: () => true, build: () => true, paused: () => true },
+  emits: { back: () => true, build: () => true, paused: () => true, 'review-last': () => true },
   setup(props, { emit }) {
-    const state = useKnowledgeSession(props.item, props.mode, props.settings, props.statisticsEnabled);
+    const state = useKnowledgeSession(props.item, props.mode, props.settings,
+      props.statisticsEnabled && !props.historyAttempt);
     const { questions, questionCount, options, position, responses, feedbackResponses, checked, revealed, hints, submitted, started, expired, ended,
       answered, resolved, score, scoredCount, remaining, celebrating, attempts, flagged, studyChecks, studyCorrectChecks,
       start, end, check, submit, tick } = state;
@@ -38,7 +42,10 @@ export const KnowledgeSession = defineComponent({
     watch(submitted, (isSubmitted) => {
       if (!isSubmitted) resultFilter.value = 'all';
     });
-    onMounted(() => { if (props.autoResume) void state.resume(); });
+    onMounted(() => {
+      if (props.historyAttempt) state.showHistory(props.historyAttempt);
+      else if (props.autoResume) void state.resume();
+    });
 
     function onSessionViewEntered(element: Element) {
       enterReviewPanel(element);
@@ -72,7 +79,10 @@ export const KnowledgeSession = defineComponent({
     function doneReviewingButton() {
       return h('button', {
         type: 'button', class: 'card-primary-button',
-        onClick: () => { started.value = false; },
+        onClick: () => {
+          if (props.historyAttempt) emit('back');
+          else started.value = false;
+        },
       }, 'Done reviewing');
     }
 
@@ -234,11 +244,10 @@ export const KnowledgeSession = defineComponent({
 
     function feedback(question: Question, showAnswer = true) {
       const submittedResponse = feedbackResponse(question);
-      const correct = answerCorrect(
-        question,
-        submittedResponse,
-        answerStrictnessForQuestion(options.value, question.type),
-      );
+      const correct = props.historyAttempt
+        ? props.historyAttempt.correctIds.includes(question.id)
+        : answerCorrect(question, submittedResponse,
+          answerStrictnessForQuestion(options.value, question.type));
       const attemptCount = attempts.value[question.id] ?? 0;
       const quizRetry = props.mode === 'quiz' && !correct && !checked.value.has(question.id) && attemptCount > 0;
       const attemptsRemaining = Math.max(0, options.value.quizAttempts - attemptCount);
@@ -503,21 +512,23 @@ export const KnowledgeSession = defineComponent({
         h('p', 'Check its ranges, constraints, computed choices, or registered solver in the builder.'),
         h('button', { type: 'button', class: 'quiet-button', onClick: end }, 'Return to overview'),
       ]);
-      if (!questionCount.value && !state.resumable.value) return h('section', { key: 'empty', class: 'knowledge-session knowledge-builder-empty' }, [
+      if (!props.historyAttempt && !questionCount.value && !state.resumable.value) return h('section', { key: 'empty', class: 'knowledge-session knowledge-builder-empty' }, [
         h('h3', 'Add questions to get started'), h('p', 'Complete a question and its correct answer in the builder.'),
         h('button', { type: 'button', class: 'card-primary-button', onClick: () => emit('build') }, 'Build questions'),
       ]);
       if (!started.value) return h(SessionIntro, { key: 'intro', item: props.item, mode: props.mode, settings: props.settings,
-        count: questionCount.value, ended: ended.value, resumable: state.resumable.value, message: state.storageMessage.value,
+        count: questionCount.value, ended: ended.value, resumable: state.resumable.value,
+        savedCompleted: state.savedCompleted.value, lastQuizAvailable: props.lastQuizAvailable,
+        message: state.storageMessage.value, onReviewLast: () => emit('review-last'),
         onResume: state.resume, onBack: () => emit('back'), onStart: start });
       const question = questions.value[position.value];
       if (submitted.value) {
         const showAnswers = props.mode !== 'test' || options.value.showTestAnswers;
         const allResults = questions.value.map((entry, index) => ({
-          entry, index, correct: questionScored(entry) && answerCorrect(
-            entry, responses.value[entry.id] ?? (entry.type === 'fill-in-the-blanks' ? [] : ''),
-            answerStrictnessForQuestion(options.value, entry.type),
-          ),
+          entry, index, correct: questionScored(entry) && (props.historyAttempt
+            ? props.historyAttempt.correctIds.includes(entry.id)
+            : answerCorrect(entry, responses.value[entry.id] ?? (entry.type === 'fill-in-the-blanks' ? [] : ''),
+              answerStrictnessForQuestion(options.value, entry.type))),
         }));
         const correctCount = allResults.filter(result => result.correct).length;
         const incorrectCount = allResults.filter(result => questionScored(result.entry) && !result.correct).length;
@@ -529,12 +540,19 @@ export const KnowledgeSession = defineComponent({
           { id: 'correct', label: 'Correct', count: correctCount },
           { id: 'incorrect', label: 'Incorrect', count: incorrectCount },
         ];
+        const finalScore = props.historyAttempt?.score ?? score.value;
+        const finalScored = props.historyAttempt?.scoredCount ?? scoredCount.value;
         return h('section', { key: 'results', class: 'knowledge-session knowledge-session-results', 'aria-label': 'Results' }, [
-          h('header', { class: 'knowledge-results-heading' }, [h('h3', props.mode === 'test' ? 'Test complete' : 'Quiz complete'),
-            scoredCount.value
-              ? h('p', { class: 'knowledge-score' }, `${score.value} / ${scoredCount.value}`)
+          h('header', { class: 'knowledge-results-heading' }, [
+            h('h3', props.historyAttempt
+              ? (props.mode === 'test' ? 'Test results' : 'Quiz results')
+              : (props.mode === 'test' ? 'Test complete' : 'Quiz complete')),
+            props.historyAttempt ? h('p', { class: 'knowledge-muted' },
+              new Date(props.historyAttempt.completedAt).toLocaleString()) : null,
+            finalScored
+              ? h('p', { class: 'knowledge-score' }, `${finalScore} / ${finalScored}`)
               : h('p', { class: 'knowledge-score' }, 'No scored questions'),
-            scoredCount.value ? h('p', `${Math.round(score.value / scoredCount.value * 100)}% correct`) : null,
+            finalScored ? h('p', `${Math.round(finalScore / finalScored * 100)}% correct`) : null,
             expired.value ? h('p', { role: 'status' }, 'Time ran out. Your entered answers were submitted automatically.') : null]),
           h('div', { class: 'knowledge-results-top-actions' }, [doneReviewingButton()]),
           showAnswers ? [
