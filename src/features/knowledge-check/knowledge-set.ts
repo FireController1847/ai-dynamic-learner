@@ -6,6 +6,8 @@ import { validateSetOptions, type SetOptions } from './set-options.ts';
 import { validateQuestions, questionsForSave, type Question } from './question-model.ts';
 import { inputValue } from '../../core/dom.ts';
 import { CheckBuilder } from './check-builder.ts';
+import { ReviewAttemptHistory } from './attempt-history-view.ts';
+import type { ReviewAttempt } from './attempt-history.ts';
 import { ModePicker } from './mode-picker.ts';
 import { KnowledgeSession } from './knowledge-session.ts';
 import { SessionSetup } from './session-setup.ts';
@@ -30,10 +32,29 @@ export const KnowledgeSet = defineComponent({
       initialPause ?? (props.initialMode === 'test' ? settingsForMode(props.item.options, 'test') : null));
     const revision = ref(0);
     const message = ref('');
-    onDeactivated(() => { mode.value = null; sessionSettings.value = null; resumeRequested.value = false; });
+    const historyOpen = ref(false);
+    const viewedAttempt = ref<ReviewAttempt | null>(null);
+    const lastQuiz = () => [...(props.item.history ?? [])].reverse().find(attempt => attempt.mode === 'quiz') ?? null;
+    function reviewLastQuiz() {
+      const attempt = lastQuiz();
+      if (!attempt) return;
+      viewedAttempt.value = attempt;
+      historyOpen.value = true;
+      mode.value = null; sessionSettings.value = null; resumeRequested.value = false;
+    }
+    function openHistory() {
+      if (!requestLeave()) return;
+      viewedAttempt.value = null; historyOpen.value = true;
+      mode.value = null; sessionSettings.value = null; resumeRequested.value = false;
+    }
+    onDeactivated(() => {
+      mode.value = null; sessionSettings.value = null; resumeRequested.value = false;
+      viewedAttempt.value = null; historyOpen.value = false;
+    });
     function chooseMode(next: CheckModeId) {
       if (mode.value !== next && !requestLeave()) return;
       mode.value = next;
+      viewedAttempt.value = null; historyOpen.value = false;
       const snapshotSettings = props.statisticsEnabled && next !== 'test'
         ? pausedSessionSettings(props.item.id, next) : null;
       resumeRequested.value = Boolean(snapshotSettings);
@@ -55,6 +76,19 @@ export const KnowledgeSet = defineComponent({
       } catch (error) { message.value = error instanceof Error ? error.message : String(error); }
     }
     function renderWorkspaceView() {
+      if (viewedAttempt.value) {
+        const attempt = viewedAttempt.value;
+        return h(KnowledgeSession, {
+          key: 'review-attempt-' + attempt.id, item: props.item,
+          mode: attempt.mode, settings: attempt.settings, historyAttempt: attempt, statisticsEnabled: false,
+          onBack: () => { viewedAttempt.value = null; historyOpen.value = true; },
+        });
+      }
+      if (historyOpen.value) return h(ReviewAttemptHistory, {
+        key: 'attempt-history', setName: props.item.name, attempts: props.item.history ?? [],
+        onBack: () => { historyOpen.value = false; },
+        onOpen: (attempt: ReviewAttempt) => { viewedAttempt.value = attempt; },
+      });
       if (building.value) return h(CheckBuilder, {
         key: `builder-${revision.value}`, item: props.item, onSave: save,
         onCancel: () => { building.value = false; message.value = ''; },
@@ -63,6 +97,9 @@ export const KnowledgeSet = defineComponent({
         key: 'mode-picker', setName: props.item.name, statisticsId: props.item.id,
         pausedStudy: props.statisticsEnabled && Boolean(pausedSessionSettings(props.item.id, 'study')),
         pausedQuiz: props.statisticsEnabled && Boolean(pausedSessionSettings(props.item.id, 'quiz')),
+        historyCount: props.item.history?.length ?? 0,
+        hasLastQuiz: Boolean(lastQuiz()),
+        onHistory: openHistory, onReviewLast: reviewLastQuiz,
         onChoose: chooseMode, onBuild: openBuilder,
       });
       if (!sessionSettings.value) return h(SessionSetup, {
@@ -80,6 +117,8 @@ export const KnowledgeSet = defineComponent({
         key: `session-${revision.value}-${mode.value}`, item: props.item, mode: mode.value, settings: sessionSettings.value,
         statisticsEnabled: props.statisticsEnabled,
         autoResume: resumeRequested.value,
+        lastQuizAvailable: Boolean(lastQuiz()),
+        onReviewLast: reviewLastQuiz,
         onPaused: () => {
           mode.value = null;
           sessionSettings.value = null;
@@ -102,6 +141,8 @@ export const KnowledgeSet = defineComponent({
             if (event.target instanceof HTMLSelectElement) event.target.value = mode.value ?? ''; },
         }, [h('option', { value: '', disabled: true }, 'Choose a mode'), ...CHECK_MODES.map((entry) => h('option', { value: entry.id }, entry.label))])]),
         h('span', { class: 'knowledge-muted' }, `${props.item.questions.length} ${props.item.questions.length === 1 ? 'question' : 'questions'}`),
+        h('button', { type: 'button', class: 'quiet-button', disabled: building.value,
+          onClick: openHistory }, 'History'),
         h('button', { type: 'button', class: 'quiet-button', disabled: building.value,
           onClick: openBuilder }, 'Build questions'),
       ]),

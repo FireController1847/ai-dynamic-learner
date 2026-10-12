@@ -517,3 +517,24 @@
   .knowledge-session-setup-actions > button { flex: 1 1 120px; min-width: 0; }
   .knowledge-scroll-footer > button { width: 100%; }
 }
+
+/* Per-knowledge-set assessment history. */
+.knowledge-history-actions { justify-content: flex-end; gap: 8px; }
+.knowledge-attempt-history { gap: 16px; }
+.knowledge-attempt-history-toolbar {
+  display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+}
+.knowledge-attempt-history-toolbar p { margin: 0; }
+.knowledge-attempt-history-list { display: grid; gap: 12px; list-style: none; margin: 0; padding: 0; }
+.knowledge-attempt-history-item {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;
+  min-width: 0; padding: 16px; border: 1px solid var(--border-color);
+  border-radius: var(--radius-dialog); background: var(--page-background);
+}
+.knowledge-attempt-history-details { display: grid; gap: 4px; flex: 1 1 200px; min-width: 0; }
+.knowledge-attempt-history-details time { color: var(--text-secondary); font-size: 12px; }
+.knowledge-attempt-history-score { font-variant-numeric: tabular-nums; font-weight: 650; }
+@media (max-width: 560px) {
+  .knowledge-attempt-history-item > button { flex: 1 1 100%; }
+  .knowledge-history-actions > button { flex: 1 1 auto; }
+}

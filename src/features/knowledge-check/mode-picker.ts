@@ -10,8 +10,13 @@ export const ModePicker = defineComponent({
     statisticsId: { type: String, required: true },
     pausedStudy: Boolean,
     pausedQuiz: Boolean,
+    historyCount: { type: Number, default: 0 },
+    hasLastQuiz: Boolean,
   },
-  emits: { choose: (_mode: CheckModeId) => true, build: () => true },
+  emits: {
+    choose: (_mode: CheckModeId) => true, build: () => true,
+    history: () => true, 'review-last': () => true,
+  },
   setup(props, { emit }) {
     return () => h('section', { class: 'knowledge-check-builder', 'aria-label': 'Choose how to use this knowledge set' }, [
       h('header', { class: 'knowledge-check-builder-intro' }, [h('p', { class: 'knowledge-check-builder-eyebrow' }, 'One knowledge set'),
@@ -27,8 +32,14 @@ export const ModePicker = defineComponent({
           app: 'knowledge-check', id: props.statisticsId,
           metric: mode.id === 'study' ? 'studyPasses' : mode.id === 'quiz' ? 'quizzes' : 'tests',
         })])]))),
-      h('div', { class: 'knowledge-check-builder-actions' }, [h('button', { type: 'button', class: 'quiet-button',
-        onClick: () => emit('build') }, 'Build questions')]),
+      h('div', { class: 'knowledge-check-builder-actions knowledge-history-actions' }, [
+        h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('history') },
+          'History (' + props.historyCount + ')'),
+        props.hasLastQuiz ? h('button', { type: 'button', class: 'quiet-button',
+          onClick: () => emit('review-last') }, 'Review last quiz') : null,
+        h('button', { type: 'button', class: 'quiet-button',
+          onClick: () => emit('build') }, 'Build questions'),
+      ]),
     ]);
   },
 });
