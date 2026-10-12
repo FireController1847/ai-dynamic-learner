@@ -396,3 +396,34 @@
 
 /* Keep the primary navigation action right-aligned when Previous is unavailable. */
 .knowledge-session-navigation.is-forward-only { justify-content: flex-end; }
+
+/* Quiz/Test review filters keep the score visible and hide only result rows. */
+.knowledge-results-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 22px 0 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+.knowledge-results-tab {
+  min-height: 36px;
+  padding: 7px 14px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius);
+  color: var(--text-color);
+  background: var(--page-background);
+  cursor: pointer;
+}
+.knowledge-results-tab:hover { background: var(--surface-hover); }
+.knowledge-results-tab.is-selected {
+  border-color: var(--brand);
+  background: var(--brand-tint);
+  color: var(--brand-text);
+  font-weight: 600;
+}
+.knowledge-results-tab:focus-visible, .knowledge-results-list:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+.knowledge-results-empty { padding: 18px 0; color: var(--text-secondary); }

@@ -12,7 +12,7 @@ import { answerStrictnessForQuestion } from './session-settings.ts';
 import { useKnowledgeSession } from './session-state.ts';
 import { dropdownCorrectness } from './dropdown-model.ts';
 import { enterReviewPanel, leaveReviewPanel, restoreReviewPanel } from './review-motion.ts';
-import { computed, defineComponent, h, onMounted, ref, Transition, type PropType } from 'vue';
+import { computed, defineComponent, h, onMounted, ref, Transition, watch, type PropType } from 'vue';
 
 export const KnowledgeSession = defineComponent({
   name: 'KnowledgeSession',
@@ -33,7 +33,37 @@ export const KnowledgeSession = defineComponent({
     const fillBlankPrimaryButton = ref<HTMLButtonElement | null>(null);
     const backward = ref(false);
     const scrollSession = ref<HTMLElement | null>(null);
+    type ResultFilter = 'all' | 'correct' | 'incorrect';
+    const resultFilter = ref<ResultFilter>('all');
+    watch(submitted, (isSubmitted) => {
+      if (!isSubmitted) resultFilter.value = 'all';
+    });
     onMounted(() => { if (props.autoResume) void state.resume(); });
+
+    function onSessionViewEntered(element: Element) {
+      enterReviewPanel(element);
+      if (!(element instanceof HTMLElement) || !element.classList.contains('knowledge-session-results')) return;
+      // The session lives in the Review detail's own scroll region, not the window.
+      const scroller = element.closest<HTMLElement>('.knowledge-check-detail');
+      scroller?.scrollTo({
+        top: 0,
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+      });
+    }
+
+    function changeResultsTab(event: KeyboardEvent) {
+      const tabs: ResultFilter[] = ['all', 'correct', 'incorrect'];
+      const current = tabs.indexOf(resultFilter.value);
+      const next = event.key === 'ArrowRight' ? (current + 1) % tabs.length
+        : event.key === 'ArrowLeft' ? (current + tabs.length - 1) % tabs.length
+          : event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : -1;
+      if (next < 0) return;
+      event.preventDefault();
+      resultFilter.value = tabs[next]!;
+      (event.currentTarget as HTMLButtonElement).parentElement
+        ?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next]?.focus();
+    }
+
 
     function pauseSession() {
       if (state.pause()) emit('paused');
@@ -476,6 +506,22 @@ export const KnowledgeSession = defineComponent({
       const question = questions.value[position.value];
       if (submitted.value) {
         const showAnswers = props.mode !== 'test' || options.value.showTestAnswers;
+        const allResults = questions.value.map((entry, index) => ({
+          entry, index, correct: questionScored(entry) && answerCorrect(
+            entry, responses.value[entry.id] ?? (entry.type === 'fill-in-the-blanks' ? [] : ''),
+            answerStrictnessForQuestion(options.value, entry.type),
+          ),
+        }));
+        const correctCount = allResults.filter(result => result.correct).length;
+        const incorrectCount = allResults.filter(result => questionScored(result.entry) && !result.correct).length;
+        const visibleResults = allResults.filter(result =>
+          resultFilter.value === 'all' || (questionScored(result.entry) &&
+            (resultFilter.value === 'correct' ? result.correct : !result.correct)));
+        const tabs: { id: ResultFilter; label: string; count: number }[] = [
+          { id: 'all', label: 'All', count: allResults.length },
+          { id: 'correct', label: 'Correct', count: correctCount },
+          { id: 'incorrect', label: 'Incorrect', count: incorrectCount },
+        ];
         return h('section', { key: 'results', class: 'knowledge-session knowledge-session-results', 'aria-label': 'Results' }, [
           h('header', { class: 'knowledge-results-heading' }, [h('h3', props.mode === 'test' ? 'Test complete' : 'Quiz complete'),
             scoredCount.value
@@ -483,13 +529,36 @@ export const KnowledgeSession = defineComponent({
               : h('p', { class: 'knowledge-score' }, 'No scored questions'),
             scoredCount.value ? h('p', `${Math.round(score.value / scoredCount.value * 100)}% correct`) : null,
             expired.value ? h('p', { role: 'status' }, 'Time ran out. Your entered answers were submitted automatically.') : null]),
-          showAnswers ? questions.value.map((entry, index) => h('article', { class: 'knowledge-result', key: entry.id,
-            style: { '--review-delay': `${Math.min(index, 8) * 42 + 100}ms` } }, [
-            h('h4', `${index + 1}. ${entry.type === 'fill-in-the-blanks' ? maskFillBlankAnswers(entry.prompt) : entry.prompt}`),
-            entry.context?.trim() ? h(MarkdownContent, { text: entry.context, class: 'knowledge-question-context' }) : null,
-            questionScored(entry) ? [responseSummary(entry), feedback(entry)] :
-              h('p', { class: 'knowledge-muted' }, 'Statement · Not scored'),
-          ])) : h('p', 'This set is configured to show the score only.'),
+          showAnswers ? [
+            h('div', { class: 'knowledge-results-tabs', role: 'tablist', 'aria-label': 'Filter reviewed responses' },
+              tabs.map(tab => h('button', {
+                key: tab.id,
+                id: `knowledge-results-tab-${tab.id}`,
+                type: 'button',
+                role: 'tab',
+                class: ['knowledge-results-tab', { 'is-selected': resultFilter.value === tab.id }],
+                'aria-selected': resultFilter.value === tab.id,
+                'aria-controls': 'knowledge-results-list',
+                tabindex: resultFilter.value === tab.id ? 0 : -1,
+                onClick: () => { resultFilter.value = tab.id; },
+                onKeydown: changeResultsTab,
+              }, `${tab.label} (${tab.count})`))),
+            h('div', {
+              id: 'knowledge-results-list', role: 'tabpanel', class: 'knowledge-results-list',
+              'aria-labelledby': `knowledge-results-tab-${resultFilter.value}`,
+              tabindex: 0,
+            }, visibleResults.length
+              ? visibleResults.map(({ entry, index }) => h('article', { class: 'knowledge-result', key: entry.id,
+                style: { '--review-delay': `${Math.min(index, 8) * 42 + 100}ms` } }, [
+                h('h4', `${index + 1}. ${entry.type === 'fill-in-the-blanks' ? maskFillBlankAnswers(entry.prompt) : entry.prompt}`),
+                entry.context?.trim() ? h(MarkdownContent, { text: entry.context, class: 'knowledge-question-context' }) : null,
+                questionScored(entry) ? [responseSummary(entry), feedback(entry)] :
+                  h('p', { class: 'knowledge-muted' }, 'Statement · Not scored'),
+              ]))
+              : h('p', { class: 'knowledge-results-empty' },
+                resultFilter.value === 'correct' ? 'No correct responses to show.' :
+                resultFilter.value === 'incorrect' ? 'No incorrect responses to show.' : 'No responses to show.')),
+          ] : h('p', 'This set is configured to show the score only.'),
           h('button', { type: 'button', class: 'card-primary-button', onClick: () => { started.value = false; } }, 'Back to overview'),
         ]);
       }
@@ -587,6 +656,6 @@ export const KnowledgeSession = defineComponent({
       ]);
     }
     return () => h(Transition, { name: 'knowledge-view', mode: 'out-in', onBeforeLeave: leaveReviewPanel,
-      onLeaveCancelled: restoreReviewPanel, onAfterEnter: enterReviewPanel }, { default: renderSession });
+      onLeaveCancelled: restoreReviewPanel, onAfterEnter: onSessionViewEntered }, { default: renderSession });
   },
 });
