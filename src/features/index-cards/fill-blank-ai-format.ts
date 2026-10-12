@@ -1,5 +1,6 @@
 import { parseFillBlankTemplate } from '../../core/fill-blank.ts';
 import { isRecord } from '../../core/validation.ts';
+import { AI_PLAIN_TEXT_ONLY_GUIDANCE } from '../../core/ai-formatting-guidance.ts';
 import { AI_COVERAGE_INSTRUCTIONS, parseAiImportJson, type AiCardCoverage } from './ai-import-format.ts';
 import { MAX_CARDS, MAX_CARD_TEXT_LENGTH } from './card-model.ts';
 import { MAX_NAME_LENGTH } from './tree-model.ts';
@@ -30,6 +31,8 @@ Make each card a useful recall challenge:
 - Preserve distinctions between genuinely different concepts. Change singular/plural or grammatical form only when the sentence requires it; consistency must not introduce factual or grammatical errors.
 - Do not invent facts, add citations, URLs, source markers, explanations, headings, IDs, or app settings.
 - Do not use nested braces, empty blanks, newlines inside a blank, or any brace characters outside {{answer}} markers.
+
+${AI_PLAIN_TEXT_ONLY_GUIDANCE}
 
 Coverage: ${AI_COVERAGE_INSTRUCTIONS[coverage]}
 Create at most ${limit} cards. Use fewer if the source does not support that many useful recall targets; never pad with filler.

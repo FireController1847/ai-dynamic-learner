@@ -2,6 +2,7 @@ import { computed, defineComponent, h, ref, type PropType } from 'vue';
 import { AiPromptExchange } from '../../components/ai-prompt-exchange.ts';
 import { inputValue } from '../../core/dom.ts';
 import { isRecord } from '../../core/validation.ts';
+import { AI_PLAIN_TEXT_ONLY_GUIDANCE } from '../../core/ai-formatting-guidance.ts';
 import {
   MAP_GRID, MAP_MAX_X, MAP_MAX_Y, MAP_TOPIC_HEIGHT, MAP_TOPIC_WIDTH,
   MAX_BULLETS, MAX_NAME_LENGTH, MAX_SECTIONS, MAX_TEXT_LENGTH, MAX_TOPICS, type GuideMode,
@@ -93,6 +94,8 @@ Selected preferences:
 - Bullet style: ${BULLET_STYLE_INSTRUCTIONS[options.bulletStyle]}
 
 Condense freely when several facts can be represented by one useful note. Prefer losing low-value detail over making the guide long.
+
+${AI_PLAIN_TEXT_ONLY_GUIDANCE}
 
 Do NOT include citations, references, footnotes, source annotations, source lists, or citation/source URLs anywhere in the response. Do not emit ChatGPT citation markers or content-reference tokens such as :chatgpt-content-reference{...}, :contentReference[...]{...}, or cite.... Omit citations even if the source material contains them. The JSON must contain study content only.`;
 }

@@ -1,6 +1,7 @@
 import { parseAiImportJson } from '../../core/ai-json.ts';
 export { parseAiImportJson, MAX_AI_IMPORT_LENGTH } from '../../core/ai-json.ts';
 import { isRecord } from '../../core/validation.ts';
+import { AI_PLAIN_TEXT_ONLY_GUIDANCE } from '../../core/ai-formatting-guidance.ts';
 import { MAX_CARDS, MAX_CARD_TEXT_LENGTH } from './card-model.ts';
 import { MAX_NAME_LENGTH } from './tree-model.ts';
 
@@ -32,6 +33,8 @@ Answer brevity is the highest writing priority:
 - Keep questions brief and self-contained; do not rely on another card or on "the passage above".
 - Preserve exact terminology and accuracy. Never shorten an answer so far that it becomes misleading.
 - Use only supported source information. Do not invent facts or add citations, references, URLs, or source markers.
+
+${AI_PLAIN_TEXT_ONLY_GUIDANCE}
 
 Coverage: ${AI_COVERAGE_INSTRUCTIONS[coverage]}
 Create at most ${limit} useful cards. Fewer is better if the source does not support that many; do not invent filler.

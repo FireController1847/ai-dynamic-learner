@@ -1,5 +1,6 @@
 import { isRecord } from './validation.ts';
 import { parseAiImportJson } from './ai-json.ts';
+import { AI_PLAIN_TEXT_ONLY_GUIDANCE } from './ai-formatting-guidance.ts';
 const MAX_NAME_LENGTH = 120;
 
 const FORMAT = 'dynamic-learner-index-card-categories';
@@ -18,6 +19,8 @@ This step ONLY proposes categories. Do not generate cards, questions, answers, o
 - Give each category a VERY short description: one compact phrase of 3–8 words, at most 80 characters. Name the contents; do not explain, write a full sentence, or repeat the category title.
 - Minimize overlap, preserve source terminology, and order categories in a useful learning sequence.
 - Base all categories on the supplied source. Do not add unsupported topics, citations, URLs, source markers, IDs, or application settings.
+
+${AI_PLAIN_TEXT_ONLY_GUIDANCE}
 
 Return ONLY one JSON code block with this exact structure:
 \`\`\`json

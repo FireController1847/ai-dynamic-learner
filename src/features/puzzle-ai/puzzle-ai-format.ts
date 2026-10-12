@@ -1,6 +1,7 @@
 import { parseAiImportJson } from '../../core/ai-json.ts';
 import { categoryScopedPrompt, type AiCardScope } from '../../core/ai-study-categories.ts';
 import { isRecord } from '../../core/validation.ts';
+import { AI_PLAIN_TEXT_ONLY_GUIDANCE } from '../../core/ai-formatting-guidance.ts';
 import {
   MAX_HINT_LENGTH, MAX_WORD_LENGTH, MAX_WORDS, MIN_WORDS,
   validatePuzzle as validateWordSearch, type Difficulty, type GridSize, type Puzzle as WordSearchPuzzle, type StudyMode,
@@ -94,6 +95,9 @@ STRICT SINGLE-WORD RULES FOR EVERY ANSWER:
 - Titles, category names, hints and clues may still contain multiple words; this restriction applies to the puzzle answer values only.
 
 Use only facts and terminology supported by the original source. If there are fewer useful terms than requested, output fewer rather than inventing unrelated terms; never go below ${puzzleAiLimits[kind].min} entries.
+
+${AI_PLAIN_TEXT_ONLY_GUIDANCE}
+
 Avoid repeated answers, redundant clues, citations, URLs, attribution, markdown commentary and ChatGPT citation markers. No whole-subject puzzle: this JSON represents ONE selected category only.
 
 Return ONLY one fenced JSON code block with this exact structure:

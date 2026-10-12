@@ -3,6 +3,7 @@ import { parseAiImportJson } from '../../core/ai-json.ts';
 import { categoryScopedPrompt, type AiCardScope } from '../../core/ai-study-categories.ts';
 import { parseFillBlankTemplate } from '../../core/fill-blank.ts';
 import { isRecord } from '../../core/validation.ts';
+import { AI_MARKDOWN_CONTEXT_GUIDANCE } from '../../core/ai-formatting-guidance.ts';
 import { MAX_NAME_LENGTH } from './library-model.ts';
 import { createQuestion, MAX_TEXT, MAX_QUESTION_CONTEXT, questionReady, validateQuestions, MAX_QUESTIONS, type Question } from './question-model.ts';
 import { MAX_DROPDOWN_CHOICES, MAX_DROPDOWN_ROWS, validateDropdownMatches } from './dropdown-model.ts';
@@ -75,6 +76,8 @@ ${aiChoosesMix ? `IMPORTANT — question-type priorities for this AI-selected mi
 - Make every item self-contained, accurate, and based on the source. Avoid duplicates and unsupported facts. Do not include citations, URLs, source markers, question/library IDs, or session settings.${allowParameterized ? ' Required solver IDs and parameter-generation rules are allowed only for parameterized questions.' : ''}
 ${enabledTypes.some(type => type !== 'statement') ? '- An optional explanation may give one short clarifying sentence for a scored question.\n' : ''}- Keep "prompt" as the concise main question/title in plain text. When useful, add an optional "context" string with GitHub-flavored Markdown: passages, tables, lists, task lists, links, strikethrough, or fenced code. This is supporting material shown separately from the title, not an answer key or feedback. Omit filler context. Do not use raw HTML.
 - Keep response text as plain text.
+
+${AI_MARKDOWN_CONTEXT_GUIDANCE}
 
 Vary the presentation across the knowledge set:
 - Intentionally mix concise standalone questions with questions that use meaningful Markdown context. For medium or large sets, include several context-based questions when the material supports them; do not make every question the same simple recall format. This is a flexible writing goal, not another percentage quota.
