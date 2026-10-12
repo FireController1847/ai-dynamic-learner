@@ -504,7 +504,6 @@
 }
 @container (max-width: 660px) {
   .knowledge-set-toolbar { gap: 8px; padding: 10px 12px; }
-  .knowledge-set-toolbar > button { margin-left: 0; }
   .knowledge-builder-header { align-items: flex-start; }
   .knowledge-session-setup-actions, .knowledge-results-top-actions { justify-content: flex-start; }
   .knowledge-dropdown-row { grid-template-columns: minmax(0, 1fr); gap: 8px; }
