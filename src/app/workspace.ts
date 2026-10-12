@@ -183,7 +183,7 @@ export function useWorkspace() {
       watchRemoteChanges();
     } catch (error) {
       storageProblem.value = 'Your workspace could not be loaded safely: ' + errorMessage(error) +
-        ' The previous localStorage copy has not been erased. Do not clear this site’s data.';
+        ' Existing browser storage has not been cleared. Do not clear this site’s data.';
       ready.value = false;
     }
   }

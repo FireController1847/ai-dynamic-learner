@@ -180,7 +180,10 @@ export function answerCorrect(
   return isAnswerCorrect(question.answer, response, { strictness });
 }
 
-export function validateQuestions(value: unknown): asserts value is Question[] {
+export function validateQuestions(
+  value: unknown,
+  options: { allowGeneratedHistorySnapshots?: boolean } = {},
+): asserts value is Question[] {
   if (!Array.isArray(value) || value.length > MAX_QUESTIONS) throw new Error(`A knowledge set supports up to ${MAX_QUESTIONS} questions.`);
   const ids = new Set<string>();
   for (const question of value as unknown[]) {
@@ -206,7 +209,12 @@ export function validateQuestions(value: unknown): asserts value is Question[] {
       throw new Error('A knowledge set contains invalid question data.');
     }
     if (question.type === 'dropdown') validateDropdownMatches(question.matches, MAX_TEXT);
-    if (question.type === 'parameterized') validateParameterization(question.parameters);
+    // Completed attempts store materialized prompts/answers, not their authoring rules.
+    // Only the history validator opts into those snapshots and checks their variants separately.
+    if (question.type === 'parameterized' &&
+        !(options.allowGeneratedHistorySnapshots && !Object.hasOwn(question, 'parameters'))) {
+      validateParameterization(question.parameters);
+    }
     ids.add(question.id);
   }
 }

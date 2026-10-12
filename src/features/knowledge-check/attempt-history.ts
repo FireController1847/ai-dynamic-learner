@@ -90,7 +90,7 @@ export function validateReviewHistory(value: unknown): asserts value is ReviewAt
       throw new Error('A saved Review attempt is invalid.');
     }
     seen.add(attempt.id);
-    validateQuestions(attempt.questions);
+    validateQuestions(attempt.questions, { allowGeneratedHistorySnapshots: true });
     if (!attempt.questions.length) throw new Error('A Review attempt has no questions.');
     const ids = new Set((attempt.questions as Question[]).map(question => question.id));
     if (!isRecord(attempt.settings) || Object.keys(attempt.settings).some(key => ![
@@ -107,7 +107,10 @@ export function validateReviewHistory(value: unknown): asserts value is ReviewAt
       timeLimitMinutes: settings.timeLimitMinutes, showTestAnswers: settings.showTestAnswers,
     });
     if (!isRecord(attempt.variants) || Object.entries(attempt.variants).some(([id, variant]) => {
-      if (!ids.has(id) || (attempt.questions as Question[]).find(q => q.id === id)?.type !== 'parameterized') return true;
+      const question = (attempt.questions as Question[]).find(q => q.id === id);
+      // Materializing a parameterized template changes its public type for choice,
+      // true/false, blank, and dropdown presentations. Those are still generated.
+      if (!question || !['parameterized', 'multiple-choice', 'true-false', 'fill-in-the-blanks', 'dropdown'].includes(question.type)) return true;
       validateGeneratedVariant(variant);
       return false;
     }) || (attempt.questions as Question[]).some(q => q.type === 'parameterized' && !Object.hasOwn(attempt.variants as Record<string, unknown>, q.id))) {
