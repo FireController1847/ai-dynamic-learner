@@ -122,4 +122,4 @@ The Review knowledge-set toolbar groups **History** and **Build questions** at t
 
 ## LaTeX math in Markdown
 
-Shared Markdown content supports inline `$...$` or `\\(...\\)` and display `$$...$$` or `\\[...\\]` (display formulas work best on their own line). Render with bundled KaTeX and local fonts; equations inherit their surrounding text color, and long display equations scroll horizontally instead of widening the workspace. Notebook's Markdown cheatsheet documents examples. LaTeX is rendering-only: no changes to authored Markdown or the saved data format; backtick code remains literal.
+Shared Markdown content supports inline `$...$` or `\(...\)` and display `$$...$$` or `\[...\]` (display formulas work best on their own line). Render with bundled KaTeX and local fonts; equations inherit their surrounding text color, and long display equations scroll horizontally instead of widening the workspace. Notebook's Markdown cheatsheet documents examples. LaTeX is rendering-only: no changes to authored Markdown or the saved data format; backtick code remains literal.
