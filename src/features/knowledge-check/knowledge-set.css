@@ -478,3 +478,20 @@
   .knowledge-intro-header { align-items: flex-start; gap: 16px; }
   .knowledge-intro-art { flex-basis: 80px; height: 80px; }
 }
+
+/* Import additional Review questions without leaving the question builder. */
+.knowledge-question-import { gap: 12px; }
+.knowledge-question-import-count { max-width: 280px; margin-bottom: 4px; }
+.knowledge-question-import-count input { max-width: 160px; }
+.knowledge-question-import .ai-exchange { min-width: 0; }
+.knowledge-import-add-notice {
+  padding: 12px 14px;
+  border-left: 3px solid var(--success);
+  background: var(--surface-subtle);
+  color: var(--text-color);
+  overflow-wrap: anywhere;
+}
+@media (max-width: 560px) {
+  .knowledge-question-import .knowledge-builder-header { align-items: stretch; }
+  .knowledge-question-import .knowledge-builder-header > button { width: 100%; }
+}

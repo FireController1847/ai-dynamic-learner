@@ -6,7 +6,7 @@ import { isRecord } from '../../core/validation.ts';
 import { MAX_NAME_LENGTH } from './library-model.ts';
 import { createQuestion, MAX_TEXT, MAX_QUESTION_CONTEXT, questionReady, validateQuestions, MAX_QUESTIONS, type Question } from './question-model.ts';
 import { MAX_DROPDOWN_CHOICES, MAX_DROPDOWN_ROWS, validateDropdownMatches } from './dropdown-model.ts';
-import { AI_QUESTION_TYPES, allocateQuestions, questionCountProblem, questionTypeLabel, type QuestionWeights } from './ai-question-mix.ts';
+import { AI_QUESTION_TYPES, DEFAULT_AI_WEIGHTS, allocateQuestions, questionCountProblem, questionTypeLabel, type QuestionWeights } from './ai-question-mix.ts';
 
 export const REVIEW_AI_FORMAT = 'dynamic-learner-review';
 export interface ReviewAiImport { title: string; description: string; questions: Question[]; warnings: string[] }
@@ -173,4 +173,20 @@ export function parseReviewAiImport(text: string, preferences: ReviewAiPreferenc
     }
   }
   return { title: value.title.trim(), description: value.description.trim(), questions, warnings };
+}
+
+/** Accept a complete AI knowledge-set response OR a bare question array.
+ * The caller appends the validated questions without replacing the set metadata.
+ */
+export function parseReviewQuestionsImport(text: string, requestedCount: number): ReviewAiImport {
+  const source = parseAiImportJson(text);
+  const envelope = Array.isArray(source)
+    ? { format: REVIEW_AI_FORMAT, version: 1, title: 'Additional questions', description: '', questions: source }
+    : isRecord(source) && !Object.hasOwn(source, 'format') &&
+      Object.keys(source).every(key => key === 'questions' || key === 'solvers')
+      ? { ...source, format: REVIEW_AI_FORMAT, version: 1, title: 'Additional questions', description: '' }
+      : source;
+  return parseReviewAiImport(JSON.stringify(envelope), {
+    count: requestedCount, mixMode: 'ai', coverage: 'balanced', weights: { ...DEFAULT_AI_WEIGHTS },
+  });
 }

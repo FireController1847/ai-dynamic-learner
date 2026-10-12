@@ -1,5 +1,6 @@
 import { defaultSetOptions, validateSetOptions, type SetOptions } from './set-options.ts';
 import { SetOptionsEditor } from './set-options-editor.ts';
+import { ReviewQuestionImport } from './question-import.ts';
 import type { CheckItem } from './library-model.ts';
 import { MAX_NAME_LENGTH } from './library-model.ts';
 import { cloneQuestion, createQuestion, questionDisplayPrompt, questionHasContent, questionProblem, questionsForSave, MAX_QUESTIONS, MAX_TEXT, QUESTION_TYPES, type Question, type QuestionType } from './question-model.ts';
@@ -30,6 +31,8 @@ export const CheckBuilder = defineComponent({
     }
     const selected = ref(0);
     const tab = ref<'questions' | 'options'>('questions');
+    const importing = ref(false);
+    const importNotice = ref('');
     const options = ref<SetOptions>({ ...defaultSetOptions(), ...props.item?.options });
     const message = ref('');
     const draftProblems = ref<Record<string, string>>({});
@@ -61,6 +64,31 @@ export const CheckBuilder = defineComponent({
       questions.value.push(createQuestion());
       selected.value = questions.value.length - 1;
     }
+    function appendQuestions(incoming: Question[]) {
+      if (!incoming.length || questions.value.length + incoming.length > MAX_QUESTIONS) {
+        message.value = 'This import exceeds the maximum number of questions.';
+        return;
+      }
+      const used = new Set(questions.value.map(question => question.id));
+      const added = incoming.map(question => {
+        let id = createQuestion().id;
+        while (used.has(id)) id = createQuestion().id;
+        used.add(id);
+        const copy = cloneQuestion(question);
+        const pkg = copy.parameters?.rules.solver?.package;
+        if (pkg && !uploadedSolvers.value.some(entry => entry.id === pkg.id && entry.solverVersion === pkg.solverVersion)) {
+          uploadedSolvers.value.push(JSON.parse(JSON.stringify(pkg)) as SolverPackage);
+        }
+        return { ...copy, id };
+      });
+      const first = questions.value.length;
+      questions.value.push(...added);
+      selected.value = first;
+      tab.value = 'questions';
+      importing.value = false;
+      message.value = '';
+      importNotice.value = `${added.length} ${added.length === 1 ? 'question was' : 'questions were'} added to the builder. Save questions to keep the changes.`;
+    }
     function removeQuestion(question: Question) {
       questions.value = questions.value.filter((entry) => entry.id !== question.id);
       selected.value = Math.min(selected.value, Math.max(0, questions.value.length - 1));
@@ -90,6 +118,11 @@ export const CheckBuilder = defineComponent({
       })]);
     }
     return () => {
+      if (importing.value) return h(ReviewQuestionImport, {
+        setName: name.value, existing: questions.value,
+        onBack: () => { importing.value = false; },
+        onAppend: appendQuestions,
+      });
       const question = questions.value[selected.value];
       return h('section', { class: 'knowledge-set-builder', 'aria-label': 'Knowledge set builder' }, [
         h('header', { class: 'knowledge-builder-header' }, [
@@ -97,6 +130,10 @@ export const CheckBuilder = defineComponent({
             h('p', 'Add questions, then use them to study or test yourself.')]),
           h('div', { class: 'knowledge-actions' }, [
             h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel') }, 'Cancel'),
+            h('button', { type: 'button', class: 'quiet-button',
+              disabled: questions.value.length >= MAX_QUESTIONS,
+              onClick: () => { importNotice.value = ''; importing.value = true; },
+            }, 'Import questions'),
             h('button', { type: 'button', class: 'card-primary-button', disabled: !name.value.trim() || invalid.value >= 0 || Boolean(optionsProblem.value) || Object.values(draftProblems.value).some(Boolean),
               onClick: save },
             props.item ? 'Save questions' : 'Create knowledge set'),
@@ -112,6 +149,7 @@ export const CheckBuilder = defineComponent({
         }, page === 'questions' ? 'Questions' : 'Set options'))),
         invalid.value >= 0 ? h('p', { class: 'knowledge-message', role: 'status' }, `Question ${invalid.value + 1}: ${questionProblem(questions.value[invalid.value]!)}`) : null,
         message.value ? h('p', { class: 'knowledge-message', role: 'alert' }, message.value) : null,
+        importNotice.value ? h('p', { class: 'knowledge-import-add-notice', role: 'status' }, importNotice.value) : null,
         optionsProblem.value ? h('p', { class: 'knowledge-message', role: 'alert' }, optionsProblem.value) : null,
         tab.value === 'options' ? h(SetOptionsEditor, { options: options.value, questionCount: questions.value.length }) : h('div', { class: 'knowledge-builder-layout' }, [
           h('aside', { class: 'knowledge-question-list', 'aria-label': 'Questions' }, [
