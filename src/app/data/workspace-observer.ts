@@ -266,10 +266,11 @@ export async function observeWorkspace(
             true, seen);
         } else if (app === 'knowledge-check') {
           attach('reviewSets', [workspaceId, id], item,
-            () => [item.mode, item.options],
+            () => [item.mode, item.options, item.history],
             () => put('reviewSets', [workspaceId, id], {
               id, ...(Object.hasOwn(item, 'mode') ? { mode: item.mode } : {}),
               ...(Object.hasOwn(item, 'options') ? { options: item.options } : {}),
+              ...(Object.hasOwn(item, 'history') ? { history: item.history } : {}),
             }), true, seen);
           const questions = item.questions as Plain[];
           signature.push('knowledge-check:' + id + ':' + questions.map(q => q.id).join(','));

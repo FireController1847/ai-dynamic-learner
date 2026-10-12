@@ -1,4 +1,5 @@
 import { computed, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue';
+import { completedReviewAttempt, reviewedQuestions, type ReviewAttempt } from './attempt-history.ts';
 import { useStatistics } from '../../components/statistics-context.ts';
 import { registerLeaveGuard } from '../../core/leave-guards.ts';
 import { answerCorrect, cloneQuestion, questionReady, questionResponseAnswered, questionScored, type Question, type QuestionResponse } from './question-model.ts';
@@ -181,8 +182,27 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
         statistics?.record('knowledge-check', item.id, 'assessmentQuestions', scoredCount.value);
         statistics?.record('knowledge-check', item.id, 'assessmentCorrect', score.value);
       }
-      expired.value = timedOut; submitted.value = true; deadline.value = null; clearCelebration(); persist();
+      expired.value = timedOut; submitted.value = true; deadline.value = null; clearCelebration();
+      if (statisticsEnabled && mode !== 'study') {
+        const entry = completedReviewAttempt(mode, options.value, questions.value, responses.value,
+          feedbackResponses.value, attempts.value, timedOut);
+        item.history = [...(item.history ?? []), entry];
+      }
+      persist();
     } finally { if (currentEpoch === epoch) submitting.value = false; }
+  }
+  function showHistory(attempt: ReviewAttempt) {
+    resetGeneration();
+    runtimeSettings.value = { ...attempt.settings };
+    questions.value = reviewedQuestions(attempt);
+    position.value = 0;
+    responses.value = { ...attempt.responses };
+    feedbackResponses.value = { ...attempt.feedbackResponses };
+    attempts.value = { ...attempt.attempts };
+    checked.value = new Set(questions.value.map(question => question.id));
+    revealed.value = new Set(); hints.value = new Set(); flagged.value = new Set();
+    expired.value = attempt.expired; deadline.value = null;
+    started.value = true; submitted.value = true; ended.value = false;
   }
   function resetStudyPass() {
     studyVisited = new Set(questions.value[position.value] ? [questions.value[position.value]!.id] : []);
@@ -355,5 +375,5 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
     active, answered, resolved, score, scoredCount, remaining, celebrating, attempts, flagged, toggleFlag,
     studyChecks, studyCorrectChecks,
     generationError, generating, submitting, storageMessage, resumable, resume,
-    start, pause, end, check, submit, leave, tick, finishStudyPass, completeStudyScrollPass, resetStudyPass };
+    start, pause, end, check, submit, leave, tick, showHistory, finishStudyPass, completeStudyScrollPass, resetStudyPass };
 }

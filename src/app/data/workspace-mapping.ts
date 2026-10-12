@@ -83,6 +83,7 @@ export function workspaceRows(workspaceId: string, workspace: Workspace): DataRo
         scoped('reviewSets', [workspaceId, id], {
           id, ...(Object.hasOwn(item, 'mode') ? { mode: item.mode } : {}),
           ...(Object.hasOwn(item, 'options') ? { options: copy(item.options) } : {}),
+          ...(Object.hasOwn(item, 'history') ? { history: copy(item.history) } : {}),
         });
         scoped('collections', [workspaceId, 'knowledge-check:questions', id], {
           app: 'knowledge-check:questions', parentId: id,
@@ -231,6 +232,7 @@ export async function hydrateWorkspace(store: Pick<IndexedDataStore, 'all'> & Pa
         if (!set) throw new Error('A Review set is missing.');
         item = { ...item, ...(own(set, 'mode') ? { mode: set.mode } : {}),
           ...(own(set, 'options') ? { options: set.options } : {}),
+          ...(own(set, 'history') ? { history: set.history } : {}),
           questions: getRows('reviewQuestions').filter(question => question.setId === id).sort(ordering)
             .map(question => unwrap(question, ['setId', 'position'])) };
       }
