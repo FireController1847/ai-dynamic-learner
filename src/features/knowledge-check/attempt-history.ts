@@ -110,7 +110,7 @@ export function validateReviewHistory(value: unknown): asserts value is ReviewAt
       if (!ids.has(id) || (attempt.questions as Question[]).find(q => q.id === id)?.type !== 'parameterized') return true;
       validateGeneratedVariant(variant);
       return false;
-    }) || (attempt.questions as Question[]).some(q => q.type === 'parameterized' && !Object.hasOwn(attempt.variants, q.id))) {
+    }) || (attempt.questions as Question[]).some(q => q.type === 'parameterized' && !Object.hasOwn(attempt.variants as Record<string, unknown>, q.id))) {
       throw new Error('A Review attempt contains invalid generated questions.');
     }
     if (!validResponses(attempt.responses, ids) || !validResponses(attempt.feedbackResponses, ids) ||
