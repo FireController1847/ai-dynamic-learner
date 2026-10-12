@@ -69,6 +69,13 @@ export const KnowledgeSession = defineComponent({
       if (state.pause()) emit('paused');
     }
 
+    function doneReviewingButton() {
+      return h('button', {
+        type: 'button', class: 'card-primary-button',
+        onClick: () => { started.value = false; },
+      }, 'Done reviewing');
+    }
+
     const canPause = computed(() => props.statisticsEnabled && (props.mode === 'study' ||
       (props.mode === 'quiz' && options.value.timeLimitMinutes === null)));
     function sessionEndControls() {
@@ -494,7 +501,7 @@ export const KnowledgeSession = defineComponent({
       if (state.generationError.value) return h('section', { key: 'generation-error', class: 'knowledge-session' }, [
         h('h3', 'This question could not be generated'), h('p', { role: 'alert' }, state.generationError.value),
         h('p', 'Check its ranges, constraints, computed choices, or registered solver in the builder.'),
-        h('button', { type: 'button', class: 'quiet-button', onClick: end }, 'Back to overview'),
+        h('button', { type: 'button', class: 'quiet-button', onClick: end }, 'Return to overview'),
       ]);
       if (!questionCount.value && !state.resumable.value) return h('section', { key: 'empty', class: 'knowledge-session knowledge-builder-empty' }, [
         h('h3', 'Add questions to get started'), h('p', 'Complete a question and its correct answer in the builder.'),
@@ -529,6 +536,7 @@ export const KnowledgeSession = defineComponent({
               : h('p', { class: 'knowledge-score' }, 'No scored questions'),
             scoredCount.value ? h('p', `${Math.round(score.value / scoredCount.value * 100)}% correct`) : null,
             expired.value ? h('p', { role: 'status' }, 'Time ran out. Your entered answers were submitted automatically.') : null]),
+          h('div', { class: 'knowledge-results-top-actions' }, [doneReviewingButton()]),
           showAnswers ? [
             h('div', { class: 'knowledge-results-tabs', role: 'tablist', 'aria-label': 'Filter reviewed responses' },
               tabs.map(tab => h('button', {
@@ -559,7 +567,7 @@ export const KnowledgeSession = defineComponent({
                 resultFilter.value === 'correct' ? 'No correct responses to show.' :
                 resultFilter.value === 'incorrect' ? 'No incorrect responses to show.' : 'No responses to show.')),
           ] : h('p', 'This set is configured to show the score only.'),
-          h('button', { type: 'button', class: 'card-primary-button', onClick: () => { started.value = false; } }, 'Back to overview'),
+          doneReviewingButton(),
         ]);
       }
       if (!question) return null;

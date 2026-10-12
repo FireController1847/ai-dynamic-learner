@@ -302,32 +302,31 @@
 }
 .knowledge-flag-toggle.is-flagged .ui-icon { fill: color-mix(in srgb, var(--brand) 20%, transparent); }
 
-/* Reserve the right-hand bookmark lane throughout the session.
-   Never resize/recenter a question when the first bookmark is added. */
+/* The bookmark rail shares the content's grid area. It floats outside the
+   question column instead of occupying a second track and squeezing cards. */
 .knowledge-session-with-rail {
-  width: min(1180px, 100%);
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 44px;
-  gap: clamp(20px, 5vw, 68px);
+  grid-template-columns: minmax(0, 1fr);
   align-items: start;
+  gap: 0;
 }
-/* The original 940px / 820px session caps include the session's own
-   horizontal padding (40px per side at desktop widths). The body lives
-   inside that padding now, so subtract it rather than widening cards. */
 .knowledge-session-with-rail .knowledge-session-body {
+  grid-column: 1;
+  grid-row: 1;
   min-width: 0;
   width: 100%;
-  max-width: calc(940px - clamp(20px, 4vw, 40px) - clamp(20px, 4vw, 40px));
-  margin-inline: auto;
-}
-.knowledge-session-with-rail:not(.knowledge-scroll-session) .knowledge-session-body {
-  max-width: calc(820px - clamp(20px, 4vw, 40px) - clamp(20px, 4vw, 40px));
 }
 .knowledge-flag-rail {
+  grid-column: 1;
+  grid-row: 1;
   position: sticky;
   top: 72px;
-  min-width: 0;
+  justify-self: end;
   align-self: start;
+  width: 44px;
+  min-width: 0;
+  transform: translateX(calc(100% + 16px));
+  z-index: 1;
 }
 .knowledge-flag-rail-items {
   display: grid;
@@ -378,11 +377,13 @@
   outline: 2px solid var(--brand);
   outline-offset: 2px;
 }
+/* On compact panes, dock over the trailing padding rather than clipping the
+   bookmarks outside the scrollable Review detail. Content width stays fixed. */
+@media (max-width: 1350px) {
+  .knowledge-session-with-rail .knowledge-flag-rail { transform: none; }
+}
 @media (max-width: 560px) {
-  .knowledge-session-with-rail {
-    grid-template-columns: minmax(0, 1fr) 36px;
-    gap: 4px;
-  }
+  .knowledge-flag-rail { width: 36px; }
   .knowledge-flag-jump { width: 34px; }
   .knowledge-flag-jump .ui-icon { width: 32px; height: 32px; }
   .knowledge-flag-rail { top: 56px; }
@@ -427,3 +428,13 @@
   outline-offset: 2px;
 }
 .knowledge-results-empty { padding: 18px 0; color: var(--text-secondary); }
+
+/* Results can be dozens of questions long; offer the exit at both ends. */
+.knowledge-results-top-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin: 12px 0 18px;
+}
+@media (max-width: 560px) {
+  .knowledge-results-top-actions > button { width: 100%; }
+}
