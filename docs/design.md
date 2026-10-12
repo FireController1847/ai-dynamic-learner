@@ -117,3 +117,5 @@ The Review question builder has an **Import questions** action. It opens a separ
 ## Review attempt history
 
 Each knowledge set offers History from the mode picker and toolbar, listing every completed Quiz and Test in completion order with the original date, score, question count, and timeout status. Selecting Review opens the existing score/results presentation (including All/Correct/Incorrect tabs) in read-only mode, without creating a new attempt, changing the statistics, or altering current question data. The latest completed Quiz can be opened quickly with **Review last quiz** on the picker or Quiz intro; **Resume saved session** stays reserved for unfinished paused work. Results display the recorded grading and exact original questions. Score-only Test settings remain enforced for historical viewing. History layout stacks gracefully in narrower Review panes.
+
+The Review knowledge-set toolbar groups **History** and **Build questions** at the right as one action cluster, never spacing the two controls independently across the header. At narrower workspace widths the action cluster wraps together beneath the mode/question count and remains usable.

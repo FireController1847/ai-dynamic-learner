@@ -141,10 +141,12 @@ export const KnowledgeSet = defineComponent({
             if (event.target instanceof HTMLSelectElement) event.target.value = mode.value ?? ''; },
         }, [h('option', { value: '', disabled: true }, 'Choose a mode'), ...CHECK_MODES.map((entry) => h('option', { value: entry.id }, entry.label))])]),
         h('span', { class: 'knowledge-muted' }, `${props.item.questions.length} ${props.item.questions.length === 1 ? 'question' : 'questions'}`),
-        h('button', { type: 'button', class: 'quiet-button', disabled: building.value,
-          onClick: openHistory }, 'History'),
-        h('button', { type: 'button', class: 'quiet-button', disabled: building.value,
-          onClick: openBuilder }, 'Build questions'),
+        h('div', { class: 'knowledge-set-toolbar-actions' }, [
+          h('button', { type: 'button', class: 'quiet-button', disabled: building.value,
+            onClick: openHistory }, 'History'),
+          h('button', { type: 'button', class: 'quiet-button', disabled: building.value,
+            onClick: openBuilder }, 'Build questions'),
+        ]),
       ]),
       h(Transition, {
         name: 'knowledge-workspace-view',
