@@ -1,5 +1,5 @@
 .knowledge-check-detail.is-check { display: flex; flex-direction: column; }
-.knowledge-set-workspace { flex: 1; min-width: 0; }
+.knowledge-set-workspace { flex: 1; min-width: 0; container-type: inline-size; }
 .knowledge-set-toolbar {
   display: flex; align-items: center; flex-wrap: wrap; gap: 12px;
   padding: 12px 20px; border-bottom: 1px solid var(--border-color); background: var(--page-background);
@@ -464,4 +464,17 @@
 }
 @media (max-width: 560px) {
   .knowledge-results-top-actions > button { width: 100%; }
+}
+
+/* The library can narrow the Review workspace without narrowing the viewport.
+   Stack controls based on their actual available space. */
+@container (max-width: 760px) {
+  .knowledge-session-progress { grid-template-columns: minmax(0, 1fr); }
+  .knowledge-session-end-actions { justify-content: flex-start; }
+}
+@container (max-width: 480px) {
+  .knowledge-session-end-actions > button { flex: 1 1 120px; min-width: 0; }
+  .knowledge-intro-actions > button { width: 100%; }
+  .knowledge-intro-header { align-items: flex-start; gap: 16px; }
+  .knowledge-intro-art { flex-basis: 80px; height: 80px; }
 }
