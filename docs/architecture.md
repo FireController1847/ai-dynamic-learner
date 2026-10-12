@@ -8,7 +8,7 @@ Dynamic Learner is a browser-only Vue 3 application built with webpack and stric
 
 Node.js 24+ runs build tooling. `npm start` launches webpack-dev-server, `npm run typecheck` checks browser and Node configurations, and `npm run build` emits production output to ignored `dist/`.
 
-Markdown preview uses Marked plus DOMPurify. Sanitization stays explicit; generated preview HTML must not become an unchecked route to Vue props, handlers, styles, or arbitrary DOM behavior.
+Markdown preview uses Marked plus DOMPurify, with the shared KaTeX LaTeX module for inline and display math. Sanitization stays explicit: user HTML is sanitized before DOM-to-Vue conversion; the Markdown lexer emits encoded math placeholders and only those sanitized placeholders are replaced with KaTeX-generated HTML using `trust: false` and bounded expansion. Ordinary Markdown HTML still cannot supply Vue handlers, classes, or styles.
 
 `src/components/markdown-renderer.ts` owns the shared synchronous GFM parser, DOMPurify allowlist, and safe DOM-to-VNode conversion. `MarkdownContent` gives independent rendered regions unique heading IDs; `src/styles/markdown-content.css` owns shared Markdown typography. Notebook retains an adapter for its existing outline heading IDs and paper presentation. Review stores optional question context as Markdown source and renders it separately from the plain-text question title and answer controls.
 
@@ -100,3 +100,5 @@ Fill-in-the-Blanks number matching is centralized in `src/core/fill-blank.ts` fo
 Review AI generation uses `ReviewAiPreferences.mixMode` (`custom` or `ai`) as transient configuration in `ai-creation.ts`, with conditional prompt generation/import warning policy in `ai-import-format.ts`. Count validity is independent of weights; custom mode allocates/compares type quotas, while AI mode presents all supported question-type schemas and validates generated questions without a quota. Neither mode changes persisted question records or workspace format.
 
 Review completed assessment history is modeled and validated in `src/features/knowledge-check/attempt-history.ts`, stored with the set's `history` collection, and surfaced in `attempt-history-view.ts`. The archive owns original question templates and separately validated generated variants; it is independent of browser-local active/paused session snapshots. Workspace IndexedDB mapping and observer preserve the optional history field in the `reviewSets` record, so backups and cross-tab restoration are consistent. `KnowledgeSession` reuses its results UI for a read-only archived view without recording statistics.
+
+`src/components/latex-module.ts` owns math tokenization/rendering for the shared `markdown-renderer.ts`, so Notebook previews and every `MarkdownContent` consumer use the same math support. CSS and font resources are bundled via webpack (no runtime CDN); Markdown source and exported content remain unchanged. Code spans and fenced blocks stay literal.

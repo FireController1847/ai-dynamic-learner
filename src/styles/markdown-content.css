@@ -67,3 +67,22 @@
 :is(.markdown-preview, .markdown-content) summary { cursor: pointer; }
 :is(.markdown-preview, .markdown-content) kbd { padding: 0.1em 0.3em; border: 1px solid var(--border-color); border-radius: 4px; }
 :is(.markdown-preview, .markdown-content) hr { margin:1.6em 0;border:0;border-top:1px solid var(--border-color); }
+
+/* KaTeX uses the local font bundle and follows the active text color. */
+:is(.markdown-preview, .markdown-content) .markdown-latex-inline {
+  display: inline;
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
+:is(.markdown-preview, .markdown-content) .markdown-latex-block {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin: 1em 0;
+  text-align: center;
+  overflow-wrap: normal;
+}
+:is(.markdown-preview, .markdown-content) :is(.markdown-latex-inline, .markdown-latex-block) .katex {
+  color: inherit;
+}
