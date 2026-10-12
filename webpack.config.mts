@@ -77,6 +77,7 @@ export default (_env: unknown, argv: { mode?: Configuration['mode'] }): Configur
         { from: '@vue/*/LICENSE', to: 'licenses/[path][name]', context: 'node_modules' },
         { from: 'node_modules/marked/LICENSE', to: 'licenses/marked.txt' },
         { from: 'node_modules/dompurify/LICENSE', to: 'licenses/dompurify.txt' },
+        { from: 'node_modules/katex/LICENSE', to: 'licenses/katex.txt' },
       ] }),
     ],
     optimization: {
