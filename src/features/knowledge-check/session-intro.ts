@@ -62,12 +62,14 @@ export const SessionIntro = defineComponent({
         ]),
         props.message ? h('p', { role: 'status', class: 'knowledge-message' }, props.message) : null,
         props.ended ? h('p', { role: 'status' }, study ? 'Your study session ended. Start again when ready.' : 'Your previous session ended. Start again when ready.') : null,
+        h('div', { class: 'knowledge-intro-statistics' }, [
+          h(EntryStatistics, { app: 'knowledge-check', id: props.item.id,
+            metric: study ? 'studyPasses' : test ? 'tests' : 'quizzes' }),
+        ]),
         h('div', { class: 'knowledge-intro-actions' }, [
           h('button', { type: 'button', class: 'quiet-button',
             onClick: () => emit('back') }, 'Back'),
           props.resumable ? h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('resume') }, 'Resume saved session') : null,
-          h(EntryStatistics, { app: 'knowledge-check', id: props.item.id,
-            metric: study ? 'studyPasses' : test ? 'tests' : 'quizzes' }),
           h('button', { type: 'button', class: 'card-primary-button', disabled: !props.count,
             onClick: () => emit('start') }, [
             study ? 'Start studying' : `Start ${mode.label.toLowerCase()}`,

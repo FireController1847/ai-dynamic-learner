@@ -41,8 +41,33 @@
   accent-color: var(--brand);
 }
 .knowledge-session { width: min(820px, 100%); margin: 0 auto; padding: clamp(20px, 4vw, 40px); }
-.knowledge-session-progress, .knowledge-session-navigation { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
-.knowledge-session-progress { color: var(--text-secondary); font-size: 12px; }
+.knowledge-session-navigation {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+}
+.knowledge-session-progress {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px 16px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.knowledge-session-progress-details {
+  display: flex; align-items: center; justify-content: flex-start; flex-wrap: wrap;
+  gap: 6px 16px; min-width: 0;
+}
+.knowledge-session-progress-details > p { margin: 0; }
+.knowledge-session-end-actions {
+  display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px;
+}
+.knowledge-progress-track { grid-column: 1 / -1; }
+@media (max-width: 700px) {
+  .knowledge-session-progress { grid-template-columns: minmax(0, 1fr); }
+  .knowledge-session-end-actions { justify-content: flex-start; }
+}
+@media (max-width: 480px) {
+  .knowledge-session-end-actions > button { flex: 1 1 120px; min-width: 0; }
+}
 .knowledge-prompt { padding: clamp(20px, 4vw, 32px); margin: 16px 0 24px; border: 1px solid var(--border-color); border-radius: var(--radius-dialog); background: var(--page-background); }
 .knowledge-prompt h3 { font-size: clamp(20px, 3vw, 28px); line-height: 1.4; margin: 12px 0 24px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .knowledge-answer-choice { display: flex; align-items: center; gap: 12px; padding: 12px; margin-bottom: 8px; border: 1px solid var(--control-border); border-radius: var(--radius); cursor: pointer; }
@@ -116,7 +141,9 @@
 .knowledge-intro-details { padding-block: 16px; margin-block: 16px 24px; border-block: 1px solid var(--border-color); }
 .knowledge-intro-details h4 { margin: 0 0 8px; font-size: 14px; font-weight: 600; }
 .knowledge-intro-details p { margin: 8px 0 0; }
-.knowledge-intro-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.knowledge-intro-statistics { margin-bottom: 12px; }
+.knowledge-intro-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.knowledge-intro-actions > button:first-child { margin-right: auto; }
 .knowledge-intro-note { margin: 12px 0 0; }
 @media (max-width: 560px) {
   .knowledge-intro-header { gap: 16px; align-items: flex-start; }

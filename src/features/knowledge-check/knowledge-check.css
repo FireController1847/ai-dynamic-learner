@@ -314,9 +314,25 @@
   outline-offset: 3px;
 }
 .knowledge-check-type-icon { width: 104px; height: 104px; color: var(--brand); }
-.knowledge-check-type-copy { display: grid; gap: 8px; }
-.knowledge-check-type-copy strong { font-size: 18px; }
-.knowledge-check-type-copy span { color: var(--text-secondary); line-height: 1.5; }
+.knowledge-check-type-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+.knowledge-check-type-copy > strong { font-size: 18px; }
+.knowledge-check-type-copy > span:not(.entry-statistics) { color: var(--text-secondary); line-height: 1.5; }
+.knowledge-check-type-copy > .entry-statistics {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-self: stretch;
+  white-space: normal;
+  gap: 3px;
+  margin-top: 8px;
+}
 .knowledge-check-builder-actions { display: flex; justify-content: flex-end; }
 
 @media (max-width: 900px) {
@@ -324,10 +340,39 @@
   .knowledge-check-type-card {
     grid-template-columns: auto minmax(0, 1fr);
     min-height: 0;
-    justify-items: start;
+    align-content: start;
+    align-items: center;
+    justify-items: stretch;
+    gap: 16px;
     text-align: left;
   }
+  .knowledge-check-type-copy { align-items: flex-start; text-align: left; }
+  .knowledge-check-type-copy > .entry-statistics { justify-content: flex-start; text-align: left; }
   .knowledge-check-type-icon { width: 76px; height: 76px; }
+}
+/* A wide browser may still have a narrow Review pane beside its library. */
+.knowledge-check-builder { container-type: inline-size; }
+@container (max-width: 900px) {
+  .knowledge-check-type-grid { grid-template-columns: minmax(0, 1fr); }
+  .knowledge-check-type-card {
+    grid-template-columns: auto minmax(0, 1fr);
+    min-height: 0;
+    align-content: start;
+    align-items: center;
+    justify-items: stretch;
+    gap: 16px;
+    text-align: left;
+  }
+  .knowledge-check-type-copy { align-items: flex-start; text-align: left; }
+  .knowledge-check-type-copy > .entry-statistics { justify-content: flex-start; text-align: left; }
+  .knowledge-check-type-icon { width: 76px; height: 76px; }
+}
+@media (max-width: 560px) {
+  .knowledge-check-builder { gap: 20px; padding: 20px 16px; }
+  .knowledge-check-type-grid { gap: 12px; }
+  .knowledge-check-type-card { padding: 20px 16px; gap: 12px; }
+  .knowledge-check-type-icon { width: 52px; height: 52px; }
+  .knowledge-check-builder-actions > button { flex: 1 1 auto; }
 }
 .knowledge-check-placeholder { padding: 32px 20px; color: var(--text-secondary); }
 

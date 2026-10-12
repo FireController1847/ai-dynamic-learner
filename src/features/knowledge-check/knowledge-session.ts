@@ -82,11 +82,11 @@ export const KnowledgeSession = defineComponent({
       const endButton = h('button', { type: 'button', class: 'quiet-button',
         onClick: props.mode === 'study' ? end : state.leave },
       props.mode === 'study' ? 'End studying' : props.mode === 'quiz' ? 'End quiz' : 'End test');
-      return [
+      return h('div', { class: 'knowledge-session-end-actions', 'aria-label': 'Session actions' }, [
         canPause.value ? h('button', { type: 'button', class: 'quiet-button',
           onClick: pauseSession }, props.mode === 'study' ? 'Pause Studying' : 'Pause Quiz') : null,
         endButton,
-      ];
+      ]);
     }
 
     function moveQuestion(next: number, wrap = false) {
@@ -580,6 +580,7 @@ export const KnowledgeSession = defineComponent({
           h('div', { class: 'knowledge-session-body' }, [
           state.storageMessage.value ? h('p', { role: 'status', class: 'knowledge-message' }, state.storageMessage.value) : null,
           h('div', { class: 'knowledge-session-progress' }, [
+            h('div', { class: 'knowledge-session-progress-details' }, [
             h('p', `${questions.value.length} ${questions.value.length === 1 ? 'question' : 'questions'} in this session`),
             props.mode === 'study'
               ? h('p', 'Practice freely — hints and retries welcome')
@@ -588,7 +589,8 @@ export const KnowledgeSession = defineComponent({
               `${studyCorrectChecks.value} / ${studyChecks.value} checks correct · ${studyChecks.value ? Math.round(studyCorrectChecks.value / studyChecks.value * 100) : 0}%`) : null,
             remaining.value !== null ? h('p', { class: ['knowledge-timer', { 'is-low': remaining.value <= 60 }], role: 'timer', 'aria-live': 'off' },
               `Time left: ${Math.floor(remaining.value / 60)}:${String(remaining.value % 60).padStart(2, '0')}`) : null,
-            ...sessionEndControls(),
+            ]),
+            sessionEndControls(),
           ]),
           h('div', { class: 'knowledge-scroll-questions' }, questions.value.map((entry, index) =>
             renderQuestion(entry, index, true))),
@@ -617,13 +619,16 @@ export const KnowledgeSession = defineComponent({
         'data-mode': props.mode, 'aria-label': `${props.mode} questions` }, [
         h('div', { class: 'knowledge-session-body' }, [
         state.storageMessage.value ? h('p', { role: 'status', class: 'knowledge-message' }, state.storageMessage.value) : null,
-        h('div', { class: 'knowledge-session-progress' }, [h('p', `Question ${position.value + 1} of ${questions.value.length}`),
+        h('div', { class: 'knowledge-session-progress' }, [
+          h('div', { class: 'knowledge-session-progress-details' }, [
+          h('p', `Question ${position.value + 1} of ${questions.value.length}`),
           study ? h('p', 'Practice freely — hints and retries welcome') : h('p', `${answered.value} answered`),
           study ? h('p', { class: 'knowledge-study-score', key: studyChecks.value },
             `${studyCorrectChecks.value} / ${studyChecks.value} checks correct · ${studyChecks.value ? Math.round(studyCorrectChecks.value / studyChecks.value * 100) : 0}%`) : null,
           remaining.value !== null ? h('p', { class: ['knowledge-timer', { 'is-low': remaining.value <= 60 }], role: 'timer', 'aria-live': 'off' },
             `Time left: ${Math.floor(remaining.value / 60)}:${String(remaining.value % 60).padStart(2, '0')}`) : null,
-          ...sessionEndControls(),
+          ]),
+          sessionEndControls(),
           h('div', { class: 'knowledge-progress-track', 'aria-hidden': 'true' }, [
             h('span', { style: { width: `${(position.value + 1) / questions.value.length * 100}%` } }),
           ])]),
