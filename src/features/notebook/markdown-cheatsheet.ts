@@ -10,7 +10,7 @@ const examples = [
   ['Links & images', '[Link text](https://example.com)\n![Image description](https://example.com/image.png)', 'Plain web addresses also become links.'],
   ['Quotes', '> A quoted paragraph', 'Start each quoted line with >.'],
   ['Code', '`inline code`\n\n```\nA block of code\n```', 'Code keeps its spacing and displays Markdown literally.'],
-  ['LaTeX math', "Inline: $E=mc^2$ or \\(E=mc^2\\)\n\nDisplay:\n$\n\\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}\n$\n\nOr: \\[\\sum_{i=1}^{n} i\\]", "Use $...$ or \\(...\\) for inline equations; use $...$ or \\[...\\] for display equations. Code formatting keeps LaTeX literal."],
+  ['LaTeX math', "Inline: $E=mc^2$ or \\(E=mc^2\\)\n\nDisplay:\n$$\n\\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}\n$$\n\nOr: \\[\\sum_{i=1}^{n} i\\]", "Use $...$ or \\(...\\) for inline equations; use $$...$$ or \\[...\\] for display equations. Code formatting keeps LaTeX literal."],
   ['Tables', '| Name | Value |\n| --- | ---: |\n| Example | 42 |', 'Use :---, :---:, or ---: to align a column left, center, or right.'],
   ['HTML formatting', '<u>underline</u> · H<sub>2</sub>O · x<sup>2</sup>', 'Basic HTML formatting is supported; scripts and custom styles are removed.'],
   ['Dividers & line breaks', '---\n\nFirst line<br>\nSecond line', 'Use a blank line for a new paragraph, or <br> for a line break.'],
