@@ -79,10 +79,13 @@ export const AiCategoryPicker = defineComponent({
           h('summary', `Category history (${history.value.length})`),
           h('p', { class: 'study-ai-muted' }, 'Reuse a category list, then use its matching source in your AI conversation.'),
           h('ul', { ref: historyList }, history.value.map(entry => h('li', { key: entry.id }, [
-            h('button', { type: 'button', class: 'quiet-button study-ai-history-use', onClick: () => reuse(entry) }, [
+            h('button', {
+              type: 'button', class: 'quiet-button study-ai-history-use',
+              'aria-label': `Use category history: ${entry.categories.title}`,
+              onClick: () => reuse(entry),
+            }, [
               h('strong', entry.categories.title),
               h('span', { class: 'study-ai-muted' }, `${entry.categories.categories.length} categories · ${new Date(entry.savedAt).toLocaleDateString()}`),
-              h('span', 'Use'),
             ]),
             h('button', {
               type: 'button', class: 'icon-button delete-button study-ai-history-remove',
