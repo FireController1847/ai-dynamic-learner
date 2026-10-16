@@ -551,3 +551,20 @@
   .knowledge-attempt-history-item > button { flex: 1 1 100%; }
   .knowledge-history-actions > button { flex: 1 1 auto; }
 }
+
+/* Per-question variable-distractor settings; stable width beside question editor. */
+.knowledge-choice-pool-editor {
+  margin-top: 20px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border-color);
+}
+.knowledge-choice-pool-settings {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 0 0 8px;
+}
+.knowledge-choice-pool-settings .knowledge-field { min-width: 0; max-width: 100%; }
+.knowledge-choice-pool-settings input[type='number'] { max-width: 140px; }
+.knowledge-choice-pool-settings textarea { width: 100%; resize: vertical; }
+.knowledge-choice-pool-settings > p { margin: 0 0 8px; }

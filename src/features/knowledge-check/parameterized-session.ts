@@ -7,6 +7,7 @@ import { validateQuestions, type Question, type QuestionResponse } from './quest
 import { validateSetOptions } from './set-options.ts';
 import type { SessionSettings } from './session-settings.ts';
 import { seededRandom } from '../../core/parameterized/random.ts';
+import { materializeChoicePool } from './multiple-choice-pool.ts';
 
 export interface ParameterizedSessionSnapshot {
   version: 1; instances?: Record<string, GeneratedVariant>; templates: Question[]; seeds: Record<string, string>; settings: SessionSettings;
@@ -110,8 +111,10 @@ export function writeSession(key: string, snapshot: ParameterizedSessionSnapshot
 }
 /** Choices use a separate deterministic stream; reloading never changes their order. */
 export async function sessionVariant(template: Question, seed: string, shuffleChoices: boolean, signal?: AbortSignal, cached?: GeneratedVariant): Promise<Question> {
-  const question = await materializeQuestionAsync(template, seed, signal, cached);
-  if (shuffleChoices && ['multiple-choice','dropdown'].includes(question.type)) {
+  const original = await materializeQuestionAsync(template, seed, signal, cached);
+  const pooled = original.type === 'multiple-choice' && Boolean(original.choicePool);
+  const question = materializeChoicePool(original, seed);
+  if (shuffleChoices && !pooled && ['multiple-choice','dropdown'].includes(question.type)) {
     const random = seededRandom(`${seed}:choices`);
     for (let index = question.choices.length - 1; index > 0; index--) {
       const other = Math.floor(random() * (index + 1));

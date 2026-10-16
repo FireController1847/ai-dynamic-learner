@@ -1,6 +1,7 @@
 import { defaultSetOptions, validateSetOptions, type SetOptions } from './set-options.ts';
 import { SetOptionsEditor } from './set-options-editor.ts';
 import { ReviewQuestionImport } from './question-import.ts';
+import { MultipleChoicePoolEditor } from './multiple-choice-pool-editor.ts';
 import type { CheckItem } from './library-model.ts';
 import { MAX_NAME_LENGTH } from './library-model.ts';
 import { cloneQuestion, createQuestion, questionDisplayPrompt, questionHasContent, questionProblem, questionsForSave, MAX_QUESTIONS, MAX_TEXT, QUESTION_TYPES, type Question, type QuestionType } from './question-model.ts';
@@ -103,7 +104,8 @@ export const CheckBuilder = defineComponent({
       }
       const replacement = createQuestion(type as QuestionType);
       Object.assign(question, { type: replacement.type, answer: replacement.answer, choices: replacement.choices });
-      delete question.parameters; delete question.correctAnswers; delete draftProblems.value[question.id];
+      delete question.parameters; delete question.correctAnswers; delete question.choicePool;
+      delete draftProblems.value[question.id];
       if (replacement.parameters) { question.parameters = replacement.parameters;
         if (!question.prompt.trim()) question.prompt = replacement.prompt; }
       delete question.matches;
@@ -236,6 +238,7 @@ export const CheckBuilder = defineComponent({
               ])),
               h('button', { type: 'button', class: 'quiet-button', disabled: question.choices.length >= 8,
                 onClick: () => question.choices.push('') }, 'Add choice'),
+              h(MultipleChoicePoolEditor, { question, key: question.id }),
             ]) : question.type === 'true-false' ? h('label', { class: 'knowledge-field' }, ['Correct answer', h('select', {
               value: question.answer, onChange: (event: Event) => { question.answer = inputValue(event); },
             }, [h('option', { value: '', disabled: true }, 'Select the correct answer'), ...['True', 'False'].map((answer) => h('option', { value: answer }, answer))])])
