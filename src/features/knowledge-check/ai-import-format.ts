@@ -27,7 +27,9 @@ export function reviewAiPrompt(preferences: ReviewAiPreferences, scope: AiCardSc
   const enabledTypes = AI_QUESTION_TYPES.filter(type => counts === null || counts[type] > 0);
   const allowParameterized = counts === null || counts.parameterized > 0;
   const examples: Record<keyof QuestionWeights, object> = {
-    'multiple-choice': { type: 'multiple-choice', prompt: 'Which symbol represents gold?', choices: ['Au', 'Ag', 'Fe', 'Cu'], answer: 'Au', explanation: 'Au represents gold.' },
+    'multiple-choice': { type: 'multiple-choice', prompt: 'Which symbol represents gold?', choices: ['Au', 'Ag', 'Fe', 'Cu'],
+      answer: 'Au', choicePool: { displayCount: 4, distractors: ['Pt', 'Sn', 'Pb', 'Zn'] },
+      explanation: 'Au represents gold.' },
     'true-false': { type: 'true-false', prompt: 'The chemical symbol for gold is Au.', answer: 'True' },
     'fill-in-the-blanks': { type: 'fill-in-the-blanks', prompt: 'Use the table: A = {{amylase}} and B = {{pepsin}}.', context: '| Substrate | Enzyme label |\n| --- | --- |\n| Starch | A |\n| Protein | B |' },
     'short-answer': { type: 'short-answer', prompt: 'What is the chemical symbol for gold?', answer: 'Au' },
@@ -37,7 +39,7 @@ export function reviewAiPrompt(preferences: ReviewAiPreferences, scope: AiCardSc
     statement: { type: 'statement', prompt: 'Gold has the chemical symbol Au.' },
   };
   const quality: Record<keyof QuestionWeights, string> = {
-    'multiple-choice': '- Multiple Choice: typically four distinct, plausible choices, using closely related alternatives from the same topic. Use answer for one correct choice or correctAnswers for genuinely multiple correct choices, never both. Vary correct positions; avoid giveaway distractors.',
+    'multiple-choice': '- Multiple Choice: typically four distinct, plausible choices, using closely related alternatives from the same topic. Use answer for one correct choice or correctAnswers for genuinely multiple correct choices, never both. When many plausible incorrect terms exist, prefer a reusable choicePool (displayCount 2–8 and 1–100 additional distinct incorrect terms) rather than duplicate copies of one question. Correct answers always appear, while the incorrect slots are sampled from the base choices and additional pool. Avoid giveaway distractors.',
     'true-false': '- True/False: a clear, unambiguous claim with answer exactly "True" or "False".',
     'fill-in-the-blanks': '- Fill in the Blanks: {{answer}} markers belong ONLY in the plain-text prompt. Prefer a single word, number, or indivisible term per blank. For association tables/diagrams in Markdown context, label missing cells A/B/1/2 and ask A = {{term}}, B = {{term}} in the prompt. Multiple related blanks are encouraged; never reveal the answer in context.',
     'short-answer': '- Short Answer: only short, uniquely checkable responses (usually 1–5 words) that cannot be assessed more reliably with another type.',
@@ -46,7 +48,7 @@ export function reviewAiPrompt(preferences: ReviewAiPreferences, scope: AiCardSc
     parameterized: PARAMETERIZED_AI_GUIDANCE,
   };
   const fields: Record<keyof QuestionWeights, string> = {
-    'multiple-choice': 'By default, use type/prompt/choices/answer/optional explanation. To make a multi-select question, replace answer with a correctAnswers array listing all correct choice texts; do not include both fields.',
+    'multiple-choice': 'Use type/prompt/choices/answer/optional explanation; multi-answer replaces answer with correctAnswers. Optional choicePool: { displayCount: integer 2–8, distractors: string[] of 1–100 unique extra incorrect terms }. Correct answers must be in choices and count toward displayCount; remaining slots sample from base incorrect choices plus additional terms. Do not provide both answer and correctAnswers.',
     'true-false': 'Use type/prompt/answer/optional explanation on true/false; omit choices.',
     'short-answer': 'Use type/prompt/answer/optional explanation on short answer; omit choices.',
     'dropdown': 'On Dropdown use type/prompt/choices/matches/optional explanation, with correct answers inside the matching rows and no top-level answer.',
@@ -113,7 +115,7 @@ export function parseReviewAiImport(text: string, preferences: ReviewAiPreferenc
     }
     const type = AI_QUESTION_TYPES.find(type => type === entry.type)!;
     const fields = type === 'parameterized' ? ['type', 'prompt', 'parameters', 'explanation'] : type === 'statement' ? ['type', 'prompt'] : type === 'dropdown' ? ['type', 'prompt', 'choices', 'matches', 'explanation'] : type === 'fill-in-the-blanks' ? ['type', 'prompt', 'explanation'] :
-      type === 'multiple-choice' ? ['type', 'prompt', 'answer', 'correctAnswers', 'choices', 'explanation'] : ['type', 'prompt', 'answer', 'explanation'];
+      type === 'multiple-choice' ? ['type', 'prompt', 'answer', 'correctAnswers', 'choices', 'choicePool', 'explanation'] : ['type', 'prompt', 'answer', 'explanation'];
     fields.push('context');
     if (Object.keys(entry).some(key => !fields.includes(key)) ||
         (Object.hasOwn(entry, 'context') && (typeof entry.context !== 'string' || entry.context.length > MAX_QUESTION_CONTEXT)) ||
@@ -143,6 +145,20 @@ export function parseReviewAiImport(text: string, preferences: ReviewAiPreferenc
         throw new Error(`Item ${index + 1} needs 2–${limit} non-empty answer choices.`);
       }
       question.choices = entry.choices.map((choice: string) => choice.trim());
+    }
+    if (type === 'multiple-choice' && Object.hasOwn(entry, 'choicePool')) {
+      const pool = entry.choicePool;
+      if (!isRecord(pool) || Object.keys(pool).some(key => !['displayCount', 'distractors'].includes(key)) ||
+          !Number.isInteger(pool.displayCount) || (pool.displayCount as number) < 2 ||
+          (pool.displayCount as number) > 8 || !Array.isArray(pool.distractors) ||
+          pool.distractors.length < 1 || pool.distractors.length > 100 ||
+          pool.distractors.some(term => typeof term !== 'string' || !term.trim() || term.length > MAX_TEXT)) {
+        throw new Error(`Item ${index + 1} needs a valid choicePool with displayCount 2–8 and 1–100 extra incorrect terms.`);
+      }
+      question.choicePool = {
+        displayCount: pool.displayCount as number,
+        distractors: pool.distractors.map((term: string) => term.trim()),
+      };
     }
     if (type === 'dropdown') {
       validateDropdownMatches(entry.matches, MAX_TEXT);
