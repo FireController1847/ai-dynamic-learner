@@ -29,7 +29,7 @@ export function reviewAiPrompt(preferences: ReviewAiPreferences, scope: AiCardSc
   const examples: Record<keyof QuestionWeights, object> = {
     'multiple-choice': { type: 'multiple-choice', prompt: 'Which symbol represents gold?', choices: ['Au', 'Ag', 'Fe', 'Cu'], answer: 'Au', explanation: 'Au represents gold.' },
     'true-false': { type: 'true-false', prompt: 'The chemical symbol for gold is Au.', answer: 'True' },
-    'fill-in-the-blanks': { type: 'fill-in-the-blanks', prompt: 'The chemical symbol for gold is {{Au}}.' },
+    'fill-in-the-blanks': { type: 'fill-in-the-blanks', prompt: 'Use the table: A = {{amylase}} and B = {{pepsin}}.', context: '| Substrate | Enzyme label |\n| --- | --- |\n| Starch | A |\n| Protein | B |' },
     'short-answer': { type: 'short-answer', prompt: 'What is the chemical symbol for gold?', answer: 'Au' },
     dropdown: { type: 'dropdown', prompt: 'Match each element to its symbol.', choices: ['Au', 'Ag', 'Fe'],
       matches: [{ label: 'Gold', answer: 'Au' }, { label: 'Silver', answer: 'Ag' }] },
@@ -37,12 +37,12 @@ export function reviewAiPrompt(preferences: ReviewAiPreferences, scope: AiCardSc
     statement: { type: 'statement', prompt: 'Gold has the chemical symbol Au.' },
   };
   const quality: Record<keyof QuestionWeights, string> = {
-    'multiple-choice': `- Multiple choice: normally four distinct, plausible choices and one correct answer in answer. When the source clearly supports a select-all question, optionally use correctAnswers (an array of correct choice texts) instead of answer; all and only those choices must be selected. Avoid giveaway wording, arbitrary tricks, "all of the above", and always putting the correct answer first. Mix answer positions.`,
-    'true-false': `- True/false: one clear factual claim, with answer exactly "True" or "False". Include both outcomes when useful, without ambiguous qualifiers or trick statements.`,
-    'fill-in-the-blanks': `- Fill in the blanks: {{answer}} markers inside concise, contextual statements. Almost always one word per blank; 2–3 only for an indivisible term. For separate items use {{letters}} and {{numbers}} or {{letters}} or {{numbers}}, preserving the source meaning. Keep meaningful context visible; several related blanks are welcome. Keep terminology and blank boundaries consistent throughout, never alternating a full term like "nullword" with "null" for the same concept. Keep {{answer}} markers only in "prompt"; optional Markdown context is background material and must not replace the blank-aware prompt.`,
-    'short-answer': `- Short answer: a specific quick-recall question with an answer of 1–5 words, not an essay or a list.`,
-    'dropdown': `- Dropdown: one matching question with a shared list of 2–${MAX_DROPDOWN_CHOICES} distinct choices and 1–${MAX_DROPDOWN_ROWS} labeled rows in "matches". Each row has "label" and "answer"; its answer must exactly match one choice. Keep rows related and labels distinct. Choices may be reused when factually appropriate. The entire matching question counts as one item in the requested mix.`,
-    'statement': `- Statement: a concise authored fact or transition with no answer, choices, or explanation; it is not scored.`,
+    'multiple-choice': '- Multiple Choice: typically four distinct, plausible choices, using closely related alternatives from the same topic. Use answer for one correct choice or correctAnswers for genuinely multiple correct choices, never both. Vary correct positions; avoid giveaway distractors.',
+    'true-false': '- True/False: a clear, unambiguous claim with answer exactly "True" or "False".',
+    'fill-in-the-blanks': '- Fill in the Blanks: {{answer}} markers belong ONLY in the plain-text prompt. Prefer a single word, number, or indivisible term per blank. For association tables/diagrams in Markdown context, label missing cells A/B/1/2 and ask A = {{term}}, B = {{term}} in the prompt. Multiple related blanks are encouraged; never reveal the answer in context.',
+    'short-answer': '- Short Answer: only short, uniquely checkable responses (usually 1–5 words) that cannot be assessed more reliably with another type.',
+    dropdown: `- Dropdown: directly test matching relationships, with 1–${MAX_DROPDOWN_ROWS} labeled rows (label/answer) and 2–${MAX_DROPDOWN_CHOICES} distinct shared choices. Every answer must appear in choices; use plausible neighbors. A matching table counts as one item.`,
+    'statement': '- Statement: unscored directions/context only; do not substitute it for meaningful scored questions.',
     parameterized: PARAMETERIZED_AI_GUIDANCE,
   };
   const fields: Record<keyof QuestionWeights, string> = {
@@ -54,45 +54,39 @@ export function reviewAiPrompt(preferences: ReviewAiPreferences, scope: AiCardSc
     'statement': 'On statements use only type/prompt.',
     'parameterized': 'On parameterized questions use type/prompt/parameters/optional explanation, and place referenced JavaScript solver packages in the optional top-level solvers array.',
   };
-  const prompt = `Using the original source material supplied earlier in this conversation, construct a Dynamic Learner Review knowledge set.
+  const prompt = `Using the original source material supplied earlier in this conversation, create a Dynamic Learner Review knowledge set as a teacher or instructor would assess it.
 
-Scope: ${scope ? 'Only the selected category described above.' : 'The overall subject: distribute useful questions across its major topics.'}
-Coverage: ${preferences.coverage === 'essentials' ? 'Core concepts only.' : preferences.coverage === 'comprehensive' ? 'Broad useful coverage, without trivia or repetition.' : 'Major ideas and useful supporting facts.'}
-
+Scope: ${scope ? 'Only the selected category described above.' : 'The overall subject, covering its important topics.'}
+Coverage: ${preferences.coverage === 'essentials' ? 'Core concepts only.' : preferences.coverage === 'comprehensive' ? 'Broad useful coverage without trivia or repetition.' : 'Major ideas and useful supporting facts.'}
 Create EXACTLY ${preferences.count} items.
 ${aiChoosesMix
-    ? `Choose the question types and their counts yourself based on what best tests understanding of the source. You may use any mix of the supported types listed below, including omitting types that do not suit this content. Do not impose fixed percentages, quotas, or an equal split. Prefer a varied, purposeful mix of useful scored questions; use unscored Statements only when they genuinely help with context or instructions. For numerical or procedural material, prefer valid Parameterized questions whenever they can meaningfully generate solvable numeric variants rather than asking for one fixed numerical answer. Use the other question types only when a valid reusable generator would not make sense or cannot be specified reliably. Make each question type earn its place.`
-    : `Use this exact question mix (counts already account for rounding):
-${enabledTypes.map(type => `- ${questionTypeLabel(type)}: ${preferences.weights[type]}% preference → ${counts![type]} items`).join('\n')}`}
-Use only these supported question types: ${enabledTypes.map(questionTypeLabel).join(', ')}. Do not substitute another type. If the source cannot support this many useful items, ask me to reduce the count instead of inventing facts.
+    ? 'Choose question types and counts to suit the material; omit unsuitable types. Favor scored questions over arbitrary quotas or unscored filler.'
+    : `Use EXACTLY this mix:
+${enabledTypes.map(type => `- ${questionTypeLabel(type)}: ${counts![type]} items`).join('\n')}`}
+Use ONLY these types: ${enabledTypes.map(questionTypeLabel).join(', ')}. If the source cannot support the count, ask to reduce it rather than invent content.
 
-Question quality:
-${aiChoosesMix ? `IMPORTANT — question-type priorities for this AI-selected mix (apply throughout, not just once):
-- NUMBERS FIRST → PARAMETERIZED: Whenever a question involves numbers, quantities, calculations, formulas, measurements, numerical comparisons, or multi-step procedures, ALWAYS first try to express it as a Parameterized (procedurally generated) question. STRONGLY prefer Parameterized over fixed numeric Multiple Choice, Fill in the Blanks, or Short Answer wherever a valid parameterized generator is possible. Make the numbers vary across generated instances while preserving the taught method and verifiable answer. Supply complete, valid parameter rules and solver definitions where needed. Do not invent unsupported formulas, quantities, or source facts; for inherently fixed numerical facts that cannot sensibly vary, use an appropriate non-generated type.
-- FILL IN THE BLANKS: Prefer exactly ONE word, digit string, or indivisible technical term per blank. Avoid multi-word expected responses whenever possible because matching them is unreliable; rewrite the sentence to isolate a single meaningful term, or choose a better question type. Use a multi-word blank only when the source requires one indivisible phrase and no better type works.
-- SHORT ANSWER LAST: Avoid Short Answer unless necessary for a uniquely identifiable, concise response that cannot be assessed more reliably with another supported question type. Ambiguous or subjective phrasing is not suitable for automatic answer checking. Prefer Parameterized for numerical answers and other structured types for text answers.
-- MULTIPLE CHOICE VARIETY: When choosing Multiple Choice, intentionally mix single-answer questions (one \`answer\` string, radio buttons) and multi-answer questions (a \`correctAnswers\` array, checkboxes). Use multi-answer only when multiple choices are genuinely correct and all can be established unambiguously from the source; do not force a fake second correct answer. Use a meaningful variety across multiple MC questions, not an obligatory 50/50 split.
-` : ''}${enabledTypes.map(type => quality[type]).join('\n')}
-- Make every item self-contained, accurate, and based on the source. Avoid duplicates and unsupported facts. Do not include citations, URLs, source markers, question/library IDs, or session settings.${allowParameterized ? ' Required solver IDs and parameter-generation rules are allowed only for parameterized questions.' : ''}
-${enabledTypes.some(type => type !== 'statement') ? '- An optional explanation may give one short clarifying sentence for a scored question.\n' : ''}- Keep "prompt" as the concise main question/title in plain text. When useful, add an optional "context" string with GitHub-flavored Markdown: passages, tables, lists, task lists, links, strikethrough, or fenced code. This is supporting material shown separately from the title, not an answer key or feedback. Omit filler context. Do not use raw HTML.
-- Keep response text as plain text.
+Choose the approach from the material (respect any specified type counts):
+1. LOGIC / NUMBERS / PROCEDURES: Favor reusable Parameterized questions wherever inputs, calculations, rules, or algorithms can genuinely vary. Test the method with many valid solvable variants, not one fixed numerical result. Supply feasible ranges, constraints and complete solvers as needed. Never randomize fixed facts, diagnostic thresholds, or medical constants. If Parameterized is unavailable or unsuitable, use another enabled type.
+2. RECALL / FIXED FACTS / MEDICAL / ASSOCIATIONS: Favor Multiple Choice, Fill in the Blanks, and matching Dropdowns. Test relationships directly (enzyme ↔ substrate, function ↔ term, symptom ↔ condition, threshold ↔ meaning). Reverse associations where useful; use plausible near-miss distractors to test distinctions, not obviously wrong options. Keep grading unambiguous.
+
+Think like the instructor: weight questions toward what the source emphasizes, repeats, compares, teaches procedurally, or expects students to APPLY. Vary angles, scenarios, challenge, and presentation without testing the same fact repeatedly. Do not introduce outside facts.
+
+Use creative, relevant Markdown context: GFM tables, comparison charts, supplied-figure relationships, short text diagrams/flows (fenced text), and KaTeX math. Present data or labeled gaps for interpretation rather than answer keys. For table-based Fill in the Blanks, put labeled unknown cells in context but scored {{blanks}} ONLY in prompt. Use context where it helps; omit decorative or invented figures, unsupported image URLs, and raw HTML.
+
+Type-specific rules:
+${enabledTypes.map(type => quality[type]).join('\n')}
+- Questions must be self-contained, source-grounded, distinct, and fairly graded. Never include citations, URLs, source markers, question IDs, or settings; parameter/solver identifiers are permitted. Brief explanations may clarify scored answers.
 
 ${AI_MARKDOWN_CONTEXT_GUIDANCE}
 
-Vary the presentation across the knowledge set:
-- Intentionally mix concise standalone questions with questions that use meaningful Markdown context. For medium or large sets, include several context-based questions when the material supports them; do not make every question the same simple recall format. This is a flexible writing goal, not another percentage quota.
-- Use small GFM tables for comparisons, classifications, timelines, or data interpretation; brief passages or scenarios for application questions; lists for processes or related facts; and fenced code blocks for code-reading questions when relevant to the subject.
-- Make the context useful to answering the question: ask the learner to interpret, compare, infer, or apply something in it. Do not add a decorative table or simply repeat the question beneath its title.
-- Base all context on the source's information and concepts. Do not invent unsupported factual claims or include a labeled answer key. Keep context compact, preserve the ${aiChoosesMix ? 'AI-selected, content-appropriate question-type mix' : 'requested question-type mix'}, and leave some questions without context. If the source does not benefit from added context, prioritize clarity over forcing variety.
-
-Return ONLY one JSON code block using this structure:
+Return ONLY one fenced JSON code block in this structure:
 \`\`\`json
 ${JSON.stringify({ format: REVIEW_AI_FORMAT, version: 1, title: 'Short knowledge set title', description: 'Brief scope of this knowledge set.', ...(allowParameterized ? { solvers: [AI_SOLVER_EXAMPLE] } : {}), questions: enabledTypes.map(type => examples[type]) }, null, 2)}
 \`\`\`
 
-These are format examples only, not required proportions or a requirement to use every type. ${allowParameterized ? 'Omit solvers unless an included Parameterized question actually needs uploaded JavaScript solver packages. ' : ''}Use the ${aiChoosesMix ? 'AI-selected distribution and' : 'requested counts and'} source content, not these example facts. Title: 1–${MAX_NAME_LENGTH} characters. Description: at most ${MAX_TEXT} characters. Prompt, answer, explanation, and each choice: at most ${MAX_TEXT} characters of plain text. Optional context: at most ${MAX_QUESTION_CONTEXT} characters of Markdown, encoded as a JSON string (escape newlines inside strings).
+Examples show structure only, not required types or facts. ${allowParameterized ? 'Include solvers only when a Parameterized question needs them. ' : ''}Title: 1–${MAX_NAME_LENGTH} characters; description, prompt, answer, explanation, and choices: at most ${MAX_TEXT} characters each; context: at most ${MAX_QUESTION_CONTEXT} characters. Escape newlines and backslashes inside JSON strings.
 ${enabledTypes.map(type => fields[type]).join('\n')}
-Any of these types may also include the optional context field.`;
+All scored types may include optional context.`;
   return scope ? categoryScopedPrompt(prompt, scope, 'Review questions') : prompt;
 }
 
