@@ -11,6 +11,14 @@ import { defaultParameterization, parameterizedProblem, validateParameterization
 import type { GeneratedVariant } from '../../core/parameterized/generator.ts';
 import { generatedAnswerCorrect } from '../../core/parameterized/answers.ts';
 
+export interface ChoicePool {
+  /** Total number of response options displayed per session (correct options included). */
+  displayCount: number;
+  /** Additional incorrect terms; the authored incorrect choices are candidates too. */
+  distractors: string[];
+}
+export const MAX_CHOICE_POOL_TERMS = 100;
+
 export type QuestionType = 'multiple-choice' | 'true-false' | 'short-answer' | 'fill-in-the-blanks' | 'dropdown' | 'statement' | 'parameterized';
 export interface Question {
   id: string;
@@ -22,6 +30,7 @@ export interface Question {
   choices: string[];
   /** When present, Multiple Choice uses checkboxes; legacy single-answer questions omit this. */
   correctAnswers?: string[];
+  choicePool?: ChoicePool;
   matches?: DropdownMatch[];
   parameters?: Parameterization;
   generated?: GeneratedVariant;
@@ -51,8 +60,44 @@ export function createQuestion(type: QuestionType = 'multiple-choice'): Question
 export function cloneQuestion(question: Question): Question {
   return { ...question, choices: [...question.choices],
     ...(question.correctAnswers !== undefined ? { correctAnswers: [...question.correctAnswers] } : {}),
+    ...(question.choicePool ? { choicePool: {
+      displayCount: question.choicePool.displayCount,
+      distractors: [...question.choicePool.distractors],
+    } } : {}),
     ...(question.parameters ? { parameters: JSON.parse(JSON.stringify(question.parameters)) as Parameterization } : {}),
     ...(question.matches ? { matches: question.matches.map(row => ({ ...row })) } : {}) };
+}
+
+/** Used for authored questions; generated sessions receive their own final choices. */
+export function choicePoolProblem(question: Question): string {
+  const pool = question.choicePool;
+  if (!pool) return '';
+  if (question.type !== 'multiple-choice') return 'Choice pools are only supported for Multiple Choice.';
+  if (!Number.isInteger(pool.displayCount) || pool.displayCount < 2 || pool.displayCount > 8) {
+    return 'Choose 2–8 options to display per session.';
+  }
+  if (!Array.isArray(pool.distractors) || pool.distractors.length < 1 ||
+      pool.distractors.length > MAX_CHOICE_POOL_TERMS ||
+      pool.distractors.some(term => typeof term !== 'string' || !term.trim() || term.length > MAX_TEXT)) {
+    return `Add 1–${MAX_CHOICE_POOL_TERMS} non-empty additional incorrect terms.`;
+  }
+  const source = question.choices.map(choice => choice.trim()).filter(Boolean);
+  const correct = question.correctAnswers ?? [question.answer];
+  const correctSet = new Set(correct.map(term => term.trim().toLocaleLowerCase()));
+  if (correct.length < 1 || correct.some(term => !term.trim()) ||
+      pool.displayCount <= correctSet.size) {
+    return 'Display more options than the number of correct answers, leaving room for incorrect terms.';
+  }
+  const all = [...source, ...pool.distractors].map(term => term.toLocaleLowerCase());
+  if (new Set(all).size !== all.length) {
+    return 'Incorrect terms must be unique and must not repeat existing answer choices.';
+  }
+  const distractors = source.filter(term => !correctSet.has(term.toLocaleLowerCase())).length +
+    pool.distractors.length;
+  if (distractors < pool.displayCount - correctSet.size) {
+    return 'Add more incorrect terms or reduce the number of displayed options.';
+  }
+  return '';
 }
 
 export function questionReady(question: Question): boolean {
@@ -63,7 +108,8 @@ export function questionReady(question: Question): boolean {
   if (question.type === 'fill-in-the-blanks') return parseFillBlankTemplate(question.prompt).answers.length > 0;
   if (question.type !== 'multiple-choice') return Boolean(question.answer.trim());
   const choices = question.choices.map(choice => choice.trim()).filter(Boolean);
-  if (choices.length < 2 || new Set(choices).size !== choices.length) return false;
+  if (choices.length < 2 || new Set(choices).size !== choices.length ||
+      choicePoolProblem(question)) return false;
   if (question.correctAnswers !== undefined) {
     const correct = question.correctAnswers.map(answer => answer.trim());
     return correct.length > 0 && new Set(correct).size === correct.length &&
@@ -75,6 +121,7 @@ export function questionReady(question: Question): boolean {
 export function questionHasContent(question: Question): boolean {
   return Boolean(question.prompt.trim() || question.explanation.trim() || question.choices.some(choice => choice.trim()) ||
     question.answer.trim() || question.correctAnswers?.some(answer => answer.trim()) ||
+    question.choicePool?.distractors.some(term => term.trim()) ||
     question.context?.trim() || question.matches?.some(row => row.label.trim() || row.answer.trim()));
 }
 
@@ -89,6 +136,8 @@ export function questionProblem(question: Question): string {
   if (question.type === 'multiple-choice') {
     if (question.correctAnswers !== undefined && !question.correctAnswers.length) return 'Select at least one correct answer.';
     if (question.correctAnswers === undefined && !question.answer.trim()) return 'Select a correct answer.';
+    const poolProblem = choicePoolProblem(question);
+    if (poolProblem) return poolProblem;
     if (!questionReady(question)) return 'Add at least two distinct answer choices and mark the correct choices.';
     return '';
   }
@@ -109,6 +158,10 @@ export function questionsForSave(questions: Question[]): Question[] {
     ...(question.correctAnswers !== undefined
       ? { correctAnswers: question.correctAnswers.map(answer => answer.trim()) }
       : {}),
+    ...(question.choicePool ? { choicePool: {
+      displayCount: question.choicePool.displayCount,
+      distractors: question.choicePool.distractors.map(term => term.trim()),
+    } } : {}),
   }));
 }
 
@@ -189,11 +242,23 @@ export function validateQuestions(
   for (const question of value as unknown[]) {
     if (!isRecord(question) || !isValidId(question.id) || ids.has(question.id) ||
         !QUESTION_TYPES.some((type) => type.id === question.type) ||
-        Object.keys(question).some((key) => !['id', 'type', 'prompt', 'answer', 'explanation', 'choices', 'correctAnswers', 'matches', 'context', 'parameters'].includes(key)) ||
+        Object.keys(question).some((key) => !['id', 'type', 'prompt', 'answer', 'explanation', 'choices', 'correctAnswers', 'choicePool', 'matches', 'context', 'parameters'].includes(key)) ||
         (Object.hasOwn(question, 'context') && (typeof question.context !== 'string' || question.context.length > MAX_QUESTION_CONTEXT)) ||
         [question.prompt, question.answer, question.explanation].some((text) => typeof text !== 'string' || text.length > MAX_TEXT) ||
         !Array.isArray(question.choices) || question.choices.length > (question.type === 'dropdown' ? MAX_DROPDOWN_CHOICES : 8) ||
         question.choices.some((choice) => typeof choice !== 'string' || choice.length > MAX_TEXT) ||
+        (Object.hasOwn(question, 'choicePool') &&
+          (question.type !== 'multiple-choice' || !isRecord(question.choicePool) ||
+            Object.keys(question.choicePool).some(key => !['displayCount', 'distractors'].includes(key)) ||
+            !Number.isInteger(question.choicePool.displayCount) ||
+            (question.choicePool.displayCount as number) < 2 ||
+            (question.choicePool.displayCount as number) > 8 ||
+            !Array.isArray(question.choicePool.distractors) ||
+            question.choicePool.distractors.length < 1 ||
+            question.choicePool.distractors.length > MAX_CHOICE_POOL_TERMS ||
+            question.choicePool.distractors.some(term =>
+              typeof term !== 'string' || !term.trim() || term.length > MAX_TEXT) ||
+            Boolean(choicePoolProblem(question as unknown as Question)))) ||
         (Object.hasOwn(question, 'correctAnswers') &&
           (question.type !== 'multiple-choice' || !Array.isArray(question.correctAnswers) ||
             question.correctAnswers.length < 1 || question.correctAnswers.length > 8 ||
