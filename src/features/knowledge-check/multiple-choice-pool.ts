@@ -9,10 +9,11 @@ import { cloneQuestion, type Question } from './question-model.ts';
 export function materializeChoicePool(question: Question, seed: string): Question {
   if (question.type !== 'multiple-choice' || !question.choicePool) return question;
   const result = cloneQuestion(question);
+  const choicePool = result.choicePool!;
   const correct = result.correctAnswers ?? [result.answer];
   const correctSet = new Set(correct);
   const wrong = [...result.choices.filter(choice => !correctSet.has(choice)),
-    ...result.choicePool!.distractors];
+    ...choicePool.distractors];
   const random = seededRandom(seed + ':distractor-pool');
   function shuffle<T>(items: T[]): void {
     for (let index = items.length - 1; index > 0; index--) {
@@ -21,7 +22,7 @@ export function materializeChoicePool(question: Question, seed: string): Questio
     }
   }
   shuffle(wrong);
-  const count = result.choicePool.displayCount - correct.length;
+  const count = choicePool.displayCount - correct.length;
   result.choices = [...correct, ...wrong.slice(0, count)];
   // Even with answer-choice shuffling disabled, the location of the correct
   // answer must not become predictable when a distractor pool is used.

@@ -49,7 +49,7 @@ export const MultipleChoicePoolEditor = defineComponent({
             }),
           ]),
           h('p', { class: 'knowledge-muted' },
-            \`\${correct.length} correct · \${baseWrong.length + pool.distractors.length} possible incorrect · \${pool.displayCount} displayed total · up to \${MAX_CHOICE_POOL_TERMS} additional terms\`),
+            `${correct.length} correct · ${baseWrong.length + pool.distractors.length} possible incorrect · ${pool.displayCount} displayed total · up to ${MAX_CHOICE_POOL_TERMS} additional terms`),
           choicePoolProblem(question) ? h('p', { class: 'knowledge-message', role: 'status' },
             choicePoolProblem(question)) : null,
         ]) : null,
