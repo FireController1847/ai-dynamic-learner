@@ -11,10 +11,10 @@ export interface AiCardScope { subject: string; category: AiCardCategory }
 export function studyCategoriesPrompt(product = 'Index Cards'): string {
   return `Using the source material I supplied immediately before this instruction, organize categories for Dynamic Learner ${product}. This step ONLY proposes categories; I will select one before generating study content.
 
-- Follow the source's existing sections, chapters, units, or instructor-defined headings. Preserve their names, order, and scope. Do not invent subsections unless the source itself divides a section.
-- When the source is unsectioned, group its actual topics as a teacher or course instructor naturally would for lessons or assessments. Use your knowledge of the subject to name sensible categories, NOT to add lessons or facts missing from the source.
-- Keep categories distinct and meaningful, not tiny trivia fragments. Match the source's natural number of sections; do not force a count or add filler.
-- Descriptions: one short plain-text phrase (3–8 words, at most 80 characters). No overlap, citations, markdown, math markup, or application settings.
+- Prefer the FEWEST useful categories that cover the source. Combine related short sections and overlapping topics; don't create a category for every heading. Keep genuinely different major topics separate.
+- Treat existing headings, chapters, and instructor-defined units as guidance, not strict boundaries. Keep their logical order, but merge, clarify, and rename headings when helpful. Resolve shorthand or uncertain labels from the actual content (e.g. "Carbohydrate (Issues?)" becomes "Carbohydrate Disorders" ONLY if disorders are covered).
+- Think like the course instructor: group what belongs in the same focused study set, without inventing subtopics, unsupported facts, or filler to reach a category count.
+- Descriptions: one short plain-text phrase (3–8 words, at most 80 characters). No overlap, citations, Markdown, math markup, or application settings.
 
 Return ONLY one JSON code block:
 \`\`\`json
