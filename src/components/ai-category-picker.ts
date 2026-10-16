@@ -1,6 +1,7 @@
 import { defineComponent, h, nextTick, onMounted, ref, type PropType } from 'vue';
 import { AiPromptExchange, type AiPromptExchangeHandle } from './ai-prompt-exchange.ts';
 import { PopupDialog } from './popup-dialog.ts';
+import { Icon } from './icon.ts';
 import { categoryResponseJson, studyCategoriesPrompt, parseStudyCategories, type AiCardCategories, type AiCardScope } from '../core/ai-study-categories.ts';
 import { readCategoryHistory, rememberCategories, writeCategoryHistory, type CategoryHistoryEntry } from '../core/ai-category-history.ts';
 import { MAX_AI_IMPORT_LENGTH } from '../core/ai-json.ts';
@@ -23,6 +24,7 @@ export const AiCategoryPicker = defineComponent({
     const history = ref(readCategoryHistory());
     const clearOpen = ref(false);
     const clearButton = ref<HTMLButtonElement | null>(null);
+    const historyList = ref<HTMLUListElement | null>(null);
     const storageMessage = ref('');
     const prompt = studyCategoriesPrompt(props.label);
     onMounted(() => heading.value?.focus());
@@ -46,6 +48,20 @@ export const AiCategoryPicker = defineComponent({
       persist();
       exchange.value?.showImport();
     }
+    function removeHistoryEntry(entry: CategoryHistoryEntry) {
+      const index = history.value.findIndex(item => item.id === entry.id);
+      if (index < 0) return;
+      history.value = history.value.filter(item => item.id !== entry.id);
+      persist();
+      // The clicked control disappears. Move focus to the nearest remaining
+      // delete button, or back to the heading when the history becomes empty.
+      nextTick(() => {
+        const buttons = historyList.value?.querySelectorAll<HTMLButtonElement>('.study-ai-history-remove');
+        const nextButton = buttons?.[Math.min(index, buttons.length - 1)];
+        if (nextButton) nextButton.focus({ preventScroll: true });
+        else heading.value?.focus({ preventScroll: true });
+      });
+    }
     function categoryWorkspace() {
       return h('section', { key: 'categories', class: 'study-ai-workspace', 'aria-labelledby': 'index-cards-category-title' }, [
         h('header', { class: 'study-ai-header' }, [
@@ -62,12 +78,18 @@ export const AiCategoryPicker = defineComponent({
         history.value.length ? h('details', { class: 'study-ai-history', open: true }, [
           h('summary', `Category history (${history.value.length})`),
           h('p', { class: 'study-ai-muted' }, 'Reuse a category list, then use its matching source in your AI conversation.'),
-          h('ul', history.value.map(entry => h('li', { key: entry.id }, [
-            h('button', { type: 'button', class: 'quiet-button', onClick: () => reuse(entry) }, [
+          h('ul', { ref: historyList }, history.value.map(entry => h('li', { key: entry.id }, [
+            h('button', { type: 'button', class: 'quiet-button study-ai-history-use', onClick: () => reuse(entry) }, [
               h('strong', entry.categories.title),
               h('span', { class: 'study-ai-muted' }, `${entry.categories.categories.length} categories · ${new Date(entry.savedAt).toLocaleDateString()}`),
               h('span', 'Use'),
             ]),
+            h('button', {
+              type: 'button', class: 'icon-button delete-button study-ai-history-remove',
+              title: `Remove ${entry.categories.title} from history`,
+              'aria-label': `Remove ${entry.categories.title} from category history`,
+              onClick: () => removeHistoryEntry(entry),
+            }, [h(Icon, { name: 'trash' })]),
           ]))),
           h('button', { ref: clearButton, type: 'button', class: 'quiet-button', onClick: () => { clearOpen.value = true; } }, 'Clear history'),
         ]) : null,
