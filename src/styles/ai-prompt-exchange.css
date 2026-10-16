@@ -46,7 +46,9 @@
 .study-ai-history { padding-block:12px;border-block:1px solid var(--border-color); }
 .study-ai-history summary { cursor:pointer;font-weight:600; }
 .study-ai-history ul { display:grid;gap:8px;max-height:240px;overflow:auto;padding:0;list-style:none; }
-.study-ai-history li button { display:flex;flex-wrap:wrap;align-items:center;gap:8px;width:100%;text-align:left;white-space:normal;overflow-wrap:anywhere; }
+.study-ai-history li { display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px; }
+.study-ai-history li .study-ai-history-use { display:flex;flex-wrap:wrap;align-items:center;gap:8px;width:100%;min-width:0;text-align:left;white-space:normal;overflow-wrap:anywhere; }
+.study-ai-history li .study-ai-history-remove { width:var(--control-height);height:var(--control-height);min-width:var(--control-height);justify-self:end; }
 .study-ai-history li button strong { flex:1;min-width:0; }
 .study-ai-history li button .study-ai-muted { flex-basis:100%; }
 @media(max-width:700px),(max-width:1100px) and (pointer:coarse) {
