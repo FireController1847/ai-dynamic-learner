@@ -123,3 +123,5 @@ The Review knowledge-set toolbar groups **History** and **Build questions** at t
 ## LaTeX math in Markdown
 
 Shared Markdown content supports inline `$...$` or `\(...\)` and display `$$...$$` or `\[...\]` (display formulas work best on their own line). Render with bundled KaTeX and local fonts; equations inherit their surrounding text color, and long display equations scroll horizontally instead of widening the workspace. Notebook's Markdown cheatsheet documents examples. LaTeX is rendering-only: no changes to authored Markdown or the saved data format; backtick code remains literal.
+
+Review newly created knowledge sets default to a saved maximum of **25 questions per session** and **Shuffle** question order. This number stays configured as 25 even when the knowledge set contains fewer questions; session selection uses all available questions up to the cap. Study's initial order selection follows the saved order while remaining changeable for that session. Enabling the question-limit toggle in the builder also starts at 25 regardless of current set size. Previously saved, explicit order and limit settings remain unchanged, including unlimited sessions.

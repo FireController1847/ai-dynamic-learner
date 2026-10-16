@@ -7,6 +7,7 @@ import { isRecord } from '../../core/validation.ts';
 import { MAX_QUESTIONS, MAX_TEXT } from './question-model.ts';
 
 export const DEFAULT_QUIZ_ATTEMPTS = 3;
+export const DEFAULT_SESSION_QUESTION_LIMIT = 25;
 export type QuestionOrder = 'forward' | 'backward' | 'shuffle';
 export type QuestionPresentation = 'scroll' | 'one-at-a-time';
 export const QUESTION_PRESENTATIONS: readonly QuestionPresentation[] = ['scroll', 'one-at-a-time'];
@@ -33,8 +34,8 @@ export function defaultSetOptions(): SetOptions {
     description: '',
     shortAnswerStrictness: DEFAULT_ANSWER_STRICTNESS,
     fillBlankAnswerStrictness: DEFAULT_ANSWER_STRICTNESS,
-    assessmentOrder: 'forward',
-    assessmentQuestionLimit: null,
+    assessmentOrder: 'shuffle',
+    assessmentQuestionLimit: DEFAULT_SESSION_QUESTION_LIMIT,
     shuffleChoices: false,
     quizAttempts: DEFAULT_QUIZ_ATTEMPTS,
     quizPresentation: 'scroll',

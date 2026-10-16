@@ -33,7 +33,7 @@ export function settingsForMode(options: SetOptions | undefined, mode: CheckMode
   const saved = { ...defaultSetOptions(), ...options };
   if (mode === 'study') {
     return {
-      order: 'forward',
+      order: saved.assessmentOrder,
       presentation: 'scroll',
       allowBack: true,
       questionLimit: saved.assessmentQuestionLimit,

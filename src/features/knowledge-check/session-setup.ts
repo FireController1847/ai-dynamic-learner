@@ -22,7 +22,7 @@ export const SessionSetup = defineComponent({
   },
   setup(props, { emit }) {
     const defaults = settingsForMode(props.item.options, props.mode);
-    const studyOrder = ref<QuestionOrder>('forward');
+    const studyOrder = ref<QuestionOrder>(defaults.order);
     const quizChoice = ref<QuizSetupChoice>('default');
     const customizing = ref(false);
     const custom = ref<SessionSettings>({ ...defaults });
