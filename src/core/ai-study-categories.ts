@@ -1,6 +1,5 @@
 import { isRecord } from './validation.ts';
 import { parseAiImportJson } from './ai-json.ts';
-import { AI_PLAIN_TEXT_ONLY_GUIDANCE } from './ai-formatting-guidance.ts';
 const MAX_NAME_LENGTH = 120;
 
 const FORMAT = 'dynamic-learner-index-card-categories';
@@ -10,35 +9,26 @@ export interface AiCardCategories { title: string; categories: AiCardCategory[] 
 export interface AiCardScope { subject: string; category: AiCardCategory }
 
 export function studyCategoriesPrompt(product = 'Index Cards'): string {
-  return `Using the source material I supplied immediately before this instruction, identify useful categories for creating Dynamic Learner ${product} in separate steps.
+  return `Using the source material I supplied immediately before this instruction, organize categories for Dynamic Learner ${product}. This step ONLY proposes categories; I will select one before generating study content.
 
-This step ONLY proposes categories. Do not generate cards, questions, answers, or fill-in-the-blanks content yet. I will select one category and send a second prompt for its study content.
+- Follow the source's existing sections, chapters, units, or instructor-defined headings. Preserve their names, order, and scope. Do not invent subsections unless the source itself divides a section.
+- When the source is unsectioned, group its actual topics as a teacher or course instructor naturally would for lessons or assessments. Use your knowledge of the subject to name sensible categories, NOT to add lessons or facts missing from the source.
+- Keep categories distinct and meaningful, not tiny trivia fragments. Match the source's natural number of sections; do not force a count or add filler.
+- Descriptions: one short plain-text phrase (3–8 words, at most 80 characters). No overlap, citations, markdown, math markup, or application settings.
 
-- Organize the actual contents into distinct, clearly named study categories. Each category should be a coherent topic suitable for one focused study set, not the entire subject and not one isolated trivia fact.
-- Usually propose 4–12 categories, but use fewer for a short source and more only when the source warrants it. Never invent categories to reach a count.
-- Give each category a VERY short description: one compact phrase of 3–8 words, at most 80 characters. Name the contents; do not explain, write a full sentence, or repeat the category title.
-- Minimize overlap, preserve source terminology, and order categories in a useful learning sequence.
-- Base all categories on the supplied source. Do not add unsupported topics, citations, URLs, source markers, IDs, or application settings.
-
-${AI_PLAIN_TEXT_ONLY_GUIDANCE}
-
-Return ONLY one JSON code block with this exact structure:
+Return ONLY one JSON code block:
 \`\`\`json
 {
   "format": "${FORMAT}",
   "version": 1,
-  "title": "Short subject title",
+  "title": "Subject title",
   "categories": [
-    {
-      "key": "foundations",
-      "title": "Foundations",
-      "description": "Core definitions and key terms"
-    }
+    { "key": "section-1", "title": "Source section title", "description": "Topics covered in this source section" }
   ]
 }
 \`\`\`
 
-The example demonstrates format only. Use 1–${MAX_CATEGORIES} categories with unique keys and titles. Keys are short local references (1–64 characters), not app IDs. Subject and category titles must be 1–${MAX_NAME_LENGTH} characters. Descriptions should be 3–8 words of plain text, at most 80 characters. Use only the fields shown.`;
+Use 1–${MAX_CATEGORIES} categories with unique keys (1–64 characters) and titles (1–${MAX_NAME_LENGTH} characters). Subject title maximum ${MAX_NAME_LENGTH} characters. Example is structural only.`;
 }
 
 export function categoryResponseJson(value: AiCardCategories): string {
