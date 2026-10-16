@@ -41,7 +41,7 @@
 .study-ai-preview p,.study-ai-preview h3 { margin:0; }
 .study-ai-error { color:var(--danger); }
 .study-ai-categories { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 12px; width: 100%; }
-.study-ai-category { display: grid; align-content: start; gap: 8px; padding: 16px; text-align: left; white-space: normal; overflow-wrap: anywhere; }
+.study-ai-category { display: grid; grid-template-columns: minmax(0, 1fr); justify-content: stretch; justify-items: start; align-content: start; align-items: start; gap: 8px; padding: 16px; text-align: left; white-space: normal; overflow-wrap: anywhere; }
 .study-ai-category span { color: var(--text-secondary); font-size: 12px; line-height: 18px; }
 .study-ai-history { padding-block:12px;border-block:1px solid var(--border-color); }
 .study-ai-history summary { cursor:pointer;font-weight:600; }
