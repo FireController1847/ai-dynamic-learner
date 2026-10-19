@@ -10,7 +10,8 @@
     "pages:prepare": "npm run build",
     "typecheck": "tsc -p tsconfig.app.json && tsc -p tsconfig.node.json",
     "test:answer-matching": "node --test packages/@dynamic-learner/answer-matching/tests/*.test.mts",
-    "test:fill-blank": "node --test tests/fill-blank.test.mts"
+    "test:fill-blank": "node --test tests/fill-blank.test.mts",
+    "test:parameterized": "node --test tests/parameterized-template.test.mts"
   },
   "dependencies": {
     "dompurify": "3.4.16",
