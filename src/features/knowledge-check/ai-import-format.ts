@@ -8,6 +8,7 @@ import { MAX_NAME_LENGTH } from './library-model.ts';
 import { createQuestion, MAX_TEXT, MAX_QUESTION_CONTEXT, questionReady, validateQuestions, MAX_QUESTIONS, type Question } from './question-model.ts';
 import { MAX_DROPDOWN_CHOICES, MAX_DROPDOWN_ROWS, validateDropdownMatches } from './dropdown-model.ts';
 import { AI_QUESTION_TYPES, DEFAULT_AI_WEIGHTS, allocateQuestions, questionCountProblem, questionTypeLabel, type QuestionWeights } from './ai-question-mix.ts';
+import { reviewAiFocusPrompt, type ReviewAiFocus } from './ai-focus.ts';
 
 export const REVIEW_AI_FORMAT = 'dynamic-learner-review';
 export interface ReviewAiImport { title: string; description: string; questions: Question[]; warnings: string[] }
@@ -15,6 +16,8 @@ export type ReviewAiMixMode = 'custom' | 'ai';
 export interface ReviewAiPreferences {
   count: number;
   mixMode: ReviewAiMixMode;
+  /** Omission retains the original AI-selection prompt for other callers. */
+  aiFocus?: ReviewAiFocus;
   weights: QuestionWeights;
   coverage: 'essentials' | 'balanced' | 'comprehensive';
 }
@@ -23,6 +26,7 @@ export function reviewAiPrompt(preferences: ReviewAiPreferences, scope: AiCardSc
   const countProblem = questionCountProblem(preferences.count);
   if (countProblem) throw new Error(countProblem);
   const aiChoosesMix = preferences.mixMode === 'ai';
+  const focusPrompt = aiChoosesMix ? reviewAiFocusPrompt(preferences.aiFocus) : '';
   const counts = aiChoosesMix ? null : allocateQuestions(preferences.weights, preferences.count);
   const enabledTypes = AI_QUESTION_TYPES.filter(type => counts === null || counts[type] > 0);
   const allowParameterized = counts === null || counts.parameterized > 0;
@@ -62,7 +66,7 @@ Scope: ${scope ? 'Only the selected category described above.' : 'The overall su
 Coverage: ${preferences.coverage === 'essentials' ? 'Core concepts only.' : preferences.coverage === 'comprehensive' ? 'Broad useful coverage without trivia or repetition.' : 'Major ideas and useful supporting facts.'}
 Create EXACTLY ${preferences.count} items.
 ${aiChoosesMix
-    ? 'Choose question types and counts to suit the material; omit unsuitable types. Favor scored questions over arbitrary quotas or unscored filler.'
+    ? 'Choose question types and counts to suit the material; omit unsuitable types. Favor scored questions over arbitrary quotas or unscored filler.' + (focusPrompt ? `\nSelected focus (guidance, not a quota): ${focusPrompt}` : '')
     : `Use EXACTLY this mix:
 ${enabledTypes.map(type => `- ${questionTypeLabel(type)}: ${counts![type]} items`).join('\n')}`}
 Use ONLY these types: ${enabledTypes.map(questionTypeLabel).join(', ')}. If the source cannot support the count, ask to reduce it rather than invent content.
@@ -71,7 +75,7 @@ Choose the approach from the material (respect any specified type counts):
 1. LOGIC / NUMBERS / PROCEDURES: Favor reusable Parameterized questions wherever inputs, calculations, rules, or algorithms can genuinely vary. Test the method with many valid solvable variants, not one fixed numerical result. Supply feasible ranges, constraints and complete solvers as needed. Never randomize fixed facts, diagnostic thresholds, or medical constants. If Parameterized is unavailable or unsuitable, use another enabled type.
 2. RECALL / FIXED FACTS / MEDICAL / ASSOCIATIONS: Favor Multiple Choice, Fill in the Blanks, and matching Dropdowns. Test relationships directly (enzyme ↔ substrate, function ↔ term, symptom ↔ condition, threshold ↔ meaning). Reverse associations where useful; use plausible near-miss distractors to test distinctions, not obviously wrong options. Keep grading unambiguous.
 
-Think like an instructor when CHOOSING what to test, not when wording the questions. Emphasize what the source repeats, compares, demonstrates, or expects learners to apply. Vary scenarios and difficulty without redundant questions or outside facts.
+Think like an instructor when CHOOSING what to test, not when wording the questions. Emphasize what the source repeats, compares, demonstrates, or expects learners to apply. Vary scenarios and difficulty without redundant questions or outside facts. Reject questions whose answer is given away by their wording, which test only the presence of a word in the prompt, or whose distractors are obviously nonsensical; each question should genuinely test knowledge or reasoning.
 Write natural, standalone exam questions, contexts, and explanations. NEVER say "from the notes", "in class", "according to the lecture", "as discussed", "in the material", or similar references to lessons, instructors, sources, or studying. Ask directly about the concept; referencing a table or diagram actually included in the question's context is fine.
 
 Use creative, relevant Markdown context: GFM tables, comparison charts, supplied-figure relationships, short text diagrams/flows (fenced text), and KaTeX math. Present data or labeled gaps for interpretation rather than answer keys. For table-based Fill in the Blanks, put labeled unknown cells in context but scored {{blanks}} ONLY in prompt. Use context where it helps; omit decorative or invented figures, unsupported image URLs, and raw HTML.

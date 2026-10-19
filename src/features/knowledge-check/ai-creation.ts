@@ -7,6 +7,7 @@ import type { AiCardCategories, AiCardScope } from '../../core/ai-study-categori
 import { inputValue } from '../../core/dom.ts';
 import { parseFillBlankTemplate } from '../../core/fill-blank.ts';
 import { parseReviewAiImport, reviewAiPrompt, type ReviewAiImport, type ReviewAiPreferences } from './ai-import-format.ts';
+import { REVIEW_AI_FOCUSES } from './ai-focus.ts';
 import { AI_QUESTION_TYPES, allocateQuestions, DEFAULT_AI_WEIGHTS, equalizeQuestionWeights, normalizeQuestionWeights, questionCountProblem, questionMixProblem, questionTypeLabel, rebalanceQuestionWeights, type QuestionWeights, type AiQuestionType } from './ai-question-mix.ts';
 import { MAX_QUESTIONS, questionDisplayPrompt, type Question } from './question-model.ts';
 
@@ -18,7 +19,7 @@ export const ReviewAiCreation = defineComponent({
     const stage = ref<'scope' | 'categories' | 'configure' | 'generate'>('scope');
     const scope = ref<AiCardScope | null>(null);
     const categories = ref<AiCardCategories | null>(null);
-    const preferences = ref<ReviewAiPreferences>({ count: 50, coverage: 'balanced', mixMode: 'ai', weights: { ...DEFAULT_AI_WEIGHTS } });
+    const preferences = ref<ReviewAiPreferences>({ count: 50, coverage: 'balanced', mixMode: 'ai', aiFocus: 'default', weights: { ...DEFAULT_AI_WEIGHTS } });
     const json = ref('');
     const problem = ref('');
     const candidate = ref<ReviewAiImport | null>(null);
@@ -138,6 +139,22 @@ export const ReviewAiCreation = defineComponent({
                 h('span', 'AI chooses the types, prioritizing generated numeric questions and clear, reliably checked answers.')]),
             ]),
           ]),
+          preferences.value.mixMode === 'ai' ? h('fieldset', { class: 'review-ai-focus' }, [
+            h('legend', 'AI focus'),
+            h('div', { class: 'review-ai-focus-options' }, REVIEW_AI_FOCUSES.map(option => h('label', {
+              class: 'review-ai-focus-option', key: option.id,
+            }, [
+              h('input', {
+                type: 'radio', name: 'review-ai-focus', value: option.id,
+                checked: (preferences.value.aiFocus ?? 'default') === option.id,
+                onChange: () => { preferences.value.aiFocus = option.id; },
+              }),
+              h('span', { class: 'review-ai-focus-copy' }, [
+                h('strong', option.label),
+                option.description ? h('span', option.description) : null,
+              ]),
+            ]))),
+          ]) : null,
           preferences.value.mixMode === 'custom' ? h('fieldset', { class: 'review-ai-mix' }, [
             h('legend', editingMix.value ? 'Set the whole mix using relative weights' : 'Question type percentages'),
             ...AI_QUESTION_TYPES.map(type => h('label', { class: 'review-ai-weight', key: type }, [
@@ -171,8 +188,8 @@ export const ReviewAiCreation = defineComponent({
           preferences.value.mixMode === 'custom' && editingMix.value ? h('p', { class: 'study-ai-muted' }, 'Relative weights need not total 100: for example, 2 / 1 / 1 becomes 50% / 25% / 25%. Blank or 0 excludes a type. Whole-number rounding is shown beside each field.') : null,
           preferences.value.mixMode === 'custom' && editingMix.value && !normalizedMix.value ? h('p', { class: 'study-ai-error', role: 'status' }, 'Use whole weights from 0 to 100, with at least one type above 0.') : null,
           preferences.value.mixMode === 'custom' && weightNotice.value ? h('p', { class: 'study-ai-muted', role: 'status' }, weightNotice.value) : null,
-          preferences.value.mixMode === 'ai' ? h('p', { class: mixProblem.value ? 'study-ai-error' : 'study-ai-muted', role: 'status' },
-            mixProblem.value || 'AI prioritizes procedural questions for numbers, single-word blanks, and a sensible mix of single- and multi-answer choices. Short Answer is used only when needed. Some types may be omitted.') : null,
+          preferences.value.mixMode === 'ai' && mixProblem.value
+            ? h('p', { class: 'study-ai-error', role: 'status' }, mixProblem.value) : null,
           h('p', { class: 'study-ai-muted' }, 'Statements are not scored. You can still import an Index Cards set using the Library’s existing Import knowledge set action.'),
           h('div', { class: 'study-ai-actions' }, preferences.value.mixMode === 'ai' ? [
             h('button', { type: 'button', class: 'card-primary-button',
