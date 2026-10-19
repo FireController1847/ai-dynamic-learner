@@ -1,11 +1,11 @@
 import type { SocialImage } from '../core/metadata.ts';
 
 const socialImage: Readonly<SocialImage> = Object.freeze({
-  path: 'assets/dynamic-learner-social-v2.jpg',
+  path: 'assets/dynamic-learner-social-v3.jpg',
   type: 'image/jpeg',
   width: 1200,
   height: 630,
-  alt: 'Dynamic Learner — Notes. Cards. Word searches. Blue notebook, index cards, and letter-grid artwork.',
+  alt: 'Dynamic Learner — A collection of study tools, with a blue book-and-leaf mark and softly shaded app icons.',
 });
 
 export const appConfig = Object.freeze({
