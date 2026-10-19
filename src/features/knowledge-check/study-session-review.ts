@@ -24,6 +24,19 @@ export const StudySessionReview = defineComponent({
     continue: (_event: MouseEvent) => true,
   },
   setup(props, { emit }) {
+    function reviewActions() {
+      return h('div', { class: 'knowledge-study-review-actions' }, [
+        h('button', { type: 'button', class: 'quiet-button',
+          onClick: (event: MouseEvent) => emit('back', event) }, 'Back to questions'),
+        h('div', { class: 'knowledge-study-finish-actions' }, [
+          h('button', { type: 'button', class: 'quiet-button',
+            onClick: () => emit('end') }, 'End studying'),
+          h('button', { type: 'button', class: 'card-primary-button knowledge-keep-studying',
+            disabled: props.restarting, onClick: (event: MouseEvent) => emit('continue', event) }, 'Keep studying'),
+        ]),
+      ]);
+    }
+
     return () => {
       const checkedQuestions = props.questions.filter(question => (props.attempts[question.id] ?? 0) > 0).length;
       const correctChecks = props.studyCorrectChecks;
@@ -51,6 +64,7 @@ export const StudySessionReview = defineComponent({
           h('p', { class: 'knowledge-muted' },
             'Here’s how this round went. These are practice checks, not a graded test score.'),
         ]),
+        reviewActions(),
         h('div', { class: 'knowledge-study-review-overview' }, [
           h('div', { class: 'knowledge-study-review-accuracy' }, [
             h('span', { class: 'knowledge-study-review-accuracy-value' }, accuracy === null ? '—' : accuracy + '%'),
@@ -104,16 +118,7 @@ export const StudySessionReview = defineComponent({
             ]);
           })),
         ]),
-        h('div', { class: 'knowledge-study-review-actions' }, [
-          h('button', { type: 'button', class: 'quiet-button',
-            onClick: (event: MouseEvent) => emit('back', event) }, 'Back to questions'),
-          h('div', { class: 'knowledge-study-finish-actions' }, [
-            h('button', { type: 'button', class: 'quiet-button',
-              onClick: () => emit('end') }, 'End studying'),
-            h('button', { type: 'button', class: 'card-primary-button knowledge-keep-studying',
-              disabled: props.restarting, onClick: (event: MouseEvent) => emit('continue', event) }, 'Keep studying'),
-          ]),
-        ]),
+        reviewActions(),
       ]);
     };
   },
