@@ -578,3 +578,58 @@
 .knowledge-choice-pool-settings input[type='number'] { max-width: 140px; }
 .knowledge-choice-pool-settings textarea { width: 100%; resize: vertical; }
 .knowledge-choice-pool-settings > p { margin: 0 0 8px; }
+
+/* Read-only Study session recap. */
+.knowledge-study-review { display: grid; align-content: start; gap: 20px; }
+.knowledge-study-review-heading h2 { margin: 4px 0 8px; font-size: clamp(22px, 3vw, 30px); }
+.knowledge-study-review-heading p { margin-block: 0 8px; }
+.knowledge-study-review-overview {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 24px;
+  padding: 20px; border: 1px solid var(--border-color);
+  border-radius: var(--radius-dialog); background: var(--page-background);
+}
+.knowledge-study-review-accuracy { display: grid; gap: 4px; min-width: 140px; }
+.knowledge-study-review-accuracy-value {
+  font-size: clamp(36px, 5vw, 48px); font-weight: 650;
+  line-height: 1.1; font-variant-numeric: tabular-nums;
+}
+.knowledge-study-review-progress { display: grid; gap: 10px; flex: 1 1 240px; min-width: 0; }
+.knowledge-study-review-progress-label { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
+.knowledge-study-review-progress p { margin: 0; }
+.knowledge-study-review-progress-track {
+  height: 8px; overflow: hidden; border-radius: 999px; background: var(--surface-hover);
+}
+.knowledge-study-review-progress-track span { display: block; height: 100%; border-radius: inherit; background: var(--brand); }
+.knowledge-study-review-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.knowledge-study-review-metric {
+  display: grid; gap: 6px; padding: 18px 16px; min-width: 0;
+  border: 1px solid var(--border-color); border-radius: var(--radius);
+  background: var(--page-background);
+}
+.knowledge-study-review-metric strong { font-size: 24px; line-height: 30px; font-variant-numeric: tabular-nums; }
+.knowledge-study-review-metric span { font-size: 12px; color: var(--text-secondary); }
+.knowledge-study-review-breakdown h3 { margin: 4px 0 12px; font-size: 17px; }
+.knowledge-study-review-list { display: grid; gap: 10px; padding: 0; margin: 0; list-style: none; }
+.knowledge-study-review-question {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 10px 16px; padding: 14px 16px;
+  border: 1px solid var(--border-color); border-radius: var(--radius);
+  background: var(--page-background);
+}
+.knowledge-study-review-question-copy { display: grid; gap: 4px; min-width: 0; flex: 1 1 240px; }
+.knowledge-study-review-question-copy p { margin: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+.knowledge-study-review-question-status { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+.knowledge-study-review-question-status.is-correct { color: var(--success); }
+.knowledge-study-review-question-status.is-incorrect { color: var(--danger); }
+.knowledge-study-review-actions {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 12px; padding-bottom: 24px;
+}
+@container (max-width: 540px) {
+  .knowledge-study-review-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .knowledge-study-review-actions > button { flex: 1 1 100%; }
+  .knowledge-study-review-actions .knowledge-study-finish-actions {
+    width: 100%; justify-content: flex-start; margin-left: 0;
+  }
+  .knowledge-study-review-actions .knowledge-study-finish-actions > button { flex: 1 1 130px; }
+}
