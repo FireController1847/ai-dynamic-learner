@@ -88,7 +88,7 @@
 .knowledge-answer-choice span, .knowledge-result, .knowledge-study-answer { white-space: pre-wrap; overflow-wrap: anywhere; }
 .knowledge-study-choices { padding-left: 24px; margin-bottom: 24px; }
 .knowledge-study-answer, .knowledge-feedback { padding: 16px; margin: 16px 0; border-left: 3px solid var(--brand); background: var(--surface-subtle); }
-.knowledge-feedback p:last-child { margin-bottom: 0; }
+/* Celebration sparks are transient siblings; feedback spacing must not depend on :last-child. */
 .knowledge-feedback.is-incorrect { border-left-color: var(--danger); }
 .knowledge-results-heading h3 { margin: 12px 0; font-size: 20px; line-height: 28px; }
 .knowledge-result { padding: 16px 0; border-bottom: 1px solid var(--border-color); margin-bottom: 16px; }
