@@ -13,7 +13,7 @@ import { answerStrictnessForQuestion } from './session-settings.ts';
 import { useKnowledgeSession } from './session-state.ts';
 import { dropdownCorrectness } from './dropdown-model.ts';
 import { enterReviewPanel, leaveReviewPanel, restoreReviewPanel } from './review-motion.ts';
-import { computed, defineComponent, h, onMounted, ref, Transition, watch, type PropType } from 'vue';
+import { computed, defineComponent, h, nextTick, onMounted, ref, Transition, watch, type PropType } from 'vue';
 
 export const KnowledgeSession = defineComponent({
   name: 'KnowledgeSession',
@@ -37,6 +37,7 @@ export const KnowledgeSession = defineComponent({
     const fillBlankPrimaryButton = ref<HTMLButtonElement | null>(null);
     const backward = ref(false);
     const scrollSession = ref<HTMLElement | null>(null);
+    const restartingStudy = ref(false);
     type ResultFilter = 'all' | 'correct' | 'incorrect';
     const resultFilter = ref<ResultFilter>('all');
     watch(submitted, (isSubmitted) => {
@@ -99,14 +100,44 @@ export const KnowledgeSession = defineComponent({
       ]);
     }
 
-    function moveQuestion(next: number, wrap = false) {
+    async function keepStudying(event: MouseEvent) {
+      if (props.mode !== 'study' || !started.value || restartingStudy.value ||
+          state.generating.value || state.submitting.value) return;
+      restartingStudy.value = true;
+      const scroller = (event.currentTarget as HTMLElement).closest<HTMLElement>('.knowledge-check-detail');
+      try {
+        // Finish this round before start() resets its visited questions.
+        if (options.value.presentation === 'scroll') state.completeStudyScrollPass();
+        else state.finishStudyPass();
+        await start();
+        backward.value = false;
+        await nextTick();
+        scroller?.scrollTo({
+          top: 0,
+          behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+        });
+      } finally {
+        restartingStudy.value = false;
+      }
+    }
+
+    function studyFooterActions() {
+      return h('div', { class: 'knowledge-study-finish-actions' }, [
+        h('button', { type: 'button', class: 'quiet-button', onClick: end }, 'End studying'),
+        h('button', {
+          type: 'button', class: 'card-primary-button knowledge-keep-studying',
+          disabled: restartingStudy.value || state.generating.value,
+          onClick: keepStudying,
+        }, ['Keep studying', h(Icon, { name: 'chevron' })]),
+      ]);
+    }
+
+    function moveQuestion(next: number) {
       tick();
       if (submitted.value || state.generating.value || state.submitting.value || next < 0 || next >= questions.value.length) return;
       if (next < position.value && props.mode !== 'study' && options.value.presentation === 'one-at-a-time' && !options.value.allowBack) return;
-      if (wrap) state.finishStudyPass();
-      backward.value = next < position.value && !wrap;
+      backward.value = next < position.value;
       position.value = next;
-      if (wrap) state.resetStudyPass();
     }
 
     function canJumpToFlag(index: number): boolean {
@@ -614,11 +645,7 @@ export const KnowledgeSession = defineComponent({
             renderQuestion(entry, index, true))),
           h('div', { class: 'knowledge-session-navigation knowledge-scroll-footer' }, [
             props.mode === 'study'
-              ? h('button', { type: 'button', class: 'quiet-button knowledge-keep-studying', onClick: () => {
-                state.completeStudyScrollPass();
-                scrollSession.value?.querySelector<HTMLElement>('.knowledge-prompt')?.scrollIntoView({ block: 'start' });
-                state.resetStudyPass();
-              } }, ['Keep studying', h(Icon, { name: 'chevron' })])
+              ? studyFooterActions()
               : h('button', {
                 type: 'button', class: 'card-primary-button',
                 disabled: state.submitting.value || (props.mode === 'quiz' && resolved.value !== questions.value.length),
@@ -676,11 +703,7 @@ export const KnowledgeSession = defineComponent({
               disabled: props.mode === 'quiz' && resolved.value !== questions.value.length,
               onClick: props.mode === 'test' ? submitTest : () => submit(),
             }, props.mode === 'test' ? 'Submit test' : 'See results') :
-              h('button', {
-                type: 'button',
-                class: 'quiet-button knowledge-keep-studying',
-                onClick: () => moveQuestion(0, true),
-              }, ['Keep studying', h(Icon, { name: 'chevron' })]),
+              studyFooterActions(),
         ]),
         ]),
         flagRail(),

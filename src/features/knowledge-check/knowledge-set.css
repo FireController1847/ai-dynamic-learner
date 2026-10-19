@@ -302,9 +302,19 @@
 }
 .knowledge-scroll-questions .knowledge-prompt h3 { margin-top: 0; }
 .knowledge-scroll-footer { justify-content: flex-end; padding-bottom: 24px; }
+.knowledge-study-finish-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
 @media (max-width: 560px) {
   .knowledge-scroll-questions { gap: 12px; }
   .knowledge-scroll-footer > button { width: 100%; }
+  .knowledge-study-finish-actions { flex: 1 1 100%; margin-left: 0; }
+  .knowledge-study-finish-actions > button { flex: 1 1 135px; }
 }
 
 
