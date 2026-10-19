@@ -37,7 +37,7 @@ export function settingsForMode(options: SetOptions | undefined, mode: CheckMode
       presentation: 'scroll',
       allowBack: true,
       questionLimit: saved.assessmentQuestionLimit,
-      shuffleChoices: false,
+      shuffleChoices: saved.shuffleChoices,
       shortAnswerStrictness: saved.shortAnswerStrictness,
       fillBlankAnswerStrictness: saved.fillBlankAnswerStrictness,
       quizAttempts: saved.quizAttempts,

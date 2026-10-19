@@ -36,7 +36,7 @@ export function defaultSetOptions(): SetOptions {
     fillBlankAnswerStrictness: DEFAULT_ANSWER_STRICTNESS,
     assessmentOrder: 'shuffle',
     assessmentQuestionLimit: DEFAULT_SESSION_QUESTION_LIMIT,
-    shuffleChoices: false,
+    shuffleChoices: true,
     quizAttempts: DEFAULT_QUIZ_ATTEMPTS,
     quizPresentation: 'scroll',
     quizAllowBack: true,
