@@ -375,7 +375,7 @@ export const KnowledgeSession = defineComponent({
           event.shiftKey || event.altKey || event.ctrlKey || event.metaKey) return;
       event.preventDefault();
       const card = (event.currentTarget as HTMLElement).closest('.knowledge-prompt');
-      card?.querySelector<HTMLButtonElement>('[data-review-primary]:not(:disabled)']?.click();
+      card?.querySelector<HTMLButtonElement>('[data-review-primary]:not(:disabled)')?.click();
     }
 
     function handleFillBlankEnter(event: KeyboardEvent, blankIndex: number, blankCount: number, locked: boolean) {
