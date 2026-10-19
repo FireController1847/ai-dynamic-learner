@@ -504,7 +504,13 @@ export const KnowledgeSession = defineComponent({
             ]),
           !scored ? null : props.mode !== 'test' ? h('div', {}, [
             h(Transition, { name: 'knowledge-feedback', mode: 'out-in', onBeforeLeave: leaveReviewPanel, onLeaveCancelled: restoreReviewPanel }, {
-              default: () => showFeedback ? h('div', { key: `${question.id}-${attemptCount}` }, [feedback(question, study ? correct : !quizRetrying)]) : null,
+              default: () => showFeedback ? h('div', {
+                key: `${question.id}-${attemptCount}`, class: 'knowledge-feedback-frame',
+              }, [
+                h('div', { class: 'knowledge-feedback-frame-inner' }, [
+                  feedback(question, study ? correct : !quizRetrying),
+                ]),
+              ]) : null,
             }),
             !(props.mode === 'quiz' && wasChecked) ? h('button', {
               ref: question.type === 'fill-in-the-blanks' && !scroll ? fillBlankPrimaryButton : undefined,

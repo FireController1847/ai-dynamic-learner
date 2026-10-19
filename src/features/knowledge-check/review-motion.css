@@ -70,13 +70,12 @@
   animation-delay: var(--review-delay, 0ms);
 }
 .knowledge-answer-choice:hover:not(.is-selected) {
-  transform: translateY(-1px);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--brand) 8%, transparent);
 }
 .knowledge-answer-choice:active {
-  transform: translateY(0) scale(.995);
+  background: var(--surface-pressed);
 }
 .knowledge-answer-choice.is-selected {
-  transform: translateY(-1px);
   box-shadow: 0 3px 10px color-mix(in srgb, var(--brand) 12%, transparent);
 }
 .knowledge-answer-choice.is-correct {
@@ -124,11 +123,9 @@
 
 .knowledge-fill-blank-input {
   transition:
-    width var(--motion-fast) var(--ease-out),
     border-color var(--motion-fast),
     background-color var(--motion-fast),
-    box-shadow var(--motion-fast),
-    transform var(--motion-fast);
+    box-shadow var(--motion-fast);
 }
 .knowledge-fill-blank-input.is-correct {
   border-bottom-color: var(--success);
@@ -141,20 +138,27 @@
   animation: knowledge-blank-incorrect 360ms var(--ease-out);
 }
 
+.knowledge-feedback-frame {
+  display: grid;
+  grid-template-rows: 1fr;
+  min-width: 0;
+  opacity: 1;
+}
+.knowledge-feedback-frame-inner {
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
 .knowledge-feedback-enter-active,
 .knowledge-feedback-leave-active {
-  overflow: hidden;
   transition:
-    opacity 180ms var(--ease-out),
-    transform 200ms var(--ease-out);
+    grid-template-rows 220ms var(--ease-out),
+    opacity 180ms var(--ease-out);
 }
-.knowledge-feedback-enter-from {
-  opacity: 0;
-  transform: translateY(8px) scale(.992);
-}
+.knowledge-feedback-enter-from,
 .knowledge-feedback-leave-to {
+  grid-template-rows: 0fr;
   opacity: 0;
-  transform: translateY(-4px) scale(.996);
 }
 .knowledge-feedback.is-correct:not(.is-celebrating) {
   animation: knowledge-feedback-correct 420ms var(--ease-out);
@@ -273,10 +277,8 @@
   100% { box-shadow: 0 0 0 0 transparent; }
 }
 @keyframes knowledge-choice-incorrect {
-  0%, 100% { transform: translateY(-1px) translateX(0); }
-  28% { transform: translateY(-1px) translateX(-4px); }
-  55% { transform: translateY(-1px) translateX(3px); }
-  78% { transform: translateY(-1px) translateX(-2px); }
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  40% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--danger) 12%, transparent); }
 }
 @keyframes knowledge-blank-correct {
   0% { box-shadow: 0 2px 0 color-mix(in srgb, var(--success) 0%, transparent); }
@@ -284,10 +286,8 @@
   100% { box-shadow: 0 2px 0 transparent; }
 }
 @keyframes knowledge-blank-incorrect {
-  0%, 100% { transform: translateX(0); }
-  30% { transform: translateX(-3px); }
-  60% { transform: translateX(3px); }
-  82% { transform: translateX(-1px); }
+  0%, 100% { box-shadow: 0 2px 0 0 transparent; }
+  45% { box-shadow: 0 2px 0 2px color-mix(in srgb, var(--danger) 20%, transparent); }
 }
 @keyframes knowledge-feedback-correct {
   0% { box-shadow: inset 0 0 0 transparent; }
@@ -295,10 +295,8 @@
   100% { box-shadow: inset 0 0 0 transparent; }
 }
 @keyframes knowledge-feedback-incorrect {
-  0%, 100% { transform: translateX(0); }
-  28% { transform: translateX(-3px); }
-  55% { transform: translateX(2px); }
-  78% { transform: translateX(-1px); }
+  0%, 100% { box-shadow: inset 0 0 0 0 transparent; }
+  45% { box-shadow: inset 0 0 0 999px color-mix(in srgb, var(--danger) 6%, transparent); }
 }
 @keyframes knowledge-score-tick {
   0% { opacity: .55; transform: translateY(3px) scale(.98); }
@@ -345,8 +343,8 @@
   to { opacity: 1; transform: scale(1); }
 }
 @keyframes knowledge-result-arrive {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -402,14 +400,14 @@
   .knowledge-question-leave-to,
   .knowledge-session.is-backward .knowledge-question-enter-from,
   .knowledge-session.is-backward .knowledge-question-leave-to,
-  .knowledge-feedback-enter-from,
-  .knowledge-feedback-leave-to,
   .knowledge-reveal-enter-from,
   .knowledge-reveal-leave-to {
     opacity: 1;
     transform: none;
   }
 
+  .knowledge-feedback-enter-from,
+  .knowledge-feedback-leave-to,
   .knowledge-reveal-enter-from,
   .knowledge-reveal-leave-to {
     grid-template-rows: 1fr;
