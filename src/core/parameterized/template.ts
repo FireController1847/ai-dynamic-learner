@@ -85,7 +85,17 @@ export function validateTexts(texts: Record<string, string>, names: readonly str
     const rest = value.replace(/\{\{([A-Za-z][A-Za-z0-9_]*)(?::([0-8]))?\}\}/g, (_match, name: string) => {
       if (!names.includes(name)) throw new Error(`Unresolved placeholder: ${name}.`); return '';
     });
-    if (/\{\{|\}\}/.test(rest)) throw new Error('Malformed variable placeholder.');
+    if (/\{\{/.test(rest)) throw new Error('Malformed variable placeholder.');
+    // KaTeX can close two nested groups with "}}". Reject a double closing
+    // brace only when fewer than two ordinary opening groups remain.
+    let openGroups = 0;
+    for (let index = 0; index < rest.length; index++) {
+      if (rest[index] === '{') openGroups++;
+      else if (rest[index] === '}') {
+        if (rest[index + 1] === '}' && openGroups < 2) throw new Error('Malformed variable placeholder.');
+        openGroups = Math.max(0, openGroups - 1);
+      }
+    }
   }
 }
 export const dependencies = (source: string) => expressionDependencies(parseExpression(source));
