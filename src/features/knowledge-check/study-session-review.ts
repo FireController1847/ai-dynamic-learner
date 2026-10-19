@@ -15,6 +15,7 @@ export const StudySessionReview = defineComponent({
     revealed: { type: Object as PropType<Set<string>>, required: true },
     studyChecks: { type: Number, required: true },
     studyCorrectChecks: { type: Number, required: true },
+    studyUncreditedChecks: { type: Number, default: 0 },
     settings: { type: Object as PropType<SessionSettings>, required: true },
     restarting: Boolean,
     readOnly: Boolean,
@@ -47,7 +48,8 @@ export const StudySessionReview = defineComponent({
       const checkedQuestions = props.questions.filter(question => (props.attempts[question.id] ?? 0) > 0).length;
       const correctChecks = props.studyCorrectChecks;
       const totalChecks = props.studyChecks;
-      const incorrectChecks = Math.max(0, totalChecks - correctChecks);
+      const uncreditedChecks = props.studyUncreditedChecks;
+      const incorrectChecks = Math.max(0, totalChecks - correctChecks - uncreditedChecks);
       const accuracy = totalChecks ? Math.round(correctChecks / totalChecks * 100) : null;
       const hintsUsed = props.questions.filter(question => props.hints.has(question.id)).length;
       const answersRevealed = props.questions.filter(question => props.revealed.has(question.id)).length;
@@ -55,6 +57,7 @@ export const StudySessionReview = defineComponent({
         { title: 'Total checks', value: totalChecks },
         { title: 'Correct checks', value: correctChecks },
         { title: 'Incorrect checks', value: incorrectChecks },
+        ...(uncreditedChecks ? [{ title: 'Revealed-answer checks', value: uncreditedChecks }] : []),
         { title: 'Questions practiced', value: checkedQuestions + ' / ' + props.questions.length },
         { title: 'Hints open', value: hintsUsed },
         { title: 'Answers revealed', value: answersRevealed },
@@ -93,7 +96,7 @@ export const StudySessionReview = defineComponent({
             }, [h('span', { style: { width: (props.questions.length
               ? checkedQuestions / props.questions.length * 100 : 0) + '%' } })]),
             h('p', { class: 'knowledge-muted' },
-              totalChecks ? 'Correct and incorrect counts include retries.' : 'No answers were checked this round.'),
+              totalChecks ? 'Checks include retries. Correct answers checked after Show answer are not credited.' : 'No answers were checked this round.'),
           ]),
         ]),
         h('div', { class: 'knowledge-study-review-metrics', 'aria-label': 'Study statistics' },

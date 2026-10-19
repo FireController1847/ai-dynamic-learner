@@ -26,6 +26,8 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
   const feedbackResponses = ref<Record<string, QuestionResponse>>({});
   const checked = ref(new Set<string>());
   const revealed = ref(new Set<string>());
+  // Answer visibility is reversible; having seen an answer is not.
+  const studyAnswersSeen = ref(new Set<string>());
   const hints = ref(new Set<string>());
   const flagged = ref(new Set<string>());
   const submitted = ref(false);
@@ -38,6 +40,7 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
   const attempts = ref<Record<string, number>>({});
   const studyChecks = ref(0);
   const studyCorrectChecks = ref(0);
+  const studyUncreditedChecks = ref(0);
   const active = computed(() => mode !== 'study' && started.value && !submitted.value);
   const scoredCount = computed(() => questions.value.filter(questionScored).length);
   const answered = computed(() => questions.value.filter(question =>
@@ -85,9 +88,9 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
         version: 1, templates, instances: { ...instances }, seeds: { ...seeds },
         settings: { ...options.value }, position: position.value, paused: paused.value,
         responses: { ...responses.value }, feedbackResponses: { ...feedbackResponses.value }, checked: [...checked.value],
-        revealed: [...revealed.value], hints: [...hints.value], flagged: [...flagged.value],
+        revealed: [...revealed.value], studyAnswersSeen: [...studyAnswersSeen.value], hints: [...hints.value], flagged: [...flagged.value],
         attempts: { ...attempts.value }, submitted: submitted.value,
-        expired: expired.value, deadline: deadline.value, studyChecks: studyChecks.value, studyCorrectChecks: studyCorrectChecks.value,
+        expired: expired.value, deadline: deadline.value, studyChecks: studyChecks.value, studyCorrectChecks: studyCorrectChecks.value, studyUncreditedChecks: studyUncreditedChecks.value,
         studyVisited: [...studyVisited], studyPassRecorded,
       };
       writeSession(storageKey, snapshot);
@@ -147,8 +150,11 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
     }
     responses.value = { ...snapshot.responses }; feedbackResponses.value = { ...snapshot.feedbackResponses };
     checked.value = new Set(snapshot.checked); revealed.value = new Set(snapshot.revealed); hints.value = new Set(snapshot.hints);
+    // Backward compatibility: previously visible answers were certainly seen.
+    studyAnswersSeen.value = new Set(snapshot.studyAnswersSeen ?? snapshot.revealed);
     flagged.value = new Set(snapshot.flagged ?? []);
     attempts.value = { ...snapshot.attempts }; studyChecks.value = snapshot.studyChecks; studyCorrectChecks.value = snapshot.studyCorrectChecks;
+    studyUncreditedChecks.value = snapshot.studyUncreditedChecks ?? 0;
     studyVisited = new Set(snapshot.studyVisited); studyPassRecorded = snapshot.studyPassRecorded;
     submitted.value = snapshot.submitted; expired.value = snapshot.expired; deadline.value = snapshot.deadline;
     ended.value = false; paused.value = false; started.value = true; tick();
@@ -165,7 +171,7 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
       }
     }
   }
-  watch([responses, feedbackResponses, checked, revealed, hints, flagged, attempts, position, submitted, deadline, studyChecks, studyCorrectChecks], persist, { deep: true });
+  watch([responses, feedbackResponses, checked, revealed, studyAnswersSeen, hints, flagged, attempts, position, submitted, deadline, studyChecks, studyCorrectChecks, studyUncreditedChecks], persist, { deep: true });
 
   function clearCelebration() {
     if (celebrationTimer !== null) window.clearTimeout(celebrationTimer);
@@ -202,7 +208,7 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
     feedbackResponses.value = { ...attempt.feedbackResponses };
     attempts.value = { ...attempt.attempts };
     checked.value = new Set(questions.value.map(question => question.id));
-    revealed.value = new Set(); hints.value = new Set(); flagged.value = new Set();
+    revealed.value = new Set(); studyAnswersSeen.value = new Set(); hints.value = new Set(); flagged.value = new Set();
     expired.value = attempt.expired; deadline.value = null;
     started.value = true; submitted.value = true; ended.value = false;
   }
@@ -226,7 +232,8 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
   function saveStudyReview() {
     if (mode !== 'study' || !statisticsEnabled || !started.value || !questions.value.length) return;
     item.lastStudy = completedStudySession(options.value, questions.value, feedbackResponses.value,
-      attempts.value, [...hints.value], [...revealed.value], studyChecks.value, studyCorrectChecks.value);
+      attempts.value, [...hints.value], [...studyAnswersSeen.value], studyChecks.value, studyCorrectChecks.value,
+      studyUncreditedChecks.value);
   }
   watch(position, async () => {
     const index = position.value, currentEpoch = epoch;
@@ -246,10 +253,10 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
       try { localStorage.removeItem(storageKey); saved = null; resumable.value = false; savedCompleted.value = false; }
       catch { storageMessage.value = 'Previous paused session could not be cleared.'; }
     }
-    responses.value = {}; checked.value = new Set(); revealed.value = new Set(); hints.value = new Set();
+    responses.value = {}; checked.value = new Set(); revealed.value = new Set(); studyAnswersSeen.value = new Set(); hints.value = new Set();
     flagged.value = new Set(); attempts.value = {};
     feedbackResponses.value = {};
-    studyChecks.value = 0; studyCorrectChecks.value = 0;
+    studyChecks.value = 0; studyCorrectChecks.value = 0; studyUncreditedChecks.value = 0;
     runtimeSettings.value = { ...settings };
     // Recover the previous run's values solely to avoid an unnecessary repeat.
     for (const template of saved?.templates ?? []) {
@@ -290,15 +297,15 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
   }
   function end() {
     finishStudyPass();
-    if (studyChecks.value > 0 || hints.value.size > 0 || revealed.value.size > 0) saveStudyReview();
+    if (studyChecks.value > 0 || hints.value.size > 0 || studyAnswersSeen.value.size > 0) saveStudyReview();
     resetGeneration(); instances = {};
     try { if (statisticsEnabled) localStorage.removeItem(storageKey); } catch { storageMessage.value = 'Saved session could not be cleared.'; }
     saved = null; resumable.value = false; savedCompleted.value = false; paused.value = false; generationError.value = '';
     started.value = false; submitted.value = false; deadline.value = null; ended.value = true; clearCelebration();
-    responses.value = {}; checked.value = new Set(); revealed.value = new Set(); hints.value = new Set();
+    responses.value = {}; checked.value = new Set(); revealed.value = new Set(); studyAnswersSeen.value = new Set(); hints.value = new Set();
     flagged.value = new Set(); attempts.value = {};
     feedbackResponses.value = {};
-    studyChecks.value = 0; studyCorrectChecks.value = 0; questions.value = []; position.value = 0;
+    studyChecks.value = 0; studyCorrectChecks.value = 0; studyUncreditedChecks.value = 0; questions.value = []; position.value = 0;
   }
   function leave(): boolean {
     tick();
@@ -312,6 +319,16 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
     if (next.has(id)) next.delete(id);
     else next.add(id);
     flagged.value = next;
+  }
+  function toggleStudyAnswer(id: string) {
+    if (mode !== 'study' || !started.value || !questions.value.some(question => question.id === id)) return;
+    const nextVisible = new Set(revealed.value);
+    if (nextVisible.has(id)) nextVisible.delete(id);
+    else {
+      nextVisible.add(id);
+      studyAnswersSeen.value = new Set([...studyAnswersSeen.value, id]);
+    }
+    revealed.value = nextVisible;
   }
   function check(index = position.value) {
     tick();
@@ -331,10 +348,11 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
       answerStrictnessForQuestion(options.value, question.type),
     );
 
+    const creditedCorrect = correct && (mode !== 'study' || !studyAnswersSeen.value.has(question.id));
     clearCelebration();
     statistics?.record('knowledge-check', item.id, 'answerChecks');
-    if (correct) statistics?.record('knowledge-check', item.id, 'correctChecks');
-    if (correct && mode !== 'test') {
+    if (creditedCorrect) statistics?.record('knowledge-check', item.id, 'correctChecks');
+    if (creditedCorrect && mode !== 'test') {
       celebrating.value = question.id;
       celebrationTimer = window.setTimeout(clearCelebration, 900);
     }
@@ -342,7 +360,8 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
     if (mode === 'study') {
       checked.value.add(question.id);
       studyChecks.value += 1;
-      if (correct) studyCorrectChecks.value += 1;
+      if (creditedCorrect) studyCorrectChecks.value += 1;
+      else if (correct) studyUncreditedChecks.value += 1;
       return;
     }
 
@@ -381,12 +400,12 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
   });
   onBeforeUnmount(() => {
     finishStudyPass();
-    if (!paused.value && (studyChecks.value > 0 || hints.value.size > 0 || revealed.value.size > 0)) saveStudyReview();
+    if (!paused.value && (studyChecks.value > 0 || hints.value.size > 0 || studyAnswersSeen.value.size > 0)) saveStudyReview();
     persist(); resetGeneration(); detach();
   });
   return { questions, questionCount, options, position, responses, feedbackResponses, checked, revealed, hints, submitted, started, expired, ended,
-    active, answered, resolved, score, scoredCount, remaining, celebrating, attempts, flagged, toggleFlag,
-    studyChecks, studyCorrectChecks,
+    active, answered, resolved, score, scoredCount, remaining, celebrating, attempts, flagged, toggleFlag, toggleStudyAnswer,
+    studyChecks, studyCorrectChecks, studyUncreditedChecks, studyAnswersSeen,
     generationError, generating, submitting, storageMessage, resumable, savedCompleted, resume,
     start, pause, end, check, submit, leave, tick, showHistory, finishStudyPass, completeStudyScrollPass, saveStudyReview, resetStudyPass };
 }

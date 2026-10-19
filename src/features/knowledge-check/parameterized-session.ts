@@ -12,17 +12,17 @@ import { materializeChoicePool } from './multiple-choice-pool.ts';
 export interface ParameterizedSessionSnapshot {
   version: 1; instances?: Record<string, GeneratedVariant>; templates: Question[]; seeds: Record<string, string>; settings: SessionSettings;
   position: number; responses: Record<string, QuestionResponse>; feedbackResponses: Record<string, QuestionResponse>;
-  checked: string[]; revealed: string[]; hints: string[]; flagged?: string[]; attempts: Record<string, number>;
+  checked: string[]; revealed: string[]; studyAnswersSeen?: string[]; hints: string[]; flagged?: string[]; attempts: Record<string, number>;
   submitted: boolean; expired: boolean; deadline: number | null; paused?: boolean;
-  studyChecks: number; studyCorrectChecks: number; studyVisited: string[]; studyPassRecorded: boolean;
+  studyChecks: number; studyCorrectChecks: number; studyUncreditedChecks?: number; studyVisited: string[]; studyPassRecorded: boolean;
 }
 const MAX_SNAPSHOT = 4 * 1024 * 1024;
 export const sessionStorageKey = (id: string, mode: string) => `dynamic-learner.review.generated-session.v1:${id}:${mode}`;
 function natural(value: unknown): value is number { return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0; }
 export function validateSessionSnapshot(value: unknown): asserts value is ParameterizedSessionSnapshot {
   if (!isRecord(value) || value.version !== 1 || Object.keys(value).some(key => ![
-    'version','instances','templates','seeds','settings','position','responses','feedbackResponses','checked','revealed','hints','flagged','attempts',
-    'submitted','expired','deadline','paused','studyChecks','studyCorrectChecks','studyVisited','studyPassRecorded',
+    'version','instances','templates','seeds','settings','position','responses','feedbackResponses','checked','revealed','studyAnswersSeen','hints','flagged','attempts',
+    'submitted','expired','deadline','paused','studyChecks','studyCorrectChecks','studyUncreditedChecks','studyVisited','studyPassRecorded',
   ].includes(key))) throw new Error('Unsupported saved generated session.');
   validateQuestions(value.templates);
   if (!value.templates.length ||
@@ -46,12 +46,19 @@ export function validateSessionSnapshot(value: unknown): asserts value is Parame
     timeLimitMinutes: settings.timeLimitMinutes, showTestAnswers: settings.showTestAnswers });
   if (!natural(value.position) || value.position >= value.templates.length || !natural(value.studyChecks) ||
       !natural(value.studyCorrectChecks) || value.studyCorrectChecks > value.studyChecks ||
+      (value.studyUncreditedChecks !== undefined &&
+        (!natural(value.studyUncreditedChecks) || value.studyCorrectChecks + value.studyUncreditedChecks > value.studyChecks)) ||
       typeof value.submitted !== 'boolean' || typeof value.expired !== 'boolean' || typeof value.studyPassRecorded !== 'boolean' ||
       value.deadline !== null && (!natural(value.deadline) || value.deadline > 8640000000000000)) throw new Error('Invalid saved session progress.');
-  for (const key of ['checked','revealed','hints','studyVisited','flagged']) {
+  for (const key of ['checked','revealed','studyAnswersSeen','hints','studyVisited','flagged']) {
     const list = value[key];
-    if (key === 'flagged' && list === undefined) continue;
+    if ((key === 'flagged' || key === 'studyAnswersSeen') && list === undefined) continue;
     if (!Array.isArray(list) || list.length > ids.size || new Set(list).size !== list.length || list.some(id => typeof id !== 'string' || !ids.has(id))) throw new Error('Invalid saved session flags.');
+  }
+  const previouslySeen = value.studyAnswersSeen;
+  if (Array.isArray(previouslySeen) && Array.isArray(value.revealed) &&
+      value.revealed.some((id: string) => !previouslySeen.includes(id))) {
+    throw new Error('Visible answers must also be marked as revealed.');
   }
   for (const key of ['responses','feedbackResponses']) {
     const entries = value[key];

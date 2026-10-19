@@ -564,7 +564,7 @@ export const KnowledgeSession = defineComponent({
               question.generated?.trace.length ? h('ol', question.generated.trace.map(line => h('li', line))) : null,
             ]) : null),
             h('button', { type: 'button', class: 'quiet-button', onClick: () => {
-              if (revealed.value.has(question.id)) revealed.value.delete(question.id); else revealed.value.add(question.id);
+              state.toggleStudyAnswer(question.id);
             }, 'aria-expanded': revealed.value.has(question.id), 'aria-controls': `answer-${question.id}` }, revealed.value.has(question.id) ? 'Hide answer' : 'Show answer'),
             reveal(`answer-${question.id}`, revealed.value.has(question.id) ? h('div', { id: `answer-${question.id}`, class: 'knowledge-study-answer' },
               question.type === 'parameterized' ? [h('p', 'Answers:'), h('ul', (question.generated?.answers ?? []).map(answer => h('li', `${answer.label}: ${answer.text}`)))] :
@@ -598,6 +598,7 @@ export const KnowledgeSession = defineComponent({
           feedbackResponses: saved.feedbackResponses,
           hints: new Set(saved.hints), revealed: new Set(saved.revealed),
           studyChecks: saved.studyChecks, studyCorrectChecks: saved.studyCorrectChecks,
+          studyUncreditedChecks: saved.studyUncreditedChecks ?? 0,
           settings: saved.settings, readOnly: true, completedAt: saved.completedAt,
           onBack: () => { viewingLastStudy.value = false; },
         });
@@ -614,8 +615,9 @@ export const KnowledgeSession = defineComponent({
           key: 'study-review',
           questions: questions.value, attempts: attempts.value,
           feedbackResponses: feedbackResponses.value,
-          hints: hints.value, revealed: revealed.value,
+          hints: hints.value, revealed: state.studyAnswersSeen.value,
           studyChecks: studyChecks.value, studyCorrectChecks: studyCorrectChecks.value,
+          studyUncreditedChecks: state.studyUncreditedChecks.value,
           settings: options.value, restarting: restartingStudy.value,
           onBack: returnToStudyQuestions,
           onEnd: () => { reviewingStudy.value = false; end(); },

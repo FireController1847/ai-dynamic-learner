@@ -17,6 +17,7 @@ export interface LastStudySession {
   revealed: string[];
   studyChecks: number;
   studyCorrectChecks: number;
+  studyUncreditedChecks?: number;
 }
 function copy<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
@@ -30,6 +31,7 @@ export function completedStudySession(
   revealed: readonly string[],
   studyChecks: number,
   studyCorrectChecks: number,
+  studyUncreditedChecks: number,
 ): LastStudySession {
   const variants: Record<string, GeneratedVariant> = {};
   const templates = questions.map(question => {
@@ -41,7 +43,7 @@ export function completedStudySession(
   return {
     completedAt: Date.now(), settings: copy(settings), questions: copy(templates), variants,
     feedbackResponses: copy(feedbackResponses), attempts: { ...attempts },
-    hints: [...hints], revealed: [...revealed], studyChecks, studyCorrectChecks,
+    hints: [...hints], revealed: [...revealed], studyChecks, studyCorrectChecks, studyUncreditedChecks,
   };
 }
 export function reviewedStudyQuestions(session: LastStudySession): Question[] {
@@ -57,11 +59,13 @@ function natural(value: unknown): value is number {
 export function validateLastStudySession(value: unknown): asserts value is LastStudySession {
   if (!isRecord(value) || Object.keys(value).some(key => ![
     'completedAt', 'settings', 'questions', 'variants', 'feedbackResponses', 'attempts',
-    'hints', 'revealed', 'studyChecks', 'studyCorrectChecks',
+    'hints', 'revealed', 'studyChecks', 'studyCorrectChecks', 'studyUncreditedChecks',
   ].includes(key)) ||
       !natural(value.completedAt) || value.completedAt > 8640000000000000 ||
       !natural(value.studyChecks) || !natural(value.studyCorrectChecks) ||
-      value.studyCorrectChecks > value.studyChecks) {
+      value.studyCorrectChecks > value.studyChecks ||
+      (value.studyUncreditedChecks !== undefined &&
+        (!natural(value.studyUncreditedChecks) || value.studyCorrectChecks + value.studyUncreditedChecks > value.studyChecks))) {
     throw new Error('The last Study session is invalid.');
   }
   validateQuestions(value.questions, { allowGeneratedHistorySnapshots: true });
