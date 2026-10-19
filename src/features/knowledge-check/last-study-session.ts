@@ -65,8 +65,9 @@ export function validateLastStudySession(value: unknown): asserts value is LastS
     throw new Error('The last Study session is invalid.');
   }
   validateQuestions(value.questions, { allowGeneratedHistorySnapshots: true });
-  if (!value.questions.length) throw new Error('The last Study session contains no questions.');
-  const ids = new Set(value.questions.map(question => question.id));
+  const questions = value.questions;
+  if (!questions.length) throw new Error('The last Study session contains no questions.');
+  const ids = new Set(questions.map(question => question.id));
   if (!isRecord(value.settings) || Object.keys(value.settings).some(key => ![
     'order', 'presentation', 'allowBack', 'questionLimit', 'shuffleChoices',
     'shortAnswerStrictness', 'fillBlankAnswerStrictness', 'quizAttempts',
@@ -82,7 +83,7 @@ export function validateLastStudySession(value: unknown): asserts value is LastS
     timeLimitMinutes: settings.timeLimitMinutes, showTestAnswers: settings.showTestAnswers,
   });
   if (!isRecord(value.variants) || Object.entries(value.variants).some(([id, variant]) => {
-    const question = value.questions.find(entry => entry.id === id);
+    const question = questions.find(entry => entry.id === id);
     if (!question || !['parameterized', 'multiple-choice', 'true-false', 'fill-in-the-blanks', 'dropdown'].includes(question.type)) return true;
     validateGeneratedVariant(variant);
     return false;
