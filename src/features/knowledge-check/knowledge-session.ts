@@ -369,6 +369,15 @@ export const KnowledgeSession = defineComponent({
         { 'is-celebrating': celebrating.value === question.id }], role: 'status' }, content);
     }
 
+    /** Submit text-based answers with Enter, using the same enabled Check answer control as a click. */
+    function handleTypedAnswerEnter(event: KeyboardEvent, locked: boolean) {
+      if (locked || props.mode === 'test' || event.key !== 'Enter' || event.isComposing ||
+          event.shiftKey || event.altKey || event.ctrlKey || event.metaKey) return;
+      event.preventDefault();
+      const card = (event.currentTarget as HTMLElement).closest('.knowledge-prompt');
+      card?.querySelector<HTMLButtonElement>('[data-review-primary]:not(:disabled)']?.click();
+    }
+
     function handleFillBlankEnter(event: KeyboardEvent, blankIndex: number, blankCount: number, locked: boolean) {
       if (locked || event.isComposing || event.altKey || event.ctrlKey || event.metaKey || event.key !== 'Enter') return;
       event.preventDefault();
@@ -490,6 +499,7 @@ export const KnowledgeSession = defineComponent({
             answer.label, h('input', { type: 'text', inputmode: answer.matching === 'numeric' ? 'decimal' : undefined,
               value: blankResponses(question)[index] ?? '', readonly: locked, autocomplete: 'off', maxlength: 2000,
               onInput: (event: Event) => blankResponse(question, index, inputValue(event)),
+              onKeydown: (event: KeyboardEvent) => handleTypedAnswerEnter(event, locked),
             }),
           ]))) : null,
           question.type === 'parameterized' ? null : question.type === 'statement' ? null : question.type === 'fill-in-the-blanks' ? null
@@ -505,6 +515,7 @@ export const KnowledgeSession = defineComponent({
             ]) : question.type === 'short-answer' ? h('label', { class: 'knowledge-field' }, ['Your answer', h('textarea', {
               rows: 3, value: textResponse(question), readonly: locked, maxlength: 2000,
               onInput: (event: Event) => response(question, inputValue(event)),
+              onKeydown: (event: KeyboardEvent) => handleTypedAnswerEnter(event, locked),
             })]) : h('fieldset', { class: 'knowledge-answer-choices', disabled: locked }, [
               h('legend', multiChoice ? 'Select all that apply' : 'Your answer'),
               ...choices.map((choice, index) => {

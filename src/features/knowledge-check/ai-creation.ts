@@ -1,5 +1,6 @@
 import { computed, defineComponent, h, onMounted, ref, Transition } from 'vue';
 import { AiCategoryPicker } from '../../components/ai-category-picker.ts';
+import { Icon } from '../../components/icon.ts';
 import { AiPromptExchange } from '../../components/ai-prompt-exchange.ts';
 import { MarkdownContent } from '../../components/markdown-content.ts';
 import { MAX_AI_IMPORT_LENGTH } from '../../core/ai-json.ts';
@@ -149,9 +150,10 @@ export const ReviewAiCreation = defineComponent({
                 checked: (preferences.value.aiFocus ?? 'default') === option.id,
                 onChange: () => { preferences.value.aiFocus = option.id; },
               }),
+              h(Icon, { name: option.icon }),
               h('span', { class: 'review-ai-focus-copy' }, [
                 h('strong', option.label),
-                option.description ? h('span', option.description) : null,
+                h('span', option.description),
               ]),
             ]))),
           ]) : null,

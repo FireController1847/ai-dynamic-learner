@@ -55,3 +55,9 @@
 @media (max-width: 600px) {
   .review-ai-focus-options { grid-template-columns: minmax(0, 1fr); }
 }
+
+.review-ai-focus-option > .ui-icon {
+  flex: 0 0 20px; width: 20px; height: 20px;
+  margin-top: 2px; color: var(--text-secondary);
+}
+.review-ai-focus-option:has(input:checked) > .ui-icon { color: var(--brand); }
