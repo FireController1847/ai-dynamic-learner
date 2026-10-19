@@ -25,6 +25,8 @@ Full-resolution app PNGs live directly under `src/assets/app-icons/`. Visible Ho
 
 Home app icons render at 56px; sidebar icons at 24px; header artwork at 28px. Keep source files substantially larger than those render sizes but do not use full-resolution metadata assets for routine UI painting.
 
+App artwork shares the main book-and-leaf mark's layered blue palette, with icy-blue paper and restrained cyan accents. Keep shading subtle and preserve each icon's approved optical scale within the shared square canvas; equal bounding boxes do not produce equal visual weight.
+
 ## Responsive behavior
 
 Desktop is the baseline. `src/styles/mobile.css` owns phone/coarse-pointer overrides; feature styles own layout-specific container behavior. Keep controls reachable in narrow/short windows, preserve safe-area insets, and avoid horizontal page overflow unless the feature intentionally scrolls a bounded surface.

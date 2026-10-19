@@ -26,7 +26,7 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'calculator', label: 'Calculator', path: '/calculator/', icon: 'calculator',
     group: 'helpers',
-    version: '1.9.2',
+    version: '1.9.3',
     image: 'assets/app-icons/calculator.png',
     description: 'A scientific calculator for expressions and functions.',
     metadata: {
@@ -36,21 +36,21 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
         type: 'image/png',
         width: 1254,
         height: 1254,
-        alt: 'Calculator — Slate-blue calculator with a light display and teal arithmetic keys.',
+        alt: 'Calculator — Layered blue calculator with a pale display and cyan arithmetic keys.',
       },
     },
   },
   {
     id: 'notebook', label: 'Notebook', path: '/notebook/', icon: 'document',
     group: 'helpers',
-    version: '1.6.1',
+    version: '1.6.2',
     image: 'assets/app-icons/notebook.png',
     description: 'Organize notes into groups and keep your documents together in one notebook.',
   },
   {
     id: 'todo-list', label: 'Todo List', path: '/todo-list/', icon: 'checklist',
     group: 'helpers',
-    version: '1.6.2',
+    version: '1.6.3',
     image: 'assets/app-icons/todo-list.png',
     description: 'Write, organize, and prioritize tasks in simple lists that archive automatically.',
     metadata: {
@@ -60,28 +60,28 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
         type: 'image/png',
         width: 1254,
         height: 1254,
-        alt: 'Todo List — Sage checklist with teal checkboxes and a folded corner.',
+        alt: 'Todo List — Pale blue checklist with cyan checkboxes and a layered blue folded corner.',
       },
     },
   },
   {
     id: 'index-cards', label: 'Index Cards', path: '/index-cards/', icon: 'cards',
     group: 'applications',
-    version: '1.18.4',
+    version: '1.18.5',
     image: 'assets/app-icons/index-cards.png',
     description: 'Create flash cards or fill-in-the-blanks sets, then review or view them at your own pace.',
   },
   {
     id: 'word-search', label: 'Word Search', path: '/word-search/', icon: 'word-search',
     group: 'applications',
-    version: '1.7.3',
+    version: '1.7.4',
     image: 'assets/app-icons/word-search.png',
     description: 'Create your own word searches, find every word, and pick up where you left off.'
   },
   {
     id: 'crossword', label: 'Crossword', path: '/crossword/', icon: 'crossword',
     group: 'applications',
-    version: '1.3.2',
+    version: '1.3.3',
     image: 'assets/app-icons/crossword.png',
     description: 'Create your own crosswords, solve the clues, and pick up where you left off.',
     metadata: {
@@ -91,14 +91,14 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
         type: 'image/png',
         width: 1254,
         height: 1254,
-        alt: 'Crossword — A softly shaded slate-blue and white crossword grid.',
+        alt: 'Crossword — An azure blue and icy-white crossword grid.',
       },
     },
   },
   {
     id: 'guide', label: 'Guide', path: '/guide/', icon: 'document',
     group: 'mastery',
-    version: '1.7.3',
+    version: '1.7.4',
     image: 'assets/app-icons/guide.png',
     description: 'Build simple bullet lists or connected topic maps, then study a map one stop at a time.',
     metadata: {
@@ -115,7 +115,7 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'knowledge-check', label: 'Review', path: '/knowledge-check/', icon: 'checklist',
     group: 'mastery',
-    version: '1.26.1',
+    version: '1.26.2',
     image: 'assets/app-icons/knowledge-check.png',
     description: 'Make knowledge sets to study, quiz yourself, or take a test.',
     metadata: {
@@ -125,7 +125,7 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
         type: 'image/png',
         width: 1254,
         height: 1254,
-        alt: 'Review — A blue document with a folded corner and a sage checkmark badge.',
+        alt: 'Review — A layered blue document with a folded corner and a cyan checkmark badge.',
       },
     },
   },

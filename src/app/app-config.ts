@@ -1,7 +1,7 @@
 import type { SocialImage } from '../core/metadata.ts';
 
 const socialImage: Readonly<SocialImage> = Object.freeze({
-  path: 'assets/dynamic-learner-social-v3.jpg',
+  path: 'assets/dynamic-learner-social-v4.jpg',
   type: 'image/jpeg',
   width: 1200,
   height: 630,
