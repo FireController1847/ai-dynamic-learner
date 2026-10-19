@@ -8,6 +8,7 @@ import { inputValue } from '../../core/dom.ts';
 import { Icon } from '../../components/icon.ts';
 import { MarkdownContent } from '../../components/markdown-content.ts';
 import { SessionIntro } from './session-intro.ts';
+import { StudySessionReview } from './study-session-review.ts';
 import type { ReviewAttempt } from './attempt-history.ts';
 import { answerStrictnessForQuestion } from './session-settings.ts';
 import { useKnowledgeSession } from './session-state.ts';
@@ -38,6 +39,7 @@ export const KnowledgeSession = defineComponent({
     const backward = ref(false);
     const scrollSession = ref<HTMLElement | null>(null);
     const restartingStudy = ref(false);
+    const reviewingStudy = ref(false);
     type ResultFilter = 'all' | 'correct' | 'incorrect';
     const resultFilter = ref<ResultFilter>('all');
     watch(submitted, (isSubmitted) => {
@@ -100,35 +102,56 @@ export const KnowledgeSession = defineComponent({
       ]);
     }
 
-    async function keepStudying(event: MouseEvent) {
-      if (props.mode !== 'study' || !started.value || restartingStudy.value ||
+    function scrollStudyToTop(scroller: HTMLElement | null) {
+      scroller?.scrollTo({
+        top: 0,
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+      });
+    }
+
+    async function reviewStudySession(event: MouseEvent) {
+      if (props.mode !== 'study' || !started.value || reviewingStudy.value ||
           state.generating.value || state.submitting.value) return;
-      restartingStudy.value = true;
       const scroller = (event.currentTarget as HTMLElement).closest<HTMLElement>('.knowledge-check-detail');
+      if (options.value.presentation === 'scroll') state.completeStudyScrollPass();
+      else state.finishStudyPass();
+      reviewingStudy.value = true;
+      await nextTick();
+      scrollStudyToTop(scroller);
+    }
+
+    async function keepStudying(event: MouseEvent) {
+      if (props.mode !== 'study' || !reviewingStudy.value || !started.value ||
+          restartingStudy.value || state.generating.value || state.submitting.value) return;
+      const scroller = (event.currentTarget as HTMLElement).closest<HTMLElement>('.knowledge-check-detail');
+      restartingStudy.value = true;
       try {
-        // Finish this round before start() resets its visited questions.
-        if (options.value.presentation === 'scroll') state.completeStudyScrollPass();
-        else state.finishStudyPass();
+        // start() chooses fresh questions and clears all old round responses.
         await start();
+        reviewingStudy.value = false;
         backward.value = false;
         await nextTick();
-        scroller?.scrollTo({
-          top: 0,
-          behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
-        });
+        scrollStudyToTop(scroller);
       } finally {
         restartingStudy.value = false;
       }
+    }
+
+    async function returnToStudyQuestions(event: MouseEvent) {
+      const scroller = (event.currentTarget as HTMLElement).closest<HTMLElement>('.knowledge-check-detail');
+      reviewingStudy.value = false;
+      await nextTick();
+      scrollStudyToTop(scroller);
     }
 
     function studyFooterActions() {
       return h('div', { class: 'knowledge-study-finish-actions' }, [
         h('button', { type: 'button', class: 'quiet-button', onClick: end }, 'End studying'),
         h('button', {
-          type: 'button', class: 'card-primary-button knowledge-keep-studying',
-          disabled: restartingStudy.value || state.generating.value,
-          onClick: keepStudying,
-        }, ['Keep studying', h(Icon, { name: 'chevron' })]),
+          type: 'button', class: 'card-primary-button',
+          disabled: state.generating.value,
+          onClick: reviewStudySession,
+        }, 'Review study session'),
       ]);
     }
 
@@ -558,6 +581,19 @@ export const KnowledgeSession = defineComponent({
         savedCompleted: state.savedCompleted.value, lastQuizAvailable: props.lastQuizAvailable,
         message: state.storageMessage.value, onReviewLast: () => emit('review-last'),
         onResume: state.resume, onBack: () => emit('back'), onStart: start });
+      if (props.mode === 'study' && reviewingStudy.value) {
+        return h(StudySessionReview, {
+          key: 'study-review',
+          questions: questions.value, attempts: attempts.value,
+          feedbackResponses: feedbackResponses.value,
+          hints: hints.value, revealed: revealed.value,
+          studyChecks: studyChecks.value, studyCorrectChecks: studyCorrectChecks.value,
+          settings: options.value, restarting: restartingStudy.value,
+          onBack: returnToStudyQuestions,
+          onEnd: () => { reviewingStudy.value = false; end(); },
+          onContinue: keepStudying,
+        });
+      }
       const question = questions.value[position.value];
       if (submitted.value) {
         const showAnswers = props.mode !== 'test' || options.value.showTestAnswers;
