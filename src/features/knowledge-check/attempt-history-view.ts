@@ -17,6 +17,8 @@ export const ReviewAttemptHistory = defineComponent({
           h('h2', 'Quiz & Test History'),
           h('p', props.setName),
           h('p', 'Review completed attempts without changing your recorded answers or scores.'),
+          h('p', { class: 'knowledge-muted' },
+            'Study sessions are not recorded here. Only the most recent Study session is saved, and you can review it from the Study start screen.'),
         ]),
         h('div', { class: 'knowledge-attempt-history-toolbar' }, [
           h('p', { class: 'knowledge-muted' }, ordered.length + (ordered.length === 1 ? ' completed attempt' : ' completed attempts')),

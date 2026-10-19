@@ -9,6 +9,7 @@ import { Icon } from '../../components/icon.ts';
 import { MarkdownContent } from '../../components/markdown-content.ts';
 import { SessionIntro } from './session-intro.ts';
 import { StudySessionReview } from './study-session-review.ts';
+import { reviewedStudyQuestions } from './last-study-session.ts';
 import type { ReviewAttempt } from './attempt-history.ts';
 import { answerStrictnessForQuestion } from './session-settings.ts';
 import { useKnowledgeSession } from './session-state.ts';
@@ -40,6 +41,7 @@ export const KnowledgeSession = defineComponent({
     const scrollSession = ref<HTMLElement | null>(null);
     const restartingStudy = ref(false);
     const reviewingStudy = ref(false);
+    const viewingLastStudy = ref(false);
     type ResultFilter = 'all' | 'correct' | 'incorrect';
     const resultFilter = ref<ResultFilter>('all');
     watch(submitted, (isSubmitted) => {
@@ -115,6 +117,7 @@ export const KnowledgeSession = defineComponent({
       const scroller = (event.currentTarget as HTMLElement).closest<HTMLElement>('.knowledge-check-detail');
       if (options.value.presentation === 'scroll') state.completeStudyScrollPass();
       else state.finishStudyPass();
+      state.saveStudyReview();
       reviewingStudy.value = true;
       await nextTick();
       scrollStudyToTop(scroller);
@@ -576,10 +579,24 @@ export const KnowledgeSession = defineComponent({
         h('h3', 'Add questions to get started'), h('p', 'Complete a question and its correct answer in the builder.'),
         h('button', { type: 'button', class: 'card-primary-button', onClick: () => emit('build') }, 'Build questions'),
       ]);
+      if (!started.value && props.mode === 'study' && viewingLastStudy.value && props.item.lastStudy) {
+        const saved = props.item.lastStudy;
+        return h(StudySessionReview, {
+          key: 'last-study-review',
+          questions: reviewedStudyQuestions(saved), attempts: saved.attempts,
+          feedbackResponses: saved.feedbackResponses,
+          hints: new Set(saved.hints), revealed: new Set(saved.revealed),
+          studyChecks: saved.studyChecks, studyCorrectChecks: saved.studyCorrectChecks,
+          settings: saved.settings, readOnly: true, completedAt: saved.completedAt,
+          onBack: () => { viewingLastStudy.value = false; },
+        });
+      }
       if (!started.value) return h(SessionIntro, { key: 'intro', item: props.item, mode: props.mode, settings: props.settings,
         count: questionCount.value, ended: ended.value, resumable: state.resumable.value,
         savedCompleted: state.savedCompleted.value, lastQuizAvailable: props.lastQuizAvailable,
+        lastStudyAvailable: Boolean(props.item.lastStudy),
         message: state.storageMessage.value, onReviewLast: () => emit('review-last'),
+        onReviewLastStudy: () => { viewingLastStudy.value = true; },
         onResume: state.resume, onBack: () => emit('back'), onStart: start });
       if (props.mode === 'study' && reviewingStudy.value) {
         return h(StudySessionReview, {

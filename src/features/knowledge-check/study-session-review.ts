@@ -17,6 +17,8 @@ export const StudySessionReview = defineComponent({
     studyCorrectChecks: { type: Number, required: true },
     settings: { type: Object as PropType<SessionSettings>, required: true },
     restarting: Boolean,
+    readOnly: Boolean,
+    completedAt: Number,
   },
   emits: {
     back: (_event: MouseEvent) => true,
@@ -25,6 +27,10 @@ export const StudySessionReview = defineComponent({
   },
   setup(props, { emit }) {
     function reviewActions() {
+      if (props.readOnly) return h('div', { class: 'knowledge-study-review-actions' }, [
+        h('button', { type: 'button', class: 'quiet-button',
+          onClick: (event: MouseEvent) => emit('back', event) }, 'Back to Study'),
+      ]);
       return h('div', { class: 'knowledge-study-review-actions' }, [
         h('button', { type: 'button', class: 'quiet-button',
           onClick: (event: MouseEvent) => emit('back', event) }, 'Back to questions'),
@@ -63,6 +69,10 @@ export const StudySessionReview = defineComponent({
           h('h2', 'Review study session'),
           h('p', { class: 'knowledge-muted' },
             'Here’s how this round went. These are practice checks, not a graded test score.'),
+          props.readOnly && props.completedAt
+            ? h('p', { class: 'knowledge-muted' },
+              'Saved ' + new Date(props.completedAt).toLocaleString() + ' · Only the latest Study session is retained.')
+            : null,
         ]),
         reviewActions(),
         h('div', { class: 'knowledge-study-review-overview' }, [

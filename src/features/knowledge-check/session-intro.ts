@@ -12,8 +12,8 @@ export const SessionIntro = defineComponent({
     mode: { type: String as PropType<CheckModeId>, required: true },
     settings: { type: Object as PropType<SessionSettings>, required: true },
     count: { type: Number, required: true }, ended: Boolean, resumable: Boolean, message: String,
-    savedCompleted: Boolean, lastQuizAvailable: Boolean },
-  emits: { back: () => true, start: () => true, resume: () => true, 'review-last': () => true },
+    savedCompleted: Boolean, lastQuizAvailable: Boolean, lastStudyAvailable: Boolean },
+  emits: { back: () => true, start: () => true, resume: () => true, 'review-last': () => true, 'review-last-study': () => true },
   setup(props, { emit }) {
     return () => {
       const test = props.mode === 'test';
@@ -73,6 +73,10 @@ export const SessionIntro = defineComponent({
           props.resumable && !props.savedCompleted
             ? h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('resume') }, 'Resume saved session')
             : null,
+          study && props.lastStudyAvailable
+            ? h('button', { type: 'button', class: 'quiet-button',
+              onClick: () => emit('review-last-study') }, 'Review last Study session')
+            : null,
           props.mode === 'quiz' && props.lastQuizAvailable
             ? h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('review-last') }, 'Review last quiz')
             : null,
@@ -87,7 +91,7 @@ export const SessionIntro = defineComponent({
         ]),
         h('p', { class: 'knowledge-muted knowledge-intro-note' },
           study
-            ? 'Use Pause Studying to save your current progress on this browser, or End studying to discard it.'
+            ? 'Use Pause Studying to save current progress on this browser. Your latest Study recap is kept separately; earlier Study sessions are not archived.'
             : !test && settings.timeLimitMinutes === null
               ? 'Use Pause Quiz to save your answers on this browser, or End quiz to discard them.'
               : props.item.questions.some(question => question.type === 'parameterized')

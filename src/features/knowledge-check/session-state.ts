@@ -1,5 +1,6 @@
 import { computed, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue';
 import { completedReviewAttempt, reviewedQuestions, type ReviewAttempt } from './attempt-history.ts';
+import { completedStudySession } from './last-study-session.ts';
 import { useStatistics } from '../../components/statistics-context.ts';
 import { registerLeaveGuard } from '../../core/leave-guards.ts';
 import { answerCorrect, cloneQuestion, questionReady, questionResponseAnswered, questionScored, type Question, type QuestionResponse } from './question-model.ts';
@@ -222,6 +223,11 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
     studyVisited = new Set(questions.value.map(question => question.id));
     finishStudyPass();
   }
+  function saveStudyReview() {
+    if (mode !== 'study' || !statisticsEnabled || !started.value || !questions.value.length) return;
+    item.lastStudy = completedStudySession(options.value, questions.value, feedbackResponses.value,
+      attempts.value, [...hints.value], [...revealed.value], studyChecks.value, studyCorrectChecks.value);
+  }
   watch(position, async () => {
     const index = position.value, currentEpoch = epoch;
     if (!started.value || !await ensureQuestion(index, true) || currentEpoch !== epoch) return;
@@ -283,7 +289,9 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
     return true;
   }
   function end() {
-    finishStudyPass(); resetGeneration(); instances = {};
+    finishStudyPass();
+    if (studyChecks.value > 0 || hints.value.size > 0 || revealed.value.size > 0) saveStudyReview();
+    resetGeneration(); instances = {};
     try { if (statisticsEnabled) localStorage.removeItem(storageKey); } catch { storageMessage.value = 'Saved session could not be cleared.'; }
     saved = null; resumable.value = false; savedCompleted.value = false; paused.value = false; generationError.value = '';
     started.value = false; submitted.value = false; deadline.value = null; ended.value = true; clearCelebration();
@@ -371,10 +379,14 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
     else if (active.value || (mode === 'study' && started.value)) end();
     detach();
   });
-  onBeforeUnmount(() => { finishStudyPass(); persist(); resetGeneration(); detach(); });
+  onBeforeUnmount(() => {
+    finishStudyPass();
+    if (!paused.value && (studyChecks.value > 0 || hints.value.size > 0 || revealed.value.size > 0)) saveStudyReview();
+    persist(); resetGeneration(); detach();
+  });
   return { questions, questionCount, options, position, responses, feedbackResponses, checked, revealed, hints, submitted, started, expired, ended,
     active, answered, resolved, score, scoredCount, remaining, celebrating, attempts, flagged, toggleFlag,
     studyChecks, studyCorrectChecks,
     generationError, generating, submitting, storageMessage, resumable, savedCompleted, resume,
-    start, pause, end, check, submit, leave, tick, showHistory, finishStudyPass, completeStudyScrollPass, resetStudyPass };
+    start, pause, end, check, submit, leave, tick, showHistory, finishStudyPass, completeStudyScrollPass, saveStudyReview, resetStudyPass };
 }
