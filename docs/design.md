@@ -27,6 +27,8 @@ Home app icons render at 56px; sidebar icons at 24px; header artwork at 28px. Ke
 
 App artwork shares the main book-and-leaf mark's layered blue palette, with icy-blue paper and restrained cyan accents. Keep shading subtle and preserve each icon's approved optical scale within the shared square canvas; equal bounding boxes do not produce equal visual weight.
 
+Extract approved artwork directly when preparing assets from a concept sheet. Regenerating individual icons can change their silhouettes, internal spacing, and details even when the prompt requests a faithful copy. Preserve the source proportions and native detail; use transparent padding for square canvases.
+
 ## Responsive behavior
 
 Desktop is the baseline. `src/styles/mobile.css` owns phone/coarse-pointer overrides; feature styles own layout-specific container behavior. Keep controls reachable in narrow/short windows, preserve safe-area insets, and avoid horizontal page overflow unless the feature intentionally scrolls a bounded surface.

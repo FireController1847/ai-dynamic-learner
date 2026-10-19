@@ -26,7 +26,7 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'calculator', label: 'Calculator', path: '/calculator/', icon: 'calculator',
     group: 'helpers',
-    version: '1.9.3',
+    version: '1.9.4',
     image: 'assets/app-icons/calculator.png',
     description: 'A scientific calculator for expressions and functions.',
     metadata: {
@@ -34,8 +34,8 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
       socialImage: {
         path: 'assets/app-icons/calculator.png',
         type: 'image/png',
-        width: 1254,
-        height: 1254,
+        width: 350,
+        height: 350,
         alt: 'Calculator — Layered blue calculator with a pale display and cyan arithmetic keys.',
       },
     },
@@ -67,7 +67,7 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'index-cards', label: 'Index Cards', path: '/index-cards/', icon: 'cards',
     group: 'applications',
-    version: '1.18.5',
+    version: '1.18.6',
     image: 'assets/app-icons/index-cards.png',
     description: 'Create flash cards or fill-in-the-blanks sets, then review or view them at your own pace.',
   },
@@ -81,7 +81,7 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'crossword', label: 'Crossword', path: '/crossword/', icon: 'crossword',
     group: 'applications',
-    version: '1.3.3',
+    version: '1.3.4',
     image: 'assets/app-icons/crossword.png',
     description: 'Create your own crosswords, solve the clues, and pick up where you left off.',
     metadata: {
@@ -89,8 +89,8 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
       socialImage: {
         path: 'assets/app-icons/crossword.png',
         type: 'image/png',
-        width: 1254,
-        height: 1254,
+        width: 350,
+        height: 350,
         alt: 'Crossword — An azure blue and icy-white crossword grid.',
       },
     },
@@ -98,7 +98,7 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'guide', label: 'Guide', path: '/guide/', icon: 'document',
     group: 'mastery',
-    version: '1.7.4',
+    version: '1.7.5',
     image: 'assets/app-icons/guide.png',
     description: 'Build simple bullet lists or connected topic maps, then study a map one stop at a time.',
     metadata: {
@@ -106,8 +106,8 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
       socialImage: {
         path: 'assets/app-icons/guide.png',
         type: 'image/png',
-        width: 1254,
-        height: 1254,
+        width: 350,
+        height: 350,
         alt: 'Guide — A folded study map with connected waypoints and a destination flag.',
       },
     },
@@ -115,7 +115,7 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'knowledge-check', label: 'Review', path: '/knowledge-check/', icon: 'checklist',
     group: 'mastery',
-    version: '1.26.2',
+    version: '1.26.3',
     image: 'assets/app-icons/knowledge-check.png',
     description: 'Make knowledge sets to study, quiz yourself, or take a test.',
     metadata: {
@@ -123,8 +123,8 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
       socialImage: {
         path: 'assets/app-icons/knowledge-check.png',
         type: 'image/png',
-        width: 1254,
-        height: 1254,
+        width: 350,
+        height: 350,
         alt: 'Review — A layered blue document with a folded corner and a cyan checkmark badge.',
       },
     },
