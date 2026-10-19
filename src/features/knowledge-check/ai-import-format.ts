@@ -5,7 +5,7 @@ import { parseFillBlankTemplate } from '../../core/fill-blank.ts';
 import { isRecord } from '../../core/validation.ts';
 import { AI_MARKDOWN_CONTEXT_GUIDANCE } from '../../core/ai-formatting-guidance.ts';
 import { MAX_NAME_LENGTH } from './library-model.ts';
-import { createQuestion, MAX_TEXT, MAX_QUESTION_CONTEXT, questionReady, validateQuestions, MAX_QUESTIONS, type Question } from './question-model.ts';
+import { createQuestion, MAX_TEXT, MAX_QUESTION_CONTEXT, questionProblem, questionReady, validateQuestions, MAX_QUESTIONS, type Question } from './question-model.ts';
 import { MAX_DROPDOWN_CHOICES, MAX_DROPDOWN_ROWS, validateDropdownMatches } from './dropdown-model.ts';
 import { AI_QUESTION_TYPES, DEFAULT_AI_WEIGHTS, allocateQuestions, questionCountProblem, questionTypeLabel, type QuestionWeights } from './ai-question-mix.ts';
 import { reviewAiFocusPrompt, type ReviewAiFocus } from './ai-focus.ts';
@@ -177,7 +177,7 @@ export function parseReviewAiImport(text: string, preferences: ReviewAiPreferenc
         throw new Error(`Item ${index + 1} needs valid {{answer}} blanks with visible context.`);
       }
     }
-    if (!questionReady(question)) throw new Error(`Item ${index + 1} is incomplete or its correct answer(s) do not match distinct choices.`);
+    if (!questionReady(question)) throw new Error(`Item ${index + 1}: ${questionProblem(question) || 'Question is incomplete.'}`);
     return question;
   });
   for (const pkg of packages) {
