@@ -97,8 +97,11 @@ export function prepareSessionQuestions(
   if (settings.order === 'backward') questions.reverse();
   else if (settings.order === 'shuffle') questions = shuffled(questions);
   if (settings.questionLimit !== null) questions = questions.slice(0, settings.questionLimit);
+  // Dropdown options are randomized once by sessionVariant using the saved
+  // session seed. Do not pre-shuffle them here or the order cannot be
+  // reconstructed independently from the authored question.
   if (settings.shuffleChoices) {
-    questions = questions.map((question) => question.type === 'multiple-choice' || question.type === 'dropdown'
+    questions = questions.map((question) => question.type === 'multiple-choice'
       ? { ...cloneQuestion(question), choices: shuffled(question.choices) }
       : question);
   }

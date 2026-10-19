@@ -47,7 +47,7 @@ export const SessionSetup = defineComponent({
       const count = defaults.questionLimit === null
         ? 'all questions'
         : `up to ${defaults.questionLimit} questions`;
-      return `${defaults.presentation === 'scroll' ? 'All questions' : 'One at a time'}, ${QUESTION_ORDER_LABELS[defaults.order]}, ${count}, ${defaults.shuffleChoices ? 'shuffled' : 'original'} answer-choice order, Short Answer strictness ${defaults.shortAnswerStrictness}, Fill in the Blanks strictness ${defaults.fillBlankAnswerStrictness}, ${defaults.quizAttempts} ${defaults.quizAttempts === 1 ? 'attempt' : 'attempts'} per question.`;
+      return `${defaults.presentation === 'scroll' ? 'All questions' : 'One at a time'}, ${QUESTION_ORDER_LABELS[defaults.order]}, ${count}, ${defaults.shuffleChoices ? 'shuffled' : 'original'} Multiple Choice options (Dropdown options always shuffled), Short Answer strictness ${defaults.shortAnswerStrictness}, Fill in the Blanks strictness ${defaults.fillBlankAnswerStrictness}, ${defaults.quizAttempts} ${defaults.quizAttempts === 1 ? 'attempt' : 'attempts'} per question.`;
     }
 
     function emitStudy() {
@@ -157,7 +157,7 @@ export const SessionSetup = defineComponent({
             checked: custom.value.shuffleChoices,
             onChange: (event: Event) => { custom.value.shuffleChoices = (event.target as HTMLInputElement).checked; },
           }),
-          'Shuffle multiple-choice and dropdown choices',
+          'Shuffle multiple-choice choices',
         ]),
         h(AnswerStrictnessField, {
           id: 'quiz-short-answer-strictness',

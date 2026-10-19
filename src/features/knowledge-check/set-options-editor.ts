@@ -66,8 +66,8 @@ export const SetOptionsEditor = defineComponent({
       h('label', { class: 'knowledge-option-toggle' }, [h('input', {
         type: 'checkbox', checked: props.options.shuffleChoices,
         onChange: (event: Event) => { props.options.shuffleChoices = (event.target as HTMLInputElement).checked; },
-      }), 'Shuffle multiple-choice and dropdown choices']),
-      h('p', { class: 'knowledge-muted' }, 'These defaults are fixed for Test. Quiz uses them unless you choose Customize Settings before starting.'),
+      }), 'Shuffle multiple-choice choices']),
+      h('p', { class: 'knowledge-muted' }, 'Dropdown answer options are always shuffled independently of their matching rows. These defaults are fixed for Test; Quiz can customize them before starting.'),
 
       h('h3', 'Quiz settings'),
       h('label', { class: 'knowledge-field' }, ['Question layout', h('select', {

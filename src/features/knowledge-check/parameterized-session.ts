@@ -114,11 +114,19 @@ export async function sessionVariant(template: Question, seed: string, shuffleCh
   const original = await materializeQuestionAsync(template, seed, signal, cached);
   const pooled = original.type === 'multiple-choice' && Boolean(original.choicePool);
   const question = materializeChoicePool(original, seed);
-  if (shuffleChoices && !pooled && ['multiple-choice','dropdown'].includes(question.type)) {
+  // Dropdown matching choices must never give away the answers by following
+  // the row order, even when the optional Multiple Choice shuffle is disabled.
+  if (question.type === 'dropdown' || (shuffleChoices && !pooled && question.type === 'multiple-choice')) {
     const random = seededRandom(`${seed}:choices`);
     for (let index = question.choices.length - 1; index > 0; index--) {
       const other = Math.floor(random() * (index + 1));
       [question.choices[index], question.choices[other]] = [question.choices[other]!, question.choices[index]!];
+    }
+    if (question.type === 'dropdown' && question.choices.length > 1 &&
+        question.matches?.length && question.matches.every((row, index) => question.choices[index] === row.answer)) {
+      // A shuffle can occasionally recreate the exact matching order.
+      // Rotate it so the dropdown cannot reveal every answer by position.
+      question.choices.push(question.choices.shift()!);
     }
   }
   return question;
