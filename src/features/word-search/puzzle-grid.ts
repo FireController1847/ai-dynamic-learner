@@ -8,6 +8,7 @@ export interface PuzzleGridHandle {
   cancelSelection(): void;
   focusCompletionCancel(): void;
   focusCompletionAction(): void;
+  focusViewButton(): void;
 }
 import { lineCells } from './game-model.ts';
 import { defaultDisplayOptions, displayStyles } from './display-options.ts';
@@ -50,6 +51,7 @@ export const PuzzleGrid = defineComponent({
     const area = ref<HTMLElement | null>(null);
     const completionCancel = ref<HTMLButtonElement | null>(null);
     const completionAction = ref<HTMLButtonElement | null>(null);
+    const viewButton = ref<HTMLButtonElement | null>(null);
     const focused = ref(0);
     const anchor = ref<number | null>(null);
     const endpoint = ref<number | null>(null);
@@ -114,6 +116,7 @@ export const PuzzleGrid = defineComponent({
       cancelSelection,
       focusCompletionCancel: () => completionCancel.value?.focus(),
       focusCompletionAction: () => completionAction.value?.focus(),
+      focusViewButton: () => viewButton.value?.focus(),
     });
 
     function activate(cell: number) {
@@ -299,9 +302,13 @@ export const PuzzleGrid = defineComponent({
           onClick: () => emit('confirm-action') },
           pending === 'new' ? 'Create new layout' : 'Start over'),
       ] : [
-        h('button', { type: 'button', class: 'quiet-button word-search-finish-view',
-          onClick: () => emit(inToolbar ? 'view-results' : 'view-board') },
-          inToolbar ? 'View results' : 'View board'),
+        h('button', {
+          ref: viewButton, type: 'button', class: 'quiet-button word-search-finish-view',
+          onClick: () => {
+            if (inToolbar) emit('view-results');
+            else emit('view-board');
+          },
+        }, inToolbar ? 'View results' : 'View board'),
         h('button', {
           ref: completionAction, type: 'button', class: 'quiet-button',
           onClick: (event: MouseEvent) => emit('restart', event),
