@@ -373,7 +373,7 @@
 @keyframes word-search-success-outline {
   0% { opacity: 0; }
   18% { opacity: 1; }
-  52% { opacity: 1; filter: drop-shadow(0 0 0.18px var(--search-highlight)); }
+  52% { opacity: 1; filter: drop-shadow(0 0 0.18px var(--search-success-color)); }
   100% { opacity: 0; }
 }
 .outline-miss {
