@@ -42,6 +42,63 @@
   place-items: center;
   contain: paint;
 }
+.word-search-board-surface { position: relative; display: grid; place-items: center; }
+.word-search-completion-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  padding: 8px;
+  overflow: clip;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--page-background) 94%, transparent);
+  backdrop-filter: blur(6px);
+  text-align: center;
+  animation: word-search-completion-arrive 360ms var(--ease-out) both;
+}
+.word-search-completion-content {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  width: 100%;
+  max-width: 340px;
+  min-width: 0;
+}
+.word-search-completion-seal {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  color: #237a43;
+  background: color-mix(in srgb, #2f9e58 13%, var(--page-background));
+}
+.word-search-completion-seal .ui-icon { width: 22px; height: 22px; }
+.word-search-completion-content h3 { font-size: 17px; line-height: 22px; }
+.word-search-completion-content p { margin: 0; color: var(--text-secondary); font-size: 12px; line-height: 17px; }
+.word-search-completion-actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  width: 100%;
+  margin-top: 4px;
+}
+.word-search-completion-actions button {
+  flex: 1 1 110px;
+  min-width: 0;
+  max-width: 170px;
+  min-height: 32px;
+  padding: 4px 7px;
+  font-size: 12px;
+}
+@keyframes word-search-completion-arrive {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
 .word-search-board-rotator {
   transform: rotate(var(--board-to));
   transform-origin: center;
