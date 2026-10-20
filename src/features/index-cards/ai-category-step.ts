@@ -23,9 +23,11 @@ export const IndexCardsAiCreation = defineComponent({
           h('header', { class: 'study-ai-header' }, [h('div', [h('h2', 'Create ' + (getSetMode(props.mode)?.label ?? 'Index Cards') + ' with AI'), h('p', 'Choose the scope or import an existing JSON response.')]),
             h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('back') }, 'Back')]),
           h('div', { class: 'review-ai-scope' }, [
-            h('button', { type: 'button', class: 'quiet-button', onClick: () => { scope.value = null; entry.value = 'direct'; } }, [h('strong', 'Import existing JSON'), h('span', 'Validate a completed set without generating a prompt.')]),
             h('button', { type: 'button', class: 'quiet-button', onClick: () => { scope.value = null; entry.value = 'overall'; } }, [h('strong', 'Overall subject'), h('span', 'Create cards across the full source.')]),
             h('button', { type: 'button', class: 'quiet-button', onClick: () => { entry.value = 'categories'; } }, [h('strong', 'Choose a category'), h('span', 'Focus on one source category.')]),
+          ]),
+          h('div', { class: 'study-ai-actions', style: { justifyContent: 'flex-start', marginTop: '1rem' } }, [
+            h('button', { type: 'button', class: 'quiet-button', onClick: () => { scope.value = null; entry.value = 'direct'; } }, 'Import existing JSON'),
           ]),
         ]) : entry.value !== 'categories' ? h(IndexCardsAiImport, {
           key: scope.value?.category.key ?? entry.value, direct: entry.value === 'direct', mode: props.mode, destination: props.destination, remainingCards: props.remainingCards,
