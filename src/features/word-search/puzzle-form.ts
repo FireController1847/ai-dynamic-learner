@@ -5,7 +5,8 @@ import { Icon } from '../../components/icon.ts';
 import { MAX_NAME_LENGTH } from './library-model.ts';
 import {
   DIFFICULTIES, GRID_SIZES, MAX_HINT_LENGTH, MAX_INSTRUCTIONS_LENGTH, MAX_WORD_INPUT_LENGTH,
-  MAX_WORDS, MAX_LAYOUT_WORDS, DEFAULT_LAYOUT_WORDS, MIN_WORDS, STUDY_MODES, parseWords, validatePuzzle,
+  MAX_WORDS, MAX_LAYOUT_WORDS, DEFAULT_LAYOUT_MIN_WORDS, DEFAULT_LAYOUT_MAX_WORDS, MIN_WORDS,
+  STUDY_MODES, parseWords, validatePuzzle,
 } from './puzzle-model.ts';
 
 import { defineComponent, type PropType, computed, h, nextTick, onMounted, ref } from 'vue';
@@ -24,8 +25,8 @@ export const PuzzleForm = defineComponent({
     const size = ref<number>(props.item?.puzzle?.size ?? 15);
     const difficulty = ref(props.item?.puzzle?.difficulty ?? 'medium');
     const selectionMode = ref<'all' | 'random'>(props.item?.puzzle?.selection ? 'random' : 'all');
-    const selectionMin = ref(props.item?.puzzle?.selection?.min ?? DEFAULT_LAYOUT_WORDS);
-    const selectionMax = ref(props.item?.puzzle?.selection?.max ?? DEFAULT_LAYOUT_WORDS);
+    const selectionMin = ref(props.item?.puzzle?.selection?.min ?? DEFAULT_LAYOUT_MIN_WORDS);
+    const selectionMax = ref(props.item?.puzzle?.selection?.max ?? DEFAULT_LAYOUT_MAX_WORDS);
     const instructions = ref(props.item?.puzzle?.instructions ?? '');
     const studyMode = ref(props.item?.puzzle?.studyMode ?? 'words');
     const hints = ref({ ...(props.item?.puzzle?.hints ?? {}) });
@@ -104,10 +105,10 @@ export const PuzzleForm = defineComponent({
                 onChange: () => {
                   selectionMode.value = choice.mode;
                   if (choice.mode === 'random') {
-                    const count = Math.min(DEFAULT_LAYOUT_WORDS, MAX_LAYOUT_WORDS,
+                    const available = Math.min(MAX_LAYOUT_WORDS,
                       Math.max(MIN_WORDS, parsed.value.words.length));
-                    selectionMin.value = Math.min(selectionMin.value, count);
-                    selectionMax.value = Math.min(selectionMax.value, count);
+                    selectionMin.value = Math.min(selectionMin.value, available);
+                    selectionMax.value = Math.min(selectionMax.value, available);
                   }
                 },
               }),
