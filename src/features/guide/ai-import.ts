@@ -511,6 +511,7 @@ export const GuideAiImportWorkspace = defineComponent({
   props: {
     destination: { type: String, required: true },
     mode: { type: String as PropType<GuideMode>, required: true },
+    direct: Boolean,
   },
   emits: { back: () => true, cancel: () => true, import: (_value: SimpleGuideImport) => true },
   setup(props, { emit }) {
@@ -524,7 +525,12 @@ export const GuideAiImportWorkspace = defineComponent({
     function preview() {
       candidate.value = null;
       problem.value = '';
-      try { candidate.value = parseGuideAiImport(json.value, props.mode); }
+      try {
+        if (props.direct) {
+          try { candidate.value = parseGuideAiImport(json.value, 'list'); }
+          catch { candidate.value = parseGuideAiImport(json.value, 'map'); }
+        } else candidate.value = parseGuideAiImport(json.value, props.mode);
+      }
       catch (error) { problem.value = error instanceof Error ? error.message : String(error); }
     }
     function optionField<T extends string>(
@@ -577,9 +583,9 @@ export const GuideAiImportWorkspace = defineComponent({
     return () => h('section', { class: 'guide-ai-workspace', 'aria-labelledby': 'guide-ai-title' }, [
       h('header', { class: 'guide-ai-header' }, [
         h('div', { class: 'guide-ai-heading' }, [
-          h('span', { class: 'guide-ai-kicker' }, `${props.mode === 'map' ? 'Map mode' : 'List mode'} · Saved in ${props.destination}`),
+          h('span', { class: 'guide-ai-kicker' }, `${props.direct ? 'Existing JSON' : props.mode === 'map' ? 'Map mode' : 'List mode'} · Saved in ${props.destination}`),
           h('h2', { id: 'guide-ai-title' }, 'Create with AI'),
-          h('p', 'Generate a prompt for your AI, then paste its JSON response back here to create the guide.'),
+          h('p', props.direct ? 'Import an existing List or Map Guide JSON without generating a prompt.' : 'Generate a prompt for your AI, then paste its JSON response back here to create the guide.'),
         ]),
         h('div', { class: 'guide-ai-actions' }, [
           h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('back') }, 'Back'),
@@ -587,7 +593,7 @@ export const GuideAiImportWorkspace = defineComponent({
         ]),
       ]),
       h(AiPromptExchange, {
-        idPrefix: 'guide-ai', label: 'Guide', prompt: prompt.value, json: json.value, problem: problem.value,
+        idPrefix: 'guide-ai', label: 'Guide', prompt: prompt.value, json: json.value, problem: problem.value, startInImport: props.direct,
         hasPreview: candidate.value !== null,
         promptHelp: 'Give the AI the source material first, then send this prompt to create your guide.',
         importHelp: 'Wait for the AI response, then paste its JSON here. Dynamic Learner validates the content before creating the guide.',
