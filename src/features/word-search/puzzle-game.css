@@ -54,8 +54,9 @@
   overflow: clip;
   border: 1px solid var(--border-color);
   border-radius: 10px;
-  background: color-mix(in srgb, var(--page-background) 94%, transparent);
-  backdrop-filter: blur(6px);
+  background: radial-gradient(circle at center,
+    color-mix(in srgb, #2f9e58 10%, var(--page-background)),
+    var(--page-background) 80%);
   text-align: center;
   animation: word-search-completion-arrive 360ms var(--ease-out) both;
 }
