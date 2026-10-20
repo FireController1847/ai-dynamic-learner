@@ -3,6 +3,7 @@ import { isRecord } from '../../core/validation.ts';
 export type Difficulty = 'easy' | 'medium' | 'hard';
 export type StudyMode = 'words' | 'hints';
 export type GridSize = 10 | 15 | 20 | 24;
+export interface WordSelection { min: number; max: number }
 export interface Puzzle {
   words: string[];
   size: GridSize;
@@ -11,14 +12,18 @@ export interface Puzzle {
   // Existing imports treat null like an omitted mode; keep that compatibility.
   studyMode?: StudyMode | null;
   hints?: Record<string, string>;
+  // Omitted for legacy puzzles that place every authored word.
+  selection?: WordSelection;
 }
 
 export const MIN_WORDS = 3;
-export const MAX_WORDS = 40;
+export const MAX_WORDS = 500;
+export const MAX_LAYOUT_WORDS = 40;
+export const DEFAULT_LAYOUT_WORDS = 10;
 export const MAX_WORD_LENGTH = 24;
 export const MAX_HINT_LENGTH = 240;
 export const MAX_INSTRUCTIONS_LENGTH = 500;
-export const MAX_WORD_INPUT_LENGTH = 4000;
+export const MAX_WORD_INPUT_LENGTH = 30000;
 // TODO: Support custom grid dimensions, including rectangular puzzles.
 export const GRID_SIZES = [10, 15, 20, 24];
 export const DIFFICULTIES: { value: Difficulty; label: string; description: string }[] = [
@@ -56,7 +61,7 @@ export function parseWords(text: string): { words: string[]; duplicates: number;
 
 export function validatePuzzle(puzzle: unknown): asserts puzzle is Puzzle {
   if (!isRecord(puzzle) ||
-      Object.keys(puzzle).some((key) => !['words', 'size', 'difficulty', 'instructions', 'studyMode', 'hints'].includes(key)) ||
+      Object.keys(puzzle).some((key) => !['words', 'size', 'difficulty', 'instructions', 'studyMode', 'hints', 'selection'].includes(key)) ||
       typeof puzzle.size !== 'number' || !GRID_SIZES.includes(puzzle.size) ||
       !DIFFICULTIES.some(({ value }) => value === puzzle.difficulty) ||
       typeof puzzle.instructions !== 'string' || puzzle.instructions.length > MAX_INSTRUCTIONS_LENGTH) {
@@ -69,6 +74,19 @@ export function validatePuzzle(puzzle: unknown): asserts puzzle is Puzzle {
   }
   // The checks above establish the element type without trusting imported JSON.
   const words = puzzle.words as string[];
+  if (Object.hasOwn(puzzle, 'selection')) {
+    const selection = puzzle.selection;
+    if (!isRecord(selection) || Object.keys(selection).some((key) => !['min', 'max'].includes(key)) ||
+        !Object.hasOwn(selection, 'min') || !Object.hasOwn(selection, 'max') ||
+        !Number.isInteger(selection.min) || !Number.isInteger(selection.max) ||
+        (selection.min as number) < MIN_WORDS || (selection.max as number) > MAX_LAYOUT_WORDS ||
+        (selection.min as number) > (selection.max as number) ||
+        (selection.max as number) > words.length) {
+      throw new Error(`Choose a random layout range of ${MIN_WORDS}–${Math.min(MAX_LAYOUT_WORDS, words.length)} words, with minimum no greater than maximum.`);
+    }
+  } else if (words.length > MAX_LAYOUT_WORDS) {
+    throw new Error(`Use Random selection for pools above ${MAX_LAYOUT_WORDS} words.`);
+  }
   const longest = Math.max(...words.map((word) => word.length));
   if (longest > puzzle.size) {
     throw new Error(`Your longest word has ${longest} letters. Choose a larger grid or shorten the word.`);
