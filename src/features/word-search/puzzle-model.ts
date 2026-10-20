@@ -19,7 +19,8 @@ export interface Puzzle {
 export const MIN_WORDS = 3;
 export const MAX_WORDS = 500;
 export const MAX_LAYOUT_WORDS = 40;
-export const DEFAULT_LAYOUT_WORDS = 10;
+export const DEFAULT_LAYOUT_MIN_WORDS = 5;
+export const DEFAULT_LAYOUT_MAX_WORDS = 7;
 export const MAX_WORD_LENGTH = 24;
 export const MAX_HINT_LENGTH = 240;
 export const MAX_INSTRUCTIONS_LENGTH = 500;
