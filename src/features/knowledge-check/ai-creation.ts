@@ -116,7 +116,7 @@ export const ReviewAiCreation = defineComponent({
           h('button', { type: 'button', class: 'quiet-button', onClick: () => go('categories') }, [h('strong', 'Choose a category'), h('span', 'Discover or reuse categories, then focus on one.')]),
         ]),
           h('div', { class: 'study-ai-actions', style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem' } }, [
-            h('button', { type: 'button', class: 'quiet-button', style: { width: 'auto', flex: '0 0 auto', background: 'transparent' }, onClick: () => { scope.value = null; go('direct'); } }, 'Import existing JSON'),
+            h('button', { type: 'button', class: 'quiet-button outline-button', style: { width: 'auto', flex: '0 0 auto' }, onClick: () => { scope.value = null; go('direct'); } }, 'Import existing JSON'),
             h('button', { type: 'button', class: 'quiet-button', style: { width: 'auto', flex: '0 0 auto' }, onClick: () => emit('cancel') }, 'Cancel'),
           ]),
         ] : stage.value === 'configure' ? [
