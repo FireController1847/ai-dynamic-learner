@@ -95,6 +95,9 @@
 .word-search-tree-toggle.is-open .ui-icon { transform: rotate(90deg); }
 .word-search-library-row > .ui-icon { width: 18px; height: 18px; color: var(--text-secondary); }
 .word-search-library-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
   flex: 1;
   min-width: 0;
   min-height: var(--control-height);
@@ -103,9 +106,22 @@
   border: 0;
   background: transparent;
   text-align: left;
+  white-space: nowrap;
+}
+.word-search-library-label-text {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.word-search-library-complete {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  color: #238a49;
+}
+.word-search-library-complete .ui-icon { width: 16px; height: 16px; }
 .word-search-rename {
   flex: 1;
   min-width: 0;
