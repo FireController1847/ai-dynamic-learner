@@ -1,8 +1,8 @@
 import type { Game } from './game-model.ts';
 import type { DisplayOptions } from './display-options.ts';
 import type { GridPoint } from './word-outline.ts';
-export interface SelectionAttempt { id: number; start: number; end: number; cells: number[]; matched: boolean }
-export interface WordCelebration { id: number; start: number; end: number; complete: boolean }
+export interface SelectionAttempt { id: number; start: number; end: number; cells: number[]; matched: boolean; revealed?: boolean }
+export interface WordCelebration { id: number; start: number; end: number; complete: boolean; revealed?: boolean }
 export interface PuzzleGridHandle {
   focusCell(cell: number): void;
   cancelSelection(): void;
@@ -57,6 +57,9 @@ export const PuzzleGrid = defineComponent({
     const selected = computed(() => new Set(lineCells(anchor.value, endpoint.value, size.value)));
     const found = computed(() => new Set(props.game.found.flatMap(({ start, end }) =>
       lineCells(start, end, size.value))));
+    const revealedFound = computed(() => new Set(props.game.found
+      .filter((entry) => entry.revealed)
+      .flatMap(({ start, end }) => lineCells(start, end, size.value))));
     const answers = computed(() => new Set(props.revealed
       ? props.game.placements.flatMap(({ start, end }) => lineCells(start, end, size.value)) : []));
     const rotation = computed(() => ((Math.round(props.rotationTurns) % 4) + 4) % 4);
@@ -213,8 +216,9 @@ export const PuzzleGrid = defineComponent({
         'aria-hidden': 'true',
         focusable: 'false',
       }, [
-        ...props.game.found.map(({ word, start, end }) =>
-          wordOutline(start, end, size.value, `found-${word}`, 'found', null, word, boardDegrees)),
+        ...props.game.found.map(({ word, start, end, revealed }) =>
+          wordOutline(start, end, size.value, `found-${word}`,
+            revealed ? 'found-revealed' : 'found', null, word, boardDegrees)),
         ...(props.revealed ? props.game.placements
           .filter(({ word }) => !props.game.found.some((entry) => entry.word === word))
           .map(({ word, start, end }) =>
@@ -225,7 +229,8 @@ export const PuzzleGrid = defineComponent({
           `miss-${props.attempt?.id}`, 'miss') : null,
         props.celebration ? wordOutline(
           props.celebration.start, props.celebration.end, size.value,
-          `success-${props.celebration.id}`, 'success') : null,
+          `success-${props.celebration.id}`,
+          props.celebration.revealed ? 'success-revealed' : 'success') : null,
         anchor.value !== null ? wordOutline(
           anchor.value, endpoint.value ?? anchor.value, size.value,
           'selection', 'selection', pointerPoint.value) : null,
@@ -387,6 +392,7 @@ export const PuzzleGrid = defineComponent({
                   'data-cell': cell,
                   class: ['word-search-cell', {
                     'is-found': found.value.has(cell),
+                    'is-revealed-found': revealedFound.value.has(cell),
                     'is-selected': selected.value.has(cell),
                     'is-answer': answers.value.has(cell),
                     'is-hint': props.hint === cell,
@@ -406,7 +412,8 @@ export const PuzzleGrid = defineComponent({
                       'word-search-letter-upright',
                       ...(attemptCell ? [
                         'word-search-attempt-letter',
-                        { 'attempt-miss': !props.attempt?.matched },
+                        { 'attempt-miss': !props.attempt?.matched,
+                          'attempt-revealed': !!props.attempt?.revealed },
                       ] : []),
                     ],
                     style: { '--letter-delay': `${delay}ms` },
