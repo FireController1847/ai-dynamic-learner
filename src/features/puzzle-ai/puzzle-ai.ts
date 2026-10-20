@@ -265,9 +265,11 @@ export const PuzzleAiCreation = defineComponent({
             h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel') }, 'Cancel'),
           ]),
           h('div', { class: 'review-ai-scope' }, [
-            h('button', { type: 'button', class: 'quiet-button', onClick: () => { scope.value = null; configured.value = false; entry.value = 'direct'; } }, [h('strong', 'Import existing JSON'), h('span', 'Skip prompt generation and validate a completed puzzle.')]),
             h('button', { type: 'button', class: 'quiet-button', onClick: () => { scope.value = null; configured.value = false; entry.value = 'settings'; } }, [h('strong', 'Overall subject'), h('span', 'Generate terms from the full source.')]),
             h('button', { type: 'button', class: 'quiet-button', onClick: () => { entry.value = 'categories'; } }, [h('strong', 'Choose a category'), h('span', 'Discover or reuse categories for a focused puzzle.')]),
+          ]),
+          h('div', { class: 'study-ai-actions', style: { justifyContent: 'flex-start', marginTop: '1rem' } }, [
+            h('button', { type: 'button', class: 'quiet-button', onClick: () => { scope.value = null; configured.value = false; entry.value = 'direct'; } }, 'Import existing JSON'),
           ]),
         ]) : entry.value === 'direct' ? h('section', { key: 'direct', class: 'study-ai-workspace puzzle-ai-workspace', 'data-ai-scroll-region': '' }, [
           h('header', { class: 'study-ai-header' }, [h('div', [h('h2', 'Import existing ' + label.value + ' JSON'), h('p', 'Paste an overall or category-based response.')]),
