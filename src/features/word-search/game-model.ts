@@ -56,8 +56,8 @@ export function validateGame(puzzle: unknown, game: unknown): asserts game is Ga
       (Object.hasOwn(game, 'completed') && game.completed !== true) ||
       !Array.isArray(game.rows) || game.rows.length !== size ||
       game.rows.some((row) => typeof row !== 'string' || row.length !== size || !/^[A-Z]+$/.test(row)) ||
-      !Array.isArray(game.placements) || game.placements.length !== words.length ||
-      !Array.isArray(game.found) || game.found.length > words.length) {
+      !Array.isArray(game.placements) ||
+      !Array.isArray(game.found)) {
     throw new Error('The saved word search grid or progress is invalid.');
   }
   const selected = game.selectedWords;
