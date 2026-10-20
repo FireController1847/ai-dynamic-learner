@@ -104,9 +104,8 @@ export const PuzzleForm = defineComponent({
                 checked: selectionMode.value === choice.mode,
                 onChange: () => {
                   selectionMode.value = choice.mode;
-                  if (choice.mode === 'random') {
-                    const available = Math.min(MAX_LAYOUT_WORDS,
-                      Math.max(MIN_WORDS, parsed.value.words.length));
+                  if (choice.mode === 'random' && parsed.value.words.length >= MIN_WORDS) {
+                    const available = Math.min(MAX_LAYOUT_WORDS, parsed.value.words.length);
                     selectionMin.value = Math.min(selectionMin.value, available);
                     selectionMax.value = Math.min(selectionMax.value, available);
                   }
