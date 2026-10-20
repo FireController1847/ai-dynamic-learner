@@ -20,7 +20,8 @@ export const IndexCardsAiImport = defineComponent({
     destination: { type: String, required: true },
     remainingCards: { type: Number, required: true },
     mode: { type: String as PropType<SetModeId>, required: true },
-    scope: { type: Object as PropType<AiCardScope>, required: true },
+    scope: { type: Object as PropType<AiCardScope | null>, default: null },
+    direct: Boolean,
   },
   emits: { back: () => true, cancel: () => true, import: (_value: IndexCardsAiImportValue) => true },
   setup(props, { emit }) {
@@ -33,9 +34,10 @@ export const IndexCardsAiImport = defineComponent({
     const heading = ref<HTMLElement | null>(null);
     const modeLabel = computed(() => getSetMode(props.mode)?.label ?? 'Flash Cards');
     const isFillBlank = computed(() => props.mode === 'fill-in-the-blanks');
-    const prompt = computed(() => categoryScopedPrompt(isFillBlank.value
-      ? fillBlankAiPrompt(coverage.value, limit.value, blankStyle.value)
-      : flashCardsAiPrompt(coverage.value, limit.value), props.scope));
+    const prompt = computed(() => {
+      const base = isFillBlank.value ? fillBlankAiPrompt(coverage.value, limit.value, blankStyle.value) : flashCardsAiPrompt(coverage.value, limit.value);
+      return props.scope ? categoryScopedPrompt(base, props.scope) : base;
+    });
     const longAnswers = computed(() => candidate.value?.mode === 'flash-cards'
       ? candidate.value.data.cards.filter(card => answerIsLong(card.answer)).length : 0);
     const overCapacity = computed(() => (candidate.value?.data.cards.length ?? 0) > props.remainingCards);
@@ -69,9 +71,9 @@ export const IndexCardsAiImport = defineComponent({
       h('header', { class: 'flash-ai-header' }, [
         h('div', [
           h('p', { class: 'flash-ai-muted' }, `${modeLabel.value} · Saved in ${props.destination}`),
-          h('h2', { id: 'flash-ai-title', ref: heading, tabindex: -1 }, props.scope.category.title),
-          h('p', 'Step 2 of 2 · Create cards for this category.'),
-          h('p', { class: 'flash-ai-muted' }, props.scope.category.description),
+          h('h2', { id: 'flash-ai-title', ref: heading, tabindex: -1 }, props.scope?.category.title ?? (props.direct ? 'Import existing JSON' : 'Overall subject')),
+          h('p', props.direct ? 'Import an existing set of cards.' : 'Create cards for your selected scope.'),
+          h('p', { class: 'flash-ai-muted' }, props.scope?.category.description ?? ''),
         ]),
         h('div', { class: 'flash-ai-actions' }, [
           h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('back') }, 'Back'),
@@ -79,10 +81,10 @@ export const IndexCardsAiImport = defineComponent({
         ]),
       ]),
       h(AiPromptExchange, {
-        idPrefix: 'index-cards-ai', label: modeLabel.value, prompt: prompt.value,
+        idPrefix: 'index-cards-ai', label: modeLabel.value, prompt: prompt.value, startInImport: props.direct,
         json: json.value, problem: problem.value, maxLength: MAX_AI_IMPORT_LENGTH,
         hasPreview: candidate.value !== null,
-        promptHelp: 'Send this second prompt in the AI conversation containing the matching source and category list. It creates cards only for your chosen category.',
+        promptHelp: props.scope ? 'Send this second prompt in the AI conversation containing the matching source and category list.' : 'Send the prompt with your source material to create overall-subject cards.',
         importHelp: 'Wait for the card response in that conversation, then paste its JSON here for validation and preview.',
         readyInstructions: ['Paste the card JSON below.', 'Choose Validate JSON.', 'Review the cards, then import the set.'],
         onUpdateJson: (value: string) => { json.value = value; candidate.value = null; problem.value = ''; },
