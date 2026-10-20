@@ -4,10 +4,11 @@ import { isRecord } from '../../core/validation.ts';
 
 export type Direction = [row: number, column: number];
 export interface WordPlacement { word: string; start: number; end: number }
+export interface FoundWord extends WordPlacement { revealed?: true }
 export interface Game {
   rows: string[];
   placements: WordPlacement[];
-  found: WordPlacement[];
+  found: FoundWord[];
   // True once this generated layout has been solved, even after Start over.
   completed?: true;
 }
@@ -63,7 +64,10 @@ export function validateGame(puzzle: unknown, game: unknown): asserts game is Ga
   function checkLines(lines: unknown[], isSolution: boolean): void {
     const seen = new Set<string>();
     for (const line of lines) {
-      if (!hasOnlyKeys(line, ['word', 'start', 'end']) || typeof line.word !== 'string' ||
+      if (!isRecord(line) ||
+          !(hasOnlyKeys(line, ['word', 'start', 'end']) ||
+            (!isSolution && hasOnlyKeys(line, ['word', 'start', 'end', 'revealed']) && line.revealed === true)) ||
+          typeof line.word !== 'string' ||
           typeof line.start !== 'number' || typeof line.end !== 'number' ||
           !words.includes(line.word) || seen.has(line.word)) {
         throw new Error('The saved word search contains invalid or duplicate word locations.');
