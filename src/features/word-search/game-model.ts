@@ -65,8 +65,10 @@ export function validateGame(puzzle: unknown, game: unknown): asserts game is Ga
     const seen = new Set<string>();
     for (const line of lines) {
       if (!isRecord(line) ||
-          !(hasOnlyKeys(line, ['word', 'start', 'end']) ||
-            (!isSolution && hasOnlyKeys(line, ['word', 'start', 'end', 'revealed']) && line.revealed === true)) ||
+          !['word', 'start', 'end'].every((key) => Object.hasOwn(line, key)) ||
+          Object.keys(line).some((key) =>
+            !['word', 'start', 'end', ...(!isSolution ? ['revealed'] : [])].includes(key)) ||
+          (Object.hasOwn(line, 'revealed') && (isSolution || line.revealed !== true)) ||
           typeof line.word !== 'string' ||
           typeof line.start !== 'number' || typeof line.end !== 'number' ||
           !words.includes(line.word) || seen.has(line.word)) {
