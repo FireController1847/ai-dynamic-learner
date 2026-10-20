@@ -3,7 +3,7 @@ import type { ConfiguredWordSearch, BoardRotation } from './library-model.ts';
 import type { DisplayOptions } from './display-options.ts';
 import type { PuzzleGridHandle, SelectionAttempt, WordCelebration } from './puzzle-grid.ts';
 import { DIFFICULTIES } from './puzzle-model.ts';
-import { lineCells, matchSelection, wordOnLine } from './game-model.ts';
+import { hasCompletedBoard, lineCells, matchSelection, wordOnLine } from './game-model.ts';
 import { generatePuzzle } from './puzzle-generator.ts';
 import { PuzzleGrid } from './puzzle-grid.ts';
 import { Icon } from '../../components/icon.ts';
@@ -53,6 +53,7 @@ export const PuzzleGame = defineComponent({
     const foundWords = computed(() => new Set(game.value?.found.map(({ word }) => word) ?? []));
     const hintMode = computed(() => (props.item.puzzle.studyMode ?? 'words') === 'hints');
     const complete = computed(() => foundWords.value.size === props.item.puzzle.words.length);
+    const showCompletionOverlay = computed(() => complete.value && !celebration.value?.complete);
     const statistics = useStatistics();
     let completionRecorded = complete.value;
     watch(complete, value => {
@@ -107,7 +108,7 @@ export const PuzzleGame = defineComponent({
     }
 
     function select(start: number, end: number) {
-      if (!game.value || loading.value || revealed.value) return;
+      if (!game.value || loading.value || revealed.value || complete.value) return;
       statistics?.record('word-search', props.item.id, 'wordAttempts');
       const match = matchSelection(props.item.puzzle, game.value, start, end);
       const cells = lineCells(start, end, props.item.puzzle.size);
@@ -132,6 +133,7 @@ export const PuzzleGame = defineComponent({
       game.value.found.push(match);
       hint.value = null;
       const completed = game.value.found.length === props.item.puzzle.words.length;
+      if (completed) game.value.completed = true;
       clearCelebration();
       celebration.value = {
         id: ++celebrationId,
@@ -197,6 +199,9 @@ export const PuzzleGame = defineComponent({
       pending.value = null;
       if (action === 'new') await generate();
       else if (game.value) {
+        // An older completed save may lack the optional flag. Keep its achievement
+        // when restarting the same layout, even though found words are cleared.
+        if (hasCompletedBoard(game.value)) game.value.completed = true;
         completionRecorded = false;
         statistics?.record('word-search', props.item.id, 'gamesStarted');
         game.value.found = [];
@@ -236,6 +241,12 @@ export const PuzzleGame = defineComponent({
             options: props.options,
             attempt: attempt.value,
             celebration: celebration.value,
+            completed: showCompletionOverlay.value,
+            pendingAction: pending.value,
+            onRestart: (event: MouseEvent) => requestAction('restart', event),
+            onNewLayout: (event: MouseEvent) => requestAction('new', event),
+            onCancelAction: cancelAction,
+            onConfirmAction: confirmAction,
             rotationTurns: boardTurns.value,
             rotating: rotating.value,
           }),
@@ -335,7 +346,7 @@ export const PuzzleGame = defineComponent({
             onClick: (event: MouseEvent) => requestAction('new', event),
           }, 'New layout'),
         ]) : null,
-        pending.value ? h('div', {
+        pending.value && !showCompletionOverlay.value ? h('div', {
           class: 'word-search-restart-review', role: 'group', 'aria-label': 'Confirm restart',
           onKeydown: (event: KeyboardEvent) => { if (event.key === 'Escape') { event.preventDefault(); cancelAction(); } },
         }, [
