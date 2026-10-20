@@ -25,6 +25,8 @@ export const PuzzleGame = defineComponent({
     const revealed = ref(false);
     const hint = ref<number | null>(null);
     const revealedWords = ref(new Set<string>());
+    // A revealed clue stays assisted even if its answer is hidden again.
+    const revealedHistory = ref(new Set<string>());
     const pending = ref<'new' | 'restart' | null>(null);
     const grid = ref<PuzzleGridHandle | null>(null);
     const gridVersion = ref(0);
@@ -72,6 +74,7 @@ export const PuzzleGame = defineComponent({
       pending.value = null;
       revealed.value = false;
       revealedWords.value = new Set<string>();
+      revealedHistory.value = new Set<string>();
       hint.value = null;
       clearAttempt();
       clearCelebration();
@@ -96,6 +99,7 @@ export const PuzzleGame = defineComponent({
         gridVersion.value += 1;
         revealed.value = false;
         revealedWords.value = new Set<string>();
+        revealedHistory.value = new Set<string>();
         hint.value = null;
         message.value = hintMode.value
           ? 'Puzzle ready. Use the clues to find every hidden answer.'
@@ -113,6 +117,7 @@ export const PuzzleGame = defineComponent({
       const match = matchSelection(props.item.puzzle, game.value, start, end);
       const cells = lineCells(start, end, props.item.puzzle.size);
       const text = wordOnLine(game.value.rows, start, end);
+      const assisted = Boolean(match && hintMode.value && revealedHistory.value.has(match.word));
       clearAttempt();
       attempt.value = {
         id: ++attemptId,
@@ -120,6 +125,7 @@ export const PuzzleGame = defineComponent({
         end,
         cells: cells.length ? cells : [start, end],
         matched: Boolean(match),
+        revealed: assisted,
       };
       attemptTimer = setTimeout(clearAttempt, match ? 230 : 2250);
       const recognized = text ? `Selected “${text}”. ` : '';
@@ -130,7 +136,7 @@ export const PuzzleGame = defineComponent({
       }
       if (foundWords.value.has(match.word)) { message.value = `${recognized}${match.word} is already found.`; return; }
       statistics?.record('word-search', props.item.id, 'wordsSolved');
-      game.value.found.push(match);
+      game.value.found.push(assisted ? { ...match, revealed: true } : match);
       hint.value = null;
       const completed = game.value.found.length === props.item.puzzle.words.length;
       if (completed) game.value.completed = true;
@@ -140,6 +146,7 @@ export const PuzzleGame = defineComponent({
         start: match.start,
         end: match.end,
         complete: completed,
+        revealed: assisted,
       };
       celebrationTimer = setTimeout(clearCelebration, completed ? 2100 : 1050);
       message.value = recognized + (completed ? `You found ${match.word}—and completed the puzzle!` : `Found ${match.word}!`);
@@ -160,7 +167,10 @@ export const PuzzleGame = defineComponent({
     function toggleWordReveal(word: string) {
       const next = new Set(revealedWords.value);
       if (next.has(word)) next.delete(word);
-      else next.add(word);
+      else {
+        next.add(word);
+        revealedHistory.value = new Set([...revealedHistory.value, word]);
+      }
       revealedWords.value = next;
     }
 
@@ -208,6 +218,7 @@ export const PuzzleGame = defineComponent({
         game.value.found = [];
         revealed.value = false;
         revealedWords.value = new Set<string>();
+        revealedHistory.value = new Set<string>();
         hint.value = null;
         gridVersion.value += 1;
         message.value = 'Progress cleared. Same puzzle, fresh start.';
@@ -270,12 +281,13 @@ export const PuzzleGame = defineComponent({
             ]),
             h('ol', { class: 'word-search-clue-list' }, puzzle.words.map((word, index) => {
               const found = foundWords.value.has(word);
+              const assisted = Boolean(game.value?.found.some((entry) => entry.word === word && entry.revealed));
               const individuallyRevealed = revealedWords.value.has(word);
               const answerVisible = revealed.value || found || individuallyRevealed;
               const location = revealed.value ? game.value?.placements.find((entry) => entry.word === word) : null;
               return h('li', {
                 key: word,
-                class: ['word-search-clue', { 'is-found': found }],
+                class: ['word-search-clue', { 'is-found': found, 'is-revealed-found': assisted }],
               }, [
                 h('span', { class: 'word-search-clue-number', 'aria-hidden': 'true' }, index + 1),
                 h('div', { class: 'word-search-clue-content' }, [
@@ -284,7 +296,8 @@ export const PuzzleGame = defineComponent({
                   location ? h('p', { class: 'word-search-answer-location' },
                     `Row ${Math.floor(location.start / puzzle.size) + 1}, column ${location.start % puzzle.size + 1} → row ${Math.floor(location.end / puzzle.size) + 1}, column ${location.end % puzzle.size + 1}`) : null,
                   h('div', { class: 'word-search-clue-footer' }, [
-                    h('span', { class: 'word-search-word-state' }, found ? '✓ Found' : 'Not found'),
+                    h('span', { class: 'word-search-word-state' },
+                      found ? (assisted ? '✓ Found · answer revealed' : '✓ Found') : 'Not found'),
                     !found && !revealed.value ? h('button', {
                       type: 'button',
                       class: 'word-search-word-reveal',
@@ -314,7 +327,7 @@ export const PuzzleGame = defineComponent({
           ]),
         ]) : null,
         h('p', { class: 'word-search-game-message', role: 'status', 'aria-live': 'polite' }, message.value),
-        game.value ? h('div', { class: 'word-search-game-actions' }, [
+        game.value && !complete.value ? h('div', { class: 'word-search-game-actions' }, [
           h('button', {
             type: 'button',
             class: ['quiet-button', 'word-search-rotate-button', { 'is-rotating': rotating.value }],
