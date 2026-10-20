@@ -4,7 +4,7 @@ import { AiPromptExchange } from '../../components/ai-prompt-exchange.ts';
 import { MAX_AI_IMPORT_LENGTH } from '../../core/ai-json.ts';
 import type { AiCardCategories, AiCardScope } from '../../core/ai-study-categories.ts';
 import { inputValue } from '../../core/dom.ts';
-import { DIFFICULTIES, GRID_SIZES, MAX_INSTRUCTIONS_LENGTH, STUDY_MODES, type Difficulty, type GridSize, type StudyMode } from '../word-search/puzzle-model.ts';
+import { DIFFICULTIES, GRID_SIZES, MAX_LAYOUT_WORDS, MIN_WORDS, MAX_INSTRUCTIONS_LENGTH, STUDY_MODES, type Difficulty, type GridSize, type StudyMode } from '../word-search/puzzle-model.ts';
 import { defaultPuzzleAiOptions, parsePuzzleAiImport, puzzleAiLimits, puzzleAiPrompt, type PuzzleAiKind, type PuzzleAiOptions, type PuzzleAiResult } from './puzzle-ai-format.ts';
 
 export const PuzzleAiCreation = defineComponent({
@@ -39,6 +39,21 @@ export const PuzzleAiCreation = defineComponent({
       if (!Number.isInteger(count) || count < bounds.min || count > bounds.max) {
         configurationProblem.value = `Choose between ${bounds.min} and ${bounds.max} ${props.kind === 'word-search' ? 'words' : 'answers'}.`;
         return;
+      }
+      if (props.kind === 'word-search') {
+        if (preferences.value.selectionMode === 'all' && count > MAX_LAYOUT_WORDS) {
+          configurationProblem.value = `Use Random selection to import more than ${MAX_LAYOUT_WORDS} words.`;
+          return;
+        }
+        if (preferences.value.selectionMode === 'random') {
+          const { layoutMin, layoutMax } = preferences.value;
+          if (!Number.isInteger(layoutMin) || !Number.isInteger(layoutMax) ||
+              layoutMin < MIN_WORDS || layoutMin > layoutMax ||
+              layoutMax > MAX_LAYOUT_WORDS || layoutMax > count) {
+            configurationProblem.value = `Choose a layout range of ${MIN_WORDS}–${Math.min(MAX_LAYOUT_WORDS, count)} words, minimum no greater than maximum.`;
+            return;
+          }
+        }
       }
       if (instructions.length > MAX_INSTRUCTIONS_LENGTH) {
         configurationProblem.value = `Instructions must contain at most ${MAX_INSTRUCTIONS_LENGTH} characters.`;
@@ -78,7 +93,9 @@ export const PuzzleAiCreation = defineComponent({
       return h('div', [
         h('h3', result.title),
         h('p', { class: 'study-ai-muted' }, entries.length + ' ' + (result.kind === 'word-search'
-          ? result.puzzle.studyMode === 'hints' ? 'words with hints' : 'words to find'
+          ? result.puzzle.selection
+            ? `pool words · ${result.puzzle.selection.min}–${result.puzzle.selection.max} randomly selected per layout`
+            : 'words per layout'
           : 'answers with clues') + ' · Ready to import'),
         h('ol', { class: 'puzzle-ai-preview-list' }, entries.map(entry => h('li', { key: entry.key }, [
           h('strong', entry.answer),
@@ -111,15 +128,15 @@ export const PuzzleAiCreation = defineComponent({
         h('form', { class: 'puzzle-ai-setup', onSubmit: continueToPrompt }, [
           h('div', { class: 'puzzle-ai-setup-grid' }, [
             h('label', { class: 'puzzle-ai-setting' }, [
-              h('span', wordSearch ? 'Maximum words' : 'Target answers'),
+              h('span', wordSearch ? 'Word pool target' : 'Target answers'),
               h('input', {
                 type: 'number', required: true, min: bounds.min, max: bounds.max, step: 1,
                 value: current.count,
                 onInput: (event: Event) => updatePreferences({ count: Number(inputValue(event)) }),
               }),
               h('span', { class: 'study-ai-muted' },
-                wordSearch && current.count === puzzleAiLimits['word-search'].initial
-                  ? 'Default target: 6–7 words. Use fewer when the category is small.'
+                wordSearch
+                  ? `Request ${bounds.min}–${bounds.max} unique terms from the selected category. ${current.selectionMode === 'random' ? 'The AI generates a pool larger than one board.' : 'All imported words must fit one board.'}`
                   : `Choose ${bounds.min}–${bounds.max}. Use fewer when the category is small.`),
             ]),
             wordSearch ? h('label', { class: 'puzzle-ai-setting' }, [
@@ -138,6 +155,36 @@ export const PuzzleAiCreation = defineComponent({
                 'Crossword determines the grid from the intersections of its answers.'),
             ]),
           ]),
+          wordSearch ? h('fieldset', { class: 'puzzle-ai-choice-group' }, [
+            h('legend', 'Words per layout'),
+            ...([
+              { value: 'all' as const, label: 'Use all words', description: `Every generated layout uses all imported words (max ${MAX_LAYOUT_WORDS}).` },
+              { value: 'random' as const, label: 'Random selection', description: 'Generate a large word pool, then sample different words for each new layout.' },
+            ]).map((choice) => h('label', {
+              key: choice.value,
+              class: ['puzzle-ai-choice', { 'is-selected': current.selectionMode === choice.value }],
+            }, [
+              h('input', { type: 'radio', name: 'puzzle-ai-selection-mode',
+                checked: current.selectionMode === choice.value,
+                onChange: () => updatePreferences({ selectionMode: choice.value }) }),
+              h('span', [h('strong', choice.label), h('span', { class: 'study-ai-muted' }, choice.description)]),
+            ])),
+          ]) : null,
+          wordSearch && current.selectionMode === 'random' ? h('div', { class: 'puzzle-ai-selection-range' }, [
+            ...([
+              { key: 'layoutMin' as const, label: 'Minimum words', value: current.layoutMin },
+              { key: 'layoutMax' as const, label: 'Maximum words', value: current.layoutMax },
+            ]).map((field) => h('label', { class: 'puzzle-ai-setting', key: field.key }, [
+              h('span', field.label),
+              h('input', { type: 'number', required: true, min: MIN_WORDS,
+                max: Math.min(MAX_LAYOUT_WORDS, current.count), step: 1,
+                value: field.value,
+                onInput: (event: Event) => updatePreferences({ [field.key]: Number(inputValue(event)) }),
+              }),
+            ])),
+            h('p', { class: 'study-ai-muted' },
+              'The AI writes the entire word pool. Each new layout samples a number within this range. Set both numbers equal for a fixed count.'),
+          ]) : null,
           h('fieldset', { class: 'puzzle-ai-choice-group' }, [
             h('legend', wordSearch ? 'Difficulty' : 'Clue difficulty'),
             ...DIFFICULTIES.map(choice => {
@@ -239,7 +286,7 @@ export const PuzzleAiCreation = defineComponent({
           }, {
             guidance: () => h('p', { class: 'study-ai-muted' },
               props.kind === 'word-search'
-                ? `${preferences.value.size} × ${preferences.value.size} · ${preferences.value.difficulty} · ${preferences.value.studyMode === 'hints' ? 'Hints' : 'Word list'} · ${preferences.value.count === puzzleAiLimits['word-search'].initial ? 'Target 6–7 words' : `Up to ${preferences.value.count} words`}`
+                ? `${preferences.value.size} × ${preferences.value.size} · ${preferences.value.difficulty} · ${preferences.value.studyMode === 'hints' ? 'Hints' : 'Word list'} · Up to ${preferences.value.count} pool words · ${preferences.value.selectionMode === 'random' ? `${preferences.value.layoutMin}–${preferences.value.layoutMax} per layout` : 'All words per layout'}`
                 : `Automatic grid · ${preferences.value.clueDifficulty} clues · Up to ${preferences.value.count} answers`),
             preview,
           }),
