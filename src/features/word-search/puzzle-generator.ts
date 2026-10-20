@@ -44,7 +44,15 @@ export async function generatePuzzle(puzzle: unknown, signal?: AbortSignal): Pro
       : target;
     const activeWords = selection ? chooseWords(words, count) : words;
     for (const word of activeWords) {
-      if (!options.has(word)) options.set(word, candidates(word, size, directions));
+      if (!options.has(word)) {
+        // Pools can contain hundreds of words; avoid retaining every word's
+        // coordinate candidates across failed packing attempts.
+        if (options.size >= 2 * 40) {
+          const oldest = options.keys().next().value;
+          if (oldest !== undefined) options.delete(oldest);
+        }
+        options.set(word, candidates(word, size, directions));
+      }
     }
     await new Promise((resolve) => setTimeout(resolve, 0));
     if (signal?.aborted) return null;
