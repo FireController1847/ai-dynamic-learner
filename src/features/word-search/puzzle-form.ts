@@ -5,7 +5,7 @@ import { Icon } from '../../components/icon.ts';
 import { MAX_NAME_LENGTH } from './library-model.ts';
 import {
   DIFFICULTIES, GRID_SIZES, MAX_HINT_LENGTH, MAX_INSTRUCTIONS_LENGTH, MAX_WORD_INPUT_LENGTH,
-  MAX_WORDS, MIN_WORDS, STUDY_MODES, parseWords, validatePuzzle,
+  MAX_WORDS, MAX_LAYOUT_WORDS, DEFAULT_LAYOUT_WORDS, MIN_WORDS, STUDY_MODES, parseWords, validatePuzzle,
 } from './puzzle-model.ts';
 
 import { defineComponent, type PropType, computed, h, nextTick, onMounted, ref } from 'vue';
@@ -23,6 +23,9 @@ export const PuzzleForm = defineComponent({
     const wordsText = ref(props.item?.puzzle?.words.join('\n') ?? '');
     const size = ref<number>(props.item?.puzzle?.size ?? 15);
     const difficulty = ref(props.item?.puzzle?.difficulty ?? 'medium');
+    const selectionMode = ref<'all' | 'random'>(props.item?.puzzle?.selection ? 'random' : 'all');
+    const selectionMin = ref(props.item?.puzzle?.selection?.min ?? DEFAULT_LAYOUT_WORDS);
+    const selectionMax = ref(props.item?.puzzle?.selection?.max ?? DEFAULT_LAYOUT_WORDS);
     const instructions = ref(props.item?.puzzle?.instructions ?? '');
     const studyMode = ref(props.item?.puzzle?.studyMode ?? 'words');
     const hints = ref({ ...(props.item?.puzzle?.hints ?? {}) });
@@ -45,6 +48,8 @@ export const PuzzleForm = defineComponent({
           words: [...parsed.value.words], size: size.value,
           difficulty: difficulty.value, instructions: instructions.value.trim(),
           studyMode: studyMode.value, hints: savedHints,
+          ...(selectionMode.value === 'random'
+            ? { selection: { min: selectionMin.value, max: selectionMax.value } } : {}),
         };
         validatePuzzle(puzzle);
         props.save(name.value, puzzle);
@@ -71,9 +76,9 @@ export const PuzzleForm = defineComponent({
       ]),
       h('div', { class: 'word-search-form-columns' }, [
         h('div', { class: 'word-search-field' }, [
-          h('label', { for: 'puzzle-words' }, 'Words to find'),
+          h('label', { for: 'puzzle-words' }, 'Word pool'),
           h('p', { id: 'puzzle-words-help', class: 'word-search-help' },
-            `Add ${MIN_WORDS}–${MAX_WORDS} words, one per line or separated by commas. English letters A–Z; spaces, hyphens, and apostrophes are removed.`),
+            `Add ${MIN_WORDS}–${MAX_WORDS} unique words, one per line or separated by commas. Select All words for a fixed board (up to ${MAX_LAYOUT_WORDS}), or Random selection for a larger pool. English letters A–Z; spaces, hyphens, and apostrophes are removed.`),
           h('textarea', {
             id: 'puzzle-words', rows: 10, required: true, maxlength: MAX_WORD_INPUT_LENGTH,
             placeholder: 'FOREST\nRIVER\nWILLOW', value: wordsText.value, spellcheck: false,
@@ -85,6 +90,48 @@ export const PuzzleForm = defineComponent({
           parsed.value.error ? h('p', { class: 'word-search-error' }, parsed.value.error) : null,
         ]),
         h('div', { class: 'word-search-options' }, [
+          h('fieldset', { class: 'word-search-difficulty word-search-selection-settings' }, [
+            h('legend', 'Words per layout'),
+            ...([
+              { mode: 'all' as const, title: 'Use all words', description: `Every layout uses the whole list (maximum ${MAX_LAYOUT_WORDS} words).` },
+              { mode: 'random' as const, title: 'Random selection', description: 'Each new layout draws a fresh sample from the pool.' },
+            ]).map((choice) => h('label', {
+              class: ['word-search-difficulty-choice', { 'is-selected': selectionMode.value === choice.mode }],
+            }, [
+              h('input', {
+                type: 'radio', name: 'puzzle-selection-mode', value: choice.mode,
+                checked: selectionMode.value === choice.mode,
+                onChange: () => {
+                  selectionMode.value = choice.mode;
+                  if (choice.mode === 'random') {
+                    const count = Math.min(DEFAULT_LAYOUT_WORDS, MAX_LAYOUT_WORDS,
+                      Math.max(MIN_WORDS, parsed.value.words.length));
+                    selectionMin.value = Math.min(selectionMin.value, count);
+                    selectionMax.value = Math.min(selectionMax.value, count);
+                  }
+                },
+              }),
+              h('span', [h('strong', choice.title), h('span', { class: 'word-search-help' }, choice.description)]),
+            ])),
+            selectionMode.value === 'random' ? h('div', { class: 'word-search-selection-range' }, [
+              ...([
+                { key: 'min', title: 'Minimum', value: selectionMin },
+                { key: 'max', title: 'Maximum', value: selectionMax },
+              ] as const).map((field) => h('label', { key: field.key }, [
+                h('span', field.title),
+                h('input', {
+                  type: 'number', min: MIN_WORDS,
+                  max: Math.min(MAX_LAYOUT_WORDS, parsed.value.words.length),
+                  step: 1, required: true, value: field.value.value,
+                  onInput: (event: Event) => {
+                    field.value.value = Number(inputValue(event));
+                  },
+                }),
+              ])),
+              h('p', { class: 'word-search-help' },
+                `Each board uses ${selectionMin.value === selectionMax.value ? selectionMin.value : `${selectionMin.value}–${selectionMax.value}`} randomly chosen words. Minimum and maximum can be equal.`),
+            ]) : null,
+          ]),
           h('div', { class: 'word-search-field' }, [
             h('label', { for: 'puzzle-size' }, 'Grid size'),
             h('select', {
@@ -109,11 +156,13 @@ export const PuzzleForm = defineComponent({
         ]),
       ]),
       parsed.value.words.length ? h('div', { class: 'word-search-word-preview' }, [
-        h('h3', 'Word list preview'),
-        h('ul', { class: 'word-search-word-chips' }, parsed.value.words.map((word) =>
+        h('h3', 'Word pool preview'),
+        h('ul', { class: 'word-search-word-chips' }, parsed.value.words.slice(0, 80).map((word) =>
           h('li', { key: word, class: { 'is-too-long': word.length > size.value } }, [
             word, word.length > size.value ? h('span', ' · too long for this grid') : null,
           ]))),
+        parsed.value.words.length > 80 ? h('p', { class: 'word-search-help' },
+          `Showing first 80 of ${parsed.value.words.length} words.`) : null,
       ]) : null,
       h('fieldset', { class: 'word-search-study-mode' }, [
         h('legend', 'Study display'),
@@ -133,7 +182,7 @@ export const PuzzleForm = defineComponent({
         class: 'word-search-hint-editor', 'aria-labelledby': 'word-search-hint-heading',
       }, [
         h('h3', { id: 'word-search-hint-heading' }, 'Hints'),
-        h('p', { class: 'word-search-help' }, 'Write a clue for each answer. Players can reveal an individual answer without marking it found.'),
+        h('p', { class: 'word-search-help' }, 'Write a clue for every word in the pool. A random layout displays only the clues for its selected words.'),
         h('div', { class: 'word-search-hint-fields' }, parsed.value.words.map((word) => h('label', {
           key: word, class: 'word-search-hint-field',
         }, [
@@ -158,7 +207,7 @@ export const PuzzleForm = defineComponent({
         ref: errorBox, class: 'word-search-error', role: 'alert', tabindex: -1,
       }, error.value) : null,
       h('p', { class: 'word-search-help' }, props.item?.game
-        ? 'Changing words, grid size, or difficulty starts a new puzzle and clears found words. Title, instructions, study display, and hints keep the existing grid and progress.'
+        ? 'Changing the word pool, layout selection, grid size, or difficulty starts a new board and clears progress. Title, instructions, study display, and hints keep the existing board.'
         : 'Your puzzle will be generated after saving. If the words cannot fit, try a larger grid or fewer words.'),
       h('div', { class: 'word-search-form-actions' }, [
         h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel') }, 'Cancel'),
@@ -180,9 +229,12 @@ export const PuzzleSummary = defineComponent({
       return h('div', { class: 'word-search-puzzle-summary' }, [
         h('h3', puzzle ? 'Puzzle setup' : 'Add your puzzle details'),
         puzzle ? h('p', { class: 'word-search-help' },
-          `${puzzle.words.length} words · ${puzzle.size} × ${puzzle.size} grid · ${DIFFICULTIES.find(({ value }) => value === puzzle.difficulty)?.label} · ${(puzzle.studyMode ?? 'words') === 'hints' ? 'Hint study mode' : 'Word-list study mode'}`) : null,
+          `${puzzle.words.length} pool words · ${puzzle.selection ? `${puzzle.selection.min}–${puzzle.selection.max} randomly per layout` : 'All words per layout'} · ${puzzle.size} × ${puzzle.size} grid · ${DIFFICULTIES.find(({ value }) => value === puzzle.difficulty)?.label} · ${(puzzle.studyMode ?? 'words') === 'hints' ? 'Hint study mode' : 'Word-list study mode'}`) : null,
         puzzle?.instructions ? h('p', { class: 'word-search-instructions' }, puzzle.instructions) : null,
-        puzzle ? h('ul', { class: 'word-search-word-chips' }, puzzle.words.map((word) => h('li', { key: word }, word))) : null,
+        puzzle ? h('ul', { class: 'word-search-word-chips' },
+          puzzle.words.slice(0, 80).map((word) => h('li', { key: word }, word))) : null,
+        puzzle && puzzle.words.length > 80 ? h('p', { class: 'word-search-help' },
+          `Showing first 80 of ${puzzle.words.length} pool words.`) : null,
         h('p', { class: 'word-search-help' }, puzzle
           ? 'Your word list and settings are saved.'
           : 'Choose words and settings to complete this word search.'),
