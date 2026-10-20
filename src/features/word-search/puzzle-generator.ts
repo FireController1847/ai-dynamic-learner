@@ -40,7 +40,7 @@ export async function generatePuzzle(puzzle: unknown, signal?: AbortSignal): Pro
   for (let attempt = 0; attempt < 48; attempt += 1) {
     // If a densely selected layout cannot fit, retry toward the requested minimum.
     const count = selection && attempt >= 24
-      ? Math.max(selection.min, target - Math.floor((attempt - 24) / 8) - 1)
+      ? Math.max(selection.min, target - Math.ceil(((attempt - 23) * (target - selection.min)) / 24))
       : target;
     const activeWords = selection ? chooseWords(words, count) : words;
     for (const word of activeWords) {
