@@ -7,6 +7,7 @@ import { boardScore, hasCompletedBoard, isFinishedGame, lineCells, matchSelectio
 import { generatePuzzle } from './puzzle-generator.ts';
 import { PuzzleGrid } from './puzzle-grid.ts';
 import { Icon } from '../../components/icon.ts';
+import { EntryStatistics } from '../../components/entry-statistics.ts';
 import { defaultDisplayOptions, displayStyles } from './display-options.ts';
 
 import { defineComponent, type PropType, computed, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue';
@@ -245,12 +246,45 @@ export const PuzzleGame = defineComponent({
         'aria-label': 'Play word search', 'aria-busy': loading.value,
       }, [
         h('div', { class: 'word-search-game-toolbar' }, [
-          h('p', { class: 'word-search-help' }, `${puzzle.size} × ${puzzle.size} · ${difficulty?.label} · ${difficulty?.description}${game.value?.selectedWords ? ` · ${activeWords.value.length} of ${puzzle.words.length} pool words` : ''}`),
-          h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('edit') }, 'Edit puzzle'),
+          h('div', { class: 'word-search-game-meta', 'aria-label': 'Board settings' }, [
+            h('span', { class: 'word-search-meta-chip' }, `${puzzle.size} × ${puzzle.size}`),
+            h('span', { class: 'word-search-meta-chip', title: difficulty?.description },
+              `${difficulty?.label ?? 'Medium'} difficulty`),
+            game.value?.selectedWords ? h('span', { class: 'word-search-meta-chip' },
+              `${activeWords.value.length} of ${puzzle.words.length} pool words`) : null,
+          ]),
+          h('div', { class: 'word-search-game-toolbar-actions' }, [
+            h('details', {
+              class: 'word-search-how-to-play',
+              onKeydown: (event: KeyboardEvent) => {
+                if (event.key === 'Escape' && event.currentTarget instanceof HTMLDetailsElement) {
+                  event.preventDefault();
+                  event.currentTarget.open = false;
+                  event.currentTarget.querySelector('summary')?.focus();
+                }
+              },
+            }, [
+              h('summary', { class: 'quiet-button' }, [
+                h(Icon, { name: 'lightbulb' }), 'How to play',
+              ]),
+              h('div', { class: 'word-search-help-popover' }, [
+                h('strong', 'How to play'),
+                h('p', difficulty?.description ?? ''),
+                h('p', 'Drag across a word, or tap its first and last letters. Either direction works.'),
+                h('p', 'Keyboard: arrow keys move between letters; Enter or Space selects an endpoint; Escape cancels. Larger grids can scroll sideways.'),
+              ]),
+            ]),
+            h('button', { type: 'button', class: 'quiet-button',
+              onClick: () => emit('edit') }, [
+              h(Icon, { name: 'pencil' }), 'Edit puzzle',
+            ]),
+          ]),
         ]),
         puzzle.instructions ? h('p', { class: 'word-search-instructions' }, puzzle.instructions) : null,
-        h('p', { id: 'word-search-play-help', class: 'word-search-help' },
-          'Drag across a word with a mouse, or tap its first and last letters. Select either end first. Keyboard: use arrow keys to move, Enter or Space to choose each end, and Escape to cancel. Scroll sideways for larger grids.'),
+        h('p', { id: 'word-search-play-help', class: 'visually-hidden' },
+          finished.value
+            ? 'This board is finished and read-only. View results or start another attempt.'
+            : 'Drag across a word or select first and last letters. Arrow keys move between cells; Enter or Space selects a letter; Escape cancels.'),
         loading.value ? h('p', { role: 'status' }, 'Arranging your words…') : null,
         error.value ? h('div', { class: 'word-search-generation-error', role: 'alert' }, [
           h('p', error.value),
@@ -423,6 +457,14 @@ export const PuzzleGame = defineComponent({
               pending.value === 'new' ? 'Create new layout' : pending.value === 'give-up' ? 'Give up' : 'Start over'),
           ]),
         ]) : null,
+        h('details', { class: 'word-search-lifetime-activity' }, [
+          h('summary', 'Lifetime activity'),
+          h('div', { class: 'word-search-lifetime-values' }, [
+            h(EntryStatistics, { app: 'word-search', id: props.item.id, metric: 'gamesCompleted' }),
+            h(EntryStatistics, { app: 'word-search', id: props.item.id, metric: 'wordsSolved' }),
+            h(EntryStatistics, { app: 'word-search', id: props.item.id, metric: 'wordAttempts' }),
+          ]),
+        ]),
       ]);
     };
   },
