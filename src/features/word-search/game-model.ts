@@ -9,6 +9,8 @@ export interface Game {
   rows: string[];
   placements: WordPlacement[];
   found: FoundWord[];
+  // Revealed clue answers stay visible until this board is replaced.
+  revealedAnswers?: string[];
   // True once this generated layout has been solved, even after Start over.
   completed?: true;
 }
@@ -42,23 +44,28 @@ export function wordOnLine(rows: readonly string[], start: number, end: number):
   return lineCells(start, end, size).map((cell) => rows[Math.floor(cell / size)][cell % size]).join('');
 }
 
-function hasOnlyKeys(value: unknown, keys: readonly string[]): value is Record<string, unknown> {
-  return isRecord(value) &&
-    Object.keys(value).length === keys.length && Object.keys(value).every((key) => keys.includes(key));
-}
-
 // Validate stored boards directly so backup imports never have to regenerate puzzles.
 export function validateGame(puzzle: unknown, game: unknown): asserts game is Game {
   validatePuzzle(puzzle);
   const { size, words, difficulty } = puzzle;
-  if (!(hasOnlyKeys(game, ['rows', 'placements', 'found']) ||
-        hasOnlyKeys(game, ['rows', 'placements', 'found', 'completed'])) ||
+  if (!isRecord(game) ||
+      !['rows', 'placements', 'found'].every((key) => Object.hasOwn(game, key)) ||
+      Object.keys(game).some((key) => !['rows', 'placements', 'found', 'completed', 'revealedAnswers'].includes(key)) ||
       (Object.hasOwn(game, 'completed') && game.completed !== true) ||
       !Array.isArray(game.rows) || game.rows.length !== size ||
       game.rows.some((row) => typeof row !== 'string' || row.length !== size || !/^[A-Z]+$/.test(row)) ||
       !Array.isArray(game.placements) || game.placements.length !== words.length ||
       !Array.isArray(game.found) || game.found.length > words.length) {
     throw new Error('The saved word search grid or progress is invalid.');
+  }
+  if (Object.hasOwn(game, 'revealedAnswers')) {
+    const revealedAnswers = game.revealedAnswers;
+    if (!Array.isArray(revealedAnswers) ||
+        revealedAnswers.length > words.length ||
+        revealedAnswers.some((word: unknown) => typeof word !== 'string' || !words.includes(word)) ||
+        new Set(revealedAnswers).size !== revealedAnswers.length) {
+      throw new Error('The saved word search contains invalid revealed answers.');
+    }
   }
   const rows = game.rows as string[];
   function checkLines(lines: unknown[], isSolution: boolean): void {
