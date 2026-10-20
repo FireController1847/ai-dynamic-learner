@@ -24,7 +24,7 @@ export const DISPLAY_FIELDS: DisplayField<DisplayOptions>[] = [
     { value: 'screen', label: 'Fit available space' },
     { value: 'preferred', label: 'Use preferred cell size' },
   ] },
-  { key: 'highlight', label: 'Highlight color', default: 'blue', choices: [
+  { key: 'highlight', label: 'Highlight color', default: 'green', choices: [
     { value: 'blue', label: 'Blue', css: '#0f6cbd' },
     { value: 'green', label: 'Green', css: '#167044' },
     { value: 'purple', label: 'Purple', css: '#7443a8' },
