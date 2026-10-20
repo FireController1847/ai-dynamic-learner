@@ -3,7 +3,7 @@ import type { ConfiguredWordSearch, BoardRotation } from './library-model.ts';
 import type { DisplayOptions } from './display-options.ts';
 import type { PuzzleGridHandle, SelectionAttempt, WordCelebration } from './puzzle-grid.ts';
 import { DIFFICULTIES } from './puzzle-model.ts';
-import { hasCompletedBoard, lineCells, matchSelection, wordOnLine } from './game-model.ts';
+import { boardScore, hasCompletedBoard, isFinishedGame, lineCells, matchSelection, wordOnLine, wordScore } from './game-model.ts';
 import { generatePuzzle } from './puzzle-generator.ts';
 import { PuzzleGrid } from './puzzle-grid.ts';
 import { Icon } from '../../components/icon.ts';
@@ -24,7 +24,8 @@ export const PuzzleGame = defineComponent({
     const message = ref('');
     const revealed = ref(false);
     const hint = ref<number | null>(null);
-    const pending = ref<'new' | 'restart' | null>(null);
+    const pending = ref<'new' | 'restart' | 'give-up' | null>(null);
+    const viewingBoard = ref(false);
     const grid = ref<PuzzleGridHandle | null>(null);
     const gridVersion = ref(0);
     const attempt = ref<SelectionAttempt | null>(null);
@@ -58,7 +59,10 @@ export const PuzzleGame = defineComponent({
     const foundWords = computed(() => new Set(game.value?.found.map(({ word }) => word) ?? []));
     const hintMode = computed(() => (props.item.puzzle.studyMode ?? 'words') === 'hints');
     const complete = computed(() => Boolean(game.value) && foundWords.value.size === activeWords.value.length);
-    const showCompletionOverlay = computed(() => complete.value && !celebration.value?.complete);
+    const finished = computed(() => isFinishedGame(game.value));
+    const score = computed(() => game.value ? boardScore(game.value) : { earned: 0, possible: 0 });
+    const showCompletionOverlay = computed(() =>
+      finished.value && !celebration.value?.complete && !viewingBoard.value);
     const statistics = useStatistics();
     let completionRecorded = complete.value;
     watch(complete, value => {
@@ -75,6 +79,7 @@ export const PuzzleGame = defineComponent({
     });
     onDeactivated(() => {
       pending.value = null;
+      viewingBoard.value = false;
       revealed.value = false;
       hint.value = null;
       clearAttempt();
@@ -91,6 +96,7 @@ export const PuzzleGame = defineComponent({
       loading.value = true;
       error.value = '';
       pending.value = null;
+      viewingBoard.value = false;
       try {
         const result = await generatePuzzle(props.item.puzzle, request.signal);
         if (!result || request.signal.aborted) return;
@@ -111,7 +117,7 @@ export const PuzzleGame = defineComponent({
     }
 
     function select(start: number, end: number) {
-      if (!game.value || loading.value || revealed.value || complete.value) return;
+      if (!game.value || loading.value || revealed.value || finished.value) return;
       statistics?.record('word-search', props.item.id, 'wordAttempts');
       const match = matchSelection(props.item.puzzle, game.value, start, end);
       const cells = lineCells(start, end, props.item.puzzle.size);
@@ -152,7 +158,7 @@ export const PuzzleGame = defineComponent({
     }
 
     function giveHint() {
-      if (!game.value) return;
+      if (!game.value || finished.value) return;
       const remaining = game.value.placements.filter(({ word }) => !foundWords.value.has(word));
       const placement = remaining[Math.floor(Math.random() * remaining.length)];
       if (!placement) return;
@@ -164,7 +170,8 @@ export const PuzzleGame = defineComponent({
     }
 
     function revealWord(word: string) {
-      if (!game.value || !hintMode.value || foundWords.value.has(word) || revealedAnswers.value.has(word)) return;
+      if (!game.value || finished.value || !hintMode.value ||
+          foundWords.value.has(word) || revealedAnswers.value.has(word)) return;
       game.value.revealedAnswers = [...(game.value.revealedAnswers ?? []), word];
       message.value = `Answer revealed: ${word}. It will stay visible until you generate a new layout.`;
     }
@@ -184,11 +191,11 @@ export const PuzzleGame = defineComponent({
       message.value = `Board rotated to ${props.item.boardRotation}°.`;
     }
 
-    async function requestAction(action: 'new' | 'restart', event: MouseEvent) {
+    async function requestAction(action: 'new' | 'restart' | 'give-up', event: MouseEvent) {
       actionTrigger = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
       pending.value = action;
       await nextTick();
-      if (showCompletionOverlay.value) grid.value?.focusCompletionCancel();
+      if (finished.value) grid.value?.focusCompletionCancel();
       else cancelButton.value?.focus();
     }
 
@@ -204,7 +211,12 @@ export const PuzzleGame = defineComponent({
       const action = pending.value;
       pending.value = null;
       if (action === 'new') await generate();
-      else if (game.value) {
+      else if (action === 'give-up' && game.value && !finished.value) {
+        game.value.gaveUp = true;
+        hint.value = null;
+        viewingBoard.value = false;
+        message.value = `You gave up. Final score: ${score.value.earned} / ${score.value.possible}.`;
+      } else if (action === 'restart' && game.value) {
         // An older completed save may lack the optional flag. Keep its achievement
         // when restarting the same layout, even though found words are cleared.
         if (hasCompletedBoard(game.value)) game.value.completed = true;
@@ -213,13 +225,15 @@ export const PuzzleGame = defineComponent({
         // Preserve revealed clues from this layout, including legacy assisted finds.
         if (revealedAnswers.value.size) game.value.revealedAnswers = [...revealedAnswers.value];
         game.value.found = [];
+        delete game.value.gaveUp;
+        viewingBoard.value = false;
         revealed.value = false;
         hint.value = null;
         gridVersion.value += 1;
         message.value = 'Progress cleared. Same puzzle, fresh start.';
       }
       await nextTick();
-      if (showCompletionOverlay.value) grid.value?.focusCompletionAction();
+      if (finished.value) grid.value?.focusCompletionAction();
       else restartButton.value?.focus();
     }
 
@@ -245,12 +259,17 @@ export const PuzzleGame = defineComponent({
         game.value ? h('div', { class: 'word-search-play-layout', inert: loading.value }, [
           h(PuzzleGrid, {
             ref: grid, key: gridVersion.value, game: game.value,
-            revealed: revealed.value, hint: hint.value, onSelect: select,
+            revealed: revealed.value || game.value.gaveUp === true, hint: hint.value, onSelect: select,
             options: props.options,
             attempt: attempt.value,
             celebration: celebration.value,
-            completed: showCompletionOverlay.value,
-            pendingAction: pending.value,
+            covered: showCompletionOverlay.value,
+            finished: finished.value && !celebration.value?.complete,
+            score: score.value,
+            viewingBoard: viewingBoard.value,
+            pendingAction: finished.value ? (pending.value === 'give-up' ? null : pending.value) : null,
+            onViewBoard: () => { viewingBoard.value = true; pending.value = null; },
+            onViewResults: () => { viewingBoard.value = false; pending.value = null; },
             onRestart: (event: MouseEvent) => requestAction('restart', event),
             onNewLayout: (event: MouseEvent) => requestAction('new', event),
             onCancelAction: cancelAction,
@@ -264,7 +283,7 @@ export const PuzzleGame = defineComponent({
           }, hintMode.value ? [
             h('header', { class: 'word-search-clue-header' }, [
               h('div', {}, [
-                h('h3', complete.value ? 'Nicely done!' : 'Clues'),
+                h('h3', finished.value ? game.value?.gaveUp ? 'Board ended' : 'Nicely done!' : 'Clues'),
                 h('p', { class: 'word-search-clue-progress' },
                   `${foundWords.value.size} of ${activeWords.value.length} found`),
               ]),
@@ -278,8 +297,10 @@ export const PuzzleGame = defineComponent({
               const found = foundWords.value.has(word);
               const assisted = Boolean(game.value?.found.some((entry) => entry.word === word && entry.revealed));
               const individuallyRevealed = revealedAnswers.value.has(word);
-              const answerVisible = revealed.value || found || individuallyRevealed;
-              const location = revealed.value ? game.value?.placements.find((entry) => entry.word === word) : null;
+              const answerVisible = revealed.value || game.value?.gaveUp === true || found || individuallyRevealed;
+              const location = (revealed.value || finished.value)
+                ? game.value?.placements.find((entry) => entry.word === word) : null;
+              const points = game.value ? wordScore(game.value, word) : 0;
               return h('li', {
                 key: word,
                 class: ['word-search-clue', {
@@ -297,8 +318,11 @@ export const PuzzleGame = defineComponent({
                   h('div', { class: 'word-search-clue-footer' }, [
                     h('span', { class: 'word-search-word-state' },
                       found ? (assisted ? '✓ Found · answer revealed' : '✓ Found')
-                        : individuallyRevealed ? 'Answer revealed' : 'Not found'),
-                    !found && !revealed.value && !individuallyRevealed ? h('button', {
+                        : individuallyRevealed ? 'Answer revealed' : game.value?.gaveUp ? 'Not found' : 'Not found'),
+                    (finished.value || found || individuallyRevealed)
+                      ? h('span', { class: 'word-search-word-points',
+                        'aria-label': `${points} points` }, `+${points}`) : null,
+                    !found && !finished.value && !revealed.value && !individuallyRevealed ? h('button', {
                       type: 'button',
                       class: 'word-search-word-reveal',
                       onClick: () => revealWord(word),
@@ -308,17 +332,23 @@ export const PuzzleGame = defineComponent({
               ]);
             })),
           ] : [
-            h('h3', complete.value ? 'Nicely done!' : 'Words to find'),
+            h('h3', finished.value ? game.value?.gaveUp ? 'Board ended' : 'Nicely done!' : 'Words to find'),
             h('p', { class: 'word-search-progress' }, `${foundWords.value.size} of ${activeWords.value.length} found`),
             h('progress', { max: activeWords.value.length, value: foundWords.value.size, 'aria-label': 'Words found' }),
             h('ul', {}, activeWords.value.map((word) => {
               const found = foundWords.value.has(word);
-              const location = revealed.value ? game.value?.placements.find((entry) => entry.word === word) : null;
+              const location = (revealed.value || finished.value)
+                ? game.value?.placements.find((entry) => entry.word === word) : null;
+              const points = game.value ? wordScore(game.value, word) : 0;
               return h('li', {
                 key: word, class: { 'is-found': found },
               }, [
                 h('span', { class: 'word-search-answer-text' }, word),
-                h('span', { class: 'word-search-word-state' }, found ? '✓ Found' : 'To find'),
+                h('span', { class: 'word-search-word-state' },
+                  found ? '✓ Found' : game.value?.gaveUp ? 'Not found' : 'To find'),
+                (finished.value || found)
+                  ? h('span', { class: 'word-search-word-points',
+                    'aria-label': `${points} points` }, `+${points}`) : null,
                 location ? h('span', { class: 'word-search-answer-location' },
                   `Row ${Math.floor(location.start / puzzle.size) + 1}, column ${location.start % puzzle.size + 1} → row ${Math.floor(location.end / puzzle.size) + 1}, column ${location.end % puzzle.size + 1}`) : null,
               ]);
@@ -326,7 +356,7 @@ export const PuzzleGame = defineComponent({
           ]),
         ]) : null,
         h('p', { class: 'word-search-game-message', role: 'status', 'aria-live': 'polite' }, message.value),
-        game.value && !complete.value ? h('div', { class: 'word-search-game-actions' }, [
+        game.value && !finished.value ? h('div', { class: 'word-search-game-actions' }, [
           h('button', {
             type: 'button',
             class: ['quiet-button', 'word-search-rotate-button', { 'is-rotating': rotating.value }],
@@ -351,26 +381,33 @@ export const PuzzleGame = defineComponent({
               message.value = revealed.value ? 'Answers shown. Hide answers to keep playing; your progress is unchanged.' : 'Answers hidden. Keep searching!';
             },
           }, revealed.value ? 'Hide answers' : 'Show answers'),
-          !showCompletionOverlay.value ? h('button', {
+          h('button', {
+            type: 'button', class: 'quiet-button word-search-give-up-button',
+            disabled: loading.value,
+            onClick: (event: MouseEvent) => requestAction('give-up', event),
+          }, 'Give up'),
+          h('button', {
             ref: restartButton, type: 'button', class: 'quiet-button', disabled: loading.value,
             onClick: (event: MouseEvent) => requestAction('restart', event),
-          }, 'Start over') : null,
-          !showCompletionOverlay.value ? h('button', {
+          }, 'Start over'),
+          h('button', {
             type: 'button', class: 'quiet-button', disabled: loading.value,
             onClick: (event: MouseEvent) => requestAction('new', event),
-          }, 'New layout') : null,
+          }, 'New layout'),
         ]) : null,
-        pending.value && !showCompletionOverlay.value ? h('div', {
+        pending.value && !finished.value ? h('div', {
           class: 'word-search-restart-review', role: 'group', 'aria-label': 'Confirm restart',
           onKeydown: (event: KeyboardEvent) => { if (event.key === 'Escape') { event.preventDefault(); cancelAction(); } },
         }, [
           h('p', pending.value === 'new'
             ? 'Create a new arrangement? Your current progress will be cleared once the new grid is ready.'
-            : 'Clear your found words and start this grid again?'),
+            : pending.value === 'give-up'
+              ? 'Give up and end this board? Unfound answers will be shown and the score finalized. You can start over afterward.'
+              : 'Clear your found words and start this grid again?'),
           h('div', { class: 'word-search-game-actions' }, [
             h('button', { ref: cancelButton, type: 'button', class: 'quiet-button', onClick: cancelAction }, 'Cancel'),
             h('button', { type: 'button', class: 'card-primary-button', onClick: confirmAction },
-              pending.value === 'new' ? 'Create new layout' : 'Start over'),
+              pending.value === 'new' ? 'Create new layout' : pending.value === 'give-up' ? 'Give up' : 'Start over'),
           ]),
         ]) : null,
       ]);
