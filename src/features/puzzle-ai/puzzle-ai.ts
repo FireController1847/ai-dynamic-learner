@@ -179,7 +179,11 @@ export const PuzzleAiCreation = defineComponent({
               h('input', { type: 'number', required: true, min: MIN_WORDS,
                 max: Math.min(MAX_LAYOUT_WORDS, current.count), step: 1,
                 value: field.value,
-                onInput: (event: Event) => updatePreferences({ [field.key]: Number(inputValue(event)) }),
+                onInput: (event: Event) => {
+                  const value = Number(inputValue(event));
+                  updatePreferences(field.key === 'layoutMin'
+                    ? { layoutMin: value } : { layoutMax: value });
+                },
               }),
             ])),
             h('p', { class: 'study-ai-muted' },
