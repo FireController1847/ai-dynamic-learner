@@ -6,6 +6,7 @@ export interface WordCelebration { id: number; start: number; end: number; compl
 export interface PuzzleGridHandle { focusCell(cell: number): void; cancelSelection(): void }
 import { lineCells } from './game-model.ts';
 import { defaultDisplayOptions, displayStyles } from './display-options.ts';
+import { Icon } from '../../components/icon.ts';
 import { useGridSizing } from './grid-sizing.ts';
 import { wordOutline } from './word-outline.ts';
 
@@ -21,10 +22,18 @@ export const PuzzleGrid = defineComponent({
     helpId: { type: String, default: 'word-search-play-help' },
     attempt: { type: Object as PropType<SelectionAttempt | null>, default: null },
     celebration: { type: Object as PropType<WordCelebration | null>, default: null },
+    completed: Boolean,
+    pendingAction: { type: String as PropType<'new' | 'restart' | null>, default: null },
     rotationTurns: { type: Number, default: 0 },
     rotating: Boolean,
   },
-  emits: { 'select': (_start: number, _end: number) => true },
+  emits: {
+    'select': (_start: number, _end: number) => true,
+    'restart': (_event: MouseEvent) => true,
+    'new-layout': (_event: MouseEvent) => true,
+    'cancel-action': () => true,
+    'confirm-action': () => true,
+  },
   setup(props, { emit, expose }) {
     const grid = ref<HTMLElement | null>(null);
     const area = ref<HTMLElement | null>(null);
@@ -255,6 +264,39 @@ export const PuzzleGrid = defineComponent({
       ]);
     }
 
+    function completionOverlay() {
+      if (!props.completed) return null;
+      const pending = props.pendingAction;
+      return h('section', {
+        class: 'word-search-completion-overlay',
+        role: 'region',
+        'aria-label': 'Completed word search',
+      }, [
+        h('div', { class: 'word-search-completion-content' }, [
+          h('div', { class: 'word-search-completion-seal', 'aria-hidden': 'true' }, [
+            h(Icon, { name: 'verified' }),
+          ]),
+          h('h3', pending ? (pending === 'new' ? 'Create a new layout?' : 'Start this board over?')
+            : 'Puzzle complete!'),
+          h('p', pending
+            ? (pending === 'new'
+              ? 'A new arrangement replaces this board and clears its progress.'
+              : 'This clears your found words but keeps the same board and its completed badge.')
+            : `You found all ${props.game.placements.length} words. Nicely done!`),
+          h('div', { class: 'word-search-completion-actions' }, pending ? [
+            h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel-action') }, 'Cancel'),
+            h('button', { type: 'button', class: 'card-primary-button', onClick: () => emit('confirm-action') },
+              pending === 'new' ? 'Create new layout' : 'Start over'),
+          ] : [
+            h('button', { type: 'button', class: 'quiet-button',
+              onClick: (event: MouseEvent) => emit('restart', event) }, 'Start over'),
+            h('button', { type: 'button', class: 'card-primary-button',
+              onClick: (event: MouseEvent) => emit('new-layout', event) }, 'New layout'),
+          ]),
+        ]),
+      ]);
+    }
+
     return () => h('div', {
       ref: area,
       class: ['word-search-board-area', {
@@ -272,7 +314,8 @@ export const PuzzleGrid = defineComponent({
         'aria-label': props.options.fit === 'screen' ? 'Puzzle board' : 'Scrollable puzzle',
       }, [
         h('div', { class: 'word-search-board-stage' }, [
-          h('div', {
+          h('div', { class: 'word-search-board-surface' }, [
+            h('div', {
             class: ['word-search-board-rotator', { 'is-rotating': props.rotating }],
             style: {
               '--board-to': `${props.rotationTurns * 90}deg`,
@@ -288,6 +331,7 @@ export const PuzzleGrid = defineComponent({
                 ref: grid,
                 class: 'word-search-grid',
                 role: 'grid',
+                inert: props.completed,
                 'aria-label': `${size.value} by ${size.value} word search, rotated ${rotation.value * 90} degrees`,
                 'aria-describedby': props.helpId,
                 'aria-rowcount': size.value,
@@ -350,6 +394,8 @@ export const PuzzleGrid = defineComponent({
                 ]);
               })))),
             ]),
+          ]),
+          completionOverlay(),
           ]),
         ]),
       ]),
