@@ -183,7 +183,8 @@ export const PuzzleGame = defineComponent({
       actionTrigger = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
       pending.value = action;
       await nextTick();
-      cancelButton.value?.focus();
+      if (showCompletionOverlay.value) grid.value?.focusCompletionCancel();
+      else cancelButton.value?.focus();
     }
 
     async function cancelAction() {
@@ -212,7 +213,8 @@ export const PuzzleGame = defineComponent({
         message.value = 'Progress cleared. Same puzzle, fresh start.';
       }
       await nextTick();
-      restartButton.value?.focus();
+      if (showCompletionOverlay.value) grid.value?.focusCompletionAction();
+      else restartButton.value?.focus();
     }
 
     return () => {
@@ -337,14 +339,14 @@ export const PuzzleGame = defineComponent({
               message.value = revealed.value ? 'Answers shown. Hide answers to keep playing; your progress is unchanged.' : 'Answers hidden. Keep searching!';
             },
           }, revealed.value ? 'Hide answers' : 'Show answers'),
-          h('button', {
+          !showCompletionOverlay.value ? h('button', {
             ref: restartButton, type: 'button', class: 'quiet-button', disabled: loading.value,
             onClick: (event: MouseEvent) => requestAction('restart', event),
-          }, 'Start over'),
-          h('button', {
+          }, 'Start over') : null,
+          !showCompletionOverlay.value ? h('button', {
             type: 'button', class: 'quiet-button', disabled: loading.value,
             onClick: (event: MouseEvent) => requestAction('new', event),
-          }, 'New layout'),
+          }, 'New layout') : null,
         ]) : null,
         pending.value && !showCompletionOverlay.value ? h('div', {
           class: 'word-search-restart-review', role: 'group', 'aria-label': 'Confirm restart',
