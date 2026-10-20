@@ -66,7 +66,7 @@ function singleWord(value: string, label: string, maximum: number): string {
   return word.toUpperCase();
 }
 
-export function puzzleAiPrompt(kind: PuzzleAiKind, scope: AiCardScope, options: PuzzleAiOptions): string {
+export function puzzleAiPrompt(kind: PuzzleAiKind, scope: AiCardScope | null, options: PuzzleAiOptions): string {
   const { count } = options;
   const randomPool = kind === 'word-search' && options.selectionMode === 'random';
   const minimumEntries = randomPool ? Math.max(MIN_WORDS, options.layoutMax) : puzzleAiLimits[kind].min;
@@ -84,7 +84,7 @@ export function puzzleAiPrompt(kind: PuzzleAiKind, scope: AiCardScope, options: 
 ${options.studyMode === 'hints'
       ? `Provide one accurate, concise, non-spoiling "hint" for EACH word (at most ${MAX_HINT_LENGTH} characters). The puzzle will hide the answers behind hints.`
       : 'The learner selected Show word list. OMIT the "hint" field from every word; answers will be displayed directly in the sidebar.'}
-Favor memorable standalone vocabulary over generic filler. Spread the pool across concepts within the selected category; avoid repeated synonyms for the same concept. The application builds the letter grid with ${options.difficulty} difficulty; do not generate a grid.`
+Favor memorable standalone vocabulary over generic filler. Spread the pool across concepts within the selected scope; avoid repeated synonyms for the same concept. The application builds the letter grid with ${options.difficulty} difficulty; do not generate a grid.`
     : `Choose up to ${count} DISTINCT, meaningful SINGLE-WORD answers, each 2–${MAX_ANSWER_LENGTH} English letters A–Z. Never submit a phrase or run words together.
 Clue difficulty: ${options.clueDifficulty}. ${CLUE_DIFFICULTY[options.clueDifficulty]}
 Provide one accurate clue for EACH answer (at most ${MAX_CLUE_LENGTH} characters). Never include the answer itself in its clue.
@@ -109,24 +109,24 @@ Use only facts and terminology supported by the original source. If there are fe
 
 ${AI_PLAIN_TEXT_ONLY_GUIDANCE}
 
-Avoid repeated answers, redundant clues, citations, URLs, attribution, markdown commentary and ChatGPT citation markers. No whole-subject puzzle: this JSON represents ONE selected category only.
+Avoid repeated answers, redundant clues, citations, URLs, attribution, markdown commentary and ChatGPT citation markers. ${scope ? 'This JSON represents ONE selected category only.' : 'Cover the overall subject, not a single category.'}
 
 Return ONLY one fenced JSON code block with this exact structure:
 \`\`\`json
 {
   "format": "${format}",
   "version": 1,
-  "title": ${JSON.stringify(scope.category.title)},
-  "categoryKey": ${JSON.stringify(scope.category.key)},
+  "title": ${JSON.stringify(scope?.category.title ?? "Subject word puzzle")},
+  ${scope ? `"categoryKey": ${JSON.stringify(scope.category.key)},` : ''}
   ${example}
 }
 \`\`\`
 
-The example is a STRUCTURAL TEMPLATE, not puzzle content. Output ${minimumEntries}–${count} unique entries, with no extra fields. Title must be 1–120 characters and use the selected category title. Include the exact selected category key. Each puzzle answer must be one actual single English word, using only letters A–Z (prefer uppercase), never multiple words jammed together. Hints and clues must be plain text, not answer reveals or source markers.`;
-  return categoryScopedPrompt(body, scope, kind === 'word-search' ? 'word-search terms and hints' : 'crossword answers and clues');
+The example is a STRUCTURAL TEMPLATE, not puzzle content. Output ${minimumEntries}–${count} unique entries, with no extra fields. Title must be 1–120 characters. ${scope ? 'Use the selected category title and include its exact category key.' : 'Use an appropriate subject title; omit categoryKey.'} Each puzzle answer must be one actual single English word, using only letters A–Z (prefer uppercase), never multiple words jammed together. Hints and clues must be plain text, not answer reveals or source markers.`;
+  return scope ? categoryScopedPrompt(body, scope, kind === 'word-search' ? 'word-search terms and hints' : 'crossword answers and clues') : body;
 }
 
-export function parsePuzzleAiImport(json: string, kind: PuzzleAiKind, scope: AiCardScope, options: PuzzleAiOptions): PuzzleAiResult {
+export function parsePuzzleAiImport(json: string, kind: PuzzleAiKind, scope: AiCardScope | null, options: PuzzleAiOptions): PuzzleAiResult {
   const limit = options.count;
   const randomPool = kind === 'word-search' && options.selectionMode === 'random';
   const minEntries = randomPool ? Math.max(MIN_WORDS, options.layoutMax) : puzzleAiLimits[kind].min;
@@ -134,10 +134,10 @@ export function parsePuzzleAiImport(json: string, kind: PuzzleAiKind, scope: AiC
   const format = kind === 'word-search' ? 'dynamic-learner-word-search' : 'dynamic-learner-crossword';
   const field = kind === 'word-search' ? 'words' : 'entries';
   if (!isRecord(value) || Object.keys(value).some(k => !['format', 'version', 'title', 'categoryKey', field].includes(k)) ||
-      value.format !== format || value.version !== 1 || value.categoryKey !== scope.category.key ||
+      value.format !== format || value.version !== 1 || (scope ? value.categoryKey !== scope.category.key : (value.categoryKey !== undefined && typeof value.categoryKey !== 'string')) ||
       typeof value.title !== 'string' || !value.title.trim() || value.title.length > 120 ||
       !Array.isArray(value[field]) || value[field].length < minEntries || value[field].length > Math.min(limit, kind === 'word-search' ? puzzleAiLimits['word-search'].max : MAX_ENTRIES)) {
-    throw new Error('This JSON must contain one puzzle for the selected category, using the displayed format and entry limit.');
+    throw new Error('This JSON must contain one valid puzzle using the selected format and entry limit.');
   }
   const items: unknown[] = value[field];
   const used = new Set<string>();
