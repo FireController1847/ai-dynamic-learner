@@ -265,6 +265,7 @@ export const PuzzleGrid = defineComponent({
         key: `celebration-${props.celebration.id}`,
         class: ['word-search-celebration-layer', {
           'is-complete': props.celebration.complete,
+          'is-revealed': !!props.celebration.revealed,
         }],
         'aria-hidden': 'true',
       }, [
