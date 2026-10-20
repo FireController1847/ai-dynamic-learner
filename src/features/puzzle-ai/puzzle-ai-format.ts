@@ -3,7 +3,7 @@ import { categoryScopedPrompt, type AiCardScope } from '../../core/ai-study-cate
 import { isRecord } from '../../core/validation.ts';
 import { AI_PLAIN_TEXT_ONLY_GUIDANCE } from '../../core/ai-formatting-guidance.ts';
 import {
-  MAX_HINT_LENGTH, MAX_WORD_LENGTH, MAX_LAYOUT_WORDS, DEFAULT_LAYOUT_WORDS, MIN_WORDS,
+  MAX_HINT_LENGTH, MAX_WORD_LENGTH, DEFAULT_LAYOUT_WORDS, MIN_WORDS,
   validatePuzzle as validateWordSearch, type Difficulty, type GridSize, type Puzzle as WordSearchPuzzle, type StudyMode,
 } from '../word-search/puzzle-model.ts';
 import {
