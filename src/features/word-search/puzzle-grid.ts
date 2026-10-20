@@ -15,7 +15,7 @@ import { Icon } from '../../components/icon.ts';
 import { useGridSizing } from './grid-sizing.ts';
 import { wordOutline } from './word-outline.ts';
 
-import { defineComponent, type PropType, computed, h, nextTick, onDeactivated, ref, watch } from 'vue';
+import { defineComponent, type PropType, computed, h, nextTick, onDeactivated, ref, Transition, watch } from 'vue';
 
 export const PuzzleGrid = defineComponent({
   name: 'PuzzleGrid',
@@ -27,7 +27,11 @@ export const PuzzleGrid = defineComponent({
     helpId: { type: String, default: 'word-search-play-help' },
     attempt: { type: Object as PropType<SelectionAttempt | null>, default: null },
     celebration: { type: Object as PropType<WordCelebration | null>, default: null },
-    completed: Boolean,
+    covered: Boolean,
+    finished: Boolean,
+    viewingBoard: Boolean,
+    score: { type: Object as PropType<{ earned: number; possible: number }>,
+      default: () => ({ earned: 0, possible: 0 }) },
     pendingAction: { type: String as PropType<'new' | 'restart' | null>, default: null },
     rotationTurns: { type: Number, default: 0 },
     rotating: Boolean,
@@ -38,6 +42,8 @@ export const PuzzleGrid = defineComponent({
     'new-layout': (_event: MouseEvent) => true,
     'cancel-action': () => true,
     'confirm-action': () => true,
+    'view-board': () => true,
+    'view-results': () => true,
   },
   setup(props, { emit, expose }) {
     const grid = ref<HTMLElement | null>(null);
@@ -111,7 +117,7 @@ export const PuzzleGrid = defineComponent({
     });
 
     function activate(cell: number) {
-      if (props.revealed || props.rotating) return;
+      if (props.revealed || props.rotating || props.finished) return;
       if (anchor.value === null) {
         pointerPoint.value = null;
         anchor.value = cell;
@@ -135,7 +141,7 @@ export const PuzzleGrid = defineComponent({
 
     function pointerDown(event: PointerEvent) {
       pointerType = event.pointerType;
-      if (event.pointerType !== 'mouse' || event.button !== 0 || props.revealed || props.rotating) return;
+      if (event.pointerType !== 'mouse' || event.button !== 0 || props.revealed || props.rotating || props.finished) return;
       const start = cellAt(event);
       if (start === null) return;
       pointer = { id: event.pointerId, start, moved: false };
@@ -145,7 +151,7 @@ export const PuzzleGrid = defineComponent({
 
     function pointerMove(event: PointerEvent) {
       if (!grid.value) return;
-      if (props.revealed || props.rotating || event.pointerType !== 'mouse') return;
+      if (props.revealed || props.rotating || props.finished || event.pointerType !== 'mouse') return;
       const cell = cellAt(event);
       if (pointer && pointer.id !== event.pointerId) return;
       if (pointer && cell !== null && cell !== pointer.start) pointer.moved = true;
@@ -177,7 +183,7 @@ export const PuzzleGrid = defineComponent({
     }
 
     function keyboard(event: KeyboardEvent, cell: number) {
-      if (props.rotating) return;
+      if (props.rotating || props.finished) return;
       const sourceRow = Math.floor(cell / size.value);
       const sourceCol = cell % size.value;
       const visual = sourceToVisual(sourceRow, sourceCol);
@@ -282,13 +288,37 @@ export const PuzzleGrid = defineComponent({
       ]);
     }
 
-    function completionOverlay() {
-      if (!props.completed) return null;
+    function finishedActions(inToolbar: boolean) {
       const pending = props.pendingAction;
+      return h('div', { class: 'word-search-completion-actions' }, pending ? [
+        h('button', {
+          ref: completionCancel, type: 'button', class: 'quiet-button',
+          onClick: () => emit('cancel-action'),
+        }, 'Cancel'),
+        h('button', { type: 'button', class: 'card-primary-button',
+          onClick: () => emit('confirm-action') },
+          pending === 'new' ? 'Create new layout' : 'Start over'),
+      ] : [
+        h('button', { type: 'button', class: 'quiet-button word-search-finish-view',
+          onClick: () => emit(inToolbar ? 'view-results' : 'view-board') },
+          inToolbar ? 'View results' : 'View board'),
+        h('button', {
+          ref: completionAction, type: 'button', class: 'quiet-button',
+          onClick: (event: MouseEvent) => emit('restart', event),
+        }, 'Start over'),
+        h('button', { type: 'button', class: 'card-primary-button',
+          onClick: (event: MouseEvent) => emit('new-layout', event) }, 'New layout'),
+      ]);
+    }
+
+    function completionOverlay() {
+      if (!props.covered) return null;
+      const pending = props.pendingAction;
+      const givenUp = props.game.gaveUp === true;
       return h('section', {
-        class: 'word-search-completion-overlay',
+        class: ['word-search-completion-overlay', { 'is-given-up': givenUp }],
         role: 'region',
-        'aria-label': 'Completed word search',
+        'aria-label': 'Word search results',
         onKeydown: (event: KeyboardEvent) => {
           if (pending && event.key === 'Escape') {
             event.preventDefault();
@@ -299,31 +329,47 @@ export const PuzzleGrid = defineComponent({
       }, [
         h('div', { class: 'word-search-completion-content' }, [
           h('div', { class: 'word-search-completion-seal', 'aria-hidden': 'true' }, [
-            h(Icon, { name: 'verified' }),
+            h(Icon, { name: givenUp ? 'flag' : 'verified' }),
           ]),
           h('h3', pending ? (pending === 'new' ? 'Create a new layout?' : 'Start this board over?')
-            : 'Puzzle complete!'),
+            : givenUp ? 'Board ended' : 'Puzzle complete!'),
           h('p', pending
             ? (pending === 'new'
               ? 'A new arrangement replaces this board and clears its progress.'
-              : 'This clears your found words but keeps the same board and its completed badge.')
-            : `You found all ${props.game.placements.length} words. Nicely done!`),
-          h('div', { class: 'word-search-completion-actions' }, pending ? [
-            h('button', {
-              ref: completionCancel, type: 'button', class: 'quiet-button',
-              onClick: () => emit('cancel-action'),
-            }, 'Cancel'),
-            h('button', { type: 'button', class: 'card-primary-button', onClick: () => emit('confirm-action') },
-              pending === 'new' ? 'Create new layout' : 'Start over'),
-          ] : [
-            h('button', {
-              ref: completionAction, type: 'button', class: 'quiet-button',
-              onClick: (event: MouseEvent) => emit('restart', event),
-            }, 'Start over'),
-            h('button', { type: 'button', class: 'card-primary-button',
-              onClick: (event: MouseEvent) => emit('new-layout', event) }, 'New layout'),
+              : 'This clears found-word progress but keeps the same board and revealed clues.')
+            : givenUp
+              ? `You found ${props.game.found.length} of ${props.score.possible} words. Here is your final score.`
+              : `You found all ${props.score.possible} words. Nicely done!`),
+          h('div', { class: 'word-search-finish-score', 'aria-label': 'Final score' }, [
+            h('strong', `${props.score.earned} / ${props.score.possible}`),
+            h('span', `${props.score.possible ? Math.round(100 * props.score.earned / props.score.possible) : 0}% score`),
           ]),
+          finishedActions(false),
         ]),
+      ]);
+    }
+
+    function finishedToolbar() {
+      if (!props.viewingBoard || !props.finished) return null;
+      const pending = props.pendingAction;
+      return h('section', {
+        class: 'word-search-finished-toolbar',
+        role: 'region',
+        'aria-label': 'Word search finished actions',
+        onKeydown: (event: KeyboardEvent) => {
+          if (pending && event.key === 'Escape') {
+            event.preventDefault();
+            event.stopPropagation();
+            emit('cancel-action');
+          }
+        },
+      }, [
+        h('p', { class: 'word-search-finished-toolbar-score' },
+          `Score: ${props.score.earned} / ${props.score.possible}`),
+        pending ? h('p', { class: 'word-search-finished-toolbar-note' },
+          pending === 'new' ? 'Generate a new layout and reset this board?'
+            : 'Clear your found words and start this board over?') : null,
+        finishedActions(true),
       ]);
     }
 
@@ -361,7 +407,7 @@ export const PuzzleGrid = defineComponent({
                 ref: grid,
                 class: 'word-search-grid',
                 role: 'grid',
-                inert: props.completed,
+                inert: props.finished,
                 'aria-label': `${size.value} by ${size.value} word search, rotated ${rotation.value * 90} degrees`,
                 'aria-describedby': props.helpId,
                 'aria-rowcount': size.value,
@@ -427,7 +473,10 @@ export const PuzzleGrid = defineComponent({
               })))),
             ]),
           ]),
-          completionOverlay(),
+          h(Transition, { name: 'word-search-finish-cover' },
+            { default: completionOverlay }),
+          h(Transition, { name: 'word-search-finish-toolbar' },
+            { default: finishedToolbar }),
           ]),
         ]),
       ]),
