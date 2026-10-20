@@ -8,6 +8,13 @@ export interface Game {
   rows: string[];
   placements: WordPlacement[];
   found: WordPlacement[];
+  // True once this generated layout has been solved, even after Start over.
+  completed?: true;
+}
+
+export function hasCompletedBoard(game?: Game): boolean {
+  return !!game && (game.completed === true ||
+    (game.placements.length > 0 && game.found.length === game.placements.length));
 }
 
 export function directionsFor(difficulty: Difficulty): Direction[] {
@@ -43,7 +50,9 @@ function hasOnlyKeys(value: unknown, keys: readonly string[]): value is Record<s
 export function validateGame(puzzle: unknown, game: unknown): asserts game is Game {
   validatePuzzle(puzzle);
   const { size, words, difficulty } = puzzle;
-  if (!hasOnlyKeys(game, ['rows', 'placements', 'found']) ||
+  if (!(hasOnlyKeys(game, ['rows', 'placements', 'found']) ||
+        hasOnlyKeys(game, ['rows', 'placements', 'found', 'completed'])) ||
+      (Object.hasOwn(game, 'completed') && game.completed !== true) ||
       !Array.isArray(game.rows) || game.rows.length !== size ||
       game.rows.some((row) => typeof row !== 'string' || row.length !== size || !/^[A-Z]+$/.test(row)) ||
       !Array.isArray(game.placements) || game.placements.length !== words.length ||
