@@ -91,8 +91,7 @@
   display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start;
   gap: 24px; margin-block: auto; padding-block: 8px;
 }
-.word-search-game > .word-search-help,
-.word-search-game > .word-search-instructions { text-align: center; }
+
 .word-search-board-area {
   min-width: 0; max-width: 100%; width: calc(var(--puzzle-size) * var(--search-cell-size) + 10px);
   flex: 0 1 auto; display: grid; gap: 12px;
@@ -758,6 +757,10 @@
   .word-search-game-toolbar { align-items: flex-start; }
   .word-search-game-meta { flex: 1 1 100%; }
   .word-search-game-toolbar-actions { flex: 1 1 auto; }
+  .word-search-help-popover {
+    left: 0; right: auto;
+    width: min(320px, calc(100vw - 32px));
+  }
   .word-search-word-bank.uses-hints {
     min-width: 0;
     width: 100%;
