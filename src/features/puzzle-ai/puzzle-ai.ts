@@ -262,14 +262,14 @@ export const PuzzleAiCreation = defineComponent({
             h('div', [h('p', { class: 'study-ai-muted' }, label.value + ' · Saved in ' + props.destination),
               h('h2', 'Create ' + label.value + ' with AI'),
               h('p', 'Choose the scope or import an existing JSON response.')]),
-            h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel') }, 'Cancel'),
           ]),
           h('div', { class: 'review-ai-scope' }, [
             h('button', { type: 'button', class: 'quiet-button', onClick: () => { scope.value = null; configured.value = false; entry.value = 'settings'; } }, [h('strong', 'Overall subject'), h('span', 'Generate terms from the full source.')]),
             h('button', { type: 'button', class: 'quiet-button', onClick: () => { entry.value = 'categories'; } }, [h('strong', 'Choose a category'), h('span', 'Discover or reuse categories for a focused puzzle.')]),
           ]),
-          h('div', { class: 'study-ai-actions', style: { justifyContent: 'flex-start', marginTop: '1rem' } }, [
-            h('button', { type: 'button', class: 'quiet-button', onClick: () => { scope.value = null; configured.value = false; entry.value = 'direct'; } }, 'Import existing JSON'),
+          h('div', { class: 'study-ai-actions', style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem' } }, [
+            h('button', { type: 'button', class: 'quiet-button', style: { width: 'auto', flex: '0 0 auto' }, onClick: () => { scope.value = null; configured.value = false; entry.value = 'direct'; } }, 'Import existing JSON'),
+            h('button', { type: 'button', class: 'quiet-button', style: { width: 'auto', flex: '0 0 auto' }, onClick: () => emit('cancel') }, 'Cancel'),
           ]),
         ]) : entry.value === 'direct' ? h('section', { key: 'direct', class: 'study-ai-workspace puzzle-ai-workspace', 'data-ai-scroll-region': '' }, [
           h('header', { class: 'study-ai-header' }, [h('div', [h('h2', 'Import existing ' + label.value + ' JSON'), h('p', 'Paste an overall or category-based response.')]),
