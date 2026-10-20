@@ -2,6 +2,7 @@ export interface WordSearchLibraryHandle { reveal(id: string): void; focusToggle
 import type { VNode } from 'vue';
 import type { LibraryItem, MovePosition } from './library-model.ts';
 import { inputValue } from '../../core/dom.ts';
+import { hasCompletedBoard } from './game-model.ts';
 import { Icon } from '../../components/icon.ts';
 import { DeleteConfirmation } from '../../components/delete-confirmation.ts';
 import {
@@ -282,7 +283,12 @@ export const WordSearchLibrary = defineComponent({
             onKeydown: (event: KeyboardEvent) => {
               if (event.key === 'F2') { event.preventDefault(); rename(item); }
             },
-          }, item.name),
+          }, [
+            h('span', { class: 'word-search-library-label-text' }, item.name),
+            !isGroup && hasCompletedBoard(item.game) ? h('span', {
+              class: 'word-search-library-complete', title: 'Completed', 'aria-label': 'Completed',
+            }, [h(Icon, { name: 'verified' })]) : null,
+          ]),
           h('button', {
             type: 'button', class: 'icon-button rename-button',
             'aria-label': `Rename ${item.name}`, title: `Rename ${item.name}`,
