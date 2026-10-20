@@ -18,7 +18,8 @@ export interface SetOptions {
   shortAnswerStrictness: AnswerStrictness;
   fillBlankAnswerStrictness: AnswerStrictness;
   assessmentOrder: QuestionOrder;
-  assessmentQuestionLimit: number | null;
+  quizQuestionLimit: number | null;
+  testQuestionLimit: number | null;
   shuffleChoices: boolean;
   quizAttempts: number;
   quizPresentation: QuestionPresentation;
@@ -35,7 +36,8 @@ export function defaultSetOptions(): SetOptions {
     shortAnswerStrictness: DEFAULT_ANSWER_STRICTNESS,
     fillBlankAnswerStrictness: DEFAULT_ANSWER_STRICTNESS,
     assessmentOrder: 'shuffle',
-    assessmentQuestionLimit: DEFAULT_SESSION_QUESTION_LIMIT,
+    quizQuestionLimit: DEFAULT_SESSION_QUESTION_LIMIT,
+    testQuestionLimit: DEFAULT_SESSION_QUESTION_LIMIT,
     shuffleChoices: true,
     quizAttempts: DEFAULT_QUIZ_ATTEMPTS,
     quizPresentation: 'scroll',
@@ -47,8 +49,21 @@ export function defaultSetOptions(): SetOptions {
   };
 }
 
+function validQuestionLimit(value: unknown): value is number | null {
+  return value === null || (typeof value === 'number' && Number.isInteger(value) &&
+    value >= 1 && value <= MAX_QUESTIONS);
+}
+
 export function validateSetOptions(value: unknown): asserts value is SetOptions {
   if (!isRecord(value)) throw new Error('Set options are invalid.');
+  // Migrate the old shared Study/Quiz/Test limit into both creator-controlled limits.
+  if (Object.hasOwn(value, 'assessmentQuestionLimit')) {
+    const legacy = value.assessmentQuestionLimit;
+    if (!validQuestionLimit(legacy)) throw new Error('The legacy question limit is invalid.');
+    if (!Object.hasOwn(value, 'quizQuestionLimit')) value.quizQuestionLimit = legacy;
+    if (!Object.hasOwn(value, 'testQuestionLimit')) value.testQuestionLimit = legacy;
+    delete value.assessmentQuestionLimit;
+  }
   const defaults = defaultSetOptions();
   for (const [key, defaultValue] of Object.entries(defaults)) {
     if (!Object.hasOwn(value, key)) value[key] = defaultValue;
@@ -59,9 +74,8 @@ export function validateSetOptions(value: unknown): asserts value is SetOptions 
       !isAnswerStrictness(value.shortAnswerStrictness) ||
       !isAnswerStrictness(value.fillBlankAnswerStrictness) ||
       !QUESTION_ORDERS.includes(value.assessmentOrder as QuestionOrder) ||
-      (value.assessmentQuestionLimit !== null &&
-        (typeof value.assessmentQuestionLimit !== 'number' || !Number.isInteger(value.assessmentQuestionLimit) ||
-          value.assessmentQuestionLimit < 1 || value.assessmentQuestionLimit > MAX_QUESTIONS)) ||
+      !validQuestionLimit(value.quizQuestionLimit) ||
+      !validQuestionLimit(value.testQuestionLimit) ||
       typeof value.shuffleChoices !== 'boolean' ||
       typeof value.quizAttempts !== 'number' || !Number.isInteger(value.quizAttempts) || value.quizAttempts < 1 ||
       !QUESTION_PRESENTATIONS.includes(value.quizPresentation as QuestionPresentation) ||

@@ -38,7 +38,7 @@ export function validateSessionSnapshot(value: unknown): asserts value is Parame
   // Old in-progress sessions were all one-at-a-time. Preserve that layout on resume.
   if (settings.presentation === undefined) settings.presentation = 'one-at-a-time';
   if (settings.allowBack === undefined) settings.allowBack = true;
-  validateSetOptions({ description: '', assessmentOrder: settings.order, assessmentQuestionLimit: settings.questionLimit,
+  validateSetOptions({ description: '', assessmentOrder: settings.order, quizQuestionLimit: settings.questionLimit, testQuestionLimit: settings.questionLimit,
     quizPresentation: settings.presentation, testPresentation: settings.presentation,
     quizAllowBack: settings.allowBack, testAllowBack: settings.allowBack,
     shuffleChoices: settings.shuffleChoices, shortAnswerStrictness: settings.shortAnswerStrictness,

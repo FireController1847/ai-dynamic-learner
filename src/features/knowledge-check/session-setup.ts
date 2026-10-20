@@ -58,7 +58,7 @@ export const SessionSetup = defineComponent({
     }
 
     function emitCustomQuiz() {
-      // The creator's shared question limit applies to every mode.
+      // Quiz uses the creator's fixed Quiz/Study question limit.
       emit('continue', { ...custom.value, questionLimit: defaults.questionLimit });
     }
 
@@ -109,7 +109,7 @@ export const SessionSetup = defineComponent({
               }),
               h('span', [
                 h('strong', 'Customize Settings'),
-                h('span', { class: 'knowledge-session-choice-description' }, 'Temporarily change layout, navigation, order, answer-choice shuffling, answer strictness, or allowed attempts. The question limit is fixed by the creator.'),
+                h('span', { class: 'knowledge-session-choice-description' }, 'Temporarily change layout, navigation, order, answer-choice shuffling, answer strictness, or allowed attempts. The Quiz question limit is fixed by the creator.'),
               ]),
             ]),
           ]),
@@ -131,7 +131,7 @@ export const SessionSetup = defineComponent({
         h('p', { class: 'knowledge-session-setup-step' }, 'Customize Quiz · Session only'),
         h('h2', 'Customize Quiz settings'),
         h('p', { class: 'knowledge-session-setup-description' },
-          'These changes apply only to this Quiz. The question limit remains fixed by the knowledge-set creator.'),
+          'These changes apply only to this Quiz. The Quiz question limit remains fixed by the knowledge-set creator.'),
         h('fieldset', { class: 'knowledge-session-choices' }, [
           h('legend', 'Question order'),
           orderChoice('forward', 'In order', 'Use the original question order.', custom.value.order, () => { custom.value.order = 'forward'; }, 'quiz-question-order'),

@@ -99,7 +99,7 @@ export function validateReviewHistory(value: unknown): asserts value is ReviewAt
     ].includes(key))) throw new Error('A Review attempt has invalid settings.');
     const settings = attempt.settings;
     validateSetOptions({
-      description: '', assessmentOrder: settings.order, assessmentQuestionLimit: settings.questionLimit,
+      description: '', assessmentOrder: settings.order, quizQuestionLimit: settings.questionLimit, testQuestionLimit: settings.questionLimit,
       quizPresentation: settings.presentation, testPresentation: settings.presentation,
       quizAllowBack: settings.allowBack, testAllowBack: settings.allowBack,
       shuffleChoices: settings.shuffleChoices, shortAnswerStrictness: settings.shortAnswerStrictness,

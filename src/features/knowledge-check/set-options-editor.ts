@@ -12,6 +12,27 @@ export const SetOptionsEditor = defineComponent({
     questionCount: { type: Number, required: true },
   },
   setup(props) {
+    function questionLimitControls(key: 'quizQuestionLimit' | 'testQuestionLimit', label: string) {
+      return [
+        h('label', { class: 'knowledge-option-toggle' }, [h('input', {
+          type: 'checkbox',
+          checked: props.options[key] !== null,
+          onChange: (event: Event) => {
+            props.options[key] = (event.target as HTMLInputElement).checked
+              ? DEFAULT_SESSION_QUESTION_LIMIT : null;
+          },
+        }), `Limit ${label} questions`]),
+        props.options[key] !== null ? h('label', { class: 'knowledge-field' }, [
+          `Maximum ${label} questions`,
+          h('input', {
+            type: 'number', min: 1, max: MAX_QUESTIONS, step: 1, required: true,
+            value: props.options[key],
+            onInput: (event: Event) => { props.options[key] = Number(inputValue(event)); },
+          }),
+        ]) : null,
+      ];
+    }
+
     return () => h('section', { class: 'knowledge-options', 'aria-label': 'Set options' }, [
       h('h3', 'Set options'),
       h('label', { class: 'knowledge-field' }, ['Description (optional)', h('textarea', {
@@ -45,24 +66,7 @@ export const SetOptionsEditor = defineComponent({
         h('option', { value: 'backward' }, 'Reverse order'),
         h('option', { value: 'shuffle' }, 'Shuffle'),
       ])]),
-      h('label', { class: 'knowledge-option-toggle' }, [h('input', {
-        type: 'checkbox',
-        checked: props.options.assessmentQuestionLimit !== null,
-        onChange: (event: Event) => {
-          props.options.assessmentQuestionLimit = (event.target as HTMLInputElement).checked
-            ? DEFAULT_SESSION_QUESTION_LIMIT
-            : null;
-        },
-      }), 'Limit the number of questions']),
-      props.options.assessmentQuestionLimit !== null ? h('label', { class: 'knowledge-field' }, [
-        'Maximum questions',
-        h('input', {
-          type: 'number', min: 1, max: MAX_QUESTIONS, step: 1, required: true,
-          value: props.options.assessmentQuestionLimit,
-          onInput: (event: Event) => { props.options.assessmentQuestionLimit = Number(inputValue(event)); },
-        }),
-      ]) : null,
-      h('p', { class: 'knowledge-muted' }, 'The limit is applied after ordering. If the set has fewer questions, all available questions are used.'),
+
       h('label', { class: 'knowledge-option-toggle' }, [h('input', {
         type: 'checkbox', checked: props.options.shuffleChoices,
         onChange: (event: Event) => { props.options.shuffleChoices = (event.target as HTMLInputElement).checked; },
@@ -70,6 +74,8 @@ export const SetOptionsEditor = defineComponent({
       h('p', { class: 'knowledge-muted' }, 'Dropdown answer options are always shuffled independently of their matching rows. These defaults are fixed for Test; Quiz can customize them before starting.'),
 
       h('h3', 'Quiz settings'),
+      ...questionLimitControls('quizQuestionLimit', 'Quiz/Study'),
+      h('p', { class: 'knowledge-muted' }, 'Study uses this limit and samples questions evenly across the set. Quiz applies the limit after ordering. If fewer questions are available, all are used.'),
       h('label', { class: 'knowledge-field' }, ['Question layout', h('select', {
         value: props.options.quizPresentation,
         onChange: (event: Event) => { props.options.quizPresentation = inputValue(event) as QuestionPresentation; },
@@ -88,6 +94,8 @@ export const SetOptionsEditor = defineComponent({
       h('p', { class: 'knowledge-muted' }, 'Quiz uses these defaults unless the learner chooses Customize Settings. In scrolling mode each question keeps its own Check answer button.'),
 
       h('h3', 'Test settings'),
+      ...questionLimitControls('testQuestionLimit', 'Test'),
+      h('p', { class: 'knowledge-muted' }, 'Test applies this independent limit after ordering. If fewer questions are available, all are used.'),
       h('label', { class: 'knowledge-field' }, ['Question layout', h('select', {
         value: props.options.testPresentation,
         onChange: (event: Event) => { props.options.testPresentation = inputValue(event) as QuestionPresentation; },

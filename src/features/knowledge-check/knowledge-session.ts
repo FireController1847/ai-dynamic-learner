@@ -52,15 +52,15 @@ export const KnowledgeSession = defineComponent({
       else if (props.autoResume) void state.resume();
     });
 
+    function resetResultsScroll(element: Element) {
+      if (!(element instanceof HTMLElement) || !element.classList.contains('knowledge-session-results')) return;
+      // The detail has its own scroll region. Reset before the entrance animation, not after it.
+      element.closest<HTMLElement>('.knowledge-check-detail')?.scrollTo({ top: 0, behavior: 'instant' });
+    }
+
     function onSessionViewEntered(element: Element) {
       enterReviewPanel(element);
-      if (!(element instanceof HTMLElement) || !element.classList.contains('knowledge-session-results')) return;
-      // The session lives in the Review detail's own scroll region, not the window.
-      const scroller = element.closest<HTMLElement>('.knowledge-check-detail');
-      scroller?.scrollTo({
-        top: 0,
-        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
-      });
+      resetResultsScroll(element);
     }
 
     function changeResultsTab(event: KeyboardEvent) {
@@ -782,6 +782,7 @@ export const KnowledgeSession = defineComponent({
       ]);
     }
     return () => h(Transition, { name: 'knowledge-view', mode: 'out-in', onBeforeLeave: leaveReviewPanel,
-      onLeaveCancelled: restoreReviewPanel, onAfterEnter: onSessionViewEntered }, { default: renderSession });
+      onLeaveCancelled: restoreReviewPanel, onBeforeEnter: resetResultsScroll,
+      onAfterEnter: onSessionViewEntered }, { default: renderSession });
   },
 });

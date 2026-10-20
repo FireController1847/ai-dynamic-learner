@@ -79,7 +79,7 @@ export function validateLastStudySession(value: unknown): asserts value is LastS
   ].includes(key))) throw new Error('The last Study session settings are invalid.');
   const settings = value.settings;
   validateSetOptions({
-    description: '', assessmentOrder: settings.order, assessmentQuestionLimit: settings.questionLimit,
+    description: '', assessmentOrder: settings.order, quizQuestionLimit: settings.questionLimit, testQuestionLimit: settings.questionLimit,
     quizPresentation: settings.presentation, testPresentation: settings.presentation,
     quizAllowBack: settings.allowBack, testAllowBack: settings.allowBack,
     shuffleChoices: settings.shuffleChoices, shortAnswerStrictness: settings.shortAnswerStrictness,
