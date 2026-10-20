@@ -50,7 +50,8 @@ export function saveWordSearch(items: LibraryItem[], target: PuzzleTarget, name:
     if (!found || found.item.kind !== 'word-search') throw new Error('This word search no longer exists.');
     const previous = found.item.puzzle;
     if (!previous || previous.size !== puzzle.size || previous.difficulty !== puzzle.difficulty ||
-        JSON.stringify(previous.words) !== JSON.stringify(puzzle.words)) delete found.item.game;
+        JSON.stringify(previous.words) !== JSON.stringify(puzzle.words) ||
+        JSON.stringify(previous.selection ?? null) !== JSON.stringify(puzzle.selection ?? null)) delete found.item.game;
     Object.assign(found.item, { name: trimmedName, puzzle });
     return found.item;
   }
