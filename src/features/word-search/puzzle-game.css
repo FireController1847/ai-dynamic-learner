@@ -491,7 +491,8 @@
   border-color: color-mix(in srgb, var(--search-revealed-color) 45%, var(--control-border));
   color: var(--search-revealed-color);
 }
-.word-search-clue.is-revealed-found .word-search-word-state {
+.word-search-clue.is-revealed-found .word-search-word-state,
+.word-search-clue.is-answer-revealed .word-search-word-state {
   color: var(--search-revealed-color);
 }
 .word-search-clue-content {
