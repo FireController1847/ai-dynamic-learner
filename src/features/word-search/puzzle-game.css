@@ -5,13 +5,88 @@
 }
 .word-search-game {
   display: flex; flex-direction: column; align-items: center; flex: 1;
-  gap: 16px; padding: 16px 24px 20px;
+  gap: 12px; padding: 12px 24px 20px;
   min-width: 0; min-height: 0; width: 100%; overflow: auto;
   scrollbar-gutter: stable; background: transparent;
 }
 .word-search-game > * { flex-shrink: 0; width: min(100%, 1032px); }
 .word-search-detail.is-search > .word-search-puzzle-summary { flex: 1; overflow: auto; }
-.word-search-game-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.word-search-game-toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 8px 16px; min-width: 0;
+}
+.word-search-game-meta,
+.word-search-game-toolbar-actions {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 6px; min-width: 0;
+}
+.word-search-meta-chip {
+  display: inline-flex; align-items: center;
+  min-height: 26px; padding: 3px 9px;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--surface-subtle);
+  color: var(--text-secondary);
+  font-size: 12px; line-height: 18px; white-space: nowrap;
+}
+.word-search-game-toolbar-actions { gap: 8px; }
+.word-search-game-toolbar-actions .quiet-button {
+  display: inline-flex; align-items: center; gap: 7px;
+  min-height: 34px; padding: 5px 10px;
+}
+.word-search-game-toolbar-actions .ui-icon { width: 16px; height: 16px; }
+.word-search-how-to-play { position: relative; }
+.word-search-how-to-play > summary {
+  list-style: none; cursor: pointer;
+}
+.word-search-how-to-play > summary::-webkit-details-marker { display: none; }
+.word-search-how-to-play[open] > summary {
+  background: var(--surface-hover);
+  border-color: var(--brand);
+}
+.word-search-help-popover {
+  position: absolute; right: 0; top: calc(100% + 6px);
+  z-index: 9;
+  display: grid; gap: 8px;
+  width: min(320px, calc(100vw - 40px)); max-width: 90vw;
+  padding: 14px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  background: var(--page-background);
+  box-shadow: 0 8px 26px rgb(0 0 0 / 14%);
+  color: var(--text-color);
+  font-size: 12px; line-height: 18px;
+  text-align: left;
+}
+.word-search-help-popover strong { font-size: 13px; }
+.word-search-help-popover p { margin: 0; color: var(--text-secondary); }
+.word-search-game > .word-search-instructions {
+  margin: 0;
+  padding: 8px 12px;
+  border-left: 3px solid var(--brand);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  background: var(--surface-subtle);
+  color: var(--text-secondary);
+  font-size: 12px; line-height: 18px;
+}
+.word-search-lifetime-activity {
+  max-width: 1032px;
+  padding-top: 5px;
+  border-top: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.word-search-lifetime-activity summary {
+  width: fit-content; padding: 5px 0;
+  cursor: pointer; font-weight: 600;
+}
+.word-search-lifetime-activity summary:hover { color: var(--text-color); }
+.word-search-lifetime-activity summary:focus-visible {
+  outline: 2px solid var(--brand); outline-offset: 3px;
+}
+.word-search-lifetime-values {
+  display: flex; flex-wrap: wrap; gap: 7px 16px; padding: 5px 0 8px;
+}
+.word-search-lifetime-values .entry-statistics { white-space: nowrap; }
 .word-search-play-layout {
   display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start;
   gap: 24px; margin-block: auto; padding-block: 8px;
@@ -679,7 +754,10 @@
 }
 
 @media (max-width: 700px), (max-width: 1100px) and (pointer: coarse) {
-  .word-search-game { padding: 16px 12px; }
+  .word-search-game { padding: 12px 12px 20px; }
+  .word-search-game-toolbar { align-items: flex-start; }
+  .word-search-game-meta { flex: 1 1 100%; }
+  .word-search-game-toolbar-actions { flex: 1 1 auto; }
   .word-search-word-bank.uses-hints {
     min-width: 0;
     width: 100%;
