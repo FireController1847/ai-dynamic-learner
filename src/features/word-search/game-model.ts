@@ -15,11 +15,31 @@ export interface Game {
   revealedAnswers?: string[];
   // True once this generated layout has been solved, even after Start over.
   completed?: true;
+  // The current attempt was surrendered; unanswered words score zero.
+  gaveUp?: true;
 }
 
 export function hasCompletedBoard(game?: Game): boolean {
   return !!game && (game.completed === true ||
     (game.placements.length > 0 && game.found.length === game.placements.length));
+}
+
+export function isFinishedGame(game?: Game): boolean {
+  return !!game && (game.gaveUp === true ||
+    (game.placements.length > 0 && game.found.length === game.placements.length));
+}
+
+export function wordScore(game: Game, word: string): 0 | 0.5 | 1 {
+  const found = game.found.find((entry) => entry.word === word);
+  if (found?.revealed || game.revealedAnswers?.includes(word)) return 0.5;
+  return found ? 1 : 0;
+}
+
+export function boardScore(game: Game): { earned: number; possible: number } {
+  return {
+    earned: game.placements.reduce((sum, placement) => sum + wordScore(game, placement.word), 0),
+    possible: game.placements.length,
+  };
 }
 
 export function directionsFor(difficulty: Difficulty): Direction[] {
@@ -52,8 +72,9 @@ export function validateGame(puzzle: unknown, game: unknown): asserts game is Ga
   const { size, words, difficulty, selection } = puzzle;
   if (!isRecord(game) ||
       !['rows', 'placements', 'found'].every((key) => Object.hasOwn(game, key)) ||
-      Object.keys(game).some((key) => !['rows', 'placements', 'found', 'completed', 'revealedAnswers', 'selectedWords'].includes(key)) ||
+      Object.keys(game).some((key) => !['rows', 'placements', 'found', 'completed', 'revealedAnswers', 'selectedWords', 'gaveUp'].includes(key)) ||
       (Object.hasOwn(game, 'completed') && game.completed !== true) ||
+      (Object.hasOwn(game, 'gaveUp') && game.gaveUp !== true) ||
       !Array.isArray(game.rows) || game.rows.length !== size ||
       game.rows.some((row) => typeof row !== 'string' || row.length !== size || !/^[A-Z]+$/.test(row)) ||
       !Array.isArray(game.placements) ||
@@ -72,7 +93,8 @@ export function validateGame(puzzle: unknown, game: unknown): asserts game is Ga
   }
   const activeWords: string[] = selection ? selected as string[] : words;
   if (game.placements.length !== activeWords.length ||
-      game.found.length > activeWords.length) {
+      game.found.length > activeWords.length ||
+      (game.gaveUp === true && game.found.length === activeWords.length)) {
     throw new Error('The saved word search has an incorrect number of active words.');
   }
   if (Object.hasOwn(game, 'revealedAnswers')) {
