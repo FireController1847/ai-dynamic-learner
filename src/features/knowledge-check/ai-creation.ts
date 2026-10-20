@@ -108,7 +108,7 @@ export const ReviewAiCreation = defineComponent({
           ]),
           h('div', { class: 'study-ai-actions' }, [
             stage.value !== 'scope' ? h('button', { type: 'button', class: 'quiet-button', onClick: back }, 'Back') : null,
-            stage.value !== 'scope' ? h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel') }, 'Cancel'), : null,
+            stage.value !== 'scope' ? h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel') }, 'Cancel') : null,
           ]),
         ]),
         stage.value === 'scope' ? [h('div', { class: 'review-ai-scope' }, [
