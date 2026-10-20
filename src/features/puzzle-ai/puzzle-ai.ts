@@ -20,12 +20,13 @@ export const PuzzleAiCreation = defineComponent({
     const scope = ref<AiCardScope | null>(null);
     const preferences = ref<PuzzleAiOptions>(defaultPuzzleAiOptions(props.kind));
     const configured = ref(false);
+    const entry = ref<'scope' | 'categories' | 'direct'>('scope');
     const configurationProblem = ref('');
     const json = ref('');
     const problem = ref('');
     const candidate = ref<PuzzleAiResult | null>(null);
     const backward = ref(false);
-    const prompt = computed(() => scope.value ? puzzleAiPrompt(props.kind, scope.value, preferences.value) : '');
+    const prompt = computed(() => puzzleAiPrompt(props.kind, scope.value, preferences.value));
     function updatePreferences(changes: Partial<PuzzleAiOptions>) {
       preferences.value = { ...preferences.value, ...changes };
       candidate.value = null;
@@ -69,12 +70,12 @@ export const PuzzleAiCreation = defineComponent({
     function validate() {
       candidate.value = null;
       problem.value = '';
-      if (!scope.value) return;
       try { candidate.value = parsePuzzleAiImport(json.value, props.kind, scope.value, preferences.value); }
       catch (error) { problem.value = error instanceof Error ? error.message : String(error); }
     }
     function choose(next: AiCardScope, list: AiCardCategories) {
       scope.value = next;
+      entry.value = 'settings';
       categories.value = list;
       preferences.value = defaultPuzzleAiOptions(props.kind);
       configured.value = false;
@@ -116,11 +117,11 @@ export const PuzzleAiCreation = defineComponent({
             h('p', { class: 'study-ai-muted' }, label.value + ' · Saved in ' + props.destination),
             h('h2', 'Configure ' + (wordSearch ? 'word search' : 'crossword')),
             h('p', 'Step 2 of 3 · Choose your puzzle options before generating the AI prompt.'),
-            h('p', { class: 'study-ai-muted' }, scope.value?.category.title ?? ''),
+            h('p', { class: 'study-ai-muted' }, scope.value?.category.title ?? 'Overall subject'),
           ]),
           h('div', { class: 'study-ai-actions' }, [
             h('button', { type: 'button', class: 'quiet-button', onClick: () => {
-              backward.value = true; scope.value = null; configured.value = false;
+              backward.value = true; scope.value = null; configured.value = false; entry.value = 'scope';
             } }, 'Back to categories'),
             h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel') }, 'Cancel'),
           ]),
@@ -256,15 +257,37 @@ export const PuzzleAiCreation = defineComponent({
       ]);
     }
     return () => h('div', { class: ['ai-workflow', { 'is-backward': backward.value }] }, [
-      h(Transition, { name: 'ai-workflow-step', mode: 'out-in' }, { default: () => scope.value
+      h(Transition, { name: 'ai-workflow-step', mode: 'out-in' }, { default: () => entry.value === 'scope' ? h('section', { key: 'scope', class: 'study-ai-workspace puzzle-ai-workspace' }, [
+          h('header', { class: 'study-ai-header' }, [
+            h('div', [h('p', { class: 'study-ai-muted' }, label.value + ' · Saved in ' + props.destination),
+              h('h2', 'Create ' + label.value + ' with AI'),
+              h('p', 'Choose the scope or import an existing JSON response.')]),
+            h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel') }, 'Cancel'),
+          ]),
+          h('div', { class: 'review-ai-scope' }, [
+            h('button', { type: 'button', class: 'quiet-button', onClick: () => { scope.value = null; configured.value = false; entry.value = 'direct'; } }, [h('strong', 'Import existing JSON'), h('span', 'Skip prompt generation and validate a completed puzzle.')]),
+            h('button', { type: 'button', class: 'quiet-button', onClick: () => { scope.value = null; configured.value = false; entry.value = 'settings'; } }, [h('strong', 'Overall subject'), h('span', 'Generate terms from the full source.')]),
+            h('button', { type: 'button', class: 'quiet-button', onClick: () => { entry.value = 'categories'; } }, [h('strong', 'Choose a category'), h('span', 'Discover or reuse categories for a focused puzzle.')]),
+          ]),
+        ]) : entry.value === 'direct' ? h('section', { key: 'direct', class: 'study-ai-workspace puzzle-ai-workspace', 'data-ai-scroll-region': '' }, [
+          h('header', { class: 'study-ai-header' }, [h('div', [h('h2', 'Import existing ' + label.value + ' JSON'), h('p', 'Paste an overall or category-based response.')]),
+            h('button', { type: 'button', class: 'quiet-button', onClick: () => { entry.value = 'scope'; } }, 'Back')]),
+          h(AiPromptExchange, { idPrefix: 'puzzle-direct-' + props.kind, label: label.value, prompt: '',
+            promptHelp: 'Import an existing puzzle response directly.', importHelp: 'Paste your existing puzzle JSON and validate it.',
+            readyInstructions: ['Paste the existing JSON.', 'Validate the puzzle.', 'Review and create the puzzle.'],
+            startInImport: true, json: json.value, problem: problem.value, maxLength: MAX_AI_IMPORT_LENGTH,
+            hasPreview: candidate.value !== null, validateLabel: 'Validate puzzle',
+            onUpdateJson: (value: string) => { json.value = value; candidate.value = null; problem.value = ''; }, onValidate: validate,
+          }, { preview }),
+        ]) : entry.value === 'settings' || (entry.value === 'categories' && scope.value)
         ? !configured.value ? settings()
-        : h('section', { key: 'generate-' + scope.value.category.key, class: 'study-ai-workspace puzzle-ai-workspace', 'data-ai-scroll-region': '' }, [
+        : h('section', { key: 'generate-' + (scope.value?.category.key ?? 'overall'), class: 'study-ai-workspace puzzle-ai-workspace', 'data-ai-scroll-region': '' }, [
           h('header', { class: 'study-ai-header' }, [
             h('div', [
               h('p', { class: 'study-ai-muted' }, label.value + ' · Saved in ' + props.destination),
-              h('h2', scope.value.category.title),
+              h('h2', scope.value?.category.title ?? 'Overall subject'),
               h('p', 'Step 3 of 3 · Create one puzzle using your selected settings.'),
-              h('p', { class: 'study-ai-muted' }, scope.value.category.description),
+              h('p', { class: 'study-ai-muted' }, scope.value?.category.description ?? 'Cover the overall subject.'),
             ]),
             h('div', { class: 'study-ai-actions' }, [
               h('button', { type: 'button', class: 'quiet-button', onClick: () => {
@@ -281,7 +304,7 @@ export const PuzzleAiCreation = defineComponent({
             problem: problem.value,
             maxLength: MAX_AI_IMPORT_LENGTH,
             hasPreview: candidate.value !== null,
-            promptHelp: 'Use the same AI conversation and original source material. This prompt builds one puzzle only for ' + scope.value.category.title + '. Copy it, send it to your AI, then import the response.',
+            promptHelp: 'Use the same AI conversation and original source material. This prompt builds one puzzle only for ' + (scope.value?.category.title ?? 'the overall subject') + '. Copy it, send it to your AI, then import the response.',
             importHelp: 'Send the category-specific puzzle prompt to your AI, then paste its JSON response here.',
             readyInstructions: ['Paste the puzzle JSON below.', 'Validate the generated terms and any hints or clues.', 'Review the entries, then create your puzzle.'],
             validateLabel: 'Validate puzzle',
@@ -301,7 +324,7 @@ export const PuzzleAiCreation = defineComponent({
           destination: props.destination,
           totalSteps: 3,
           initialCategories: categories.value,
-          onBack: () => emit('cancel'),
+          onBack: () => { entry.value = 'scope'; },
           onCancel: () => emit('cancel'),
           onSelect: choose,
         }),
