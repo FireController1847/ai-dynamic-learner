@@ -1,5 +1,5 @@
 import { directionsFor, validateGame } from './game-model.ts';
-import { validatePuzzle } from './puzzle-model.ts';
+import { MAX_LAYOUT_WORDS, validatePuzzle } from './puzzle-model.ts';
 import type { Direction, Game, WordPlacement } from './game-model.ts';
 
 function candidates(word: string, size: number, directions: readonly Direction[]): number[][] {
@@ -43,16 +43,20 @@ export async function generatePuzzle(puzzle: unknown, signal?: AbortSignal): Pro
       ? Math.max(selection.min, target - Math.ceil(((attempt - 23) * (target - selection.min)) / 24))
       : target;
     const activeWords = selection ? chooseWords(words, count) : words;
+    const activeOptions = new Map<string, number[][]>();
     for (const word of activeWords) {
-      if (!options.has(word)) {
-        // Pools can contain hundreds of words; avoid retaining every word's
-        // coordinate candidates across failed packing attempts.
-        if (options.size >= 2 * 40) {
+      let paths = options.get(word);
+      if (!paths) {
+        paths = candidates(word, size, directions);
+        // Cache only a bounded number of words across attempts. Keep the
+        // current layout's candidates separately so eviction cannot affect it.
+        if (options.size >= MAX_LAYOUT_WORDS * 2) {
           const oldest = options.keys().next().value;
           if (oldest !== undefined) options.delete(oldest);
         }
-        options.set(word, candidates(word, size, directions));
+        options.set(word, paths);
       }
+      activeOptions.set(word, paths);
     }
     await new Promise((resolve) => setTimeout(resolve, 0));
     if (signal?.aborted) return null;
@@ -63,7 +67,7 @@ export async function generatePuzzle(puzzle: unknown, signal?: AbortSignal): Pro
     for (const { word } of order) {
       let best: number[] | null = null;
       let bestScore = -Infinity;
-      for (const path of options.get(word) ?? []) {
+      for (const path of activeOptions.get(word) ?? []) {
         let overlap = 0;
         let fits = true;
         for (let index = 0; index < path.length; index += 1) {
