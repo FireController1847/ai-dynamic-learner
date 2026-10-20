@@ -17,18 +17,40 @@ function candidates(word: string, size: number, directions: readonly Direction[]
   return result;
 }
 
+// Choose without replacement; a new board samples the authored pool again.
+function chooseWords(pool: readonly string[], count: number): string[] {
+  const entries = [...pool];
+  for (let index = 0; index < count; index += 1) {
+    const other = index + Math.floor(Math.random() * (entries.length - index));
+    [entries[index], entries[other]] = [entries[other]!, entries[index]!];
+  }
+  return entries.slice(0, count);
+}
+
 // Bounded randomized packing: longer words first, favoring compatible intersections.
 // Yield between attempts so dense/impossible setups keep the interface responsive.
 export async function generatePuzzle(puzzle: unknown, signal?: AbortSignal): Promise<Game | null> {
   validatePuzzle(puzzle);
-  const { size, words, difficulty } = puzzle;
-  const options = new Map(words.map((word) => [word, candidates(word, size, directionsFor(difficulty))]));
+  const { size, words, difficulty, selection } = puzzle;
+  const target = selection
+    ? selection.min + Math.floor(Math.random() * (selection.max - selection.min + 1))
+    : words.length;
+  const directions = directionsFor(difficulty);
+  const options = new Map<string, number[][]>();
   for (let attempt = 0; attempt < 48; attempt += 1) {
+    // If a densely selected layout cannot fit, retry toward the requested minimum.
+    const count = selection && attempt >= 24
+      ? Math.max(selection.min, target - Math.floor((attempt - 24) / 8) - 1)
+      : target;
+    const activeWords = selection ? chooseWords(words, count) : words;
+    for (const word of activeWords) {
+      if (!options.has(word)) options.set(word, candidates(word, size, directions));
+    }
     await new Promise((resolve) => setTimeout(resolve, 0));
     if (signal?.aborted) return null;
     const cells: string[] = Array<string>(size * size).fill('');
     const placements: WordPlacement[] = [];
-    const order = words.map((word) => ({ word, priority: word.length + Math.random() * 2 }))
+    const order = activeWords.map((word) => ({ word, priority: word.length + Math.random() * 2 }))
       .sort((a, b) => b.priority - a.priority);
     for (const { word } of order) {
       let best: number[] | null = null;
@@ -48,11 +70,12 @@ export async function generatePuzzle(puzzle: unknown, signal?: AbortSignal): Pro
       best.forEach((cell, index) => { cells[cell] = word[index]; });
       placements.push({ word, start: best[0], end: best[best.length - 1] });
     }
-    if (placements.length !== words.length) continue;
+    if (placements.length !== activeWords.length) continue;
     const letters = cells.map((letter) => letter || String.fromCharCode(65 + Math.floor(Math.random() * 26)));
-    const game = {
+    const game: Game = {
       rows: Array.from({ length: size }, (_, row) => letters.slice(row * size, (row + 1) * size).join('')),
       placements, found: [],
+      ...(selection ? { selectedWords: [...activeWords] } : {}),
     };
     validateGame(puzzle, game);
     return game;
