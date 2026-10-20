@@ -160,7 +160,7 @@ export const PuzzleAiCreation = defineComponent({
             h('legend', 'Words per layout'),
             ...([
               { value: 'all' as const, label: 'Use all words', description: `Every generated layout uses all imported words (max ${MAX_LAYOUT_WORDS}).` },
-              { value: 'random' as const, label: 'Random selection', description: 'Generate a large word pool, then sample different words for each new layout.' },
+              { value: 'random' as const, label: 'Random selection', description: 'Generate a large word pool, then sample different words for each new grid.' },
             ]).map((choice) => h('label', {
               key: choice.value,
               class: ['puzzle-ai-choice', { 'is-selected': current.selectionMode === choice.value }],
@@ -188,7 +188,7 @@ export const PuzzleAiCreation = defineComponent({
               }),
             ])),
             h('p', { class: 'study-ai-muted' },
-              'The AI writes the entire word pool. Each new layout samples a number within this range. Set both numbers equal for a fixed count.'),
+              'The AI writes the entire word pool. Each new grid samples a number within this range. Set both numbers equal for a fixed count.'),
           ]) : null,
           h('fieldset', { class: 'puzzle-ai-choice-group' }, [
             h('legend', wordSearch ? 'Difficulty' : 'Clue difficulty'),
