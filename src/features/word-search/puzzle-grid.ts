@@ -487,9 +487,11 @@ export const PuzzleGrid = defineComponent({
           ]),
         ]),
       ]),
-      h('p', { class: 'word-search-help', role: 'status' }, anchor.value === null
-        ? 'Choose a word’s first and last letters.'
-        : `Start: row ${Math.floor(anchor.value / size.value) + 1}, column ${anchor.value % size.value + 1}. Choose the last letter; Escape or the starting cell cancels.`),
+      h('p', { class: 'word-search-help', role: 'status' }, props.finished
+        ? 'Board finished. Review the highlighted word paths or choose View results to return to your score.'
+        : anchor.value === null
+          ? 'Choose a word’s first and last letters.'
+          : `Start: row ${Math.floor(anchor.value / size.value) + 1}, column ${anchor.value % size.value + 1}. Choose the last letter; Escape or the starting cell cancels.`),
     ]);
   },
 });
