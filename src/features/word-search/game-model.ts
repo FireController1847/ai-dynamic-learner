@@ -9,6 +9,8 @@ export interface Game {
   rows: string[];
   placements: WordPlacement[];
   found: FoundWord[];
+  // Exact pool subset belonging to this generated layout (legacy boards omit it).
+  selectedWords?: string[];
   // Revealed clue answers stay visible until this board is replaced.
   revealedAnswers?: string[];
   // True once this generated layout has been solved, even after Start over.
@@ -47,16 +49,31 @@ export function wordOnLine(rows: readonly string[], start: number, end: number):
 // Validate stored boards directly so backup imports never have to regenerate puzzles.
 export function validateGame(puzzle: unknown, game: unknown): asserts game is Game {
   validatePuzzle(puzzle);
-  const { size, words, difficulty } = puzzle;
+  const { size, words, difficulty, selection } = puzzle;
   if (!isRecord(game) ||
       !['rows', 'placements', 'found'].every((key) => Object.hasOwn(game, key)) ||
-      Object.keys(game).some((key) => !['rows', 'placements', 'found', 'completed', 'revealedAnswers'].includes(key)) ||
+      Object.keys(game).some((key) => !['rows', 'placements', 'found', 'completed', 'revealedAnswers', 'selectedWords'].includes(key)) ||
       (Object.hasOwn(game, 'completed') && game.completed !== true) ||
       !Array.isArray(game.rows) || game.rows.length !== size ||
       game.rows.some((row) => typeof row !== 'string' || row.length !== size || !/^[A-Z]+$/.test(row)) ||
       !Array.isArray(game.placements) || game.placements.length !== words.length ||
       !Array.isArray(game.found) || game.found.length > words.length) {
     throw new Error('The saved word search grid or progress is invalid.');
+  }
+  const selected = game.selectedWords;
+  if (selection) {
+    if (!Array.isArray(selected) || selected.length < selection.min ||
+        selected.length > selection.max || new Set(selected).size !== selected.length ||
+        selected.some((word: unknown) => typeof word !== 'string' || !words.includes(word))) {
+      throw new Error('The saved word search contains an invalid random word selection.');
+    }
+  } else if (Object.hasOwn(game, 'selectedWords')) {
+    throw new Error('This word search does not use random word selection.');
+  }
+  const activeWords: string[] = selection ? selected as string[] : words;
+  if (game.placements.length !== activeWords.length ||
+      game.found.length > activeWords.length) {
+    throw new Error('The saved word search has an incorrect number of active words.');
   }
   if (Object.hasOwn(game, 'revealedAnswers')) {
     const revealedAnswers = game.revealedAnswers;
@@ -78,7 +95,7 @@ export function validateGame(puzzle: unknown, game: unknown): asserts game is Ga
           (Object.hasOwn(line, 'revealed') && (isSolution || line.revealed !== true)) ||
           typeof line.word !== 'string' ||
           typeof line.start !== 'number' || typeof line.end !== 'number' ||
-          !words.includes(line.word) || seen.has(line.word)) {
+          !activeWords.includes(line.word) || seen.has(line.word)) {
         throw new Error('The saved word search contains invalid or duplicate word locations.');
       }
       const text = wordOnLine(rows, line.start, line.end);
@@ -97,12 +114,17 @@ export function validateGame(puzzle: unknown, game: unknown): asserts game is Ga
   }
   checkLines(game.placements, true);
   checkLines(game.found, false);
+  const placementWords = new Set((game.placements as WordPlacement[]).map((entry) => entry.word));
+  if (activeWords.some((word) => !placementWords.has(word))) {
+    throw new Error('The saved word search is missing selected answers.');
+  }
 }
 
 export function matchSelection(puzzle: Puzzle, game: Game, start: number, end: number): WordPlacement | null {
   const text = wordOnLine(game.rows, start, end);
   const reversed = [...text].reverse().join('');
-  const matches = puzzle.words.filter((entry) => entry === text || entry === reversed);
+  const matches = (game.selectedWords ?? puzzle.words)
+    .filter((entry) => entry === text || entry === reversed);
   const word = matches.find((entry) => !game.found.some((found) => found.word === entry)) ?? matches[0];
   return word ? { word, start, end } : null;
 }
