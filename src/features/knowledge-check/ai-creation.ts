@@ -112,10 +112,13 @@ export const ReviewAiCreation = defineComponent({
           ]),
         ]),
         stage.value === 'scope' ? h('div', { class: 'review-ai-scope' }, [
-          h('button', { type: 'button', class: 'quiet-button', onClick: () => { scope.value = null; go('direct'); } }, [h('strong', 'Import existing JSON'), h('span', 'Skip setup and validate any completed Review knowledge set.')]),
           h('button', { type: 'button', class: 'quiet-button', onClick: () => { scope.value = null; go('configure'); } }, [h('strong', 'Overall subject'), h('span', 'Generate questions across the entire source.')]),
           h('button', { type: 'button', class: 'quiet-button', onClick: () => go('categories') }, [h('strong', 'Choose a category'), h('span', 'Discover or reuse categories, then focus on one.')]),
-        ]) : stage.value === 'configure' ? [
+        ]),
+          h('div', { class: 'study-ai-actions', style: { justifyContent: 'flex-start', marginTop: '1rem' } }, [
+            h('button', { type: 'button', class: 'quiet-button', onClick: () => { scope.value = null; go('direct'); } }, 'Import existing JSON'),
+          ]),
+        stage.value === 'configure' ? [
           h('div', { class: 'review-ai-settings' }, [
             h('label', [h('span', 'Total items'), h('input', { type: 'number', min: 1, max: MAX_QUESTIONS, step: 1, value: preferences.value.count,
               onInput: (event: Event) => { preferences.value.count = Number(inputValue(event)); } })]),
