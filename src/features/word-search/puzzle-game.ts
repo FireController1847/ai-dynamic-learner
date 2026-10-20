@@ -268,8 +268,18 @@ export const PuzzleGame = defineComponent({
             score: score.value,
             viewingBoard: viewingBoard.value,
             pendingAction: finished.value ? (pending.value === 'give-up' ? null : pending.value) : null,
-            onViewBoard: () => { viewingBoard.value = true; pending.value = null; },
-            onViewResults: () => { viewingBoard.value = false; pending.value = null; },
+            onViewBoard: async () => {
+              viewingBoard.value = true;
+              pending.value = null;
+              await nextTick();
+              grid.value?.focusViewButton();
+            },
+            onViewResults: async () => {
+              viewingBoard.value = false;
+              pending.value = null;
+              await nextTick();
+              grid.value?.focusViewButton();
+            },
             onRestart: (event: MouseEvent) => requestAction('restart', event),
             onNewLayout: (event: MouseEvent) => requestAction('new', event),
             onCancelAction: cancelAction,
@@ -285,7 +295,7 @@ export const PuzzleGame = defineComponent({
               h('div', {}, [
                 h('h3', finished.value ? game.value?.gaveUp ? 'Board ended' : 'Nicely done!' : 'Clues'),
                 h('p', { class: 'word-search-clue-progress' },
-                  `${foundWords.value.size} of ${activeWords.value.length} found`),
+                  `${foundWords.value.size} of ${activeWords.value.length} found · ${score.value.earned} points`),
               ]),
               h('progress', {
                 max: activeWords.value.length,
@@ -318,7 +328,7 @@ export const PuzzleGame = defineComponent({
                   h('div', { class: 'word-search-clue-footer' }, [
                     h('span', { class: 'word-search-word-state' },
                       found ? (assisted ? '✓ Found · answer revealed' : '✓ Found')
-                        : individuallyRevealed ? 'Answer revealed' : game.value?.gaveUp ? 'Not found' : 'Not found'),
+                        : individuallyRevealed ? 'Answer revealed' : 'Not found'),
                     (finished.value || found || individuallyRevealed)
                       ? h('span', { class: 'word-search-word-points',
                         'aria-label': `${points} points` }, `+${points}`) : null,
@@ -333,7 +343,8 @@ export const PuzzleGame = defineComponent({
             })),
           ] : [
             h('h3', finished.value ? game.value?.gaveUp ? 'Board ended' : 'Nicely done!' : 'Words to find'),
-            h('p', { class: 'word-search-progress' }, `${foundWords.value.size} of ${activeWords.value.length} found`),
+            h('p', { class: 'word-search-progress' },
+              `${foundWords.value.size} of ${activeWords.value.length} found · ${score.value.earned} points`),
             h('progress', { max: activeWords.value.length, value: foundWords.value.size, 'aria-label': 'Words found' }),
             h('ul', {}, activeWords.value.map((word) => {
               const found = foundWords.value.has(word);
@@ -344,11 +355,12 @@ export const PuzzleGame = defineComponent({
                 key: word, class: { 'is-found': found },
               }, [
                 h('span', { class: 'word-search-answer-text' }, word),
-                h('span', { class: 'word-search-word-state' },
-                  found ? '✓ Found' : game.value?.gaveUp ? 'Not found' : 'To find'),
-                (finished.value || found)
-                  ? h('span', { class: 'word-search-word-points',
-                    'aria-label': `${points} points` }, `+${points}`) : null,
+                h('span', { class: 'word-search-word-state' }, [
+                  found ? '✓ Found' : game.value?.gaveUp ? 'Not found' : 'To find',
+                  (finished.value || found)
+                    ? h('span', { class: 'word-search-word-points',
+                      'aria-label': `${points} points` }, ` +${points}`) : null,
+                ]),
                 location ? h('span', { class: 'word-search-answer-location' },
                   `Row ${Math.floor(location.start / puzzle.size) + 1}, column ${location.start % puzzle.size + 1} → row ${Math.floor(location.end / puzzle.size) + 1}, column ${location.end % puzzle.size + 1}`) : null,
               ]);
