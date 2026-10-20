@@ -174,7 +174,7 @@ export const PuzzleGame = defineComponent({
       if (!game.value || finished.value || !hintMode.value ||
           foundWords.value.has(word) || revealedAnswers.value.has(word)) return;
       game.value.revealedAnswers = [...(game.value.revealedAnswers ?? []), word];
-      message.value = `Answer revealed: ${word}. It will stay visible until you generate a new layout.`;
+      message.value = `Answer revealed: ${word}. It will stay visible until you generate a new grid.`;
     }
 
     function rotateBoard() {
@@ -301,6 +301,7 @@ export const PuzzleGame = defineComponent({
             finished: finished.value && !celebration.value?.complete,
             score: score.value,
             viewingBoard: viewingBoard.value,
+            randomSelection: Boolean(puzzle.selection),
             pendingAction: finished.value ? (pending.value === 'give-up' ? null : pending.value) : null,
             onViewBoard: async () => {
               viewingBoard.value = true;
@@ -439,7 +440,7 @@ export const PuzzleGame = defineComponent({
           h('button', {
             type: 'button', class: 'quiet-button', disabled: loading.value,
             onClick: (event: MouseEvent) => requestAction('new', event),
-          }, 'New layout'),
+          }, 'New grid'),
         ]) : null,
         pending.value && !finished.value ? h('div', {
           class: 'word-search-restart-review', role: 'group',
@@ -447,14 +448,16 @@ export const PuzzleGame = defineComponent({
           onKeydown: (event: KeyboardEvent) => { if (event.key === 'Escape') { event.preventDefault(); cancelAction(); } },
         }, [
           h('p', pending.value === 'new'
-            ? 'Create a new arrangement? Your current progress will be cleared once the new grid is ready.'
+            ? puzzle.selection
+              ? 'Create a new grid? Your progress will be cleared, and a different selection of words may be chosen from the pool.'
+              : 'Create a new grid? Your progress will be cleared, but the words will stay the same.'
             : pending.value === 'give-up'
               ? 'Give up and end this board? Unfound answers will be shown and the score finalized. You can start over afterward.'
               : 'Clear your found words and start this grid again?'),
           h('div', { class: 'word-search-game-actions' }, [
             h('button', { ref: cancelButton, type: 'button', class: 'quiet-button', onClick: cancelAction }, 'Cancel'),
             h('button', { type: 'button', class: 'card-primary-button', onClick: confirmAction },
-              pending.value === 'new' ? 'Create new layout' : pending.value === 'give-up' ? 'Give up' : 'Start over'),
+              pending.value === 'new' ? 'Create new grid' : pending.value === 'give-up' ? 'Give up' : 'Start over'),
           ]),
         ]) : null,
         h('details', { class: 'word-search-lifetime-activity' }, [
