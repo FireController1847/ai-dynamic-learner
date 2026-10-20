@@ -95,7 +95,7 @@ export const PuzzleForm = defineComponent({
             h('legend', 'Words per layout'),
             ...([
               { mode: 'all' as const, title: 'Use all words', description: `Every layout uses the whole list (maximum ${MAX_LAYOUT_WORDS} words).` },
-              { mode: 'random' as const, title: 'Random selection', description: 'Each new layout draws a fresh sample from the pool.' },
+              { mode: 'random' as const, title: 'Random selection', description: 'Each new grid draws a fresh sample from the pool.' },
             ]).map((choice) => h('label', {
               class: ['word-search-difficulty-choice', { 'is-selected': selectionMode.value === choice.mode }],
             }, [
