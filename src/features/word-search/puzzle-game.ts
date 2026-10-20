@@ -54,9 +54,10 @@ export const PuzzleGame = defineComponent({
       ...(game.value?.revealedAnswers ?? []),
       ...(game.value?.found.filter(({ revealed }) => revealed).map(({ word }) => word) ?? []),
     ]));
+    const activeWords = computed(() => game.value?.selectedWords ?? props.item.puzzle.words);
     const foundWords = computed(() => new Set(game.value?.found.map(({ word }) => word) ?? []));
     const hintMode = computed(() => (props.item.puzzle.studyMode ?? 'words') === 'hints');
-    const complete = computed(() => foundWords.value.size === props.item.puzzle.words.length);
+    const complete = computed(() => Boolean(game.value) && foundWords.value.size === activeWords.value.length);
     const showCompletionOverlay = computed(() => complete.value && !celebration.value?.complete);
     const statistics = useStatistics();
     let completionRecorded = complete.value;
@@ -136,7 +137,7 @@ export const PuzzleGame = defineComponent({
       statistics?.record('word-search', props.item.id, 'wordsSolved');
       game.value.found.push(assisted ? { ...match, revealed: true } : match);
       hint.value = null;
-      const completed = game.value.found.length === props.item.puzzle.words.length;
+      const completed = game.value.found.length === activeWords.value.length;
       if (completed) game.value.completed = true;
       clearCelebration();
       celebration.value = {
@@ -230,7 +231,7 @@ export const PuzzleGame = defineComponent({
         'aria-label': 'Play word search', 'aria-busy': loading.value,
       }, [
         h('div', { class: 'word-search-game-toolbar' }, [
-          h('p', { class: 'word-search-help' }, `${puzzle.size} × ${puzzle.size} · ${difficulty?.label} · ${difficulty?.description}`),
+          h('p', { class: 'word-search-help' }, `${puzzle.size} × ${puzzle.size} · ${difficulty?.label} · ${difficulty?.description}${game.value?.selectedWords ? ` · ${activeWords.value.length} of ${puzzle.words.length} pool words` : ''}`),
           h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('edit') }, 'Edit puzzle'),
         ]),
         puzzle.instructions ? h('p', { class: 'word-search-instructions' }, puzzle.instructions) : null,
@@ -265,15 +266,15 @@ export const PuzzleGame = defineComponent({
               h('div', {}, [
                 h('h3', complete.value ? 'Nicely done!' : 'Clues'),
                 h('p', { class: 'word-search-clue-progress' },
-                  `${foundWords.value.size} of ${puzzle.words.length} found`),
+                  `${foundWords.value.size} of ${activeWords.value.length} found`),
               ]),
               h('progress', {
-                max: puzzle.words.length,
+                max: activeWords.value.length,
                 value: foundWords.value.size,
                 'aria-label': 'Words found',
               }),
             ]),
-            h('ol', { class: 'word-search-clue-list' }, puzzle.words.map((word, index) => {
+            h('ol', { class: 'word-search-clue-list' }, activeWords.value.map((word, index) => {
               const found = foundWords.value.has(word);
               const assisted = Boolean(game.value?.found.some((entry) => entry.word === word && entry.revealed));
               const individuallyRevealed = revealedAnswers.value.has(word);
@@ -308,9 +309,9 @@ export const PuzzleGame = defineComponent({
             })),
           ] : [
             h('h3', complete.value ? 'Nicely done!' : 'Words to find'),
-            h('p', { class: 'word-search-progress' }, `${foundWords.value.size} of ${puzzle.words.length} found`),
-            h('progress', { max: puzzle.words.length, value: foundWords.value.size, 'aria-label': 'Words found' }),
-            h('ul', {}, puzzle.words.map((word) => {
+            h('p', { class: 'word-search-progress' }, `${foundWords.value.size} of ${activeWords.value.length} found`),
+            h('progress', { max: activeWords.value.length, value: foundWords.value.size, 'aria-label': 'Words found' }),
+            h('ul', {}, activeWords.value.map((word) => {
               const found = foundWords.value.has(word);
               const location = revealed.value ? game.value?.placements.find((entry) => entry.word === word) : null;
               return h('li', {
