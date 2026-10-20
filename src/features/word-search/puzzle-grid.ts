@@ -31,6 +31,7 @@ export const PuzzleGrid = defineComponent({
     covered: Boolean,
     finished: Boolean,
     viewingBoard: Boolean,
+    randomSelection: Boolean,
     score: { type: Object as PropType<{ earned: number; possible: number }>,
       default: () => ({ earned: 0, possible: 0 }) },
     pendingAction: { type: String as PropType<'new' | 'restart' | null>, default: null },
@@ -300,7 +301,7 @@ export const PuzzleGrid = defineComponent({
         }, 'Cancel'),
         h('button', { type: 'button', class: 'card-primary-button',
           onClick: () => emit('confirm-action') },
-          pending === 'new' ? 'Create new layout' : 'Start over'),
+          pending === 'new' ? 'Create new grid' : 'Start over'),
       ] : [
         h('button', {
           ref: viewButton, type: 'button', class: 'quiet-button word-search-finish-view',
@@ -314,7 +315,7 @@ export const PuzzleGrid = defineComponent({
           onClick: (event: MouseEvent) => emit('restart', event),
         }, 'Start over'),
         h('button', { type: 'button', class: 'card-primary-button',
-          onClick: (event: MouseEvent) => emit('new-layout', event) }, 'New layout'),
+          onClick: (event: MouseEvent) => emit('new-layout', event) }, 'New grid'),
       ]);
     }
 
@@ -338,11 +339,13 @@ export const PuzzleGrid = defineComponent({
           h('div', { class: 'word-search-completion-seal', 'aria-hidden': 'true' }, [
             h(Icon, { name: givenUp ? 'flag' : 'verified' }),
           ]),
-          h('h3', pending ? (pending === 'new' ? 'Create a new layout?' : 'Start this board over?')
+          h('h3', pending ? (pending === 'new' ? 'Create a new grid?' : 'Start this board over?')
             : givenUp ? 'Board ended' : 'Puzzle complete!'),
           h('p', pending
             ? (pending === 'new'
-              ? 'A new arrangement replaces this board and clears its progress.'
+              ? props.randomSelection
+                ? 'A new grid clears this progress and may choose different words from your pool.'
+                : 'A new grid clears this progress but uses the same words.'
               : 'This clears found-word progress but keeps the same board and revealed clues.')
             : givenUp
               ? `You found ${props.game.found.length} of ${props.score.possible} words. Here is your final score.`
@@ -374,7 +377,10 @@ export const PuzzleGrid = defineComponent({
         h('p', { class: 'word-search-finished-toolbar-score' },
           `Score: ${props.score.earned} / ${props.score.possible}`),
         pending ? h('p', { class: 'word-search-finished-toolbar-note' },
-          pending === 'new' ? 'Generate a new layout and reset this board?'
+          pending === 'new'
+            ? props.randomSelection
+              ? 'Generate a new grid? Progress will be cleared, and the selected words may change.'
+              : 'Generate a new grid? Progress will be cleared, but the words will remain the same.'
             : 'Clear your found words and start this board over?') : null,
         finishedActions(true),
       ]);
