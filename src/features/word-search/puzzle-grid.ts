@@ -3,7 +3,12 @@ import type { DisplayOptions } from './display-options.ts';
 import type { GridPoint } from './word-outline.ts';
 export interface SelectionAttempt { id: number; start: number; end: number; cells: number[]; matched: boolean }
 export interface WordCelebration { id: number; start: number; end: number; complete: boolean }
-export interface PuzzleGridHandle { focusCell(cell: number): void; cancelSelection(): void }
+export interface PuzzleGridHandle {
+  focusCell(cell: number): void;
+  cancelSelection(): void;
+  focusCompletionCancel(): void;
+  focusCompletionAction(): void;
+}
 import { lineCells } from './game-model.ts';
 import { defaultDisplayOptions, displayStyles } from './display-options.ts';
 import { Icon } from '../../components/icon.ts';
@@ -37,6 +42,8 @@ export const PuzzleGrid = defineComponent({
   setup(props, { emit, expose }) {
     const grid = ref<HTMLElement | null>(null);
     const area = ref<HTMLElement | null>(null);
+    const completionCancel = ref<HTMLButtonElement | null>(null);
+    const completionAction = ref<HTMLButtonElement | null>(null);
     const focused = ref(0);
     const anchor = ref<number | null>(null);
     const endpoint = ref<number | null>(null);
@@ -93,7 +100,12 @@ export const PuzzleGrid = defineComponent({
       focused.value = cell;
       nextTick(() => grid.value?.querySelector<HTMLElement>(`[data-cell="${cell}"]`)?.focus());
     }
-    expose({ focusCell, cancelSelection });
+    expose({
+      focusCell,
+      cancelSelection,
+      focusCompletionCancel: () => completionCancel.value?.focus(),
+      focusCompletionAction: () => completionAction.value?.focus(),
+    });
 
     function activate(cell: number) {
       if (props.revealed || props.rotating) return;
@@ -271,6 +283,13 @@ export const PuzzleGrid = defineComponent({
         class: 'word-search-completion-overlay',
         role: 'region',
         'aria-label': 'Completed word search',
+        onKeydown: (event: KeyboardEvent) => {
+          if (pending && event.key === 'Escape') {
+            event.preventDefault();
+            event.stopPropagation();
+            emit('cancel-action');
+          }
+        },
       }, [
         h('div', { class: 'word-search-completion-content' }, [
           h('div', { class: 'word-search-completion-seal', 'aria-hidden': 'true' }, [
@@ -284,12 +303,17 @@ export const PuzzleGrid = defineComponent({
               : 'This clears your found words but keeps the same board and its completed badge.')
             : `You found all ${props.game.placements.length} words. Nicely done!`),
           h('div', { class: 'word-search-completion-actions' }, pending ? [
-            h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel-action') }, 'Cancel'),
+            h('button', {
+              ref: completionCancel, type: 'button', class: 'quiet-button',
+              onClick: () => emit('cancel-action'),
+            }, 'Cancel'),
             h('button', { type: 'button', class: 'card-primary-button', onClick: () => emit('confirm-action') },
               pending === 'new' ? 'Create new layout' : 'Start over'),
           ] : [
-            h('button', { type: 'button', class: 'quiet-button',
-              onClick: (event: MouseEvent) => emit('restart', event) }, 'Start over'),
+            h('button', {
+              ref: completionAction, type: 'button', class: 'quiet-button',
+              onClick: (event: MouseEvent) => emit('restart', event),
+            }, 'Start over'),
             h('button', { type: 'button', class: 'card-primary-button',
               onClick: (event: MouseEvent) => emit('new-layout', event) }, 'New layout'),
           ]),
