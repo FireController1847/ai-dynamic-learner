@@ -20,7 +20,7 @@ export const PuzzleAiCreation = defineComponent({
     const scope = ref<AiCardScope | null>(null);
     const preferences = ref<PuzzleAiOptions>(defaultPuzzleAiOptions(props.kind));
     const configured = ref(false);
-    const entry = ref<'scope' | 'categories' | 'direct'>('scope');
+    const entry = ref<'scope' | 'categories' | 'settings' | 'direct'>('scope');
     const configurationProblem = ref('');
     const json = ref('');
     const problem = ref('');
@@ -279,7 +279,7 @@ export const PuzzleAiCreation = defineComponent({
             hasPreview: candidate.value !== null, validateLabel: 'Validate puzzle',
             onUpdateJson: (value: string) => { json.value = value; candidate.value = null; problem.value = ''; }, onValidate: validate,
           }, { preview }),
-        ]) : entry.value === 'settings' || (entry.value === 'categories' && scope.value)
+        ]) : entry.value === 'settings'
         ? !configured.value ? settings()
         : h('section', { key: 'generate-' + (scope.value?.category.key ?? 'overall'), class: 'study-ai-workspace puzzle-ai-workspace', 'data-ai-scroll-region': '' }, [
           h('header', { class: 'study-ai-header' }, [
