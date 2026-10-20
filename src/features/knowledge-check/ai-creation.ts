@@ -17,7 +17,7 @@ export const ReviewAiCreation = defineComponent({
   props: { destination: { type: String, required: true } },
   emits: { cancel: () => true, create: (_value: ReviewAiImport) => true },
   setup(props, { emit }) {
-    const stage = ref<'scope' | 'categories' | 'configure' | 'generate'>('scope');
+    const stage = ref<'scope' | 'categories' | 'configure' | 'generate' | 'direct'>('scope');
     const scope = ref<AiCardScope | null>(null);
     const categories = ref<AiCardCategories | null>(null);
     const preferences = ref<ReviewAiPreferences>({ count: 50, coverage: 'balanced', mixMode: 'ai', aiFocus: 'default', weights: { ...DEFAULT_AI_WEIGHTS } });
@@ -66,7 +66,8 @@ export const ReviewAiCreation = defineComponent({
     function back() {
       candidate.value = null;
       problem.value = '';
-      if (stage.value === 'generate') go('configure', true);
+      if (stage.value === 'direct') go('scope', true);
+      else if (stage.value === 'generate') go('configure', true);
       else if (stage.value === 'configure') go(scope.value ? 'categories' : 'scope', true);
       else go('scope', true);
     }
@@ -111,6 +112,7 @@ export const ReviewAiCreation = defineComponent({
           ]),
         ]),
         stage.value === 'scope' ? h('div', { class: 'review-ai-scope' }, [
+          h('button', { type: 'button', class: 'quiet-button', onClick: () => { scope.value = null; go('direct'); } }, [h('strong', 'Import existing JSON'), h('span', 'Skip setup and validate any completed Review knowledge set.')]),
           h('button', { type: 'button', class: 'quiet-button', onClick: () => { scope.value = null; go('configure'); } }, [h('strong', 'Overall subject'), h('span', 'Generate questions across the entire source.')]),
           h('button', { type: 'button', class: 'quiet-button', onClick: () => go('categories') }, [h('strong', 'Choose a category'), h('span', 'Discover or reuse categories, then focus on one.')]),
         ]) : stage.value === 'configure' ? [
@@ -211,12 +213,13 @@ export const ReviewAiCreation = defineComponent({
             } }, 'Generate prompt'),
           ]),
         ] : h(AiPromptExchange, {
+          startInImport: stage.value === 'direct',
           idPrefix: 'review-ai', label: 'Review', prompt: prompt.value, json: json.value, problem: problem.value,
           maxLength: MAX_AI_IMPORT_LENGTH, hasPreview: candidate.value !== null,
-          promptHelp: scope.value
+          promptHelp: stage.value === 'direct' ? 'Import an existing Review knowledge set.' : scope.value
             ? `Send this prompt in the conversation containing the matching source and categories. It creates the selected category’s knowledge set ${preferences.value.mixMode === 'ai' ? 'with AI-selected question types' : 'using your percentages'}.`
             : `Give your AI the source material first, then send this prompt to create the overall knowledge set ${preferences.value.mixMode === 'ai' ? 'with an appropriate mix of question types' : 'using your percentages'}.`,
-          importHelp: preferences.value.mixMode === 'ai'
+          importHelp: stage.value === 'direct' ? 'Paste an existing overall or category-based Review JSON to validate and import.' : preferences.value.mixMode === 'ai'
             ? 'Paste the AI-generated JSON here. Each question is validated, and a different total count produces a warning. Any valid question-type mix is allowed.'
             : 'Paste the AI-generated JSON here. Questions are validated; differences from your requested count or mix produce warnings.',
           readyInstructions: ['Paste the Review JSON below.', 'Choose Validate JSON.', 'Review the questions, then create the knowledge set.'],
