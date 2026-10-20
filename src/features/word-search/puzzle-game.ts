@@ -408,7 +408,8 @@ export const PuzzleGame = defineComponent({
           }, 'New layout'),
         ]) : null,
         pending.value && !finished.value ? h('div', {
-          class: 'word-search-restart-review', role: 'group', 'aria-label': 'Confirm restart',
+          class: 'word-search-restart-review', role: 'group',
+          'aria-label': pending.value === 'give-up' ? 'Confirm giving up' : 'Confirm puzzle reset',
           onKeydown: (event: KeyboardEvent) => { if (event.key === 'Escape') { event.preventDefault(); cancelAction(); } },
         }, [
           h('p', pending.value === 'new'
