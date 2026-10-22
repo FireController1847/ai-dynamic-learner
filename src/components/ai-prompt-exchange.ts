@@ -28,7 +28,6 @@ export const AiPromptExchange = defineComponent({
   setup(props, { emit, slots, expose }) {
     const stage = ref<'instructions' | 'response'>(props.startInImport || props.importOnly ? 'response' : 'instructions');
     const shown = ref(false);
-    const copied = ref(false);
     const copiedNotice = ref(false);
     const errorMessage = ref('');
     const input = ref<HTMLTextAreaElement | null>(null);
@@ -58,13 +57,11 @@ export const AiPromptExchange = defineComponent({
       try {
         await navigator.clipboard.writeText(props.prompt);
         if (disposed) return;
-        copied.value = true;
         copiedNotice.value = true;
         focusResponse = true;
         stage.value = 'response';
       } catch {
         if (disposed) return;
-        copied.value = false;
         shown.value = true;
         errorMessage.value = 'Copying was blocked. Select and copy the instructions shown below instead.';
         await nextTick();
@@ -82,7 +79,7 @@ export const AiPromptExchange = defineComponent({
     return () => h('div', { class: 'ai-exchange' }, [
       props.importOnly ? null : h('div', { class: 'ai-exchange-progress', 'aria-label': 'AI creation progress' }, [
         h('span', { class: stage.value === 'instructions' ? 'is-active' : 'is-complete', 'aria-current': stage.value === 'instructions' ? 'step' : undefined }, '1 · Prepare'),
-        h(Icon, { name: 'chevron-right' }),
+        h(Icon, { name: 'chevron' }),
         h('span', { class: stage.value === 'response' ? 'is-active' : '', 'aria-current': stage.value === 'response' ? 'step' : undefined }, '2 · Import'),
       ]),
       h('div', { class: 'ai-exchange-frame' }, [
@@ -99,7 +96,7 @@ export const AiPromptExchange = defineComponent({
             slots.guidance?.(),
             h('div', { class: 'ai-exchange-actions' }, [
               h('button', { type: 'button', class: 'card-primary-button ai-exchange-copy', onClick: copy }, [
-                h(Icon, { name: 'copy' }), 'Copy instructions',
+                h(Icon, { name: 'duplicate' }), 'Copy instructions',
               ]),
               h('button', { type: 'button', class: 'quiet-button',
                 'aria-expanded': shown.value, 'aria-controls': props.idPrefix + '-prompt',

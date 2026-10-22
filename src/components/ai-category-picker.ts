@@ -91,14 +91,14 @@ export const AiCategoryPicker = defineComponent({
     const option = (title: string, description: string, onClick: () => void, iconName: string) =>
       h('button', { type: 'button', class: 'quiet-button ai-category-option', onClick }, [
         h(Icon, { name: iconName }), h('span', [h('strong', title), h('span', description)]),
-        h(Icon, { name: 'chevron-right' }),
+        h(Icon, { name: 'chevron' }),
       ]);
 
     function body() {
       if (stage.value === 'start') return [
         h('div', { class: 'ai-category-options' }, [
-          history.value.length ? option('Use saved categories', 'Choose from category lists you have used before.', () => { stage.value = 'saved'; }, 'folder-open') : null,
-          option('Find categories with AI', 'Create a category list from your study material.', () => newCategories(), 'sparkles'),
+          history.value.length ? option('Use saved categories', 'Choose from category lists you have used before.', () => { stage.value = 'saved'; }, 'folder') : null,
+          option('Find categories with AI', 'Create a category list from your study material.', () => newCategories(), 'ai'),
         ]),
         h('div', { class: 'ai-category-secondary' }, [
           h('button', { type: 'button', class: 'quiet-button outline-button', onClick: () => newCategories(true) }, 'Import an existing AI response'),
@@ -109,7 +109,7 @@ export const AiCategoryPicker = defineComponent({
         h('ul', { ref: historyList, class: 'ai-category-history-list' }, history.value.map(entry => h('li', { key: entry.id }, [
           h('button', { type: 'button', class: 'quiet-button study-ai-history-use', onClick: () => useSaved(entry) }, [
             h('span', [h('strong', entry.categories.title), h('span', entry.categories.categories.length + ' categories · ' + new Date(entry.savedAt).toLocaleDateString())]),
-            h(Icon, { name: 'chevron-right' }),
+            h(Icon, { name: 'chevron' }),
           ]),
           h('button', {
             type: 'button', class: 'icon-button delete-button study-ai-history-remove',
@@ -143,7 +143,7 @@ export const AiCategoryPicker = defineComponent({
             onClick: () => { if (categories.value) emit('select', { subject: categories.value.title, category }, categories.value); },
           }, [
             h('span', [h('strong', category.title), h('span', category.description)]),
-            h(Icon, { name: 'chevron-right' }),
+            h(Icon, { name: 'chevron' }),
           ]))),
       ] : null;
     }
@@ -155,7 +155,7 @@ export const AiCategoryPicker = defineComponent({
       return categories.value?.title ?? 'Choose a category';
     }
     function subtitle() {
-      if (stage.value === 'start') return 'Use a previous category list or make a new one.';
+      if (stage.value === 'start') return history.value.length ? 'Use saved categories or find new ones with AI.' : 'Find categories in your study material with AI.';
       if (stage.value === 'saved') return 'Choose a category list to browse.';
       if (stage.value === 'generate') return importExisting.value
         ? 'Bring in a category list you already have.'
