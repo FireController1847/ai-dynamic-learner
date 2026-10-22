@@ -44,7 +44,10 @@ export const AiCategoryPicker = defineComponent({
     }
     function goBack() {
       if (stage.value === 'source') emit('back');
-      else if (stage.value === 'start') stage.value = props.initialCategories ? 'choose' : 'source';
+      else if (stage.value === 'start') {
+        if (props.initialCategories) emit('back');
+        else stage.value = 'source';
+      }
       else if (stage.value === 'choose') stage.value = chosenFrom.value;
       else stage.value = 'start';
     }
