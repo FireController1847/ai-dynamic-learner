@@ -539,6 +539,7 @@ export const GuideAiImportWorkspace = defineComponent({
       value: T,
       options: readonly { value: T; label: string }[],
       change: (value: T) => void,
+      explanation: string,
     ) {
       return h('label', { for: id, class: 'guide-ai-option' }, [
         h('span', label),
@@ -549,6 +550,7 @@ export const GuideAiImportWorkspace = defineComponent({
             if (event.target instanceof HTMLSelectElement) change(event.target.value as T);
           },
         }, options.map((option) => h('option', { value: option.value }, option.label))),
+        h('small', { class: 'study-ai-muted' }, explanation),
       ]);
     }
 
@@ -605,16 +607,16 @@ export const GuideAiImportWorkspace = defineComponent({
                 { value: 'concise', label: 'Concise' },
                 { value: 'balanced', label: 'Balanced' },
                 { value: 'detailed', label: 'Detailed' },
-              ], (value) => { detail.value = value; }),
+              ], (value) => { detail.value = value; }, 'How much information appears within each section.'),
               optionField('guide-ai-coverage', 'Coverage', coverage.value, [
                 { value: 'essentials', label: 'Essentials only' },
                 { value: 'balanced', label: 'Balanced' },
                 { value: 'comprehensive', label: 'Comprehensive' },
-              ], (value) => { coverage.value = value; }),
+              ], (value) => { coverage.value = value; }, 'Key ideas only or more of the subject.'),
               optionField('guide-ai-bullet-style', 'Bullet style', bulletStyle.value, [
                 { value: 'phrases', label: 'Key phrases' },
                 { value: 'thoughts', label: 'Complete thoughts' },
-              ], (value) => { bulletStyle.value = value; }),
+              ], (value) => { bulletStyle.value = value; }, 'Short key phrases or complete sentences.'),
             ]),
         preview: () => candidate.value ? h('div', { class: 'guide-ai-preview' }, [
           ...importPreview(candidate.value),

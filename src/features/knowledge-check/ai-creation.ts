@@ -121,11 +121,11 @@ export const ReviewAiCreation = defineComponent({
           ]),
         ] : stage.value === 'configure' ? [
           h('div', { class: 'review-ai-settings' }, [
-            h('label', [h('span', 'Total items'), h('input', { type: 'number', min: 1, max: MAX_QUESTIONS, step: 1, value: preferences.value.count,
-              onInput: (event: Event) => { preferences.value.count = Number(inputValue(event)); } })]),
+            h('label', [h('span', 'Total questions'), h('input', { type: 'number', min: 1, max: MAX_QUESTIONS, step: 1, value: preferences.value.count,
+              onInput: (event: Event) => { preferences.value.count = Number(inputValue(event)); } }), h('small', { class: 'study-ai-muted' }, 'Number of questions the AI should make.')]),
             h('label', [h('span', 'Coverage'), h('select', { value: preferences.value.coverage, onChange: (event: Event) => {
               const value = inputValue(event); if (value === 'essentials' || value === 'balanced' || value === 'comprehensive') preferences.value.coverage = value;
-            } }, [h('option', { value: 'essentials' }, 'Essentials only'), h('option', { value: 'balanced' }, 'Balanced'), h('option', { value: 'comprehensive' }, 'Comprehensive')])]),
+            } }, [h('option', { value: 'essentials' }, 'Essentials only'), h('option', { value: 'balanced' }, 'Balanced'), h('option', { value: 'comprehensive' }, 'Comprehensive')]), h('small', { class: 'study-ai-muted' }, 'Key facts, a balanced mix, or detailed coverage.')]),
           ]),
           h('fieldset', { class: 'review-ai-mix-strategy' }, [
             h('legend', 'Question types'),

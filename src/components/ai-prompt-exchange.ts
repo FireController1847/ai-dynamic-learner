@@ -23,7 +23,8 @@ export const AiPromptExchange = defineComponent({
   },
   emits: { 'update-json': (_value: string) => true, validate: () => true },
   setup(props, { emit, slots, expose }) {
-    const stage = ref<'instructions' | 'response'>(props.startInImport || props.importOnly ? 'response' : 'instructions');
+    const stage = ref<'source' | 'instructions' | 'response'>(props.startInImport || props.importOnly ? 'response' : 'source');
+    const sourceMode = ref<'upload' | 'paste'>('upload');
     const shown = ref(false);
     const copiedNotice = ref(false);
     const errorMessage = ref('');
@@ -47,6 +48,12 @@ export const AiPromptExchange = defineComponent({
       errorMessage.value = '';
     }
 
+    function selectSource() {
+      if (props.importOnly) return;
+      stage.value = 'source';
+      copiedNotice.value = false;
+      errorMessage.value = '';
+    }
     expose({ showImport: selectResponse });
 
     async function copy() {
@@ -75,42 +82,62 @@ export const AiPromptExchange = defineComponent({
 
     return () => h('div', { class: 'ai-exchange' }, [
       props.importOnly ? null : h('div', { class: 'ai-exchange-progress', 'aria-label': 'AI creation progress' }, [
-        h('span', { class: stage.value === 'instructions' ? 'is-active' : 'is-complete', 'aria-current': stage.value === 'instructions' ? 'step' : undefined }, '1 · Prepare'),
+        h('span', { class: stage.value === 'source' ? 'is-active' : 'is-complete', 'aria-current': stage.value === 'source' ? 'step' : undefined }, '1 · Source'),
         h(Icon, { name: 'chevron' }),
-        h('span', { class: stage.value === 'response' ? 'is-active' : '', 'aria-current': stage.value === 'response' ? 'step' : undefined }, '2 · Import'),
+        h('span', { class: stage.value === 'instructions' ? 'is-active' : stage.value === 'response' ? 'is-complete' : '', 'aria-current': stage.value === 'instructions' ? 'step' : undefined }, '2 · Instructions'),
+        h(Icon, { name: 'chevron' }),
+        h('span', { class: stage.value === 'response' ? 'is-active' : '', 'aria-current': stage.value === 'response' ? 'step' : undefined }, '3 · Import'),
       ]),
       h('div', { class: 'ai-exchange-frame' }, [
         h(Transition, { name: 'ai-exchange-panel', mode: 'out-in', onAfterEnter: afterStepEnter }, {
           default: () => h('section', {
             key: stage.value, class: 'ai-exchange-panel',
             'aria-labelledby': props.idPrefix + '-step-title',
-          }, stage.value === 'instructions' && !props.importOnly ? [
+          }, stage.value === 'source' && !props.importOnly ? [
+            h('div', { class: 'ai-exchange-step-heading' }, [
+              h('h3', { id: props.idPrefix + '-step-title' }, 'Give your AI something to study'),
+              h('p', { class: 'ai-exchange-help' }, 'Open your AI chat and share the material you want to learn from.'),
+            ]),
+            h('div', { class: 'ai-source-tutorial' }, [
+              h('div', { class: 'ai-source-tutorial-toolbar' }, [
+                h('span', 'How will you share it?'),
+                h('div', { class: 'ai-source-tutorial-modes', role: 'group', 'aria-label': 'Study material format' }, [
+                  h('button', { type: 'button', class: 'quiet-button', 'aria-pressed': sourceMode.value === 'upload',
+                    onClick: () => { sourceMode.value = 'upload'; } }, [h(Icon, { name: 'upload' }), 'Upload a file']),
+                  h('button', { type: 'button', class: 'quiet-button', 'aria-pressed': sourceMode.value === 'paste',
+                    onClick: () => { sourceMode.value = 'paste'; } }, [h(Icon, { name: 'document' }), 'Paste text']),
+                ]),
+              ]),
+              h('div', { class: 'ai-source-tutorial-scene', 'aria-hidden': 'true' }, [
+                h('div', { class: 'ai-source-tutorial-document' }, [
+                  h(Icon, { name: sourceMode.value === 'upload' ? 'document' : 'pencil' }),
+                  h('span', sourceMode.value === 'upload' ? 'Lecture notes.pdf' : 'Your class notes'),
+                ]),
+                h('span', { class: 'ai-source-tutorial-arrow' }, [h(Icon, { name: 'chevron' })]),
+                h('div', { class: 'ai-source-tutorial-chat' }, [
+                  h('div', { class: 'ai-source-tutorial-chat-title' }, [h(Icon, { name: 'ai' }), 'Your AI chat']),
+                  h('div', { key: sourceMode.value, class: 'ai-source-tutorial-message' }, [
+                    h(Icon, { name: sourceMode.value === 'upload' ? 'document' : 'check' }),
+                    h('span', sourceMode.value === 'upload' ? 'Lecture notes.pdf' : 'Chapter notes pasted'),
+                  ]),
+                ]),
+              ]),
+              h('p', { class: 'ai-source-tutorial-description' }, sourceMode.value === 'upload'
+                ? 'In your AI chat, use its attachment or upload button to select your notes, PDF, or slides. Send the file there first.'
+                : 'Copy the text from your notes or textbook, paste it into your AI chat, and send that message first.'),
+            ]),
+            h('div', { class: 'ai-exchange-actions' }, [
+              h('button', { type: 'button', class: 'card-primary-button', onClick: selectInstructions }, [
+                'Next: Set up instructions', h(Icon, { name: 'chevron' }),
+              ]),
+              h('button', { type: 'button', class: 'ai-exchange-link', onClick: selectResponse }, 'Already have an AI response?'),
+            ]),
+            h('p', { class: 'ai-source-tutorial-note' },
+              'Dynamic Learner does not upload your materials. You share them directly in the AI chat you choose.'),
+          ] : stage.value === 'instructions' && !props.importOnly ? [
             h('div', { class: 'ai-exchange-step-heading' }, [
               h('h3', { id: props.idPrefix + '-step-title' }, 'Prepare your AI instructions'),
               h('p', { class: 'ai-exchange-help' }, props.promptHelp),
-            ]),
-            h('section', { class: 'ai-source-guide', 'aria-label': 'How to share study material with your AI' }, [
-              h('div', { class: 'ai-source-guide-heading' }, [
-                h(Icon, { name: 'ai' }),
-                h('strong', 'In your AI chat'),
-                h('span', 'Share the source there, not in Dynamic Learner.'),
-              ]),
-              h('ol', { class: 'ai-source-guide-steps' }, [
-                h('li', { class: 'ai-source-guide-step' }, [
-                  h('span', { class: 'ai-source-guide-number', 'aria-hidden': 'true' }, '1'),
-                  h('div', [
-                    h('strong', [h(Icon, { name: 'document' }), 'Share your study material']),
-                    h('p', 'Paste notes, or attach a PDF, slides, or photos if your AI supports files.'),
-                  ]),
-                ]),
-                h('li', { class: 'ai-source-guide-step' }, [
-                  h('span', { class: 'ai-source-guide-number', 'aria-hidden': 'true' }, '2'),
-                  h('div', [
-                    h('strong', [h(Icon, { name: 'duplicate' }), 'Send these instructions']),
-                    h('p', 'Copy the instructions below into that same AI conversation.'),
-                  ]),
-                ]),
-              ]),
             ]),
             slots.options?.(),
             slots.guidance?.(),
@@ -131,7 +158,7 @@ export const AiPromptExchange = defineComponent({
               }) : null,
             }),
             h('div', { class: 'ai-exchange-secondary' }, [
-              h('button', { type: 'button', class: 'ai-exchange-link', onClick: selectResponse }, 'Already have a response?'),
+              h('button', { type: 'button', class: 'ai-exchange-link', onClick: selectSource }, 'Back to source'),
             ]),
           ] : [
             h('div', { class: 'ai-exchange-step-heading' }, [

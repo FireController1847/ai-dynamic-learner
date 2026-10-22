@@ -52,3 +52,6 @@
   .flash-ai-actions > button { min-height: var(--control-height); }
 }
 @media (pointer: coarse) { .flash-ai-options select { font-size: 16px; } }
+
+.flash-ai-options .flash-ai-option { align-content:start;gap:5px; }
+.flash-ai-option small { display:block;color:var(--text-secondary);font-size:12px;line-height:18px;font-weight:400; }

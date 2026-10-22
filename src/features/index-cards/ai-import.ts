@@ -90,30 +90,27 @@ export const IndexCardsAiImport = defineComponent({
         onValidate: preview,
       }, {
         options: () => h('div', { class: 'flash-ai-options' }, [
-            h('label', [h('span', 'Coverage'), h('select', {
+            h('label', { class: 'flash-ai-option' }, [h('span', 'Coverage'), h('select', {
               value: coverage.value,
               onChange: (event: Event) => {
                 const value = inputValue(event);
                 if (value === 'essentials' || value === 'balanced' || value === 'comprehensive') coverage.value = value;
               },
             }, [h('option', { value: 'essentials' }, 'Essentials only'), h('option', { value: 'balanced' }, 'Balanced'),
-              h('option', { value: 'comprehensive' }, 'Comprehensive')])]),
-            h('label', [h('span', 'Maximum cards'), h('select', {
+              h('option', { value: 'comprehensive' }, 'Comprehensive')]), h('small', 'How much to cover: just key facts, a balanced mix, or most of the material.')]),
+            h('label', { class: 'flash-ai-option' }, [h('span', 'Maximum cards'), h('select', {
               value: limit.value, onChange: (event: Event) => {
                 const value = Number(inputValue(event));
                 if ([10, 20, 30, 50].includes(value)) limit.value = value;
               },
-            }, [10, 20, 30, 50].map(value => h('option', { value }, String(value))))]),
-            isFillBlank.value ? h('label', [h('span', 'Blank style'), h('select', {
+            }, [10, 20, 30, 50].map(value => h('option', { value }, String(value)))), h('small', 'An upper limit, not a required number of cards.')]),
+            isFillBlank.value ? h('label', { class: 'flash-ai-option' }, [h('span', 'Blank style'), h('select', {
               value: blankStyle.value, onChange: (event: Event) => {
                 const value = inputValue(event);
                 if (value === 'focused' || value === 'connected') blankStyle.value = value;
               },
-            }, [h('option', { value: 'focused' }, 'One focused blank'), h('option', { value: 'connected' }, 'A few related blanks')])]) : null,
+            }, [h('option', { value: 'focused' }, 'One focused blank'), h('option', { value: 'connected' }, 'A few related blanks')]), h('small', 'One missing answer or several connected answers per card.')]) : null,
           ]),
-        guidance: () => h('p', { class: 'flash-ai-muted' }, isFillBlank.value
-          ? 'Prefer one word per blank; use 2–3 only when essential. Give separate items their own blanks joined by “and” or “or”.'
-          : 'Answers should usually be 1–5 words. Complex ideas become separate cards, not longer answers.'),
         preview: () => candidate.value ? h('div', { class: 'flash-ai-preview', 'aria-label': `${modeLabel.value} preview` }, [
           h('h3', candidate.value.data.title),
           h('p', { role: 'status' }, `${candidate.value.data.cards.length} cards · ${modeLabel.value} · ${props.remainingCards} card spaces available`),

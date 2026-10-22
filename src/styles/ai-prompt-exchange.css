@@ -131,30 +131,33 @@
   .ai-scope-choices > button,.ai-scope-actions > button { min-height:44px; }
 }
 
-/* A compact two-message example, shown before copying AI instructions. */
-.ai-source-guide {
-  display:grid;gap:8px;min-width:0;
-  padding:12px;border:1px solid var(--border-color);border-radius:var(--radius-dialog);
-  background:var(--surface-subtle);
-}
-.ai-source-guide-heading { display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px; }
-.ai-source-guide-heading > .ui-icon { width:18px;height:18px;color:var(--brand-text); }
-.ai-source-guide-heading strong { font-weight:600; }
-.ai-source-guide-heading > span { color:var(--text-secondary);font-size:12px; }
-.ai-source-guide-steps {
-  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;
-  margin:0;padding:0;list-style:none;min-width:0;
-}
-.ai-source-guide-step { display:flex;align-items:flex-start;gap:8px;min-width:0; }
-.ai-source-guide-number {
-  display:grid;place-items:center;flex:0 0 22px;width:22px;height:22px;
-  border:1px solid var(--border-color);border-radius:50%;
-  background:var(--page-background);font-size:12px;font-weight:600;
-}
-.ai-source-guide-step > div { display:grid;gap:4px;min-width:0; }
-.ai-source-guide-step strong { display:flex;align-items:center;gap:6px;font-weight:600; }
-.ai-source-guide-step strong > .ui-icon { width:16px;height:16px;color:var(--text-secondary); }
-.ai-source-guide-step p { margin:0;color:var(--text-secondary);font-size:12px;line-height:18px; }
+
+/* Lightweight illustrated example in the separate source-sharing step. */
+.ai-source-tutorial { display:grid;gap:12px;min-width:0;padding:16px;border:1px solid var(--border-color);border-radius:var(--radius-dialog);background:var(--surface-subtle); }
+.ai-source-tutorial-toolbar { display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px 16px;font-weight:600; }
+.ai-source-tutorial-modes { display:flex;flex-wrap:wrap;gap:6px; }
+.ai-source-tutorial-modes .quiet-button { font-size:12px; }
+.ai-source-tutorial-modes .quiet-button .ui-icon { width:16px;height:16px; }
+.ai-source-tutorial-modes [aria-pressed='true'] { border-color:var(--brand);background:var(--brand-tint);color:var(--brand-text); }
+.ai-source-tutorial-scene { display:grid;grid-template-columns:minmax(0,1fr) 22px minmax(0,1.2fr);align-items:center;gap:12px;max-width:650px;width:100%;margin:auto;padding:8px 4px; }
+.ai-source-tutorial-document { display:flex;align-items:center;justify-content:center;gap:8px;min-width:0;min-height:64px;padding:12px;border:1px solid var(--control-border);border-radius:var(--radius);background:var(--page-background);font-size:12px; }
+.ai-source-tutorial-document .ui-icon { color:var(--brand-text); }
+.ai-source-tutorial-document span { min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.ai-source-tutorial-arrow { display:grid;place-items:center;color:var(--brand-text); }
+.ai-source-tutorial-arrow .ui-icon { width:18px;height:18px; }
+.ai-source-tutorial-chat { display:grid;align-content:center;gap:8px;min-width:0;min-height:96px;padding:12px;border:1px solid var(--border-color);border-radius:var(--radius-dialog);background:var(--page-background); }
+.ai-source-tutorial-chat-title { display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary); }
+.ai-source-tutorial-chat-title .ui-icon { width:16px;height:16px; }
+.ai-source-tutorial-message { display:flex;align-items:center;gap:8px;min-width:0;padding:10px 12px;border-radius:var(--radius);background:var(--brand-tint);color:var(--brand-text);font-size:12px;animation:ai-source-arrive 680ms var(--ease-out) both; }
+.ai-source-tutorial-message .ui-icon { width:16px;height:16px; }
+.ai-source-tutorial-message span { overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.ai-source-tutorial-description { margin:0;line-height:20px; }
+.ai-source-tutorial-note { margin:0;color:var(--text-secondary);font-size:12px;line-height:18px; }
+@keyframes ai-source-arrive { from { opacity:0;transform:translateX(-22px) scale(.96); } to { opacity:1;transform:translateX(0) scale(1); } }
 @container (max-width:500px) {
-  .ai-source-guide-steps { grid-template-columns:minmax(0,1fr);gap:10px; }
+  .ai-source-tutorial { padding:12px; }
+  .ai-source-tutorial-scene { grid-template-columns:minmax(0,1fr) 16px minmax(0,1.2fr);gap:6px;padding:4px 0; }
+  .ai-source-tutorial-document,.ai-source-tutorial-chat { padding:8px; }
 }
+@media (pointer:coarse) { .ai-source-tutorial-modes button { min-height:44px; } }
+@media (prefers-reduced-motion:reduce) { .ai-source-tutorial-message { animation:none; } }
