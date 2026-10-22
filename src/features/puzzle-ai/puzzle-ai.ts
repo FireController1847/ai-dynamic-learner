@@ -263,11 +263,11 @@ export const PuzzleAiCreation = defineComponent({
               h('h2', 'Create ' + label.value + ' with AI'),
               h('p', 'Choose the scope for your puzzle.')]),
           ]),
-          h('div', { class: 'review-ai-scope' }, [
+          h('div', { class: 'ai-scope-choices' }, [
             h('button', { type: 'button', class: 'quiet-button', onClick: () => { scope.value = null; configured.value = false; entry.value = 'settings'; } }, [h('strong', 'Overall subject'), h('span', 'Generate terms from the full source.')]),
             h('button', { type: 'button', class: 'quiet-button', onClick: () => { entry.value = 'categories'; } }, [h('strong', 'Choose a category'), h('span', 'Discover or reuse categories for a focused puzzle.')]),
           ]),
-          h('div', { class: 'study-ai-actions', style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem' } }, [
+          h('div', { class: 'study-ai-actions ai-scope-actions' }, [
             h('button', { type: 'button', class: 'quiet-button outline-button', style: { width: 'auto', flex: '0 0 auto' }, onClick: () => { scope.value = null; configured.value = false; entry.value = 'direct'; } }, 'Import an AI response'),
             h('button', { type: 'button', class: 'quiet-button', style: { width: 'auto', flex: '0 0 auto' }, onClick: () => emit('cancel') }, 'Cancel'),
           ]),
