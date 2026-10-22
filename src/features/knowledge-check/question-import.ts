@@ -108,7 +108,7 @@ ${reviewAiPrompt({
         idPrefix: 'review-question-append', label: 'Review questions',
         prompt: prompt.value, json: json.value, problem: problem.value,
         maxLength: MAX_AI_IMPORT_LENGTH, hasPreview: candidate.value !== null,
-        promptHelp: 'Copy this prompt into the AI conversation containing your source material. It requests only new questions and asks the AI to avoid repeating questions already in your set.',
+        promptHelp: 'These instructions request additional questions and help your AI avoid repeating existing ones.',
         importHelp: 'Paste the AI response you want to add. Existing questions and settings stay unchanged.',
         onUpdateJson: (value: string) => { json.value = value; candidate.value = null; problem.value = ''; },
         onValidate: validate,

@@ -150,7 +150,7 @@ The final Study footer offers **End studying** and **Review study session**, rep
 
 ## AI creation and category discovery
 
-Keep AI generation a clear user-directed handoff: first choose scope/options, then copy the generated prompt to an external AI chat with the source material, then paste the response and preview before adding content. Do not imply Dynamic Learner sends information to AI services. Introduce one action at a time rather than simultaneously exposing prompt, import, category history, and preview.
+Keep AI generation a clear user-directed handoff: first choose scope/options, then copy the generated prompt to an external AI chat with the source material, then paste the response and preview before adding content. Do not imply Dynamic Learner sends information to AI services. Introduce one action at a time rather than simultaneously exposing prompt, import, category history, and preview. Before copying instructions, show a compact visual example of sharing notes or a supported file in the chosen AI chat, followed by sending the copied instructions in that same conversation; keep it informational, not an extra required step.
 
 The scope choices keep the established labels "Overall subject" and "Choose a category". Category discovery first offers saved lists (when available) or AI discovery. Browsing saved categories opens the category choices directly, without a JSON interchange. Creating categories with AI is a separate guided screen; success opens its category choices directly. Secondary direct-import actions bypass prompt copy. Category history remains independently clearable.
 

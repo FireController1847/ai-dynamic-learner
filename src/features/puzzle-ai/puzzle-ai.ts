@@ -305,7 +305,7 @@ export const PuzzleAiCreation = defineComponent({
             problem: problem.value,
             maxLength: MAX_AI_IMPORT_LENGTH,
             hasPreview: candidate.value !== null,
-            promptHelp: 'Use the same AI conversation and original source material. This prompt builds one puzzle only for ' + (scope.value?.category.title ?? 'the overall subject') + '. Copy it, send it to your AI, then import the response.',
+            promptHelp: 'Create one puzzle for ' + (scope.value?.category.title ?? 'the overall subject') + '.',
             importHelp: 'Paste the response from your AI chat to preview the puzzle.',
             validateLabel: 'Validate puzzle',
             onUpdateJson: (value: string) => { json.value = value; candidate.value = null; problem.value = ''; },

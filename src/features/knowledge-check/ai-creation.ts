@@ -221,8 +221,8 @@ export const ReviewAiCreation = defineComponent({
           idPrefix: 'review-ai', label: 'Review', prompt: prompt.value, json: json.value, problem: problem.value,
           maxLength: MAX_AI_IMPORT_LENGTH, hasPreview: candidate.value !== null,
           promptHelp: stage.value === 'direct' ? 'Import an existing Review knowledge set.' : scope.value
-            ? `Send this prompt in the conversation containing the matching source and categories. It creates the selected category’s knowledge set ${preferences.value.mixMode === 'ai' ? 'with AI-selected question types' : 'using your percentages'}.`
-            : `Give your AI the source material first, then send this prompt to create the overall knowledge set ${preferences.value.mixMode === 'ai' ? 'with an appropriate mix of question types' : 'using your percentages'}.`,
+            ? `Create questions for the selected category ${preferences.value.mixMode === 'ai' ? 'with AI-selected question types' : 'using your percentages'}.`
+            : `Create questions covering the overall subject ${preferences.value.mixMode === 'ai' ? 'with an appropriate mix of question types' : 'using your percentages'}.`,
           importHelp: stage.value === 'direct' ? 'Paste a previously generated Review response.' : preferences.value.mixMode === 'ai'
             ? 'Paste the AI response to preview your questions. Changes to your requested count will be noted.'
             : 'Paste the AI response to preview your questions and review any differences.',

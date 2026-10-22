@@ -89,6 +89,29 @@ export const AiPromptExchange = defineComponent({
               h('h3', { id: props.idPrefix + '-step-title' }, 'Prepare your AI instructions'),
               h('p', { class: 'ai-exchange-help' }, props.promptHelp),
             ]),
+            h('section', { class: 'ai-source-guide', 'aria-label': 'How to share study material with your AI' }, [
+              h('div', { class: 'ai-source-guide-heading' }, [
+                h(Icon, { name: 'ai' }),
+                h('strong', 'In your AI chat'),
+                h('span', 'Share the source there, not in Dynamic Learner.'),
+              ]),
+              h('ol', { class: 'ai-source-guide-steps' }, [
+                h('li', { class: 'ai-source-guide-step' }, [
+                  h('span', { class: 'ai-source-guide-number', 'aria-hidden': 'true' }, '1'),
+                  h('div', [
+                    h('strong', [h(Icon, { name: 'document' }), 'Share your study material']),
+                    h('p', 'Paste notes, or attach a PDF, slides, or photos if your AI supports files.'),
+                  ]),
+                ]),
+                h('li', { class: 'ai-source-guide-step' }, [
+                  h('span', { class: 'ai-source-guide-number', 'aria-hidden': 'true' }, '2'),
+                  h('div', [
+                    h('strong', [h(Icon, { name: 'duplicate' }), 'Send these instructions']),
+                    h('p', 'Copy the instructions below into that same AI conversation.'),
+                  ]),
+                ]),
+              ]),
+            ]),
             slots.options?.(),
             slots.guidance?.(),
             h('div', { class: 'ai-exchange-actions' }, [
@@ -108,7 +131,6 @@ export const AiPromptExchange = defineComponent({
               }) : null,
             }),
             h('div', { class: 'ai-exchange-secondary' }, [
-              h('p', 'Use the instructions in an AI chat with your source material.'),
               h('button', { type: 'button', class: 'ai-exchange-link', onClick: selectResponse }, 'Already have a response?'),
             ]),
           ] : [
@@ -118,7 +140,7 @@ export const AiPromptExchange = defineComponent({
               h('p', { class: 'ai-exchange-help' }, props.importHelp),
             ]),
             copiedNotice.value ? h('p', { class: 'ai-exchange-copied', role: 'status' }, [
-              h(Icon, { name: 'check' }), 'Instructions copied. Paste them into your AI chat, then paste its reply below.',
+              h(Icon, { name: 'check' }), 'Instructions copied. Send them in the same AI chat, then paste its reply below.',
             ]) : null,
             h('label', { class: 'ai-exchange-field-label', for: props.idPrefix + '-response' }, 'AI response'),
             h('textarea', {

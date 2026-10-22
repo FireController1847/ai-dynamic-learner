@@ -130,3 +130,31 @@
 @media(pointer:coarse) {
   .ai-scope-choices > button,.ai-scope-actions > button { min-height:44px; }
 }
+
+/* A compact two-message example, shown before copying AI instructions. */
+.ai-source-guide {
+  display:grid;gap:8px;min-width:0;
+  padding:12px;border:1px solid var(--border-color);border-radius:var(--radius-dialog);
+  background:var(--surface-subtle);
+}
+.ai-source-guide-heading { display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px; }
+.ai-source-guide-heading > .ui-icon { width:18px;height:18px;color:var(--brand-text); }
+.ai-source-guide-heading strong { font-weight:600; }
+.ai-source-guide-heading > span { color:var(--text-secondary);font-size:12px; }
+.ai-source-guide-steps {
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;
+  margin:0;padding:0;list-style:none;min-width:0;
+}
+.ai-source-guide-step { display:flex;align-items:flex-start;gap:8px;min-width:0; }
+.ai-source-guide-number {
+  display:grid;place-items:center;flex:0 0 22px;width:22px;height:22px;
+  border:1px solid var(--border-color);border-radius:50%;
+  background:var(--page-background);font-size:12px;font-weight:600;
+}
+.ai-source-guide-step > div { display:grid;gap:4px;min-width:0; }
+.ai-source-guide-step strong { display:flex;align-items:center;gap:6px;font-weight:600; }
+.ai-source-guide-step strong > .ui-icon { width:16px;height:16px;color:var(--text-secondary); }
+.ai-source-guide-step p { margin:0;color:var(--text-secondary);font-size:12px;line-height:18px; }
+@container (max-width:500px) {
+  .ai-source-guide-steps { grid-template-columns:minmax(0,1fr);gap:10px; }
+}

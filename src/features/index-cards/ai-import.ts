@@ -84,7 +84,7 @@ export const IndexCardsAiImport = defineComponent({
         idPrefix: 'index-cards-ai', label: modeLabel.value, prompt: prompt.value, startInImport: props.direct, importOnly: props.direct,
         json: json.value, problem: problem.value, maxLength: MAX_AI_IMPORT_LENGTH,
         hasPreview: candidate.value !== null,
-        promptHelp: props.scope ? 'Send this second prompt in the AI conversation containing the matching source and category list.' : 'Send the prompt with your source material to create overall-subject cards.',
+        promptHelp: props.scope ? 'Create cards for your selected category.' : 'Create cards covering the overall subject.',
         importHelp: 'Paste the response from your AI chat to preview the cards.',
         onUpdateJson: (value: string) => { json.value = value; candidate.value = null; problem.value = ''; },
         onValidate: preview,

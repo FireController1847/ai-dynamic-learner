@@ -595,7 +595,7 @@ export const GuideAiImportWorkspace = defineComponent({
       h(AiPromptExchange, {
         idPrefix: 'guide-ai', label: 'Guide', prompt: prompt.value, json: json.value, problem: problem.value, startInImport: props.direct, importOnly: props.direct,
         hasPreview: candidate.value !== null,
-        promptHelp: 'Give the AI the source material first, then send this prompt to create your guide.',
+        promptHelp: 'These instructions will turn your source material into a Guide.',
         importHelp: 'Paste your AI response to check and preview the Guide.',
         onUpdateJson: (value: string) => { json.value = value; candidate.value = null; problem.value = ''; },
         onValidate: preview,
