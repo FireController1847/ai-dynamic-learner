@@ -81,7 +81,7 @@ export const IndexCardsAiImport = defineComponent({
         ]),
       ]),
       h(AiPromptExchange, {
-        idPrefix: 'index-cards-ai', label: modeLabel.value, prompt: prompt.value, startInImport: props.direct, importOnly: props.direct,
+        idPrefix: 'index-cards-ai', label: modeLabel.value, prompt: prompt.value, startInImport: props.direct, importOnly: props.direct, skipSource: Boolean(props.scope),
         json: json.value, problem: problem.value, maxLength: MAX_AI_IMPORT_LENGTH,
         hasPreview: candidate.value !== null,
         promptHelp: props.scope ? 'Create cards for your selected category.' : 'Create cards covering the overall subject.',

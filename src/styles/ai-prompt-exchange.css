@@ -161,3 +161,6 @@
 }
 @media (pointer:coarse) { .ai-source-tutorial-modes button { min-height:44px; } }
 @media (prefers-reduced-motion:reduce) { .ai-source-tutorial-message { animation:none; } }
+
+/* Source illustration is shared by overall-topic and category creation. */
+.ai-source-intro { display:grid;gap:12px;min-width:0; }

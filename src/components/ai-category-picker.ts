@@ -1,12 +1,13 @@
 import { defineComponent, h, nextTick, onMounted, ref, watch, type PropType } from 'vue';
 import { AiPromptExchange } from './ai-prompt-exchange.ts';
+import { AiSourceIntro } from './ai-source-intro.ts';
 import { PopupDialog } from './popup-dialog.ts';
 import { Icon } from './icon.ts';
 import { studyCategoriesPrompt, parseStudyCategories, type AiCardCategories, type AiCardScope } from '../core/ai-study-categories.ts';
 import { readCategoryHistory, rememberCategories, writeCategoryHistory, type CategoryHistoryEntry } from '../core/ai-category-history.ts';
 import { MAX_AI_IMPORT_LENGTH } from '../core/ai-json.ts';
 
-type CategoryStage = 'start' | 'saved' | 'generate' | 'choose';
+type CategoryStage = 'source' | 'start' | 'saved' | 'generate' | 'choose';
 
 export const AiCategoryPicker = defineComponent({
   name: 'AiCategoryPicker',
@@ -20,7 +21,7 @@ export const AiCategoryPicker = defineComponent({
   setup(props, { emit }) {
     const history = ref(readCategoryHistory());
     const categories = ref<AiCardCategories | null>(props.initialCategories);
-    const stage = ref<CategoryStage>(props.initialCategories ? 'choose' : 'start');
+    const stage = ref<CategoryStage>(props.initialCategories ? 'choose' : 'source');
     const chosenFrom = ref<'saved' | 'generate' | 'start'>('start');
     const importExisting = ref(false);
     const json = ref('');
@@ -42,7 +43,8 @@ export const AiCategoryPicker = defineComponent({
       storageMessage.value = writeCategoryHistory(history.value) ? '' : 'Category history could not be saved in this browser.';
     }
     function goBack() {
-      if (stage.value === 'start') emit('back');
+      if (stage.value === 'source') emit('back');
+      else if (stage.value === 'start') stage.value = props.initialCategories ? 'choose' : 'source';
       else if (stage.value === 'choose') stage.value = chosenFrom.value;
       else stage.value = 'start';
     }
@@ -95,6 +97,9 @@ export const AiCategoryPicker = defineComponent({
       ]);
 
     function body() {
+      if (stage.value === 'source') return [
+        h(AiSourceIntro, { continueLabel: 'Continue to categories', onNext: () => { stage.value = 'start'; } }),
+      ];
       if (stage.value === 'start') return [
         h('div', { class: 'ai-category-options' }, [
           history.value.length ? option('Use saved categories', 'Choose from category lists you have used before.', () => { stage.value = 'saved'; }, 'folder') : null,
@@ -129,7 +134,7 @@ export const AiCategoryPicker = defineComponent({
           prompt, promptHelp: 'Have your AI find the main categories in your source material.',
           importHelp: 'Paste the category list from your AI chat.',
           json: json.value, problem: problem.value, maxLength: MAX_AI_IMPORT_LENGTH,
-          startInImport: importExisting.value, importOnly: importExisting.value,
+          startInImport: importExisting.value, importOnly: importExisting.value, skipSource: true,
           validateLabel: 'Check categories',
           onUpdateJson: (value: string) => { json.value = value; problem.value = ''; },
           onValidate: checkResponse,
@@ -149,17 +154,19 @@ export const AiCategoryPicker = defineComponent({
     }
 
     function title() {
+      if (stage.value === 'source') return 'Share your study material';
       if (stage.value === 'start') return 'Choose a category';
       if (stage.value === 'saved') return 'Saved categories';
       if (stage.value === 'generate') return importExisting.value ? 'Import categories' : 'Find categories with AI';
       return categories.value?.title ?? 'Choose a category';
     }
     function subtitle() {
+      if (stage.value === 'source') return 'Give the AI your notes first. Choose or create categories afterward.';
       if (stage.value === 'start') return history.value.length ? 'Use saved categories or find new ones with AI.' : 'Find categories in your study material with AI.';
       if (stage.value === 'saved') return 'Choose a category list to browse.';
       if (stage.value === 'generate') return importExisting.value
         ? 'Bring in a category list you already have.'
-        : 'Ask an AI to organize your material, then pick a category.';
+        : 'Use the same AI conversation to organize the material you already shared.';
       return 'Choose a category to create your study set.';
     }
 
@@ -176,6 +183,11 @@ export const AiCategoryPicker = defineComponent({
             h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel') }, 'Cancel'),
           ]),
         ]),
+        (stage.value === 'source' || stage.value === 'start' || stage.value === 'saved' || stage.value === 'choose') ? h('div', { class: 'ai-exchange-progress', 'aria-label': 'Category creation progress' }, [
+          h('span', { class: stage.value === 'source' ? 'is-active' : 'is-complete', 'aria-current': stage.value === 'source' ? 'step' : undefined }, '1 · Source'),
+          h(Icon, { name: 'chevron' }),
+          h('span', { class: stage.value !== 'source' ? 'is-active' : '', 'aria-current': stage.value !== 'source' ? 'step' : undefined }, '2 · Categories'),
+        ]) : null,
         storageMessage.value ? h('p', { class: 'study-ai-muted', role: 'status' }, storageMessage.value) : null,
         body(),
       ]),

@@ -121,7 +121,7 @@ export const PuzzleAiCreation = defineComponent({
           ]),
           h('div', { class: 'study-ai-actions' }, [
             h('button', { type: 'button', class: 'quiet-button', onClick: () => {
-              backward.value = true; scope.value = null; configured.value = false; entry.value = 'scope';
+              backward.value = true; configured.value = false; entry.value = scope.value ? 'categories' : 'scope';
             } }, 'Back to categories'),
             h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel') }, 'Cancel'),
           ]),
@@ -305,6 +305,7 @@ export const PuzzleAiCreation = defineComponent({
             problem: problem.value,
             maxLength: MAX_AI_IMPORT_LENGTH,
             hasPreview: candidate.value !== null,
+            skipSource: Boolean(scope.value),
             promptHelp: 'Create one puzzle for ' + (scope.value?.category.title ?? 'the overall subject') + '.',
             importHelp: 'Paste the response from your AI chat to preview the puzzle.',
             validateLabel: 'Validate puzzle',
