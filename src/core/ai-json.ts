@@ -5,5 +5,5 @@ export function parseAiImportJson(text: string): unknown {
   const trimmed = text.trim();
   const fence = /^```(?:json)?\s*([\s\S]*?)\s*```$/i.exec(trimmed);
   try { return JSON.parse(fence?.[1] ?? trimmed) as unknown; }
-  catch { throw new Error('Paste one valid JSON object or JSON code block, without surrounding commentary.'); }
+  catch { throw new Error('This response could not be read. Ask your AI for the requested structured response, without additional commentary.'); }
 }

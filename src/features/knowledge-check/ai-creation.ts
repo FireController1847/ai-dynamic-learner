@@ -103,7 +103,7 @@ export const ReviewAiCreation = defineComponent({
           h('div', [h('p', { class: 'study-ai-muted' }, `Review · Saved in ${props.destination}`),
             h('h2', { ref: heading, tabindex: -1 }, stage.value === 'scope' ? 'Create a knowledge set with AI' : stage.value === 'configure' ? 'Choose your question mix' : scope.value?.category.title ?? 'Overall subject'),
             h('p', stage.value === 'scope'
-              ? 'Choose the scope, then decide whether to set question percentages or let AI choose the most suitable types.'
+              ? 'Choose how much of the material your questions should cover.'
               : scope.value?.category.description ?? 'Cover the overall subject using your chosen question-type strategy.'),
           ]),
           h('div', { class: 'study-ai-actions' }, [
@@ -111,12 +111,12 @@ export const ReviewAiCreation = defineComponent({
             stage.value !== 'scope' ? h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel') }, 'Cancel') : null,
           ]),
         ]),
-        stage.value === 'scope' ? [h('div', { class: 'review-ai-scope' }, [
+        stage.value === 'scope' ? [h('div', { class: 'ai-scope-choices' }, [
           h('button', { type: 'button', class: 'quiet-button', onClick: () => { scope.value = null; go('configure'); } }, [h('strong', 'Overall subject'), h('span', 'Generate questions across the entire source.')]),
           h('button', { type: 'button', class: 'quiet-button', onClick: () => go('categories') }, [h('strong', 'Choose a category'), h('span', 'Discover or reuse categories, then focus on one.')]),
         ]),
-          h('div', { class: 'study-ai-actions', style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem' } }, [
-            h('button', { type: 'button', class: 'quiet-button outline-button', style: { width: 'auto', flex: '0 0 auto' }, onClick: () => { scope.value = null; go('direct'); } }, 'Import existing JSON'),
+          h('div', { class: 'study-ai-actions ai-scope-actions' }, [
+            h('button', { type: 'button', class: 'quiet-button outline-button', style: { width: 'auto', flex: '0 0 auto' }, onClick: () => { scope.value = null; go('direct'); } }, 'Import an AI response'),
             h('button', { type: 'button', class: 'quiet-button', style: { width: 'auto', flex: '0 0 auto' }, onClick: () => emit('cancel') }, 'Cancel'),
           ]),
         ] : stage.value === 'configure' ? [
@@ -202,7 +202,7 @@ export const ReviewAiCreation = defineComponent({
           h('div', { class: 'study-ai-actions' }, preferences.value.mixMode === 'ai' ? [
             h('button', { type: 'button', class: 'card-primary-button',
               disabled: Boolean(mixProblem.value), onClick: () => { if (!mixProblem.value) go('generate'); },
-            }, 'Generate prompt'),
+            }, 'Continue to AI'),
           ] : editingMix.value ? [
             h('button', { type: 'button', class: 'quiet-button', onClick: () => { editingMix.value = false; } }, 'Cancel mix edits'),
             h('button', { type: 'button', class: 'card-primary-button', disabled: !normalizedMix.value,
@@ -214,19 +214,18 @@ export const ReviewAiCreation = defineComponent({
             h('button', { type: 'button', class: 'card-primary-button', disabled: Boolean(mixProblem.value), onClick: () => {
               if (editingWeight.value) commitWeight(editingWeight.value);
               if (!mixProblem.value) go('generate');
-            } }, 'Generate prompt'),
+            } }, 'Continue to AI'),
           ]),
         ] : h(AiPromptExchange, {
-          startInImport: stage.value === 'direct',
+          startInImport: stage.value === 'direct', importOnly: stage.value === 'direct',
           idPrefix: 'review-ai', label: 'Review', prompt: prompt.value, json: json.value, problem: problem.value,
           maxLength: MAX_AI_IMPORT_LENGTH, hasPreview: candidate.value !== null,
           promptHelp: stage.value === 'direct' ? 'Import an existing Review knowledge set.' : scope.value
             ? `Send this prompt in the conversation containing the matching source and categories. It creates the selected category’s knowledge set ${preferences.value.mixMode === 'ai' ? 'with AI-selected question types' : 'using your percentages'}.`
             : `Give your AI the source material first, then send this prompt to create the overall knowledge set ${preferences.value.mixMode === 'ai' ? 'with an appropriate mix of question types' : 'using your percentages'}.`,
-          importHelp: stage.value === 'direct' ? 'Paste an existing overall or category-based Review JSON to validate and import.' : preferences.value.mixMode === 'ai'
-            ? 'Paste the AI-generated JSON here. Each question is validated, and a different total count produces a warning. Any valid question-type mix is allowed.'
-            : 'Paste the AI-generated JSON here. Questions are validated; differences from your requested count or mix produce warnings.',
-          readyInstructions: ['Paste the Review JSON below.', 'Choose Validate JSON.', 'Review the questions, then create the knowledge set.'],
+          importHelp: stage.value === 'direct' ? 'Paste a previously generated Review response.' : preferences.value.mixMode === 'ai'
+            ? 'Paste the AI response to preview your questions. Changes to your requested count will be noted.'
+            : 'Paste the AI response to preview your questions and review any differences.',
           onUpdateJson: (value: string) => { json.value = value; candidate.value = null; problem.value = ''; }, onValidate: validate,
         }, { preview: () => candidate.value ? h('div', { class: 'study-ai-preview' }, [
           h('h3', candidate.value.title), h('p', candidate.value.description),
@@ -234,7 +233,7 @@ export const ReviewAiCreation = defineComponent({
             ? 'Valid questions with import warnings'
             : preferences.value.mixMode === 'ai' ? 'AI-selected question mix' : 'Requested question mix matched'}`),
           candidate.value.warnings.length ? h('section', { class: 'review-ai-import-warning', role: 'status', 'aria-label': 'Import warnings' }, [
-            h('strong', 'This JSON differs from the request'),
+            h('strong', 'This response differs from your request'),
             h('ul', candidate.value.warnings.map(warning => h('li', warning))),
             h('p', 'You can still create the knowledge set with all of these questions.'),
           ]) : null,

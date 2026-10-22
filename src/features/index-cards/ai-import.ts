@@ -71,7 +71,7 @@ export const IndexCardsAiImport = defineComponent({
       h('header', { class: 'flash-ai-header' }, [
         h('div', [
           h('p', { class: 'flash-ai-muted' }, `${modeLabel.value} · Saved in ${props.destination}`),
-          h('h2', { id: 'flash-ai-title', ref: heading, tabindex: -1 }, props.scope?.category.title ?? (props.direct ? 'Import existing JSON' : 'Overall subject')),
+          h('h2', { id: 'flash-ai-title', ref: heading, tabindex: -1 }, props.scope?.category.title ?? (props.direct ? 'Import an AI response' : 'Overall subject')),
           h('p', props.direct ? 'Import an existing set of cards.' : 'Create cards for your selected scope.'),
           h('p', { class: 'flash-ai-muted' }, props.scope?.category.description ?? ''),
         ]),
@@ -81,12 +81,11 @@ export const IndexCardsAiImport = defineComponent({
         ]),
       ]),
       h(AiPromptExchange, {
-        idPrefix: 'index-cards-ai', label: modeLabel.value, prompt: prompt.value, startInImport: props.direct,
+        idPrefix: 'index-cards-ai', label: modeLabel.value, prompt: prompt.value, startInImport: props.direct, importOnly: props.direct,
         json: json.value, problem: problem.value, maxLength: MAX_AI_IMPORT_LENGTH,
         hasPreview: candidate.value !== null,
         promptHelp: props.scope ? 'Send this second prompt in the AI conversation containing the matching source and category list.' : 'Send the prompt with your source material to create overall-subject cards.',
-        importHelp: 'Wait for the card response in that conversation, then paste its JSON here for validation and preview.',
-        readyInstructions: ['Paste the card JSON below.', 'Choose Validate JSON.', 'Review the cards, then import the set.'],
+        importHelp: 'Paste the response from your AI chat to preview the cards.',
         onUpdateJson: (value: string) => { json.value = value; candidate.value = null; problem.value = ''; },
         onValidate: preview,
       }, {

@@ -147,3 +147,11 @@ Review feedback should appear at its natural width and text scale, without trans
 ## Study session review screen
 
 The final Study footer offers **End studying** and **Review study session**, replacing the direct Keep studying restart. Review study session opens a separate read-only recap of check accuracy, total/correct/incorrect checks, unique questions practiced, hints open and answers revealed, plus individual questions with last-checked result and check count. These are practice metrics, not a graded test score. A learner can return to questions (preserving the current round), end studying, or choose Keep studying to start a newly seeded round and clear only per-round responses and check counts. End studying is available on both screens. Completion statistics are credited when opening the review and not duplicated on navigation. The layout adapts to narrow Review workspaces and respects reduced motion.
+
+## AI creation and category discovery
+
+Keep AI generation a clear user-directed handoff: first choose scope/options, then copy the generated prompt to an external AI chat with the source material, then paste the response and preview before adding content. Do not imply Dynamic Learner sends information to AI services. Introduce one action at a time rather than simultaneously exposing prompt, import, category history, and preview.
+
+The scope choices keep the established labels "Overall subject" and "Choose a category". Category discovery first offers saved lists (when available) or AI discovery. Browsing saved categories opens the category choices directly, without a JSON interchange. Creating categories with AI is a separate guided screen; success opens its category choices directly. Secondary direct-import actions bypass prompt copy. Category history remains independently clearable.
+
+JSON stays the validated internal interchange format but should not be required vocabulary for primary creation actions. Keep technical help secondary and expandable. Preserve existing content validators and preview approvals, and support keyboard focus, accessible labels, mobile, light/dark, and reduced motion.
