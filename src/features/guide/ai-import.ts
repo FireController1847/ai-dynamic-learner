@@ -367,7 +367,7 @@ function parsedJson(text: string): unknown {
   try {
     return JSON.parse(stripAiCitationArtifacts(stripJsonCodeFence(text)));
   } catch {
-    throw new Error('The pasted content is not valid JSON.');
+    throw new Error('The response is not in the expected format. Ask the AI to send just the requested structured data.');
   }
 }
 
@@ -583,9 +583,9 @@ export const GuideAiImportWorkspace = defineComponent({
     return () => h('section', { class: 'guide-ai-workspace', 'aria-labelledby': 'guide-ai-title' }, [
       h('header', { class: 'guide-ai-header' }, [
         h('div', { class: 'guide-ai-heading' }, [
-          h('span', { class: 'guide-ai-kicker' }, `${props.direct ? 'Existing JSON' : props.mode === 'map' ? 'Map mode' : 'List mode'} · Saved in ${props.destination}`),
+          h('span', { class: 'guide-ai-kicker' }, `${props.direct ? 'Existing AI response' : props.mode === 'map' ? 'Map mode' : 'List mode'} · Saved in ${props.destination}`),
           h('h2', { id: 'guide-ai-title' }, 'Create with AI'),
-          h('p', props.direct ? 'Import an existing List or Map Guide JSON without generating a prompt.' : 'Generate a prompt for your AI, then paste its JSON response back here to create the guide.'),
+          h('p', props.direct ? 'Paste an existing AI response to create a Guide.' : 'Prepare a Guide from your source material with AI.'),
         ]),
         h('div', { class: 'guide-ai-actions' }, [
           h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('back') }, 'Back'),
@@ -593,11 +593,10 @@ export const GuideAiImportWorkspace = defineComponent({
         ]),
       ]),
       h(AiPromptExchange, {
-        idPrefix: 'guide-ai', label: 'Guide', prompt: prompt.value, json: json.value, problem: problem.value, startInImport: props.direct,
+        idPrefix: 'guide-ai', label: 'Guide', prompt: prompt.value, json: json.value, problem: problem.value, startInImport: props.direct, importOnly: props.direct,
         hasPreview: candidate.value !== null,
         promptHelp: 'Give the AI the source material first, then send this prompt to create your guide.',
-        importHelp: 'Wait for the AI response, then paste its JSON here. Dynamic Learner validates the content before creating the guide.',
-        readyInstructions: ['Paste the Guide JSON below.', 'Choose Validate JSON.', 'Review the preview, then choose Import guide.'],
+        importHelp: 'Paste your AI response to check and preview the Guide.',
         onUpdateJson: (value: string) => { json.value = value; candidate.value = null; problem.value = ''; },
         onValidate: preview,
       }, {

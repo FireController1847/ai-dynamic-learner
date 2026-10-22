@@ -103,18 +103,13 @@ ${reviewAiPrompt({
         }),
       ]),
       h('p', { class: 'knowledge-muted' },
-        'Use the AI Prompt to request additional questions, or open JSON Import to paste a previous Review response or an array of questions. Every imported question is checked before it can be added.'),
+        'Add more questions from an AI response without replacing your existing ones.'),
       h(AiPromptExchange, {
         idPrefix: 'review-question-append', label: 'Review questions',
         prompt: prompt.value, json: json.value, problem: problem.value,
         maxLength: MAX_AI_IMPORT_LENGTH, hasPreview: candidate.value !== null,
         promptHelp: 'Copy this prompt into the AI conversation containing your source material. It requests only new questions and asks the AI to avoid repeating questions already in your set.',
-        importHelp: 'Paste Review AI JSON or a JSON array of questions. Existing questions, set name, and options will not be replaced.',
-        readyInstructions: [
-          'Paste the response JSON below.',
-          'Choose Validate JSON and inspect the preview.',
-          'Choose Add questions, then Save questions in the builder to keep the changes.',
-        ],
+        importHelp: 'Paste the AI response you want to add. Existing questions and settings stay unchanged.',
         onUpdateJson: (value: string) => { json.value = value; candidate.value = null; problem.value = ''; },
         onValidate: validate,
       }, {

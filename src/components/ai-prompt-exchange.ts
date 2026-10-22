@@ -1,4 +1,4 @@
-import { defineComponent, h, nextTick, onBeforeUnmount, ref, Transition, type PropType } from 'vue';
+import { defineComponent, h, nextTick, onBeforeUnmount, ref, Transition } from 'vue';
 import { inputValue } from '../core/dom.ts';
 import { Icon } from './icon.ts';
 
@@ -17,9 +17,6 @@ export const AiPromptExchange = defineComponent({
     problem: { type: String, default: '' },
     maxLength: { type: Number, default: undefined },
     validateLabel: { type: String, default: 'Check response' },
-    // Retained for callers during the shared workflow migration; directions
-    // are now conveyed through the interaction rather than a numbered wall of text.
-    readyInstructions: { type: Array as PropType<string[]>, default: () => [] },
     hasPreview: Boolean,
     startInImport: Boolean,
     importOnly: Boolean,
