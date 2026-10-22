@@ -4,6 +4,7 @@ import { Icon } from './icon.ts';
 
 export interface AiPromptExchangeHandle { showImport(): void }
 
+/** Manual AI handoff. The feature supplies its own prompt, validator and preview. */
 export const AiPromptExchange = defineComponent({
   name: 'AiPromptExchange',
   props: {
@@ -15,136 +16,143 @@ export const AiPromptExchange = defineComponent({
     json: { type: String, default: '' },
     problem: { type: String, default: '' },
     maxLength: { type: Number, default: undefined },
-    validateLabel: { type: String, default: 'Validate JSON' },
-    readyInstructions: { type: Array as PropType<string[]>, required: true },
+    validateLabel: { type: String, default: 'Check response' },
+    // Retained for callers during the shared workflow migration; directions
+    // are now conveyed through the interaction rather than a numbered wall of text.
+    readyInstructions: { type: Array as PropType<string[]>, default: () => [] },
     hasPreview: Boolean,
     startInImport: Boolean,
+    importOnly: Boolean,
   },
   emits: { 'update-json': (_value: string) => true, validate: () => true },
   setup(props, { emit, slots, expose }) {
-    const tab = ref<'prompt' | 'import'>(props.startInImport ? 'import' : 'prompt');
-    const backward = ref(false);
+    const stage = ref<'instructions' | 'response'>(props.startInImport || props.importOnly ? 'response' : 'instructions');
     const shown = ref(false);
     const copied = ref(false);
-    const status = ref('');
-    const handoff = ref<'idle' | 'waiting' | 'ready'>(props.startInImport ? 'ready' : 'idle');
+    const copiedNotice = ref(false);
+    const errorMessage = ref('');
     const input = ref<HTMLTextAreaElement | null>(null);
+    const promptText = ref<HTMLTextAreaElement | null>(null);
     const preview = ref<HTMLElement | null>(null);
-    const ready = ref<HTMLButtonElement | null>(null);
-    const promptTab = ref<HTMLButtonElement | null>(null);
-    const importTab = ref<HTMLButtonElement | null>(null);
-    let timer: number | null = null;
     let disposed = false;
-    let focusAfterEnter = false;
-    function clearTimer() { if (timer !== null) window.clearTimeout(timer); timer = null; }
-    onBeforeUnmount(() => { disposed = true; clearTimer(); });
-    function select(value: 'prompt' | 'import', keyboard = false) {
-      clearTimer();
-      copied.value = false;
-      backward.value = value === 'prompt';
-      tab.value = value;
-      if (keyboard) nextTick(() => (value === 'prompt' ? promptTab : importTab).value?.focus());
+    let focusResponse = false;
+    onBeforeUnmount(() => { disposed = true; });
+
+    function selectResponse() {
+      copiedNotice.value = false;
+      focusResponse = true;
+      stage.value = 'response';
+      if (stage.value === 'response') nextTick(() => input.value?.focus({ preventScroll: true }));
     }
-    expose({ showImport() {
-      handoff.value = 'ready';
-      focusAfterEnter = true;
-      if (tab.value === 'import') nextTick(() => (props.hasPreview ? preview.value : input.value)?.focus());
-      else select('import');
-    } });
+    function selectInstructions() {
+      if (props.importOnly) return;
+      stage.value = 'instructions';
+      copiedNotice.value = false;
+      errorMessage.value = '';
+    }
+
+    expose({ showImport: selectResponse });
+
     async function copy() {
-      clearTimer();
+      errorMessage.value = '';
       try {
         await navigator.clipboard.writeText(props.prompt);
         if (disposed) return;
         copied.value = true;
-        status.value = 'Prompt copied.';
-        handoff.value = 'waiting';
-        timer = window.setTimeout(() => {
-          timer = null;
-          status.value = '';
-          backward.value = false;
-          focusAfterEnter = true;
-          tab.value = 'import';
-        }, 650);
+        copiedNotice.value = true;
+        focusResponse = true;
+        stage.value = 'response';
       } catch {
         if (disposed) return;
         copied.value = false;
         shown.value = true;
-        status.value = 'Copy failed. The prompt is shown below so you can copy it manually.';
+        errorMessage.value = 'Copying was blocked. Select and copy the instructions shown below instead.';
+        await nextTick();
+        promptText.value?.focus();
+        promptText.value?.select();
       }
     }
-    function afterEnter() {
-      if (!focusAfterEnter || tab.value !== 'import') return;
-      focusAfterEnter = false;
-      copied.value = false;
-      (handoff.value === 'waiting' ? ready.value : props.hasPreview ? preview.value : input.value)?.focus({ preventScroll: !props.hasPreview });
-    }
-    async function responseReady() {
-      handoff.value = 'ready';
-      await nextTick();
+
+    function afterStepEnter() {
+      if (!focusResponse || stage.value !== 'response') return;
+      focusResponse = false;
       input.value?.focus({ preventScroll: true });
-      const panel = input.value?.closest<HTMLElement>('.ai-exchange-panel');
-      const container = panel?.closest<HTMLElement>('[data-ai-scroll-region]');
-      if (!panel || !container) return;
-      const offset = panel.getBoundingClientRect().top - container.getBoundingClientRect().top - 24;
-      container.scrollTo({
-        top: Math.max(0, Math.min(container.scrollHeight - container.clientHeight, container.scrollTop + offset)),
-        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
-      });
     }
-    const button = (id: 'prompt' | 'import', label: string) => h('button', {
-      ref: id === 'prompt' ? promptTab : importTab, id: `${props.idPrefix}-tab-${id}`,
-      type: 'button', class: 'quiet-button', role: 'tab',
-      'aria-selected': tab.value === id, 'aria-controls': `${props.idPrefix}-panel`, tabindex: tab.value === id ? 0 : -1,
-      onClick: () => select(id),
-      onKeydown: (event: KeyboardEvent) => {
-        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
-        event.preventDefault();
-        select(event.key === 'Home' ? 'prompt' : event.key === 'End' ? 'import' : tab.value === 'prompt' ? 'import' : 'prompt', true);
-      },
-    }, label);
+
     return () => h('div', { class: 'ai-exchange' }, [
-      h('div', { class: 'ai-exchange-tabs', role: 'tablist', 'aria-label': `${props.label} import method` }, [button('prompt', 'AI Prompt'), button('import', 'JSON Import')]),
-      h('div', { class: ['ai-exchange-frame', { 'is-backward': backward.value }] }, [
-        h(Transition, { name: 'ai-exchange-panel', mode: 'out-in', onAfterEnter: afterEnter }, {
+      props.importOnly ? null : h('div', { class: 'ai-exchange-progress', 'aria-label': 'AI creation progress' }, [
+        h('span', { class: stage.value === 'instructions' ? 'is-active' : 'is-complete', 'aria-current': stage.value === 'instructions' ? 'step' : undefined }, '1 · Prepare'),
+        h(Icon, { name: 'chevron-right' }),
+        h('span', { class: stage.value === 'response' ? 'is-active' : '', 'aria-current': stage.value === 'response' ? 'step' : undefined }, '2 · Import'),
+      ]),
+      h('div', { class: 'ai-exchange-frame' }, [
+        h(Transition, { name: 'ai-exchange-panel', mode: 'out-in', onAfterEnter: afterStepEnter }, {
           default: () => h('section', {
-            key: tab.value, id: `${props.idPrefix}-panel`, class: 'ai-exchange-panel', role: 'tabpanel',
-            'aria-labelledby': `${props.idPrefix}-tab-${tab.value}`,
-          }, tab.value === 'prompt' ? [
-            h('p', { class: 'ai-exchange-help' }, props.promptHelp), slots.options?.(), slots.guidance?.(),
-            h('div', { class: 'ai-exchange-actions' }, [
-              h('button', { type: 'button', class: ['card-primary-button ai-exchange-copy', { 'is-copied': copied.value }], onClick: copy }, copied.value ? '✓ Copied!' : 'Copy prompt'),
-              h('button', {
-                type: 'button', class: 'quiet-button', 'aria-expanded': shown.value,
-                'aria-controls': `${props.idPrefix}-prompt`, 'aria-label': shown.value ? 'Hide generated prompt' : 'Show generated prompt',
-                onClick: () => { shown.value = !shown.value; },
-              }, [h(Icon, { name: shown.value ? 'chevron-up' : 'chevron-down' })]),
-              h('span', { role: 'status', class: 'ai-exchange-muted' }, status.value),
+            key: stage.value, class: 'ai-exchange-panel',
+            'aria-labelledby': props.idPrefix + '-step-title',
+          }, stage.value === 'instructions' && !props.importOnly ? [
+            h('div', { class: 'ai-exchange-step-heading' }, [
+              h('h3', { id: props.idPrefix + '-step-title' }, 'Prepare your AI instructions'),
+              h('p', { class: 'ai-exchange-help' }, props.promptHelp),
             ]),
-            h(Transition, { name: 'ai-exchange-reveal' }, { default: () => shown.value ? h('textarea', {
-              id: `${props.idPrefix}-prompt`, readonly: true, value: props.prompt, rows: 16, 'aria-label': `${props.label} AI prompt`,
-            }) : null }),
-          ] : [
-            handoff.value === 'waiting' ? h('div', { class: 'ai-exchange-handoff', role: 'status' }, [
-              h('strong', 'Prompt copied — send it to your AI.'), h('p', props.importHelp),
-              h('button', { ref: ready, type: 'button', class: 'card-primary-button', onClick: responseReady }, 'My AI response is ready'),
-            ]) : [
-              handoff.value === 'ready' ? h('div', { class: 'ai-exchange-handoff' }, [
-                h('strong', 'Bring the JSON back here.'), h('ol', props.readyInstructions.map(step => h('li', step))),
-              ]) : h('p', { class: 'ai-exchange-help' }, props.importHelp),
-              h('textarea', {
-                ref: input, value: props.json, rows: 12, maxlength: props.maxLength,
-                placeholder: `Paste your ${props.label} JSON here`, 'aria-label': `${props.label} JSON import`,
-                onInput: (event: Event) => emit('update-json', inputValue(event)),
-              }),
-              h('div', { class: 'ai-exchange-actions' }, [
-                h('button', { type: 'button', class: 'quiet-button', disabled: !props.json.trim(), onClick: () => emit('validate') }, props.validateLabel),
-                props.problem ? h('span', { role: 'alert', class: 'ai-exchange-error' }, props.problem) : null,
+            slots.options?.(),
+            slots.guidance?.(),
+            h('div', { class: 'ai-exchange-actions' }, [
+              h('button', { type: 'button', class: 'card-primary-button ai-exchange-copy', onClick: copy }, [
+                h(Icon, { name: 'copy' }), 'Copy instructions',
               ]),
-              h(Transition, { name: 'ai-exchange-reveal', onAfterEnter: () => preview.value?.focus() }, {
-                default: () => props.hasPreview ? h('div', { ref: preview, class: 'ai-exchange-preview', tabindex: -1, 'aria-label': `${props.label} preview` }, slots.preview?.()) : null,
-              }),
-            ],
+              h('button', { type: 'button', class: 'quiet-button',
+                'aria-expanded': shown.value, 'aria-controls': props.idPrefix + '-prompt',
+                onClick: () => { shown.value = !shown.value; },
+              }, [h(Icon, { name: shown.value ? 'chevron-up' : 'chevron-down' }), shown.value ? 'Hide instructions' : 'View instructions']),
+            ]),
+            errorMessage.value ? h('p', { class: 'ai-exchange-error', role: 'alert' }, errorMessage.value) : null,
+            h(Transition, { name: 'ai-exchange-reveal' }, {
+              default: () => shown.value ? h('textarea', {
+                ref: promptText, id: props.idPrefix + '-prompt', readonly: true,
+                value: props.prompt, rows: 10, 'aria-label': props.label + ' AI instructions',
+              }) : null,
+            }),
+            h('div', { class: 'ai-exchange-secondary' }, [
+              h('p', 'Use the instructions in an AI chat with your source material.'),
+              h('button', { type: 'button', class: 'ai-exchange-link', onClick: selectResponse }, 'Already have a response?'),
+            ]),
+          ] : [
+            h('div', { class: 'ai-exchange-step-heading' }, [
+              h('h3', { id: props.idPrefix + '-step-title' },
+                props.hasPreview ? 'Review the result' : 'Bring your AI response back'),
+              h('p', { class: 'ai-exchange-help' }, props.importHelp),
+            ]),
+            copiedNotice.value ? h('p', { class: 'ai-exchange-copied', role: 'status' }, [
+              h(Icon, { name: 'check' }), 'Instructions copied. Paste them into your AI chat, then paste its reply below.',
+            ]) : null,
+            h('label', { class: 'ai-exchange-field-label', for: props.idPrefix + '-response' }, 'AI response'),
+            h('textarea', {
+              ref: input, id: props.idPrefix + '-response', value: props.json,
+              rows: 9, maxlength: props.maxLength,
+              placeholder: 'Paste the AI reply here',
+              'aria-invalid': props.problem ? 'true' : undefined,
+              'aria-describedby': props.problem ? props.idPrefix + '-error' : undefined,
+              onInput: (event: Event) => { copiedNotice.value = false; emit('update-json', inputValue(event)); },
+            }),
+            props.problem ? h('p', { id: props.idPrefix + '-error', role: 'alert', class: 'ai-exchange-error' }, [
+              h('strong', 'That response could not be used. '), props.problem,
+            ]) : null,
+            h('div', { class: 'ai-exchange-actions' }, [
+              h('button', { type: 'button', class: 'card-primary-button', disabled: !props.json.trim(), onClick: () => emit('validate') },
+                props.validateLabel),
+              !props.importOnly ? h('button', { type: 'button', class: 'quiet-button', onClick: selectInstructions }, 'Back to instructions') : null,
+            ]),
+            h('details', { class: 'ai-exchange-format-help' }, [
+              h('summary', 'Having trouble with the response?'),
+              h('p', 'Ask your AI to return only the requested response format, without extra explanation. Dynamic Learner reads structured data (JSON) behind the scenes; you only need to copy and paste it.'),
+            ]),
+            h(Transition, { name: 'ai-exchange-reveal', onAfterEnter: () => preview.value?.focus({ preventScroll: false }) }, {
+              default: () => props.hasPreview ? h('div', {
+                ref: preview, class: 'ai-exchange-preview', role: 'region',
+                'aria-label': props.label + ' preview', tabindex: -1,
+              }, slots.preview?.()) : null,
+            }),
           ]),
         }),
       ]),
