@@ -105,7 +105,7 @@ export const AiCategoryPicker = defineComponent({
       ];
       if (stage.value === 'start') return [
         h('div', { class: 'ai-category-options' }, [
-          history.value.length ? option('Use saved categories', 'Choose from category lists you have used before.', () => { stage.value = 'saved'; }, 'folder') : null,
+          history.value.length ? option('Use saved categories', 'Use a saved list that matches the notes you shared.', () => { stage.value = 'saved'; }, 'folder') : null,
           option('Find categories with AI', 'Create a category list from your study material.', () => newCategories(), 'ai'),
         ]),
         h('div', { class: 'ai-category-secondary' }, [
@@ -166,7 +166,7 @@ export const AiCategoryPicker = defineComponent({
     function subtitle() {
       if (stage.value === 'source') return 'Give the AI your notes first. Choose or create categories afterward.';
       if (stage.value === 'start') return history.value.length ? 'Use saved categories or find new ones with AI.' : 'Find categories in your study material with AI.';
-      if (stage.value === 'saved') return 'Choose a category list to browse.';
+      if (stage.value === 'saved') return 'Choose the list for the material in your AI chat.';
       if (stage.value === 'generate') return importExisting.value
         ? 'Bring in a category list you already have.'
         : 'Use the same AI conversation to organize the material you already shared.';
