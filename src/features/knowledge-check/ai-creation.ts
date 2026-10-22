@@ -202,7 +202,7 @@ export const ReviewAiCreation = defineComponent({
           h('div', { class: 'study-ai-actions' }, preferences.value.mixMode === 'ai' ? [
             h('button', { type: 'button', class: 'card-primary-button',
               disabled: Boolean(mixProblem.value), onClick: () => { if (!mixProblem.value) go('generate'); },
-            }, 'Generate prompt'),
+            }, 'Continue to AI'),
           ] : editingMix.value ? [
             h('button', { type: 'button', class: 'quiet-button', onClick: () => { editingMix.value = false; } }, 'Cancel mix edits'),
             h('button', { type: 'button', class: 'card-primary-button', disabled: !normalizedMix.value,
@@ -214,7 +214,7 @@ export const ReviewAiCreation = defineComponent({
             h('button', { type: 'button', class: 'card-primary-button', disabled: Boolean(mixProblem.value), onClick: () => {
               if (editingWeight.value) commitWeight(editingWeight.value);
               if (!mixProblem.value) go('generate');
-            } }, 'Generate prompt'),
+            } }, 'Continue to AI'),
           ]),
         ] : h(AiPromptExchange, {
           startInImport: stage.value === 'direct', importOnly: stage.value === 'direct',

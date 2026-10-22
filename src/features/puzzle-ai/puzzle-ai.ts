@@ -116,7 +116,7 @@ export const PuzzleAiCreation = defineComponent({
           h('div', [
             h('p', { class: 'study-ai-muted' }, label.value + ' · Saved in ' + props.destination),
             h('h2', 'Configure ' + (wordSearch ? 'word search' : 'crossword')),
-            h('p', 'Step 2 of 3 · Choose your puzzle options before generating the AI prompt.'),
+            h('p', 'Step 2 of 3 · Choose how you want your puzzle to work.'),
             h('p', { class: 'study-ai-muted' }, scope.value?.category.title ?? 'Overall subject'),
           ]),
           h('div', { class: 'study-ai-actions' }, [
@@ -251,7 +251,7 @@ export const PuzzleAiCreation = defineComponent({
           ]),
           configurationProblem.value ? h('p', { role: 'alert', class: 'ai-exchange-error' }, configurationProblem.value) : null,
           h('div', { class: 'study-ai-actions' }, [
-            h('button', { type: 'submit', class: 'card-primary-button' }, 'Continue to AI prompt →'),
+            h('button', { type: 'submit', class: 'card-primary-button' }, 'Continue to AI →'),
           ]),
         ]),
       ]);

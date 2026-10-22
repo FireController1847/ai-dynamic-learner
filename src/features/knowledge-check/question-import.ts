@@ -50,7 +50,7 @@ ${reviewAiPrompt({
       try {
         const parsed = parseReviewQuestionsImport(json.value, count.value);
         if (parsed.questions.length > available.value) {
-          throw new Error(`Only ${available.value} more ${available.value === 1 ? 'question fits' : 'questions fit'} in this set. This JSON has ${parsed.questions.length}. Reduce the import before adding.`);
+          throw new Error(`Only ${available.value} more ${available.value === 1 ? 'question fits' : 'questions fit'} in this set. This response has ${parsed.questions.length}. Reduce the import before adding.`);
         }
         candidate.value = parsed;
       } catch (error) { problem.value = error instanceof Error ? error.message : String(error); }
