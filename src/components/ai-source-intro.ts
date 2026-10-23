@@ -5,13 +5,19 @@ import { Icon } from './icon.ts';
 export const AiSourceIntro = defineComponent({
   name: 'AiSourceIntro',
   props: {
-    continueLabel: { type: String, default: 'Next: Set up instructions' },
+    continueLabel: { type: String, default: 'I shared my notes — continue' },
     showImportShortcut: Boolean,
   },
   emits: { next: () => true, import: () => true },
   setup(props, { emit }) {
     const sourceMode = ref<'upload' | 'paste'>('upload');
     return () => h('div', { class: 'ai-source-intro' }, [
+      h('div', { class: 'ai-source-ai-choice' }, [
+        h('div', [h('strong', 'First, open a separate AI chat'), h('span', 'For example, ChatGPT in another browser tab — Dynamic Learner does not connect to it automatically.')]),
+        h('a', { class: 'quiet-button ai-exchange-open-link', href: 'https://chatgpt.com/', target: '_blank', rel: 'noopener noreferrer' }, [
+          h(Icon, { name: 'ai' }), 'Open ChatGPT', h(Icon, { name: 'chevron' }),
+        ]),
+      ]),
             h('div', { class: 'ai-source-tutorial' }, [
               h('div', { class: 'ai-source-tutorial-toolbar' }, [
                 h('span', 'How will you share it?'),
@@ -47,7 +53,7 @@ export const AiSourceIntro = defineComponent({
               props.showImportShortcut ? h('button', { type: 'button', class: 'ai-exchange-link', onClick: () => emit('import') }, 'Already have an AI response?') : null,
             ]),
             h('p', { class: 'ai-source-tutorial-note' },
-              'Dynamic Learner does not upload your materials. You share them directly in the AI chat you choose.'),
+              'Send only your notes or file for now. Dynamic Learner will give you a second message with the instructions to send afterward.'),
     ]);
   },
 });
