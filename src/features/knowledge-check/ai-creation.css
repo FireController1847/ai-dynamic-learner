@@ -58,3 +58,20 @@
   margin-top: 2px; color: var(--text-secondary);
 }
 .review-ai-focus-option:has(input:checked) > .ui-icon { color: var(--brand); }
+
+/* Preview is a decision screen rather than a 70-question wall. */
+.review-ai-question-bank,.review-ai-difference{display:grid;gap:10px;padding:12px;border:1px solid var(--border-color);border-radius:var(--radius-dialog);background:var(--surface-subtle)}
+.review-ai-question-bank p,.review-ai-difference p{margin:0;color:var(--text-secondary);line-height:20px}
+.review-ai-bank-counts,.review-ai-preview-counts{display:flex;align-items:center;flex-wrap:wrap;gap:16px;padding:6px 0}
+.review-ai-bank-counts>div,.review-ai-preview-counts>div{display:grid;gap:2px;min-width:110px}
+.review-ai-bank-counts strong,.review-ai-preview-counts strong{font-size:22px;line-height:28px;color:var(--text-color)}
+.review-ai-bank-counts span,.review-ai-preview-counts span{font-size:12px;color:var(--text-secondary)}
+.review-ai-bank-counts>.ui-icon,.review-ai-preview-counts>.ui-icon{width:18px;height:18px;color:var(--brand-text)}
+.review-ai-preview-counts{border-bottom:1px solid var(--border-color);padding:8px 0 12px}
+.review-ai-difference{border-left:3px solid var(--brand)}
+.review-ai-difference .quiet-button{justify-self:start}
+.review-ai-difference textarea{width:100%;min-width:0}
+.review-ai-warning-details,.review-ai-questions-details{padding:10px 12px;border:1px solid var(--border-color);border-radius:var(--radius-dialog)}
+.review-ai-warning-details summary,.review-ai-questions-details summary{font-weight:600;cursor:pointer}
+.review-ai-warning-details ul{margin:8px 0;padding-left:24px}
+.review-ai-warning-details p{margin:8px 0 0;color:var(--text-secondary)}

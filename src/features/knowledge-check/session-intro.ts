@@ -5,6 +5,7 @@ import { CHECK_MODES, type CheckModeId } from './check-types.ts';
 import type { CheckItem } from './library-model.ts';
 import { defaultSetOptions } from './set-options.ts';
 import { QUESTION_ORDER_LABELS, type SessionSettings } from './session-settings.ts';
+import { SessionQuestionCoverage } from './session-question-coverage.ts';
 
 export const SessionIntro = defineComponent({
   name: 'KnowledgeSessionIntro',
@@ -47,6 +48,12 @@ export const SessionIntro = defineComponent({
                 ? 'Hints and retries'
                 : `${settings.quizAttempts} ${settings.quizAttempts === 1 ? 'attempt' : 'attempts'} per question`),
         ]),
+        h(SessionQuestionCoverage, {
+          available: props.item.questions.length,
+          selected: props.count,
+          mode: props.mode,
+          order: settings.order,
+        }),
         options.description ? h('p', { class: 'knowledge-description' }, options.description) : null,
         h('div', { class: 'knowledge-intro-details' }, [
           h('h4', 'What to expect'),

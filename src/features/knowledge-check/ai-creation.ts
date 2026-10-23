@@ -5,6 +5,7 @@ import { Icon } from '../../components/icon.ts';
 import { AiPromptExchange } from '../../components/ai-prompt-exchange.ts';
 import { MarkdownContent } from '../../components/markdown-content.ts';
 import { MAX_AI_IMPORT_LENGTH } from '../../core/ai-json.ts';
+import { DEFAULT_SESSION_QUESTION_LIMIT } from './set-options.ts';
 import type { AiCardCategories, AiCardScope } from '../../core/ai-study-categories.ts';
 import { inputValue } from '../../core/dom.ts';
 import { parseFillBlankTemplate } from '../../core/fill-blank.ts';
@@ -25,6 +26,8 @@ export const ReviewAiCreation = defineComponent({
     const json = ref('');
     const problem = ref('');
     const candidate = ref<ReviewAiImport | null>(null);
+    const correctionMessage = ref('');
+    const correctionFallback = ref(false);
     const backward = ref(false);
     const heading = ref<HTMLElement | null>(null);
     const editingWeight = ref<AiQuestionType | null>(null);
@@ -78,6 +81,18 @@ export const ReviewAiCreation = defineComponent({
       try { candidate.value = parseReviewAiImport(json.value, preferences.value); }
       catch (error) { problem.value = error instanceof Error ? error.message : String(error); }
     }
+    async function requestExactCount() {
+      const message = `Please redo the last Dynamic Learner Review response with exactly ${preferences.value.count} questions, not more or fewer. Keep the same response structure and subject, and return only the requested structured content.`;
+      correctionMessage.value = '';
+      correctionFallback.value = false;
+      try {
+        await navigator.clipboard.writeText(message);
+        correctionMessage.value = 'Request copied. Paste it into your existing AI conversation, send it, then replace the reply above and select Check and preview.';
+      } catch {
+        correctionFallback.value = true;
+        correctionMessage.value = 'Copying was blocked. Select this request and send it to the same AI chat.';
+      }
+    }
     function previewQuestion(question: Question, index: number) {
       const answers = question.type === 'parameterized' ? (question.parameters?.rules.answers ?? []).map(answer => `${answer.label}: ${answer.expression ?? `Solver output ${answer.solverKey}`}`) : question.type === 'dropdown' ? (question.matches ?? []).map(row => `${row.label}: ${row.answer}`) :
         question.type === 'fill-in-the-blanks' ? parseFillBlankTemplate(question.prompt).answers :
@@ -127,6 +142,14 @@ export const ReviewAiCreation = defineComponent({
             h('label', [h('span', 'Coverage'), h('select', { value: preferences.value.coverage, onChange: (event: Event) => {
               const value = inputValue(event); if (value === 'essentials' || value === 'balanced' || value === 'comprehensive') preferences.value.coverage = value;
             } }, [h('option', { value: 'essentials' }, 'Essentials only'), h('option', { value: 'balanced' }, 'Balanced'), h('option', { value: 'comprehensive' }, 'Comprehensive')]), h('small', { class: 'study-ai-muted' }, 'Key facts, a balanced mix, or detailed coverage.')]),
+          ]),
+          h('div', { class: 'review-ai-question-bank' }, [
+            h('div', { class: 'review-ai-bank-counts' }, [
+              h('div', [h('strong', String(preferences.value.count)), h('span', 'Questions in your set')]),
+              h(Icon, { name: 'chevron' }),
+              h('div', [h('strong', String(Math.min(preferences.value.count, DEFAULT_SESSION_QUESTION_LIMIT))), h('span', 'Per Study / Quiz by default')]),
+            ]),
+            h('p', 'Build a larger question bank so each Study session can sample a different set of questions. The Quiz and Study limit starts at 25 and can be changed later in set options.'),
           ]),
           h('fieldset', { class: 'review-ai-mix-strategy' }, [
             h('legend', 'Question types'),
@@ -224,22 +247,41 @@ export const ReviewAiCreation = defineComponent({
           promptHelp: stage.value === 'direct' ? 'Import an existing Review knowledge set.' : scope.value
             ? `Create questions for the selected category ${preferences.value.mixMode === 'ai' ? 'with AI-selected question types' : 'using your percentages'}.`
             : `Create questions covering the overall subject ${preferences.value.mixMode === 'ai' ? 'with an appropriate mix of question types' : 'using your percentages'}.`,
+          validateLabel: 'Check and preview questions',
           importHelp: stage.value === 'direct' ? 'Paste a previously generated Review response.' : preferences.value.mixMode === 'ai'
             ? 'Paste the AI response to preview your questions. Changes to your requested count will be noted.'
             : 'Paste the AI response to preview your questions and review any differences.',
-          onUpdateJson: (value: string) => { json.value = value; candidate.value = null; problem.value = ''; }, onValidate: validate,
+          onUpdateJson: (value: string) => { json.value = value; candidate.value = null; problem.value = ''; correctionMessage.value = ''; correctionFallback.value = false; }, onValidate: validate,
         }, { preview: () => candidate.value ? h('div', { class: 'study-ai-preview' }, [
-          h('h3', candidate.value.title), h('p', candidate.value.description),
-          h('p', { role: 'status' }, `${candidate.value.questions.length} items · ${candidate.value.warnings.length
-            ? 'Valid questions with import warnings'
-            : preferences.value.mixMode === 'ai' ? 'AI-selected question mix' : 'Requested question mix matched'}`),
-          candidate.value.warnings.length ? h('section', { class: 'review-ai-import-warning', role: 'status', 'aria-label': 'Import warnings' }, [
-            h('strong', 'This response differs from your request'),
+          h('h3', 'Your questions are ready to review'),
+          h('p', candidate.value.title + ' · ' + candidate.value.description),
+          h('div', { class: 'review-ai-preview-counts', role: 'status' }, [
+            h('div', [h('strong', String(preferences.value.count)), h('span', 'Requested')]),
+            h(Icon, { name: 'chevron' }),
+            h('div', [h('strong', String(candidate.value.questions.length)), h('span', 'Received from AI')]),
+          ]),
+          candidate.value.questions.length !== preferences.value.count
+            ? h('section', { class: 'review-ai-difference', role: 'status' }, [
+              h('strong', 'The AI made a different number of questions'),
+              h('p', `You asked for ${preferences.value.count} and received ${candidate.value.questions.length}. All ${candidate.value.questions.length} passed format checks. Nothing was removed. You can keep them all or ask the AI to try again.`),
+              h('button', { type: 'button', class: 'quiet-button', onClick: requestExactCount },
+                `Copy request for exactly ${preferences.value.count}`),
+              correctionMessage.value ? h('p', { role: 'status' }, correctionMessage.value) : null,
+              correctionFallback.value ? h('textarea', { readonly: true, rows: 3,
+                value: `Please redo the last Dynamic Learner Review response with exactly ${preferences.value.count} questions, not more or fewer. Keep the same response structure and subject, and return only the requested structured content.`,
+                'aria-label': 'Request for exact question count' }) : null,
+            ]) : h('p', { class: 'study-ai-muted' }, 'The number of questions matches your request.'),
+          candidate.value.warnings.length ? h('details', { class: 'review-ai-warning-details' }, [
+            h('summary', `Review ${candidate.value.warnings.length} ${candidate.value.warnings.length === 1 ? 'note' : 'notes'} about this response`),
             h('ul', candidate.value.warnings.map(warning => h('li', warning))),
-            h('p', 'You can still create the knowledge set with all of these questions.'),
+            h('p', 'These notes do not prevent you from using the questions.'),
           ]) : null,
-          h('ol', { class: 'review-ai-preview' }, candidate.value.questions.map(previewQuestion)),
-          h('button', { type: 'button', class: 'card-primary-button', onClick: () => { if (candidate.value) emit('create', candidate.value); } }, candidate.value.warnings.length ? 'Create knowledge set anyway' : 'Create knowledge set'),
+          h('details', { class: 'review-ai-questions-details' }, [
+            h('summary', `Preview all ${candidate.value.questions.length} questions`),
+            h('ol', { class: 'review-ai-preview' }, candidate.value.questions.map(previewQuestion)),
+          ]),
+          h('button', { type: 'button', class: 'card-primary-button', onClick: () => { if (candidate.value) emit('create', candidate.value); } },
+            `Create set with ${candidate.value.questions.length} questions`),
         ]) : null }),
       ]);
     }

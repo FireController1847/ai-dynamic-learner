@@ -4,6 +4,7 @@ import { AnswerStrictnessField } from '../../components/answer-strictness-field.
 import type { CheckItem } from './library-model.ts';
 import type { CheckModeId } from './check-types.ts';
 import { QUESTION_ORDER_LABELS, settingsForMode, type SessionSettings } from './session-settings.ts';
+import { SessionQuestionCoverage } from './session-question-coverage.ts';
 import type { QuestionOrder, QuestionPresentation } from './set-options.ts';
 import { inputValue } from '../../core/dom.ts';
 
@@ -67,6 +68,10 @@ export const SessionSetup = defineComponent({
         h('p', { class: 'knowledge-session-setup-step' },
           `Set up Study · ${Math.min(props.questionCount, defaults.questionLimit ?? props.questionCount)} questions per session · ${props.questionCount} available`),
         h('h2', 'What order should the questions use?'),
+        h(SessionQuestionCoverage, {
+          available: props.questionCount, selected: Math.min(props.questionCount, defaults.questionLimit ?? props.questionCount),
+          mode: 'study', order: studyOrder.value,
+        }),
         h('p', { class: 'knowledge-session-setup-description' },
           defaults.questionLimit !== null && props.questionCount > defaults.questionLimit
             ? `A balanced sample of ${defaults.questionLimit} questions will be randomly selected across the whole set. Choose their display order below.`
@@ -89,6 +94,10 @@ export const SessionSetup = defineComponent({
         return h('section', { class: 'knowledge-session knowledge-session-setup', 'aria-label': 'Quiz setup' }, [
           h('p', { class: 'knowledge-session-setup-step' }, `Set up Quiz · ${props.questionCount} ${props.questionCount === 1 ? 'question' : 'questions'} available`),
           h('h2', 'How should this Quiz run?'),
+          h(SessionQuestionCoverage, {
+            available: props.questionCount, selected: Math.min(props.questionCount, defaults.questionLimit ?? props.questionCount),
+            mode: 'quiz', order: defaults.order,
+          }),
           h('p', { class: 'knowledge-session-setup-description' }, 'Use the settings saved with this knowledge set, or customize only this Quiz session.'),
           h('fieldset', { class: 'knowledge-session-choices' }, [
             h('legend', { class: 'visually-hidden' }, 'Quiz settings source'),

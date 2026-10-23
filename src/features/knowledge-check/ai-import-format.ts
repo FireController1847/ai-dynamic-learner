@@ -110,7 +110,7 @@ export function parseReviewAiImport(text: string, preferences: ReviewAiPreferenc
     throw new Error(`Paste a supported Review response with 1–${MAX_QUESTIONS} items, a title, and a description.`);
   }
   const warnings: string[] = [];
-  if (value.questions.length !== preferences.count) warnings.push(`Requested ${preferences.count} items; this JSON contains ${value.questions.length}.`);
+  if (value.questions.length !== preferences.count) warnings.push(`Requested ${preferences.count} questions; the AI response contains ${value.questions.length}.`);
   const packages = parseAiSolvers(value.solvers);
   const entries: unknown[] = value.questions;
   const questions = entries.map((entry, index): Question => {

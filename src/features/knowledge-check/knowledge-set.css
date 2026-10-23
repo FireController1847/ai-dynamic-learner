@@ -634,3 +634,14 @@
   }
   .knowledge-study-review-actions .knowledge-study-finish-actions > button { flex: 1 1 130px; }
 }
+
+/* A session is a sample of the full question bank, not lost questions. */
+.knowledge-question-coverage{display:grid;gap:8px;margin:12px 0 20px;padding:14px;border:1px solid var(--border-color);border-radius:var(--radius-dialog);background:var(--surface-subtle)}
+.knowledge-question-coverage-heading{display:flex;align-items:center;gap:8px}
+.knowledge-question-coverage-heading>.ui-icon{width:18px;height:18px;color:var(--brand-text)}
+.knowledge-question-coverage-track{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:4px}
+.knowledge-question-coverage-track>span{height:10px;border-radius:3px;background:var(--border-color)}
+.knowledge-question-coverage-track>span.is-picked{background:var(--brand);animation:knowledge-sample-show 450ms var(--ease-out) both}
+.knowledge-question-coverage p{margin:0;font-size:12px;line-height:18px;color:var(--text-secondary)}
+@keyframes knowledge-sample-show{from{opacity:.4;transform:scaleX(.3)}to{opacity:1;transform:scaleX(1)}}
+@media(prefers-reduced-motion:reduce){.knowledge-question-coverage-track>span.is-picked{animation:none}}

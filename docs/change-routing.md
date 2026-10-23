@@ -13,7 +13,7 @@ Use this as a starting-file index, not a feature specification. Follow imports o
 | Tips content | `src/app/tips-content.ts` and feature-specific Tips adapters |
 | Tips engine/UI | `packages/tips/` |
 | Shared buttons/dialogs | `src/styles/base.css`, `src/components/use-dialog.ts`, `popup-dialog.ts` |
-| Shared guided AI handoff, source illustration, import, and animation | `src/components/ai-prompt-exchange.ts`, `src/components/ai-source-intro.ts`, `src/styles/ai-prompt-exchange.css` |
+| Shared guided AI handoff, source illustration, visual scope selection, import, and animation | `src/components/ai-prompt-exchange.ts`, `src/components/ai-source-intro.ts`, `src/components/ai-scope-choices.ts`, `src/styles/ai-prompt-exchange.css` |
 | Shared AI category selection, saved lists, and discovery | `src/components/ai-category-picker.ts`, `src/core/ai-study-categories.ts`, `ai-category-history.ts`, `ai-json.ts` |
 | Shared GFM rendering / typography | `src/components/markdown-renderer.ts`, `markdown-content.ts`, `src/styles/markdown-content.css`; Notebook keeps its heading/outline adapter |
 | Answer strictness control | `src/components/answer-strictness-field.ts` |
@@ -65,3 +65,5 @@ Use this as a starting-file index, not a feature specification. Follow imports o
 | Review imports | `import-knowledge-set.ts`, `index-cards-import-picker.ts`, `fill-blank-import-resolution.ts`, `import-index-cards.ts` |
 | Review AI creation / question mix | `ai-creation.ts`, `ai-creation.css`, `ai-import-format.ts`, `ai-question-mix.ts`, `knowledge-check.ts`, `library.ts` |
 | Responsive/touch overrides | `src/styles/mobile.css` plus the owning feature stylesheet |
+
+Review session question-bank visual: `src/features/knowledge-check/session-question-coverage.ts` (used by session setup and intro).
