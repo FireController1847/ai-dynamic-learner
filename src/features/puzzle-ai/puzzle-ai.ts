@@ -1,5 +1,6 @@
 import { computed, defineComponent, h, ref, Transition, type PropType } from 'vue';
 import { AiCategoryPicker } from '../../components/ai-category-picker.ts';
+import { AiScopeChoices } from '../../components/ai-scope-choices.ts';
 import { AiPromptExchange } from '../../components/ai-prompt-exchange.ts';
 import { MAX_AI_IMPORT_LENGTH } from '../../core/ai-json.ts';
 import type { AiCardCategories, AiCardScope } from '../../core/ai-study-categories.ts';
@@ -263,10 +264,10 @@ export const PuzzleAiCreation = defineComponent({
               h('h2', 'Create ' + label.value + ' with AI'),
               h('p', 'Choose the scope for your puzzle.')]),
           ]),
-          h('div', { class: 'ai-scope-choices' }, [
-            h('button', { type: 'button', class: 'quiet-button', onClick: () => { scope.value = null; configured.value = false; entry.value = 'settings'; } }, [h('strong', 'Overall subject'), h('span', 'Generate terms from the full source.')]),
-            h('button', { type: 'button', class: 'quiet-button', onClick: () => { entry.value = 'categories'; } }, [h('strong', 'Choose a category'), h('span', 'Discover or reuse categories for a focused puzzle.')]),
-          ]),
+          h(AiScopeChoices, {
+            onOverall: () => { scope.value = null; configured.value = false; entry.value = 'settings'; },
+            onCategory: () => { entry.value = 'categories'; },
+          }),
           h('div', { class: 'study-ai-actions ai-scope-actions' }, [
             h('button', { type: 'button', class: 'quiet-button outline-button', style: { width: 'auto', flex: '0 0 auto' }, onClick: () => { scope.value = null; configured.value = false; entry.value = 'direct'; } }, 'Import an AI response'),
             h('button', { type: 'button', class: 'quiet-button', style: { width: 'auto', flex: '0 0 auto' }, onClick: () => emit('cancel') }, 'Cancel'),

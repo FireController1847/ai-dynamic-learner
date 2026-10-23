@@ -187,3 +187,16 @@
 .ai-response-path .ui-icon{width:16px;height:16px;color:var(--brand-text)}
 @container (max-width:520px){.ai-send-scene{grid-template-columns:minmax(0,1fr) 18px minmax(0,1.3fr);gap:6px}.ai-send-chat,.ai-send-piece{padding:8px}.ai-send-scene{font-size:12px}}
 @media(prefers-reduced-motion:reduce){.ai-send-bubble,.ai-send-reply{animation:none}}
+
+/* The two scope choices explain breadth through a concrete three-topic example. */
+.ai-scope-choices>.quiet-button { align-content:start;gap:10px;transition:border-color 180ms var(--ease-out),transform 180ms var(--ease-out); }
+.ai-scope-choices>.quiet-button:hover { transform:translateY(-2px); }
+.ai-scope-example { display:grid;gap:8px;width:100%;min-width:0;margin-top:4px;padding:10px;border-radius:var(--radius);background:var(--surface-subtle);border:1px solid var(--border-color); }
+.ai-scope-example>small { color:var(--text-secondary);font-size:11px; }
+.ai-scope-example>div { display:flex;gap:5px;flex-wrap:wrap; }
+.ai-scope-chip { display:inline-block;border:1px solid var(--control-border);border-radius:var(--radius);padding:4px 7px;font-size:11px;color:var(--text-secondary); }
+.ai-scope-chip.is-focus { border-color:var(--brand);color:var(--brand-text);background:var(--brand-tint); }
+.ai-scope-chip.is-muted { opacity:.48; }
+.ai-scope-example-output { display:flex;align-items:center;gap:5px;color:var(--text-color)!important;font-weight:600!important;font-size:12px!important; }
+.ai-scope-example-output .ui-icon { width:14px;height:14px;color:var(--brand-text); }
+@media(prefers-reduced-motion:reduce) {.ai-scope-choices>.quiet-button { transition:none; }.ai-scope-choices>.quiet-button:hover {transform:none}}

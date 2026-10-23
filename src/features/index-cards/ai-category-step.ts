@@ -1,5 +1,6 @@
 import { defineComponent, h, ref, Transition, type PropType } from 'vue';
 import { AiCategoryPicker } from '../../components/ai-category-picker.ts';
+import { AiScopeChoices } from '../../components/ai-scope-choices.ts';
 import type { AiCardCategories, AiCardScope } from '../../core/ai-study-categories.ts';
 import { IndexCardsAiImport, type IndexCardsAiImportValue } from './ai-import.ts';
 import { getSetMode, type SetModeId } from './set-modes.ts';
@@ -22,10 +23,10 @@ export const IndexCardsAiCreation = defineComponent({
         default: () => entry.value === 'scope' ? h('section', { key: 'scope', class: 'study-ai-workspace' }, [
           h('header', { class: 'study-ai-header' }, [h('div', [h('h2', 'Create ' + (getSetMode(props.mode)?.label ?? 'Index Cards') + ' with AI'), h('p', 'Choose the scope for your cards.')]),
           ]),
-          h('div', { class: 'ai-scope-choices' }, [
-            h('button', { type: 'button', class: 'quiet-button', onClick: () => { scope.value = null; entry.value = 'overall'; } }, [h('strong', 'Overall subject'), h('span', 'Create cards across the full source.')]),
-            h('button', { type: 'button', class: 'quiet-button', onClick: () => { entry.value = 'categories'; } }, [h('strong', 'Choose a category'), h('span', 'Focus on one source category.')]),
-          ]),
+          h(AiScopeChoices, {
+            onOverall: () => { scope.value = null; entry.value = 'overall'; },
+            onCategory: () => { entry.value = 'categories'; },
+          }),
           h('div', { class: 'study-ai-actions ai-scope-actions' }, [
             h('button', { type: 'button', class: 'quiet-button outline-button', style: { width: 'auto', flex: '0 0 auto' }, onClick: () => { scope.value = null; entry.value = 'direct'; } }, 'Import an AI response'),
             h('button', { type: 'button', class: 'quiet-button', style: { width: 'auto', flex: '0 0 auto' }, onClick: () => emit('back') }, 'Back'),

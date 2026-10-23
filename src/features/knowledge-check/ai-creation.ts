@@ -1,5 +1,6 @@
 import { computed, defineComponent, h, onMounted, ref, Transition } from 'vue';
 import { AiCategoryPicker } from '../../components/ai-category-picker.ts';
+import { AiScopeChoices } from '../../components/ai-scope-choices.ts';
 import { Icon } from '../../components/icon.ts';
 import { AiPromptExchange } from '../../components/ai-prompt-exchange.ts';
 import { MarkdownContent } from '../../components/markdown-content.ts';
@@ -111,10 +112,10 @@ export const ReviewAiCreation = defineComponent({
             stage.value !== 'scope' ? h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel') }, 'Cancel') : null,
           ]),
         ]),
-        stage.value === 'scope' ? [h('div', { class: 'ai-scope-choices' }, [
-          h('button', { type: 'button', class: 'quiet-button', onClick: () => { scope.value = null; go('configure'); } }, [h('strong', 'Overall subject'), h('span', 'Generate questions across the entire source.')]),
-          h('button', { type: 'button', class: 'quiet-button', onClick: () => go('categories') }, [h('strong', 'Choose a category'), h('span', 'Discover or reuse categories, then focus on one.')]),
-        ]),
+        stage.value === 'scope' ? [h(AiScopeChoices, {
+          onOverall: () => { scope.value = null; go('configure'); },
+          onCategory: () => go('categories'),
+        }),
           h('div', { class: 'study-ai-actions ai-scope-actions' }, [
             h('button', { type: 'button', class: 'quiet-button outline-button', style: { width: 'auto', flex: '0 0 auto' }, onClick: () => { scope.value = null; go('direct'); } }, 'Import an AI response'),
             h('button', { type: 'button', class: 'quiet-button', style: { width: 'auto', flex: '0 0 auto' }, onClick: () => emit('cancel') }, 'Cancel'),
