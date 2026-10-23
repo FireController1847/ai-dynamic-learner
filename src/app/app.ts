@@ -7,6 +7,7 @@ import { pageHref, useNavigation } from './navigation.ts';
 import { useWorkspace } from './workspace.ts';
 import { provideStatistics } from '../components/statistics-context.ts';
 import { GlobalStatistics } from '../components/global-statistics.ts';
+import { STATISTICS_APPS } from '../core/statistics.ts';
 import { WorkspaceTools } from './workspace-tools.ts';
 import { BackupReminderBanner } from './backup-reminder-ui.ts';
 import { ThemeMenu, type ThemeMenuHandle } from './theme-menu.ts';
@@ -160,7 +161,9 @@ const App = defineComponent({
           h('rect', { x: 0, y: 12, width: 18, height: 2, rx: 1 }),
         ])]),
         activeFeature.value
-          ? h(AppIcon, { name: activeFeature.value.id, imageClass: 'app-logo app-header-logo' })
+          ? activeFeature.value.image
+            ? h(AppIcon, { name: activeFeature.value.id, imageClass: 'app-logo app-header-logo' })
+            : h(Icon, { name: activeFeature.value.icon })
           : currentPath.value === '/'
             ? h(AppIcon, { name: 'dynamic-learner', imageClass: 'app-logo app-header-logo' })
             : h(Icon, { name: 'document' }),
@@ -271,7 +274,7 @@ const App = defineComponent({
           ref: main,
           class: ['app-content', {
             'app-content--home': currentPath.value === '/',
-            'app-content--workspace': ['notebook', 'todo-list', 'index-cards', 'word-search', 'crossword', 'guide', 'knowledge-check'].includes(activeFeature.value?.id ?? ''),
+            'app-content--workspace': ['notebook', 'workbook', 'todo-list', 'index-cards', 'word-search', 'crossword', 'guide', 'knowledge-check'].includes(activeFeature.value?.id ?? ''),
           }],
           tabindex: -1,
         }, [
@@ -290,7 +293,10 @@ const App = defineComponent({
         ]),
       ]),
       statisticsOpen.value ? h(GlobalStatistics, {
-        apps: features.map(feature => ({ id: feature.id, label: feature.label })), returnFocus: statisticsButton.value,
+        apps: features.flatMap(feature => {
+          const id = STATISTICS_APPS.find(app => app === feature.id);
+          return id ? [{ id, label: feature.label }] : [];
+        }), returnFocus: statisticsButton.value,
         onClose: () => { statisticsOpen.value = false; },
       }) : null,
       activeFeature.value ? h('span', {
