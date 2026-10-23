@@ -31,7 +31,7 @@ export const SessionQuestionCoverage = defineComponent({
             class: i < Math.round(12 * props.selected / props.available) ? 'is-picked' : '',
           }))),
         h('p', explanation),
-        h('p', 'Your other questions are still saved. Repeat Study, Quiz, or Test to practice more of the set.'),
+        h('p', 'Your other questions are still saved. Repeating sessions reinforces learning; with shuffled questions or a different session limit, you can cover more of the bank.'),
       ]);
     };
   },

@@ -29,6 +29,7 @@ export const AiPromptExchange = defineComponent({
     const shown = ref(false);
     const errorMessage = ref('');
     const input = ref<HTMLTextAreaElement | null>(null);
+    const stepHeading = ref<HTMLElement | null>(null);
     const promptText = ref<HTMLTextAreaElement | null>(null);
     const preview = ref<HTMLElement | null>(null);
     let disposed = false;
@@ -76,9 +77,10 @@ export const AiPromptExchange = defineComponent({
     }
 
     function afterStepEnter() {
-      if (!focusResponse || stage.value !== 'response') return;
-      focusResponse = false;
-      input.value?.focus({ preventScroll: true });
+      if (focusResponse && stage.value === 'response') {
+        focusResponse = false;
+        input.value?.focus({ preventScroll: true });
+      } else stepHeading.value?.focus({ preventScroll: true });
     }
 
     return () => h('div', { class: 'ai-exchange' }, [
@@ -98,7 +100,7 @@ export const AiPromptExchange = defineComponent({
             'aria-labelledby': props.idPrefix + '-step-title',
           }, stage.value === 'source' && !props.importOnly ? [
             h('div', { class: 'ai-exchange-step-heading' }, [
-              h('h3', { id: props.idPrefix + '-step-title' }, 'Give your AI something to study'),
+              h('h3', { id: props.idPrefix + '-step-title', ref: stepHeading, tabindex: -1 }, 'Give your AI something to study'),
               h('p', { class: 'ai-exchange-help' }, 'Open your AI chat and share the material you want to learn from.'),
             ]),
             h(AiSourceIntro, { showImportShortcut: true, onNext: selectInstructions, onImport: selectResponse }),
