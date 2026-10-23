@@ -256,11 +256,11 @@ export const ReviewAiCreation = defineComponent({
           h('h3', 'Your questions are ready to review'),
           h('p', candidate.value.title + ' · ' + candidate.value.description),
           h('div', { class: 'review-ai-preview-counts', role: 'status' }, [
-            h('div', [h('strong', String(preferences.value.count)), h('span', 'Requested')]),
-            h(Icon, { name: 'chevron' }),
+            stage.value !== 'direct' ? h('div', [h('strong', String(preferences.value.count)), h('span', 'Requested')]) : null,
+            stage.value !== 'direct' ? h(Icon, { name: 'chevron' }) : null,
             h('div', [h('strong', String(candidate.value.questions.length)), h('span', 'Received from AI')]),
           ]),
-          candidate.value.questions.length !== preferences.value.count
+          stage.value !== 'direct' && candidate.value.questions.length !== preferences.value.count
             ? h('section', { class: 'review-ai-difference', role: 'status' }, [
               h('strong', 'The AI made a different number of questions'),
               h('p', `You asked for ${preferences.value.count} and received ${candidate.value.questions.length}. All ${candidate.value.questions.length} passed format checks. Nothing was removed. You can keep them all or ask the AI to try again.`),
@@ -270,10 +270,11 @@ export const ReviewAiCreation = defineComponent({
               correctionFallback.value ? h('textarea', { readonly: true, rows: 3,
                 value: `Please redo the last Dynamic Learner Review response with exactly ${preferences.value.count} questions, not more or fewer. Keep the same response structure and subject, and return only the requested structured content.`,
                 'aria-label': 'Request for exact question count' }) : null,
-            ]) : h('p', { class: 'study-ai-muted' }, 'The number of questions matches your request.'),
-          candidate.value.warnings.length ? h('details', { class: 'review-ai-warning-details' }, [
-            h('summary', `Review ${candidate.value.warnings.length} ${candidate.value.warnings.length === 1 ? 'note' : 'notes'} about this response`),
-            h('ul', candidate.value.warnings.map(warning => h('li', warning))),
+            ]) : stage.value !== 'direct' ? h('p', { class: 'study-ai-muted' }, 'The number of questions matches your request.') : null,
+          candidate.value.warnings.filter(warning => stage.value !== 'direct' || !warning.startsWith('Requested ')).length
+            ? h('details', { class: 'review-ai-warning-details' }, [
+            h('summary', 'Other things to review'),
+            h('ul', candidate.value.warnings.filter(warning => stage.value !== 'direct' || !warning.startsWith('Requested ')).map(warning => h('li', warning))),
             h('p', 'These notes do not prevent you from using the questions.'),
           ]) : null,
           h('details', { class: 'review-ai-questions-details' }, [
