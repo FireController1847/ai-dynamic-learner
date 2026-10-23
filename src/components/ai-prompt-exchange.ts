@@ -43,14 +43,12 @@ export const AiPromptExchange = defineComponent({
     function selectInstructions() {
       if (props.importOnly) return;
       stage.value = 'instructions';
-      copiedNotice.value = false;
       errorMessage.value = '';
     }
 
     function selectSource() {
       if (props.importOnly || props.skipSource) return;
       stage.value = 'source';
-      copiedNotice.value = false;
       errorMessage.value = '';
     }
     expose({ showImport: selectResponse });
