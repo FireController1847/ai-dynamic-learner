@@ -23,6 +23,8 @@ interface Workspace {
 }
 ```
 
+**Clear workspace data** in the navigation drawer is intentionally different from restoring a backup: after two custom confirmations it atomically deletes every IndexedDB workspace generation and replaces them with a fresh empty workspace. It also removes the old localStorage migration copy, saved Review session snapshots, and AI category history while leaving unrelated UI preferences and downloaded backup files untouched. Clearing can proceed even if a saved workspace fails validation. Canceling either confirmation performs no deletion; an IndexedDB transaction failure leaves the original database intact.
+
 The legacy browser-local key `dynamic-learner.workspace.v1` is used only as a read-only migration/recovery source. IndexedDB `dynamic-learner-data` is authoritative after successful staged migration. The 128 MiB cap applies to uploaded JSON backups, **not** to ongoing IndexedDB writes; compressed backup support and a revised import limit remain separate work.
 
 Uploaded or persisted data is untrusted: parse as `unknown`, reject unsupported top-level fields/version/format, then delegate to feature validators before replacing live state. Invalid replacement never partially mutates the current workspace.

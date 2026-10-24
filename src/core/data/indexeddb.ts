@@ -380,6 +380,46 @@ export class IndexedDataStore {
   }
 
   /**
+   * User-confirmed destructive reset. Clear all workspace generations and
+   * their records in the same transaction that installs a new empty workspace.
+   * A failed transaction leaves the previous database untouched.
+   */
+  async clearAndActivate(
+    workspaceId: string, expectedWorkspaceId: string | null,
+    rows: readonly Extract<DataOperation, { type: 'put' }>[],
+  ): Promise<void> {
+    for (const row of rows) {
+      if (row.value.workspaceId !== workspaceId ||
+          ['control', 'workspaceMeta', 'changeJournal'].includes(row.store)) {
+        throw new DataApiError('validation', 'The empty workspace contains an invalid storage row.');
+      }
+    }
+    const names = Object.keys(definitions) as DataStoreName[];
+    const tx = this.db().transaction(names, 'readwrite');
+    const completion = transactionDone(tx);
+    let failure: Error | null = null;
+    const request = tx.objectStore('control').get('local');
+    request.onsuccess = () => {
+      const current = (request.result as { activeWorkspaceId?: string } | undefined)?.activeWorkspaceId ?? null;
+      if (current !== expectedWorkspaceId) {
+        failure = new DataApiError('conflict', 'Another tab replaced the workspace. Reload before clearing it.');
+        tx.abort();
+        return;
+      }
+      for (const name of names) tx.objectStore(name).clear();
+      for (const row of rows) tx.objectStore(row.store).put({ ...row.value, revision: 1 });
+      tx.objectStore('control').put({ key: 'local', activeWorkspaceId: workspaceId });
+      tx.objectStore('workspaceMeta').put({
+        id: workspaceId, createdAt: new Date().toISOString(), commitSequence: 0,
+        authoredRevision: 0, restoreEpoch: Date.now(), legacyMigration: false,
+      });
+    };
+    try { await completion; }
+    catch (error) { throw failure ?? error; }
+    this.publish({ workspaceId, commitSequence: 0, authoredRevision: 0, scopes: ['workspace-replaced'] }, true);
+  }
+
+  /**
    * Compare-and-swap in a single transaction across records, metadata and the
    * active-workspace pointer. All requests are issued from IDB event callbacks
    * so async pauses cannot cause an auto-committed transaction.

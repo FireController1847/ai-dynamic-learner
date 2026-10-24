@@ -223,6 +223,56 @@ export function useWorkspace() {
   }
 
   /**
+   * Destructive, separately confirmed reset. Unlike restoreWorkspace, this
+   * removes every IDB workspace generation, including inactive restore copies.
+   * Stop editors before the guarded transaction so delayed saves cannot
+   * repopulate the new workspace. UI preferences are left alone.
+   */
+  async function clearWorkspace(): Promise<void> {
+    if (disposed || (!ready.value && !storageProblem.value)) {
+      throw new Error('The workspace is not available for clearing yet.');
+    }
+    ready.value = false;
+    await nextTick();
+    const previousObserver = observer;
+    observer = null;
+    previousObserver?.stop();
+    try {
+      await previousObserver?.settle();
+      await api.clearWorkspace();
+      const snapshot = await api.initialSnapshot();
+      state.value = snapshot.workspace;
+      revision.value += 1;
+      lastSequence = snapshot.revisions.commitSequence;
+      remotePending = false;
+      needsReconcile.value = false;
+      await startObserver(snapshot.records);
+      backup.workspaceCleared(api.workspaceIdentity());
+      storageProblem.value = '';
+      ready.value = true;
+      watchRemoteChanges();
+    } catch (error) {
+      storageProblem.value = 'The workspace reset could not finish safely: ' + errorMessage(error) +
+        ' Reload before editing or retrying.';
+      throw error;
+    }
+
+    // The old migration source and browser-local saved review sessions must
+    // not silently restore deleted learning content on a future load.
+    try {
+      const removable = ['dynamic-learner.workspace.v1',
+        'dynamic-learner.ui.index-cards.category-history.v1'];
+      for (let index = 0; index < localStorage.length; index += 1) {
+        const key = localStorage.key(index);
+        if (key?.startsWith('dynamic-learner.review.generated-session.v1:')) removable.push(key);
+      }
+      for (const key of removable) localStorage.removeItem(key);
+    } catch {
+      throw new Error('The workspace was cleared, but some old localStorage learning data could not be removed. Check browser storage permissions before assuming all local copies are gone.');
+    }
+  }
+
+  /**
    * Emergency export intentionally uses the current Vue draft rather than the
    * last persisted snapshot. Do not advance backup reminder metadata.
    */
@@ -352,5 +402,5 @@ export function useWorkspace() {
   });
 
   return { state, ready, revision, storageProblem, needsReconcile,
-    readBackup, replaceWorkspace, downloadBackup, downloadLocalDraft, reloadSavedWorkspace, backup };
+    readBackup, replaceWorkspace, clearWorkspace, downloadBackup, downloadLocalDraft, reloadSavedWorkspace, backup };
 }

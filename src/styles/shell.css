@@ -133,6 +133,10 @@ body:has(.navigation-drawer[open]) { overflow: hidden; }
 .workspace-tools > .workspace-actions { flex-direction: column; gap: 4px; }
 .workspace-tools > .workspace-actions .quiet-button { justify-content: flex-start; border-color: transparent; background: transparent; font-weight: 400; }
 .workspace-tools > .workspace-actions .quiet-button:hover:not(:disabled) { background: var(--surface-hover); }
+/* Destructive workspace actions are separated from routine backup controls. */
+.workspace-danger-actions { margin: 8px 0 0; padding: 8px 0 0; border-top: 1px solid var(--border-color); }
+.workspace-danger-actions .quiet-button { justify-content: flex-start; width: 100%; border-color: transparent; background: transparent; font-weight: 400; }
+.workspace-danger-actions .quiet-button:hover:not(:disabled) { color: var(--danger); background: var(--danger-tint); }
 .workspace-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .workspace-storage-warning { flex-shrink: 0; margin: 0; padding: 8px var(--page-padding); color: var(--danger); background: var(--danger-tint); }
 .backup-review { margin-top: 12px; padding: 12px; border: 1px solid var(--control-border); border-radius: var(--radius); background: var(--page-background); overflow-wrap: anywhere; }

@@ -468,6 +468,22 @@ export class WorkspaceDataApi {
   }
 
   /**
+   * Permanently discard every saved workspace generation, not just swap the
+   * active pointer as ordinary backup restoration does. No valid old model is
+   * needed, so this also works when stored content fails hydration.
+   */
+  async clearWorkspace(): Promise<void> {
+    await this.store.open();
+    const previous = await this.store.activeWorkspaceId();
+    if (this.workspaceId && this.workspaceId !== previous) {
+      throw new DataApiError('conflict', 'Another tab replaced this workspace. Reload before clearing it.');
+    }
+    const next = createId();
+    await this.store.clearAndActivate(next, previous, workspaceRows(next, emptyWorkspace()));
+    this.workspaceId = next;
+  }
+
+  /**
    * The workspace and its authored revision must be captured by one readonly
    * transaction. Otherwise an edit from another tab between two reads might
    * cause us to incorrectly mark newer content as backed up.
