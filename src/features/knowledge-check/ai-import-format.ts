@@ -79,18 +79,18 @@ export function reviewAiPrompt(preferences: ReviewAiPreferences, scope: AiCardSc
 
 Scope: ${scope ? 'Only the selected category described above.' : 'The overall subject, covering its important topics.'}
 Depth: ${preferences.coverage === 'essentials' ? 'Concise questions on every subject.' : preferences.coverage === 'comprehensive' ? 'Detailed questions on every subject.' : 'Balanced questions across every subject.'}
-Target ${preferences.count} questions. COMPLETE COVERAGE OVERRIDES this target and any question-type quotas. Generate additional questions if necessary (maximum ${MAX_QUESTIONS}). Never omit a subject to match the count.
+Generate EXACTLY ${preferences.count} questions when the source supports that many meaningful questions. Never exceed ${preferences.count}. Cover as many distinct source topics as possible within this count, combining closely related topics into meaningful scored questions where appropriate. If exhaustive coverage cannot fit, report the omissions in the confidence statistics; do not generate extra questions. Do not invent filler if the source is too limited.
 ${aiChoosesMix
     ? 'Choose question types and counts to suit the material; omit unsuitable types. Favor scored questions over arbitrary quotas or unscored filler.' + (focusPrompt ? `\nSelected focus (guidance, not a quota): ${focusPrompt}` : '')
     : `Use EXACTLY this mix:
 ${enabledTypes.map(type => `- ${questionTypeLabel(type)}: ${counts![type]} items`).join('\n')}`}
-Use ONLY these types: ${enabledTypes.map(questionTypeLabel).join(', ')}. If fewer useful questions are possible, return fewer without filler. If more than ${MAX_QUESTIONS} are required for coverage, ask to split the source into batches instead of claiming full coverage.
+Use ONLY these types: ${enabledTypes.map(questionTypeLabel).join(', ')}. If fewer useful questions are possible, return fewer without filler. Respect the configured count even when it prevents full subject coverage; describe resulting gaps honestly in confidence.
 
-MANDATORY SUBJECT COVERAGE — complete the audit BEFORE and AFTER writing questions:
+SUBJECT COVERAGE AUDIT — complete BEFORE and AFTER writing questions while respecting the requested count:
 - Inventory EVERY testable subject in the supplied material: all study-guide objectives, headings, subheadings, bullets, definitions, facts, figures, numerical values, formulas, associations, exceptions, comparisons, and examples. A study guide is a checklist; do not skip any item, even if it seems minor.
 - For a selected category, inventory and test EVERY subject inside that category, not only its title/description or the most important points. For the overall subject, cover the entire supplied source. Questions may cover multiple subjects only if each one is genuinely tested.
 - Ensure each inventoried subject is tested by at least one meaningful scored question. Do not output the internal subject-by-subject inventory.
-- Cross-check the original source against the inventory again before returning JSON. Do not falsely claim full coverage. If something cannot be tested, explicitly ask for help instead of omitting it.
+- Cross-check the original source against the inventory again before returning JSON. Do not falsely claim full coverage. If a topic cannot fit within the requested number, list it under confidence.uncoveredSubjects and lower overallCoverage appropriately.
 
 Choose the approach from the material (respect requested type counts where possible):
 1. LOGIC / NUMBERS / PROCEDURES: Favor reusable Parameterized questions wherever inputs, calculations, rules, or algorithms can genuinely vary. Test the method with many valid solvable variants, not one fixed numerical result. Supply feasible ranges, constraints and complete solvers as needed. Never randomize fixed facts, diagnostic thresholds, or medical constants. If Parameterized is unavailable or unsuitable, use another enabled type.
