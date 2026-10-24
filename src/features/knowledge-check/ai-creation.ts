@@ -98,7 +98,7 @@ export const ReviewAiCreation = defineComponent({
       catch (error) { problem.value = error instanceof Error ? error.message : String(error); }
     }
     function countCorrection() {
-      return `Aim for ${preferences.value.count} questions WITHOUT dropping any source subject. Keep every scored topic, update the confidence estimates and uncoveredSubjects, and return the FULL corrected JSON. If more questions are required for complete coverage, prioritize coverage over the target count.`;
+      return `Return at most ${preferences.value.count} meaningful questions. Combine related concepts where useful; remove redundant questions without losing important distinctions. If the count prevents full coverage, identify the uncovered topics in confidence.uncoveredSubjects, adjust overallCoverage honestly, and return COMPLETE corrected JSON. Never exceed the requested question count.`;
     }
     async function requestExactCount() {
       const message = countCorrection();
@@ -304,9 +304,9 @@ export const ReviewAiCreation = defineComponent({
           ]),
           !importedDirectly.value && candidate.value.questions.length !== preferences.value.count
             ? h('section', { class: 'review-ai-difference', role: 'status' }, [
-                h('strong', 'The AI made a different number of questions'),
-                h('p', `Requested ${preferences.value.count}; received ${candidate.value.questions.length}. No questions were removed.`),
-                h('button', { type: 'button', class: 'quiet-button', onClick: requestExactCount }, 'Copy request to adjust count'),
+                h('strong', 'The AI did not follow the requested question count'),
+                h('p', `Requested ${preferences.value.count}; received ${candidate.value.questions.length}. Dynamic Learner has not removed any questions. The new AI prompt enforces this limit; you can ask the AI to regenerate the response.`),
+                h('button', { type: 'button', class: 'quiet-button', onClick: requestExactCount }, 'Copy request to fit question limit'),
                 correctionMessage.value ? h('p', { role: 'status' }, correctionMessage.value) : null,
                 correctionFallback.value ? h('textarea', { readonly: true, rows: 3, value: countCorrection() }) : null,
               ]) : null,
