@@ -36,15 +36,28 @@ export const AiSourceIntro = defineComponent({
                 h('span', { class: 'ai-source-tutorial-arrow' }, [h(Icon, { name: 'chevron' })]),
                 h('div', { class: 'ai-source-tutorial-chat' }, [
                   h('div', { class: 'ai-source-tutorial-chat-title' }, [h(Icon, { name: 'ai' }), 'Your AI chat']),
+                  h('div', { class: 'ai-source-message-label' }, 'MESSAGE 1 · SEND FIRST'),
                   h('div', { key: sourceMode.value, class: 'ai-source-tutorial-message' }, [
                     h(Icon, { name: sourceMode.value === 'upload' ? 'document' : 'check' }),
                     h('span', sourceMode.value === 'upload' ? 'Lecture notes.pdf' : 'Chapter notes pasted'),
+                    h(Icon, { name: 'check' }),
+                  ]),
+                  h('div', { class: 'ai-source-next-message' }, [
+                    h('span', 'MESSAGE 2 · SEND LATER'),
+                    h('div', [h(Icon, { name: 'document' }), 'Instructions from Dynamic Learner']),
                   ]),
                 ]),
               ]),
-              h('p', { class: 'ai-source-tutorial-description' }, sourceMode.value === 'upload'
-                ? 'In your AI chat, use its attachment or upload button to select your notes, PDF, or slides. Send the file there first.'
-                : 'Copy the text from your notes or textbook, paste it into your AI chat, and send that message first.'),
+              h('div', { class: 'ai-source-send-first', role: 'note' }, [
+                h(Icon, { name: 'check' }),
+                h('div', [
+                  h('strong', 'Send ONLY your study material first'),
+                  h('p', sourceMode.value === 'upload'
+                    ? 'Upload your notes, PDF, or slides to ChatGPT and send the attachment by itself. Do not add a prompt or instructions.'
+                    : 'Paste your notes into ChatGPT and send them as their own message. Do not add a prompt or instructions.'),
+                  h('p', 'After you send that message, Dynamic Learner will create the instructions for your SECOND message.'),
+                ]),
+              ]),
             ]),
             h('div', { class: 'ai-exchange-actions' }, [
               h('button', { type: 'button', class: 'card-primary-button', onClick: () => emit('next') }, [
@@ -52,8 +65,7 @@ export const AiSourceIntro = defineComponent({
               ]),
               props.showImportShortcut ? h('button', { type: 'button', class: 'ai-exchange-link', onClick: () => emit('import') }, 'Already have an AI response?') : null,
             ]),
-            h('p', { class: 'ai-source-tutorial-note' },
-              'Send only your notes or file for now. Dynamic Learner will give you a second message with the instructions to send afterward.'),
+
     ]);
   },
 });
