@@ -20,8 +20,15 @@
 .ai-exchange-link { display:inline;padding:4px 0;border:0;background:transparent;color:var(--brand-text);text-decoration:underline;text-underline-offset:2px;font-weight:600;cursor:pointer; }
 .ai-exchange-link:hover { color:var(--text-color); }
 .ai-exchange-link:focus-visible { outline:2px solid var(--brand);outline-offset:3px; }
-.ai-exchange-copied { display:flex;align-items:center;gap:8px;margin:0;color:var(--brand-text);font-size:12px; }
-.ai-exchange-copied .ui-icon { width:16px;height:16px; }
+.ai-exchange-copy { display:inline-grid; }
+.ai-exchange-copy-label,.ai-exchange-copy-success { grid-area:1/1;display:inline-flex;align-items:center;justify-content:center;gap:8px; }
+.ai-exchange-copy-success { visibility:hidden; }
+.ai-exchange-copy.is-copied { opacity:1;background:var(--success);border-color:var(--success);color:var(--page-background); }
+.ai-exchange-copy.is-copied .ai-exchange-copy-label { visibility:hidden; }
+.ai-exchange-copy.is-copied .ai-exchange-copy-success { visibility:visible;animation:ai-copy-confirm 240ms var(--ease-out) both; }
+.ai-exchange-copy.is-copied .ui-icon { animation:ai-copy-check 360ms var(--ease-out) both; }
+@keyframes ai-copy-confirm { from { opacity:0; } to { opacity:1; } }
+@keyframes ai-copy-check { 0% { transform:scale(.65); } 65% { transform:scale(1.15); } 100% { transform:scale(1); } }
 .ai-exchange-error { margin:0;color:var(--danger);overflow-wrap:anywhere; }
 .ai-exchange-format-help { color:var(--text-secondary);font-size:12px; }
 .ai-exchange-format-help summary { width:fit-content;cursor:pointer; }
@@ -35,6 +42,7 @@
 .ai-exchange-reveal-enter-active,.ai-exchange-reveal-leave-active { transition:opacity 160ms var(--ease-out),transform 160ms var(--ease-out); }
 .ai-exchange-reveal-enter-from,.ai-exchange-reveal-leave-to { opacity:0;transform:translateY(4px); }
 @media(prefers-reduced-motion:reduce) {
+  .ai-exchange-copy.is-copied .ai-exchange-copy-success,.ai-exchange-copy.is-copied .ui-icon { animation:none; }
   .ai-exchange-panel-enter-active,.ai-exchange-panel-leave-active,.ai-workflow-step-enter-active,.ai-workflow-step-leave-active,.ai-exchange-reveal-enter-active,.ai-exchange-reveal-leave-active { transition:none; }
   .ai-exchange-panel-enter-from,.ai-exchange-panel-leave-to,.ai-workflow-step-enter-from,.ai-workflow-step-leave-to,.ai-exchange-reveal-enter-from,.ai-exchange-reveal-leave-to { transform:none!important; }
 }

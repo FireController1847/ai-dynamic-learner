@@ -1,4 +1,4 @@
-import { defineComponent, h, nextTick, onBeforeUnmount, ref, Transition } from 'vue';
+import { defineComponent, h, nextTick, onBeforeUnmount, ref, Transition, watch } from 'vue';
 import { inputValue } from '../core/dom.ts';
 import { Icon } from './icon.ts';
 import { AiSourceIntro } from './ai-source-intro.ts';
@@ -29,6 +29,8 @@ export const AiPromptExchange = defineComponent({
   setup(props, { emit, slots, expose }) {
     const stage = ref<'source' | 'instructions' | 'send' | 'response'>(props.startInImport || props.importOnly ? 'response' : props.skipSource ? 'instructions' : 'source');
     const shown = ref(false);
+    const copied = ref(false);
+    const copying = ref(false);
     const errorMessage = ref('');
     const uploadedFile = ref('');
     const fileProblem = ref('');
@@ -39,7 +41,19 @@ export const AiPromptExchange = defineComponent({
     const preview = ref<HTMLElement | null>(null);
     let disposed = false;
     let focusResponse = false;
-    onBeforeUnmount(() => { disposed = true; });
+    let copyTimer: ReturnType<typeof setTimeout> | undefined;
+    let copyAttempt = 0;
+    function cancelCopy() {
+      clearTimeout(copyTimer);
+      copyTimer = undefined;
+      copyAttempt++;
+      copying.value = false;
+    }
+    watch(stage, () => {
+      cancelCopy();
+      if (stage.value === 'instructions') copied.value = false;
+    }, { flush: 'sync' });
+    onBeforeUnmount(() => { disposed = true; cancelCopy(); });
 
     async function loadJsonFile(event: Event) {
       const file = (event.target as HTMLInputElement).files?.[0];
@@ -99,14 +113,17 @@ export const AiPromptExchange = defineComponent({
     expose({ showImport: selectResponse, goBack });
 
     async function copy() {
+      if (copying.value || copied.value) return;
+      const attempt = ++copyAttempt;
+      copying.value = true;
       errorMessage.value = '';
       try {
         await navigator.clipboard.writeText(props.prompt);
-        if (disposed) return;
-        focusResponse = true;
-        stage.value = 'send';
+        if (disposed || attempt !== copyAttempt) return;
+        confirmCopied();
       } catch {
-        if (disposed) return;
+        if (disposed || attempt !== copyAttempt) return;
+        copying.value = false;
         shown.value = true;
         errorMessage.value = 'Copying was blocked. Select and copy the instructions shown below instead.';
         await nextTick();
@@ -116,8 +133,17 @@ export const AiPromptExchange = defineComponent({
     }
 
     function confirmCopied() {
+      if (copied.value) return;
       errorMessage.value = '';
-      stage.value = 'send';
+      copying.value = false;
+      copied.value = true;
+      // Keep the success animation visible before starting the step transition.
+      copyTimer = setTimeout(() => {
+        copyTimer = undefined;
+        if (disposed || stage.value !== 'instructions') return;
+        focusResponse = true;
+        stage.value = 'send';
+      }, 1000);
     }
 
     function afterStepEnter() {
@@ -158,9 +184,20 @@ export const AiPromptExchange = defineComponent({
             slots.options?.(),
             slots.guidance?.(),
             h('div', { class: 'ai-exchange-actions' }, [
-              h('button', { type: 'button', class: 'card-primary-button ai-exchange-copy', onClick: copy }, [
-                h(Icon, { name: 'duplicate' }), 'Copy instructions for your AI',
+              h('button', {
+                type: 'button', class: ['card-primary-button ai-exchange-copy', { 'is-copied': copied.value }],
+                disabled: copying.value || copied.value,
+                'aria-label': copied.value ? 'Instructions copied to clipboard' : 'Copy instructions for your AI',
+                onClick: copy,
+              }, [
+                h('span', { class: 'ai-exchange-copy-label', 'aria-hidden': 'true' }, [
+                  h(Icon, { name: 'duplicate' }), 'Copy instructions for your AI',
+                ]),
+                h('span', { class: 'ai-exchange-copy-success', 'aria-hidden': 'true' }, [
+                  h(Icon, { name: 'check' }), 'Copied!',
+                ]),
               ]),
+              h('span', { class: 'visually-hidden', role: 'status', 'aria-atomic': 'true' }, copied.value ? 'Instructions copied to clipboard' : ''),
               h('button', { type: 'button', class: 'quiet-button',
                 'aria-expanded': shown.value, 'aria-controls': props.idPrefix + '-prompt',
                 onClick: () => { shown.value = !shown.value; },
