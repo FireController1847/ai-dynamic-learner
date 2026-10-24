@@ -1,6 +1,7 @@
 import { parseAiImportJson } from '../../core/ai-json.ts';
 import { categoryScopedPrompt, type AiCardScope } from '../../core/ai-study-categories.ts';
 import { isRecord } from '../../core/validation.ts';
+import { AI_COMPLETE_COVERAGE_PROMPT, parseAiSubjectCoverage, type AiSubjectCoverage } from '../../core/ai-subject-coverage.ts';
 import { AI_PLAIN_TEXT_ONLY_GUIDANCE } from '../../core/ai-formatting-guidance.ts';
 import {
   MAX_HINT_LENGTH, MAX_WORD_LENGTH, DEFAULT_LAYOUT_MIN_WORDS, DEFAULT_LAYOUT_MAX_WORDS, MIN_WORDS,
@@ -13,8 +14,8 @@ import {
 
 export type PuzzleAiKind = 'word-search' | 'crossword';
 export type PuzzleAiResult =
-  | { kind: 'word-search'; title: string; puzzle: WordSearchPuzzle }
-  | { kind: 'crossword'; title: string; puzzle: CrosswordPuzzle };
+  | { kind: 'word-search'; title: string; puzzle: WordSearchPuzzle; coverage?: AiSubjectCoverage[] }
+  | { kind: 'crossword'; title: string; puzzle: CrosswordPuzzle; coverage?: AiSubjectCoverage[] };
 
 export const puzzleAiLimits = {
   'word-search': { initial: 40, min: MIN_WORDS, max: 200 },
@@ -109,6 +110,9 @@ Use only facts and terminology supported by the original source. If there are fe
 
 ${AI_PLAIN_TEXT_ONLY_GUIDANCE}
 
+${AI_COMPLETE_COVERAGE_PROMPT}
+For puzzle answers that cannot represent a multiword subject directly, test the subject using a relevant valid single-word answer and a specific clue/hint. If complete coverage cannot fit the supported entry limits, ask to split the source; never silently omit a subject.
+
 Avoid repeated answers, redundant clues, citations, URLs, attribution, markdown commentary and ChatGPT citation markers. ${scope ? 'This JSON represents ONE selected category only.' : 'Cover the overall subject, not a single category.'}
 
 Return ONLY one fenced JSON code block with this exact structure:
@@ -118,7 +122,8 @@ Return ONLY one fenced JSON code block with this exact structure:
   "version": 1,
   "title": ${JSON.stringify(scope?.category.title ?? "Subject word puzzle")},
   ${scope ? `"categoryKey": ${JSON.stringify(scope.category.key)},` : ''}
-  ${example}
+  ${example},
+  "coverage": [{ "subject": "Specific source topic", "itemNumbers": [1] }]
 }
 \`\`\`
 
@@ -133,13 +138,14 @@ export function parsePuzzleAiImport(json: string, kind: PuzzleAiKind, scope: AiC
   const value = parseAiImportJson(json);
   const format = kind === 'word-search' ? 'dynamic-learner-word-search' : 'dynamic-learner-crossword';
   const field = kind === 'word-search' ? 'words' : 'entries';
-  if (!isRecord(value) || Object.keys(value).some(k => !['format', 'version', 'title', 'categoryKey', field].includes(k)) ||
+  if (!isRecord(value) || Object.keys(value).some(k => !['format', 'version', 'title', 'categoryKey', field, 'coverage'].includes(k)) ||
       value.format !== format || value.version !== 1 || (scope ? value.categoryKey !== scope.category.key : (value.categoryKey !== undefined && typeof value.categoryKey !== 'string')) ||
       typeof value.title !== 'string' || !value.title.trim() || value.title.length > 120 ||
       !Array.isArray(value[field]) || value[field].length < minEntries || value[field].length > Math.min(limit, kind === 'word-search' ? puzzleAiLimits['word-search'].max : MAX_ENTRIES)) {
     throw new Error('This JSON must contain one valid puzzle using the selected format and entry limit.');
   }
   const items: unknown[] = value[field];
+  const coverage = value.coverage === undefined ? undefined : parseAiSubjectCoverage(value.coverage, items.length);
   const used = new Set<string>();
   if (kind === 'word-search') {
     const words: string[] = [];
@@ -168,7 +174,7 @@ export function parsePuzzleAiImport(json: string, kind: PuzzleAiKind, scope: AiC
       ...(randomPool ? { selection: { min: options.layoutMin, max: options.layoutMax } } : {}),
     };
     validateWordSearch(puzzle);
-    return { kind, title: value.title.trim(), puzzle };
+    return { kind, title: value.title.trim(), puzzle, coverage };
   }
 
   const entries: CrosswordPuzzle['entries'] = [];
