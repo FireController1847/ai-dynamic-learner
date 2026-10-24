@@ -3,7 +3,7 @@ import { inputValue } from '../core/dom.ts';
 import { Icon } from './icon.ts';
 import { AiSourceIntro } from './ai-source-intro.ts';
 
-export interface AiPromptExchangeHandle { showImport(): void }
+export interface AiPromptExchangeHandle { showImport(): void; goBack(): boolean }
 
 /** Manual AI handoff. The feature supplies its own prompt, validator and preview. */
 export const AiPromptExchange = defineComponent({
@@ -52,7 +52,16 @@ export const AiPromptExchange = defineComponent({
       stage.value = 'source';
       errorMessage.value = '';
     }
-    expose({ showImport: selectResponse });
+    function goBack(): boolean {
+      if (props.importOnly) return false;
+      if (stage.value === 'response') stage.value = 'send';
+      else if (stage.value === 'send') stage.value = 'instructions';
+      else if (stage.value === 'instructions' && !props.skipSource) stage.value = 'source';
+      else return false;
+      errorMessage.value = '';
+      return true;
+    }
+    expose({ showImport: selectResponse, goBack });
 
     async function copy() {
       errorMessage.value = '';
