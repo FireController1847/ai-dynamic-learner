@@ -11,7 +11,12 @@ import { AI_QUESTION_TYPES, DEFAULT_AI_WEIGHTS, allocateQuestions, questionCount
 import { reviewAiFocusPrompt, type ReviewAiFocus } from './ai-focus.ts';
 
 export const REVIEW_AI_FORMAT = 'dynamic-learner-review';
-export interface ReviewAiImport { title: string; description: string; questions: Question[]; warnings: string[] }
+export interface ReviewAiSubjectCoverage { subject: string; questionNumbers: number[] }
+export interface ReviewAiImport {
+  title: string; description: string; questions: Question[]; warnings: string[];
+  /** A transient AI audit; it does not change the persisted question schema. */
+  coverage: ReviewAiSubjectCoverage[] | null;
+}
 export type ReviewAiMixMode = 'custom' | 'ai';
 export interface ReviewAiPreferences {
   count: number;
@@ -63,15 +68,21 @@ export function reviewAiPrompt(preferences: ReviewAiPreferences, scope: AiCardSc
   const prompt = `Using the original source material supplied earlier in this conversation, create a Dynamic Learner Review knowledge set as a teacher or instructor would assess it.
 
 Scope: ${scope ? 'Only the selected category described above.' : 'The overall subject, covering its important topics.'}
-Coverage: ${preferences.coverage === 'essentials' ? 'Core concepts only.' : preferences.coverage === 'comprehensive' ? 'Broad useful coverage without trivia or repetition.' : 'Major ideas and useful supporting facts.'}
-Create EXACTLY ${preferences.count} items.
+Depth: ${preferences.coverage === 'essentials' ? 'Concise questions on every subject.' : preferences.coverage === 'comprehensive' ? 'Detailed questions on every subject.' : 'Balanced questions across every subject.'}
+Target ${preferences.count} questions. COMPLETE COVERAGE OVERRIDES this target and any question-type quotas. Generate additional questions if necessary (maximum ${MAX_QUESTIONS}). Never omit a subject to match the count.
 ${aiChoosesMix
     ? 'Choose question types and counts to suit the material; omit unsuitable types. Favor scored questions over arbitrary quotas or unscored filler.' + (focusPrompt ? `\nSelected focus (guidance, not a quota): ${focusPrompt}` : '')
     : `Use EXACTLY this mix:
 ${enabledTypes.map(type => `- ${questionTypeLabel(type)}: ${counts![type]} items`).join('\n')}`}
-Use ONLY these types: ${enabledTypes.map(questionTypeLabel).join(', ')}. If the source cannot support the count, ask to reduce it rather than invent content.
+Use ONLY these types: ${enabledTypes.map(questionTypeLabel).join(', ')}. If fewer useful questions are possible, return fewer without filler. If more than ${MAX_QUESTIONS} are required for coverage, ask to split the source into batches instead of claiming full coverage.
 
-Choose the approach from the material (respect any specified type counts):
+MANDATORY SUBJECT COVERAGE — complete the audit BEFORE and AFTER writing questions:
+- Inventory EVERY testable subject in the supplied material: all study-guide objectives, headings, subheadings, bullets, definitions, facts, figures, numerical values, formulas, associations, exceptions, comparisons, and examples. A study guide is a checklist; do not skip any item, even if it seems minor.
+- For a selected category, inventory and test EVERY subject inside that category, not only its title/description or the most important points. For the overall subject, cover the entire supplied source. Questions may cover multiple subjects only if each one is genuinely tested.
+- Link each inventoried subject to at least one ACTUAL scored question in the response. Return a top-level "coverage" array of { "subject": "Specific source subject", "questionNumbers": [1, 3] }, using 1-based indices into "questions". Never cite an unscored Statement or a question that does not test that subject.
+- Cross-check the original source against the inventory again before returning JSON. Do not falsely claim full coverage. If something cannot be tested, explicitly ask for help instead of omitting it.
+
+Choose the approach from the material (respect requested type counts where possible):
 1. LOGIC / NUMBERS / PROCEDURES: Favor reusable Parameterized questions wherever inputs, calculations, rules, or algorithms can genuinely vary. Test the method with many valid solvable variants, not one fixed numerical result. Supply feasible ranges, constraints and complete solvers as needed. Never randomize fixed facts, diagnostic thresholds, or medical constants. If Parameterized is unavailable or unsuitable, use another enabled type.
 2. RECALL / FIXED FACTS / MEDICAL / ASSOCIATIONS: Favor Multiple Choice, Fill in the Blanks, and matching Dropdowns. Test relationships directly (enzyme ↔ substrate, function ↔ term, symptom ↔ condition, threshold ↔ meaning). Reverse associations where useful; use plausible near-miss distractors to test distinctions, not obviously wrong options. Keep grading unambiguous.
 
@@ -86,23 +97,23 @@ ${enabledTypes.map(type => quality[type]).join('\n')}
 
 ${AI_MARKDOWN_CONTEXT_GUIDANCE}
 
-Return ONLY one fenced JSON code block in this structure:
+Return ONLY one fenced JSON code block in this structure (list ALL source subjects in coverage, not just the example):
 \`\`\`json
-${JSON.stringify({ format: REVIEW_AI_FORMAT, version: 1, title: 'Short knowledge set title', description: 'Brief scope of this knowledge set.', ...(allowParameterized ? { solvers: [AI_SOLVER_EXAMPLE] } : {}), questions: enabledTypes.map(type => examples[type]) }, null, 2)}
+${JSON.stringify({ format: REVIEW_AI_FORMAT, version: 1, title: 'Short knowledge set title', description: 'Brief scope of this knowledge set.', ...(allowParameterized ? { solvers: [AI_SOLVER_EXAMPLE] } : {}), questions: enabledTypes.map(type => examples[type]), coverage: [{ subject: 'Chemical symbols', questionNumbers: [1, 2] }] }, null, 2)}
 \`\`\`
 
 Examples show structure only, not required types or facts. ${allowParameterized ? 'Include solvers only when a Parameterized question needs them. ' : ''}Title: 1–${MAX_NAME_LENGTH} characters; description, prompt, answer, explanation, and choices: at most ${MAX_TEXT} characters each; context: at most ${MAX_QUESTION_CONTEXT} characters. Escape newlines and backslashes inside JSON strings.
 ${enabledTypes.map(type => fields[type]).join('\n')}
-All scored types may include optional context.`;
+All scored types may include optional context. New AI-created sets REQUIRE a comprehensive coverage array with one distinct source subject per entry and valid scored question references.`;
   return scope ? categoryScopedPrompt(prompt, scope, 'Review questions') : prompt;
 }
 
-export function parseReviewAiImport(text: string, preferences: ReviewAiPreferences): ReviewAiImport {
+export function parseReviewAiImport(text: string, preferences: ReviewAiPreferences, options: { requireCoverage?: boolean } = {}): ReviewAiImport {
   const countProblem = questionCountProblem(preferences.count);
   if (countProblem) throw new Error(countProblem);
   const expected = preferences.mixMode === 'ai' ? null : allocateQuestions(preferences.weights, preferences.count);
   const value = parseAiImportJson(text);
-  if (!isRecord(value) || Object.keys(value).some(key => !['format', 'version', 'title', 'description', 'questions', 'solvers'].includes(key)) ||
+  if (!isRecord(value) || Object.keys(value).some(key => !['format', 'version', 'title', 'description', 'questions', 'solvers', 'coverage'].includes(key)) ||
       value.format !== REVIEW_AI_FORMAT || value.version !== 1 || typeof value.title !== 'string' ||
       !value.title.trim() || value.title.trim().length > MAX_NAME_LENGTH ||
       typeof value.description !== 'string' || value.description.length > MAX_TEXT ||
@@ -190,7 +201,31 @@ export function parseReviewAiImport(text: string, preferences: ReviewAiPreferenc
       if (actual !== expected[type]) warnings.push(`${questionTypeLabel(type)}: requested ${expected[type]}, received ${actual}.${preferences.weights[type] === 0 && actual > 0 ? ' This type is disabled in the current mix.' : ''}`);
     }
   }
-  return { title: value.title.trim(), description: value.description.trim(), questions, warnings };
+  let coverage: ReviewAiSubjectCoverage[] | null = null;
+  if (value.coverage !== undefined) {
+    if (!Array.isArray(value.coverage) || !value.coverage.length || value.coverage.length > MAX_QUESTIONS) {
+      throw new Error('Coverage must list 1–200 source subjects and their scored question numbers.');
+    }
+    const seen = new Set<string>();
+    coverage = value.coverage.map((entry: unknown, index): ReviewAiSubjectCoverage => {
+      if (!isRecord(entry) || Object.keys(entry).some(key => !['subject', 'questionNumbers'].includes(key)) ||
+          typeof entry.subject !== 'string' || !entry.subject.trim() ||
+          entry.subject.trim().length > MAX_NAME_LENGTH || !Array.isArray(entry.questionNumbers) ||
+          !entry.questionNumbers.length || entry.questionNumbers.length > questions.length ||
+          entry.questionNumbers.some(number => !Number.isInteger(number) || number < 1 || number > questions.length) ||
+          new Set(entry.questionNumbers).size !== entry.questionNumbers.length ||
+          entry.questionNumbers.some(number => questions[Number(number) - 1].type === 'statement')) {
+        throw new Error('Coverage subject ' + (index + 1) + ' needs a valid name and scored question numbers starting at 1.');
+      }
+      const subject = entry.subject.trim(), normalized = subject.toLocaleLowerCase();
+      if (seen.has(normalized)) throw new Error('Coverage subject ' + (index + 1) + ' repeats: ' + subject);
+      seen.add(normalized);
+      return { subject, questionNumbers: [...entry.questionNumbers] as number[] };
+    });
+  } else if (options.requireCoverage) {
+    throw new Error('This AI response has no coverage inventory. Ask the AI to list EVERY source subject with the scored question numbers testing it, then paste the complete corrected JSON.');
+  }
+  return { title: value.title.trim(), description: value.description.trim(), questions, warnings, coverage };
 }
 
 /** Accept a complete AI knowledge-set response OR a bare question array.
