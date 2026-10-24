@@ -14,7 +14,7 @@ import { restoreFillBlankAnswers } from '../../core/fill-blank.ts';
 import { inputValue } from '../../core/dom.ts';
 import { Icon } from '../../components/icon.ts';
 import { DeleteConfirmation } from '../../components/delete-confirmation.ts';
-import { defineComponent, h, ref, computed, type PropType } from 'vue';
+import { defineComponent, h, ref, computed, nextTick, watch, type PropType } from 'vue';
 
 export const CheckBuilder = defineComponent({
   name: 'KnowledgeSetBuilder',
@@ -31,6 +31,17 @@ export const CheckBuilder = defineComponent({
       if (pkg && !uploadedSolvers.value.some(entry => entry.id === pkg.id && entry.solverVersion === pkg.solverVersion)) uploadedSolvers.value.push(JSON.parse(JSON.stringify(pkg)) as SolverPackage);
     }
     const selected = ref(0);
+    const questionStrip = ref<HTMLElement | null>(null);
+    watch(selected, async () => {
+      await nextTick();
+      const strip = questionStrip.value;
+      const active = strip?.querySelector<HTMLElement>('.knowledge-question-row.is-selected');
+      if (!strip || !active || strip.scrollWidth <= strip.clientWidth) return;
+      const left = active.offsetLeft - strip.offsetLeft;
+      const right = left + active.offsetWidth;
+      if (left < strip.scrollLeft) strip.scrollLeft = left;
+      else if (right > strip.scrollLeft + strip.clientWidth) strip.scrollLeft = right - strip.clientWidth;
+    });
     const tab = ref<'questions' | 'options'>('questions');
     const importing = ref(false);
     const importNotice = ref('');
@@ -158,11 +169,17 @@ export const CheckBuilder = defineComponent({
             h('div', { class: 'knowledge-builder-header' }, [h('h3', `Questions (${questions.value.length})`),
               h('button', { type: 'button', class: 'icon-button', title: 'Add question', 'aria-label': 'Add question',
                 disabled: questions.value.length >= MAX_QUESTIONS, onClick: addQuestion }, [h(Icon, { name: 'plus' })])]),
-            ...questions.value.map((entry, index) => h('button', { key: entry.id, type: 'button',
-              class: ['knowledge-question-row', { 'is-selected': index === selected.value }],
-              'aria-pressed': index === selected.value, onClick: () => { if (index === selected.value || canLeaveQuestion()) selected.value = index; } },
-            `${index + 1}. ${questionDisplayPrompt(entry).trim() || 'Untitled question'}`)),
-            !questions.value.length ? h('p', { class: 'knowledge-muted' }, 'Add your first question.') : null,
+            h('div', { ref: questionStrip, class: 'knowledge-question-strip', role: 'group', 'aria-label': 'Select a question to edit' }, [
+              ...questions.value.map((entry, index) => h('button', { key: entry.id, type: 'button',
+                class: ['knowledge-question-row', { 'is-selected': index === selected.value }],
+                'aria-label': `Question ${index + 1}: ${questionDisplayPrompt(entry).trim() || 'Untitled question'}`,
+                'aria-pressed': index === selected.value,
+                onClick: () => { if (index === selected.value || canLeaveQuestion()) selected.value = index; } }, [
+                  h('span', { class: 'knowledge-question-row-number' }, `${index + 1}.`),
+                  h('span', { class: 'knowledge-question-row-title' }, questionDisplayPrompt(entry).trim() || 'Untitled question'),
+                ])),
+              !questions.value.length ? h('p', { class: 'knowledge-muted' }, 'Add your first question.') : null,
+            ]),
           ]),
           question ? h('div', { class: 'knowledge-question-editor', key: question.id }, [
             h('div', { class: 'knowledge-builder-header' }, [h('h3', `Question ${selected.value + 1}`),
