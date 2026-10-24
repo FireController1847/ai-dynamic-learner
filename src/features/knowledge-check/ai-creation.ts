@@ -367,6 +367,7 @@ export const ReviewAiCreation = defineComponent({
           ]),
         ]) : h(AiPromptExchange, {
           ref: exchange,
+          preferFileImport: true,
           showReviewStep: stage.value !== 'direct',
           startInImport: stage.value === 'direct' || returningFromReview.value, importOnly: stage.value === 'direct', skipSource: Boolean(scope.value),
           idPrefix: 'review-ai', label: 'Review', prompt: prompt.value, json: json.value, problem: problem.value,
@@ -374,8 +375,8 @@ export const ReviewAiCreation = defineComponent({
           promptHelp: stage.value === 'direct' ? 'Import an existing Review knowledge set.' : scope.value
             ? `Create questions for the selected category ${preferences.value.mixMode === 'ai' ? 'with AI-selected question types' : 'using your percentages'}.`
             : `Create questions covering the overall subject ${preferences.value.mixMode === 'ai' ? 'with an appropriate mix of question types' : 'using your percentages'}.`,
-          validateLabel: 'Continue to Step 5 · Review',
-          importHelp: 'Paste the generated JSON, then continue to the separate review step.',
+          validateLabel: 'Validate file · Continue to Step 5',
+          importHelp: 'Download the JSON file from your AI conversation and select it below. Dynamic Learner will validate it before Step 5.',
           onUpdateJson: (value: string) => { json.value = value; candidate.value = null; problem.value = ''; correctionMessage.value = ''; correctionFallback.value = false; },
           onValidate: validate,
         }),
