@@ -151,6 +151,16 @@
 .ai-source-tutorial-message { display:flex;align-items:center;gap:8px;min-width:0;padding:10px 12px;border-radius:var(--radius);background:var(--brand-tint);color:var(--brand-text);font-size:12px;animation:ai-source-arrive 680ms var(--ease-out) both; }
 .ai-source-tutorial-message .ui-icon { width:16px;height:16px; }
 .ai-source-tutorial-message span { overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.ai-source-message-label,.ai-source-next-message>span { font-size:10px;font-weight:750;letter-spacing:.075em;color:var(--brand-text); }
+.ai-source-next-message { display:grid;gap:5px;min-width:0;padding-top:8px;border-top:1px dashed var(--border-color); }
+.ai-source-next-message>div { display:flex;gap:7px;align-items:center;min-width:0;padding:9px 10px;border:1px dashed var(--control-border);border-radius:var(--radius);font-size:12px;color:var(--text-secondary); }
+.ai-source-next-message .ui-icon { width:16px;height:16px;flex-shrink:0; }
+.ai-source-send-first { display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border:2px solid var(--brand);border-radius:var(--radius-dialog);background:var(--page-background); }
+.ai-source-send-first>.ui-icon { width:22px;height:22px;flex-shrink:0;color:var(--brand-text); }
+.ai-source-send-first>div { display:grid;gap:7px;min-width:0; }
+.ai-source-send-first strong { font-size:16px;line-height:22px; }
+.ai-source-send-first p { margin:0;line-height:21px; }
+.ai-source-send-first p:last-child { color:var(--text-secondary);font-size:13px; }
 .ai-source-tutorial-description { margin:0;line-height:20px; }
 .ai-source-tutorial-note { margin:0;color:var(--text-secondary);font-size:12px;line-height:18px; }
 @keyframes ai-source-arrive { from { opacity:0;transform:translateX(-22px) scale(.96); } to { opacity:1;transform:translateX(0) scale(1); } }
