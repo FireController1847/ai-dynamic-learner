@@ -242,6 +242,19 @@ export function parseReviewAiImport(text: string, preferences: ReviewAiPreferenc
   if (value.confidence !== undefined) {
     const data = value.confidence;
     const percentageFields = ['overallCoverage', 'examConfidence', 'subjectConfidence', 'studyConfidence'] as const;
+    if (!isRecord(data)) throw new Error('confidence must be a JSON object with four percentages, explanations and uncoveredSubjects.');
+    for (const key of percentageFields) {
+      if (!Number.isInteger(data[key]) || (data[key] as number) < 0 || (data[key] as number) > 100)
+        throw new Error('confidence.' + key + ' must be a whole number from 0 to 100, not a percentage string or fraction.');
+    }
+    for (const key of ['coverageExplanation', 'confidenceExplanation'] as const) {
+      if (typeof data[key] !== 'string' || !data[key].trim() || data[key].length > 500)
+        throw new Error('confidence.' + key + ' must be a nonempty explanation of at most 500 characters.');
+    }
+    if (!Array.isArray(data.uncoveredSubjects) ||
+        data.uncoveredSubjects.some(item => typeof item !== 'string' || !item.trim() || item.length > 160))
+      throw new Error('confidence.uncoveredSubjects must be an array of short strings, or [] if no specific topic was missed.');
+
     if (!isRecord(data) || Object.keys(data).some(key => ![...percentageFields, 'coverageExplanation', 'uncoveredSubjects', 'confidenceExplanation'].includes(key)) ||
         percentageFields.some(key => !Number.isInteger(data[key]) || (data[key] as number) < 0 || (data[key] as number) > 100) ||
         typeof data.coverageExplanation !== 'string' || !data.coverageExplanation.trim() || data.coverageExplanation.length > 500 ||
