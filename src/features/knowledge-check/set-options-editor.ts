@@ -3,7 +3,7 @@ import { defineComponent, h, type PropType } from 'vue';
 import { AnswerStrictnessField } from '../../components/answer-strictness-field.ts';
 import { inputValue } from '../../core/dom.ts';
 import { MAX_QUESTIONS, MAX_TEXT } from './question-model.ts';
-import { DEFAULT_SESSION_QUESTION_LIMIT, type QuestionOrder, type QuestionPresentation, type SetOptions } from './set-options.ts';
+import { DEFAULT_SESSION_QUESTION_LIMIT, DEFAULT_TEST_QUESTION_LIMIT, type QuestionOrder, type QuestionPresentation, type SetOptions } from './set-options.ts';
 
 export const SetOptionsEditor = defineComponent({
   name: 'KnowledgeSetOptions',
@@ -19,7 +19,7 @@ export const SetOptionsEditor = defineComponent({
           checked: props.options[key] !== null,
           onChange: (event: Event) => {
             props.options[key] = (event.target as HTMLInputElement).checked
-              ? DEFAULT_SESSION_QUESTION_LIMIT : null;
+              ? (key === 'testQuestionLimit' ? DEFAULT_TEST_QUESTION_LIMIT : DEFAULT_SESSION_QUESTION_LIMIT) : null;
           },
         }), `Limit ${label} questions`]),
         props.options[key] !== null ? h('label', { class: 'knowledge-field' }, [
