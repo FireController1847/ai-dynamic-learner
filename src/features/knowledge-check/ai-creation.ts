@@ -326,6 +326,7 @@ export const ReviewAiCreation = defineComponent({
           ]),
         ]) : h(AiPromptExchange, {
           ref: exchange,
+          showReviewStep: stage.value !== 'direct',
           startInImport: stage.value === 'direct' || returningFromReview.value, importOnly: stage.value === 'direct', skipSource: Boolean(scope.value),
           idPrefix: 'review-ai', label: 'Review', prompt: prompt.value, json: json.value, problem: problem.value,
           maxLength: MAX_AI_IMPORT_LENGTH, hasPreview: false,
