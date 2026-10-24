@@ -328,6 +328,10 @@ export const ReviewAiCreation = defineComponent({
           ].some(value => value < 80) ? h('section', { class: 'review-ai-difference', role: 'status' }, [
             h('strong', 'One or more confidence estimates are below 80%'),
             h('p', 'You can ask the AI to improve the set. It will suggest more questions when useful, or explain what additional source material is needed.'),
+            !importedDirectly.value ? h('button', { type: 'button', class: 'card-primary-button', onClick: () => {
+              returningFromReview.value = false;
+              go('configure', true);
+            } }, 'Increase question count') : null,
             h('button', { type: 'button', class: 'quiet-button', onClick: requestLowConfidence }, 'Copy improvement prompt'),
             correctionMessage.value ? h('p', { role: 'status' }, correctionMessage.value) : null,
             correctionFallback.value ? h('textarea', { readonly: true, rows: 5, value: lowConfidencePrompt(), 'aria-label': 'Confidence improvement prompt' }) : null,
