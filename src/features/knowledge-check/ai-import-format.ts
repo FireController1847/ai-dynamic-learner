@@ -247,8 +247,8 @@ export function parseReviewAiImport(text: string, preferences: ReviewAiPreferenc
         typeof data.coverageExplanation !== 'string' || !data.coverageExplanation.trim() || data.coverageExplanation.length > 500 ||
         typeof data.confidenceExplanation !== 'string' || !data.confidenceExplanation.trim() || data.confidenceExplanation.length > 500 ||
         !Array.isArray(data.uncoveredSubjects) || data.uncoveredSubjects.some(item => typeof item !== 'string' || !item.trim() || item.length > 160) ||
-        (data.overallCoverage as number) < 100 && data.uncoveredSubjects.length === 0) {
-      throw new Error('Confidence needs four percentages (0–100), brief explanations, and specific uncovered subjects when coverage is below 100%.');
+        false) {
+      throw new Error('Confidence needs four whole-number percentages (0–100), two brief explanations, and an uncoveredSubjects array ([] is allowed if no specific omission can be named).');
     }
     confidence = { overallCoverage: data.overallCoverage as number, examConfidence: data.examConfidence as number,
       subjectConfidence: data.subjectConfidence as number, studyConfidence: data.studyConfidence as number,
