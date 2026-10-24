@@ -107,6 +107,11 @@ ${enabledTypes.map(type => quality[type]).join('\n')}
 
 ${AI_MARKDOWN_CONTEXT_GUIDANCE}
 
+CONFIDENCE FORMAT CHECK:
+Use a top-level "confidence" object with EXACTLY these fields: overallCoverage, examConfidence, subjectConfidence, studyConfidence, coverageExplanation, uncoveredSubjects, confidenceExplanation.
+The four percentages MUST be whole JSON numbers from 0 to 100 (85, NOT "85%" or 0.85). The two explanations must be nonempty strings (maximum 500 characters). uncoveredSubjects must be an array of specific omitted-topic strings, or [] if no particular missing topic can be identified. For coverage below 100 with no identifiable missing topics, explain the uncertainty or inadequate depth in coverageExplanation; do not invent topics.
+Verify this object and the entire JSON before responding.
+
 Return ONLY one fenced JSON code block in this structure:
 \`\`\`json
 ${JSON.stringify({ format: REVIEW_AI_FORMAT, version: 1, title: 'Short knowledge set title', description: 'Brief scope of this knowledge set.', ...(allowParameterized ? { solvers: [AI_SOLVER_EXAMPLE] } : {}), questions: enabledTypes.map(type => examples[type]), confidence: { overallCoverage: 85, examConfidence: 90, subjectConfidence: 86, studyConfidence: 90, coverageExplanation: 'Short explanation of coverage estimate.', uncoveredSubjects: ['Specific source topics not adequately tested'], confidenceExplanation: 'Short explanation of evidence and uncertainty.' } }, null, 2)}
@@ -114,7 +119,7 @@ ${JSON.stringify({ format: REVIEW_AI_FORMAT, version: 1, title: 'Short knowledge
 
 Examples show structure only, not required types or facts. ${allowParameterized ? 'Include solvers only when a Parameterized question needs them. ' : ''}Title: 1–${MAX_NAME_LENGTH} characters; description, prompt, answer, explanation, and choices: at most ${MAX_TEXT} characters each; context: at most ${MAX_QUESTION_CONTEXT} characters. Escape newlines and backslashes inside JSON strings.
 ${enabledTypes.map(type => fields[type]).join('\n')}
-All scored types may include optional context. New AI-created sets REQUIRE a concise confidence object. Do NOT output a long subject checklist. All percentages are subjective estimates (integers 0–100), NOT verified probabilities. overallCoverage estimates the fraction of provided source/category assessed by the questions; examConfidence estimates likelihood these questions resemble exam content; subjectConfidence estimates relevance and accuracy to the chosen subject; studyConfidence estimates usefulness for learning AND exam preparation. Explain uncertainty, particularly if the supplied material is insufficient. If coverage is below 100, name specific gaps in uncoveredSubjects and explain them. Never report 100 unless all supplied material was assessed.`;
+All scored types may include optional context. New AI-created sets REQUIRE a concise confidence object. Do NOT output a long subject checklist. All percentages are subjective estimates (integers 0–100), NOT verified probabilities. overallCoverage estimates the fraction of provided source/category assessed by the questions; examConfidence estimates likelihood these questions resemble exam content; subjectConfidence estimates relevance and accuracy to the chosen subject; studyConfidence estimates usefulness for learning AND exam preparation. Explain uncertainty, particularly if the supplied material is insufficient. If coverage is below 100, list identifiable gaps in uncoveredSubjects; when no distinct omitted topic can be identified, use [] and explain the uncertainty in coverageExplanation. Never report 100 unless all supplied material was assessed.`;
   return scope ? categoryScopedPrompt(prompt, scope, 'Review questions') : prompt;
 }
 
