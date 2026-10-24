@@ -23,12 +23,16 @@ export const AiPromptExchange = defineComponent({
     importOnly: Boolean,
     skipSource: Boolean,
     showReviewStep: Boolean,
+    preferFileImport: Boolean,
   },
   emits: { 'update-json': (_value: string) => true, validate: () => true },
   setup(props, { emit, slots, expose }) {
     const stage = ref<'source' | 'instructions' | 'send' | 'response'>(props.startInImport || props.importOnly ? 'response' : props.skipSource ? 'instructions' : 'source');
     const shown = ref(false);
     const errorMessage = ref('');
+    const uploadedFile = ref('');
+    const fileProblem = ref('');
+    const uploading = ref(false);
     const input = ref<HTMLTextAreaElement | null>(null);
     const stepHeading = ref<HTMLElement | null>(null);
     const promptText = ref<HTMLTextAreaElement | null>(null);
@@ -37,6 +41,36 @@ export const AiPromptExchange = defineComponent({
     let focusResponse = false;
     onBeforeUnmount(() => { disposed = true; });
 
+    async function loadJsonFile(event: Event) {
+      const file = (event.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      uploadedFile.value = '';
+      fileProblem.value = '';
+      if (!file.name.toLowerCase().endsWith('.json')) {
+        fileProblem.value = 'Choose a .json file downloaded from your AI chat.';
+        return;
+      }
+      if (props.maxLength !== undefined && file.size > props.maxLength * 4) {
+        fileProblem.value = 'This file is too large to import.';
+        return;
+      }
+      uploading.value = true;
+      try {
+        const contents = await file.text();
+        if (props.maxLength !== undefined && contents.length > props.maxLength)
+          throw new Error('The JSON exceeds the supported import size.');
+        JSON.parse(contents);
+        if (disposed) return;
+        uploadedFile.value = file.name;
+        emit('update-json', contents);
+      } catch (error) {
+        if (disposed) return;
+        fileProblem.value = error instanceof Error ? error.message : 'Could not read this JSON file.';
+        emit('update-json', '');
+      } finally {
+        uploading.value = false;
+      }
+    }
     function selectResponse() {
       focusResponse = true;
       stage.value = 'response';
@@ -169,28 +203,42 @@ export const AiPromptExchange = defineComponent({
           ] : [
             h('div', { class: 'ai-exchange-step-heading' }, [
               h('h3', { id: props.idPrefix + '-step-title' },
-                props.hasPreview ? 'Review your generated content' : 'Paste your AI’s reply here'),
+                props.hasPreview ? 'Review your generated content' : props.preferFileImport ? 'Upload your AI’s JSON file' : 'Paste your AI’s reply here'),
               h('p', { class: 'ai-exchange-help' }, props.importHelp),
             ]),
-            !props.hasPreview ? h('div', { class: 'ai-response-path', 'aria-label': 'Final import steps' }, [
+            !props.hasPreview && !props.preferFileImport ? h('div', { class: 'ai-response-path', 'aria-label': 'Final import steps' }, [
               h('span', [h(Icon, { name: 'duplicate' }), '1. Copy the complete AI reply']),
               h(Icon, { name: 'chevron' }),
               h('span', [h(Icon, { name: 'check' }), '2. Check and preview it']),
             ]) : null,
-            h('label', { class: 'ai-exchange-field-label', for: props.idPrefix + '-response' }, 'AI response'),
-            h('textarea', {
+            props.preferFileImport ? h('div', { class: 'ai-exchange-file-import' }, [
+              h('label', { class: 'ai-exchange-field-label', for: props.idPrefix + '-file' }, 'Choose a JSON file'),
+              h('input', { id: props.idPrefix + '-file', type: 'file', accept: '.json,application/json',
+                onChange: loadJsonFile }),
+              uploadedFile.value ? h('p', { role: 'status' }, 'Loaded ' + uploadedFile.value) : null,
+              fileProblem.value ? h('p', { class: 'ai-exchange-error', role: 'alert' }, fileProblem.value) : null,
+              h('p', { class: 'ai-exchange-help' }, 'Download the .json file attached by your AI, then select it here. Nothing is uploaded to a server.'),
+              h('details', { class: 'ai-exchange-format-help' }, [
+                h('summary', 'No downloadable JSON file? Paste JSON instead'),
+                h('textarea', { ref: input, id: props.idPrefix + '-response', value: props.json,
+                  rows: 6, maxlength: props.maxLength, placeholder: 'Paste raw JSON as a fallback',
+                  onInput: (event: Event) => { uploadedFile.value = ''; emit('update-json', inputValue(event)); } }),
+              ]),
+            ]) : null,
+            !props.preferFileImport ? h('label', { class: 'ai-exchange-field-label', for: props.idPrefix + '-response' }, 'AI response') : null,
+            !props.preferFileImport ? h('textarea', {
               ref: input, id: props.idPrefix + '-response', value: props.json,
               rows: 9, maxlength: props.maxLength,
               placeholder: 'Paste everything your AI generated here (including the code block)',
               'aria-invalid': props.problem ? 'true' : undefined,
               'aria-describedby': props.problem ? props.idPrefix + '-error' : undefined,
               onInput: (event: Event) => { emit('update-json', inputValue(event)); },
-            }),
+            }) : null,
             props.problem ? h('p', { id: props.idPrefix + '-error', role: 'alert', class: 'ai-exchange-error' }, [
               h('strong', 'That response could not be used. '), props.problem,
             ]) : null,
             h('div', { class: 'ai-exchange-actions' }, [
-              h('button', { type: 'button', class: 'card-primary-button', disabled: !props.json.trim(), onClick: () => emit('validate') },
+              h('button', { type: 'button', class: 'card-primary-button', disabled: !props.json.trim() || uploading.value, onClick: () => emit('validate') },
                 props.hasPreview ? 'Check again' : props.validateLabel),
               !props.importOnly ? h('button', { type: 'button', class: 'quiet-button', onClick: () => { stage.value = 'send'; } }, 'Back to AI chat step') : null,
             ]),
