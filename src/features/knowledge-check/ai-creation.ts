@@ -301,17 +301,19 @@ export const ReviewAiCreation = defineComponent({
             ]),
             h('div', { class: 'review-ai-confidence-metrics' }, [
               ...([
-                ['Exam confidence', candidate.value.confidence.examConfidence],
-                ['Subject confidence', candidate.value.confidence.subjectConfidence],
-                ['Study confidence', candidate.value.confidence.studyConfidence],
-              ] as const).map(([label, value]) => h('div', { class: 'review-ai-metric', key: label }, [
+                ['Exam confidence', candidate.value.confidence.examConfidence, 'How closely these questions are expected to match likely exam topics. This is an estimate, not knowledge of the actual exam.'],
+                ['Subject confidence', candidate.value.confidence.subjectConfidence, 'How accurately the questions align with the subject and supplied material.'],
+                ['Study confidence', candidate.value.confidence.studyConfidence, 'How useful practicing these questions is expected to be for learning and exam preparation.'],
+              ] as const).map(([label, value, explanation]) => h('div', { class: 'review-ai-metric', key: label }, [
                 h('div', [h('strong', label), h('span', value + '%')]),
+                h('p', { class: 'review-ai-metric-help' }, explanation),
                 h('div', { class: 'review-ai-meter', role: 'progressbar', 'aria-label': label, 'aria-valuemin': 0,
                   'aria-valuemax': 100, 'aria-valuenow': value }, [
                   h('span', { style: { width: value + '%' } }),
                 ]),
               ])),
             ]),
+            h('p', { class: 'review-ai-coverage-help' }, 'Overall coverage measures how much of the supplied material or selected category these questions address. A high value means broad source coverage, not a guaranteed exam result.'),
             h('div', { class: 'review-ai-confidence-notes' }, [
               h('p', candidate.value.confidence.coverageExplanation),
               candidate.value.confidence.uncoveredSubjects.length
