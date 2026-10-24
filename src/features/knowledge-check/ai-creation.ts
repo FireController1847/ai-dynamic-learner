@@ -10,7 +10,7 @@ import type { AiCardCategories, AiCardScope } from '../../core/ai-study-categori
 import { inputValue } from '../../core/dom.ts';
 import { parseFillBlankTemplate } from '../../core/fill-blank.ts';
 import { parseReviewAiImport, reviewAiPrompt, type ReviewAiImport, type ReviewAiPreferences } from './ai-import-format.ts';
-import { ReviewAiCoverageReview } from './ai-coverage-review.ts';
+
 import { REVIEW_AI_FOCUSES } from './ai-focus.ts';
 import { AI_QUESTION_TYPES, allocateQuestions, DEFAULT_AI_WEIGHTS, equalizeQuestionWeights, normalizeQuestionWeights, questionCountProblem, questionMixProblem, questionTypeLabel, rebalanceQuestionWeights, type QuestionWeights, type AiQuestionType } from './ai-question-mix.ts';
 import { MAX_QUESTIONS, questionDisplayPrompt, type Question } from './question-model.ts';
@@ -20,14 +20,15 @@ export const ReviewAiCreation = defineComponent({
   props: { destination: { type: String, required: true } },
   emits: { cancel: () => true, create: (_value: ReviewAiImport) => true },
   setup(props, { emit }) {
-    const stage = ref<'scope' | 'categories' | 'configure' | 'generate' | 'direct'>('scope');
+    const stage = ref<'scope' | 'categories' | 'configure' | 'generate' | 'direct' | 'review'>('scope');
+    const importedDirectly = ref(false);
     const scope = ref<AiCardScope | null>(null);
     const categories = ref<AiCardCategories | null>(null);
     const preferences = ref<ReviewAiPreferences>({ count: 50, coverage: 'balanced', mixMode: 'ai', aiFocus: 'default', weights: { ...DEFAULT_AI_WEIGHTS } });
     const json = ref('');
     const problem = ref('');
     const candidate = ref<ReviewAiImport | null>(null);
-    const coverageApproved = ref(false);
+
     const validationRevision = ref(0);
     const correctionMessage = ref('');
     const correctionFallback = ref(false);
@@ -72,25 +73,28 @@ export const ReviewAiCreation = defineComponent({
     function go(next: typeof stage.value, back = false) { backward.value = back; stage.value = next; }
     function back() {
       candidate.value = null;
-      coverageApproved.value = false;
+
       problem.value = '';
-      if (stage.value === 'direct') go('scope', true);
+      if (stage.value === 'review') go(importedDirectly.value ? 'direct' : 'generate', true);
+      else if (stage.value === 'direct') go('scope', true);
       else if (stage.value === 'generate') go('configure', true);
       else if (stage.value === 'configure') go(scope.value ? 'categories' : 'scope', true);
       else go('scope', true);
     }
     function validate() {
       candidate.value = null;
-      coverageApproved.value = false;
+
       validationRevision.value++;
       problem.value = '';
       try {
         candidate.value = parseReviewAiImport(json.value, preferences.value, { requireCoverage: stage.value !== 'direct' });
+        importedDirectly.value = stage.value === 'direct';
+        go('review');
       }
       catch (error) { problem.value = error instanceof Error ? error.message : String(error); }
     }
     function countCorrection() {
-      return `Aim for ${preferences.value.count} questions WITHOUT dropping any source subject. Keep every scored topic, update the complete "coverage" inventory and its 1-based questionNumbers, and return the FULL corrected JSON. If more questions are required for complete coverage, prioritize coverage over the target count.`;
+      return `Aim for ${preferences.value.count} questions WITHOUT dropping any source subject. Keep every scored topic, update the confidence estimates and uncoveredSubjects, and return the FULL corrected JSON. If more questions are required for complete coverage, prioritize coverage over the target count.`;
     }
     async function requestExactCount() {
       const message = countCorrection();
@@ -251,61 +255,76 @@ export const ReviewAiCreation = defineComponent({
               if (!mixProblem.value) go('generate');
             } }, 'Continue to AI'),
           ]),
-        ] : h(AiPromptExchange, {
-          startInImport: stage.value === 'direct', importOnly: stage.value === 'direct', skipSource: Boolean(scope.value),
-          idPrefix: 'review-ai', label: 'Review', prompt: prompt.value, json: json.value, problem: problem.value,
-          maxLength: MAX_AI_IMPORT_LENGTH, hasPreview: candidate.value !== null,
-          promptHelp: stage.value === 'direct' ? 'Import an existing Review knowledge set.' : scope.value
-            ? `Create questions for the selected category ${preferences.value.mixMode === 'ai' ? 'with AI-selected question types' : 'using your percentages'}.`
-            : `Create questions covering the overall subject ${preferences.value.mixMode === 'ai' ? 'with an appropriate mix of question types' : 'using your percentages'}.`,
-          validateLabel: 'Check and preview questions',
-          importHelp: stage.value === 'direct' ? 'Paste a previously generated Review response.' : preferences.value.mixMode === 'ai'
-            ? 'Paste the AI JSON to check and approve subject-by-subject coverage before creating.'
-            : 'Paste the AI response to preview your questions and review any differences.',
-          onUpdateJson: (value: string) => { json.value = value; candidate.value = null; coverageApproved.value = false; problem.value = ''; correctionMessage.value = ''; correctionFallback.value = false; }, onValidate: validate,
-        }, { preview: () => candidate.value ? h('div', { class: 'study-ai-preview' }, [
-          h('h3', 'Your questions are ready to review'),
-          h('p', candidate.value.title + ' · ' + candidate.value.description),
+        ] : stage.value === 'review' && candidate.value ? h('div', { class: 'review-ai-final' }, [
+          h('p', { class: 'study-ai-muted' }, 'Step 5 · Review the generated set before creating it. Percentages are the AI’s subjective estimates, not measured probabilities.'),
+          candidate.value.confidence ? h('section', { class: 'review-ai-confidence', 'aria-label': 'AI confidence summary' }, [
+            h('div', { class: 'review-ai-coverage-ring', style: { '--coverage': String(candidate.value.confidence.overallCoverage) + '%' } }, [
+              h('div', [h('strong', candidate.value.confidence.overallCoverage + '%'), h('span', 'Overall coverage')]),
+            ]),
+            h('div', { class: 'review-ai-confidence-metrics' }, [
+              ...([
+                ['Exam confidence', candidate.value.confidence.examConfidence],
+                ['Subject confidence', candidate.value.confidence.subjectConfidence],
+                ['Study confidence', candidate.value.confidence.studyConfidence],
+              ] as const).map(([label, value]) => h('div', { class: 'review-ai-metric', key: label }, [
+                h('div', [h('strong', label), h('span', value + '%')]),
+                h('div', { class: 'review-ai-meter', role: 'progressbar', 'aria-label': label, 'aria-valuemin': 0,
+                  'aria-valuemax': 100, 'aria-valuenow': value }, [
+                  h('span', { style: { width: value + '%' } }),
+                ]),
+              ])),
+            ]),
+            h('div', { class: 'review-ai-confidence-notes' }, [
+              h('p', candidate.value.confidence.coverageExplanation),
+              candidate.value.confidence.uncoveredSubjects.length
+                ? h('div', [
+                    h('strong', 'Potentially missing coverage'),
+                    h('ul', candidate.value.confidence.uncoveredSubjects.map((subject, i) => h('li', { key: i }, subject))),
+                  ]) : null,
+              h('p', candidate.value.confidence.confidenceExplanation),
+            ]),
+          ]) : h('p', { class: 'study-ai-muted' }, 'This older imported JSON does not contain confidence statistics. Its coverage has not been assessed.'),
+          h('h3', candidate.value.title),
+          h('p', candidate.value.description),
           h('div', { class: 'review-ai-preview-counts', role: 'status' }, [
-            stage.value !== 'direct' ? h('div', [h('strong', String(preferences.value.count)), h('span', 'Requested')]) : null,
-            stage.value !== 'direct' ? h(Icon, { name: 'chevron' }) : null,
+            !importedDirectly.value ? h('div', [h('strong', String(preferences.value.count)), h('span', 'Requested')]) : null,
+            !importedDirectly.value ? h(Icon, { name: 'chevron' }) : null,
             h('div', [h('strong', String(candidate.value.questions.length)), h('span', 'Received from AI')]),
           ]),
-          stage.value !== 'direct' && candidate.value.questions.length !== preferences.value.count
+          !importedDirectly.value && candidate.value.questions.length !== preferences.value.count
             ? h('section', { class: 'review-ai-difference', role: 'status' }, [
-              h('strong', 'The AI made a different number of questions'),
-              h('p', `You asked for ${preferences.value.count} and received ${candidate.value.questions.length}. All ${candidate.value.questions.length} passed format checks. Nothing was removed. You can keep them all or ask the AI to try again.`),
-              h('button', { type: 'button', class: 'quiet-button', onClick: requestExactCount },
-                `Copy request to adjust count while preserving coverage`),
-              correctionMessage.value ? h('p', { role: 'status' }, correctionMessage.value) : null,
-              correctionFallback.value ? h('textarea', { readonly: true, rows: 3,
-                value: countCorrection(),
-                'aria-label': 'Request for exact question count' }) : null,
-            ]) : stage.value !== 'direct' ? h('p', { class: 'study-ai-muted' }, 'The number of questions matches your request.') : null,
-          candidate.value.warnings.filter(warning => stage.value !== 'direct' || !warning.startsWith('Requested ')).length
-            ? h('details', { class: 'review-ai-warning-details' }, [
+                h('strong', 'The AI made a different number of questions'),
+                h('p', `Requested ${preferences.value.count}; received ${candidate.value.questions.length}. No questions were removed.`),
+                h('button', { type: 'button', class: 'quiet-button', onClick: requestExactCount }, 'Copy request to adjust count'),
+                correctionMessage.value ? h('p', { role: 'status' }, correctionMessage.value) : null,
+                correctionFallback.value ? h('textarea', { readonly: true, rows: 3, value: countCorrection() }) : null,
+              ]) : null,
+          candidate.value.warnings.length ? h('details', { class: 'review-ai-warning-details' }, [
             h('summary', 'Other things to review'),
-            h('ul', candidate.value.warnings.filter(warning => stage.value !== 'direct' || !warning.startsWith('Requested ')).map(warning => h('li', warning))),
-            h('p', 'These notes do not prevent you from using the questions.'),
+            h('ul', candidate.value.warnings.map(w => h('li', w))),
           ]) : null,
-          h('details', { class: 'review-ai-questions-details' }, [
+          h('details', { class: 'review-ai-questions-details', open: true }, [
             h('summary', `Preview all ${candidate.value.questions.length} questions`),
             h('ol', { class: 'review-ai-preview' }, candidate.value.questions.map(previewQuestion)),
           ]),
-          candidate.value.coverage ? h(ReviewAiCoverageReview, {
-            key: validationRevision.value,
-            coverage: candidate.value.coverage, questions: candidate.value.questions,
-            onApproval: (approved: boolean) => { coverageApproved.value = approved; },
-          }) : h('p', { class: 'study-ai-muted' },
-            'Legacy direct import: no coverage checklist was included. Its completeness was not audited.'),
-          h('button', {
-            type: 'button', class: 'card-primary-button',
-            disabled: Boolean(candidate.value.coverage) && !coverageApproved.value,
-            onClick: () => {
-              if (candidate.value && (!candidate.value.coverage || coverageApproved.value)) emit('create', candidate.value);
-            },
-          }, `Create set with ${candidate.value.questions.length} questions`),
-        ]) : null }),
+          h('div', { class: 'study-ai-actions' }, [
+            h('button', { type: 'button', class: 'quiet-button', onClick: back }, 'Back to JSON'),
+            h('button', { type: 'button', class: 'card-primary-button',
+              onClick: () => { if (candidate.value) emit('create', candidate.value); },
+            }, `Create set with ${candidate.value.questions.length} questions`),
+          ]),
+        ]) : h(AiPromptExchange, {
+          startInImport: stage.value === 'direct', importOnly: stage.value === 'direct', skipSource: Boolean(scope.value),
+          idPrefix: 'review-ai', label: 'Review', prompt: prompt.value, json: json.value, problem: problem.value,
+          maxLength: MAX_AI_IMPORT_LENGTH, hasPreview: false,
+          promptHelp: stage.value === 'direct' ? 'Import an existing Review knowledge set.' : scope.value
+            ? `Create questions for the selected category ${preferences.value.mixMode === 'ai' ? 'with AI-selected question types' : 'using your percentages'}.`
+            : `Create questions covering the overall subject ${preferences.value.mixMode === 'ai' ? 'with an appropriate mix of question types' : 'using your percentages'}.`,
+          validateLabel: 'Continue to Step 5 · Review',
+          importHelp: 'Paste the generated JSON, then continue to the separate review step.',
+          onUpdateJson: (value: string) => { json.value = value; candidate.value = null; problem.value = ''; correctionMessage.value = ''; correctionFallback.value = false; },
+          onValidate: validate,
+        }),
       ]);
     }
     return () => h('div', { class: ['ai-workflow', { 'is-backward': backward.value }] }, [
