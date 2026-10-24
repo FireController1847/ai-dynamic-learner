@@ -22,6 +22,7 @@ export const ReviewAiCreation = defineComponent({
   setup(props, { emit }) {
     const stage = ref<'scope' | 'categories' | 'configure' | 'generate' | 'direct' | 'review'>('scope');
     const importedDirectly = ref(false);
+    const returningFromReview = ref(false);
     const scope = ref<AiCardScope | null>(null);
     const categories = ref<AiCardCategories | null>(null);
     const preferences = ref<ReviewAiPreferences>({ count: 50, coverage: 'balanced', mixMode: 'ai', aiFocus: 'default', weights: { ...DEFAULT_AI_WEIGHTS } });
@@ -76,7 +77,7 @@ export const ReviewAiCreation = defineComponent({
       candidate.value = null;
 
       problem.value = '';
-      if (stage.value === 'review') go(importedDirectly.value ? 'direct' : 'generate', true);
+      if (stage.value === 'review') { returningFromReview.value = true; go(importedDirectly.value ? 'direct' : 'generate', true); }
       else if ((stage.value === 'generate' || stage.value === 'direct') && exchange.value?.goBack()) return;
       else if (stage.value === 'direct') go('scope', true);
       else if (stage.value === 'generate') go('configure', true);
@@ -91,6 +92,7 @@ export const ReviewAiCreation = defineComponent({
       try {
         candidate.value = parseReviewAiImport(json.value, preferences.value, { requireCoverage: stage.value !== 'direct' });
         importedDirectly.value = stage.value === 'direct';
+        returningFromReview.value = false;
         go('review');
       }
       catch (error) { problem.value = error instanceof Error ? error.message : String(error); }
@@ -324,7 +326,7 @@ export const ReviewAiCreation = defineComponent({
           ]),
         ]) : h(AiPromptExchange, {
           ref: exchange,
-          startInImport: stage.value === 'direct', importOnly: stage.value === 'direct', skipSource: Boolean(scope.value),
+          startInImport: stage.value === 'direct' || returningFromReview.value, importOnly: stage.value === 'direct', skipSource: Boolean(scope.value),
           idPrefix: 'review-ai', label: 'Review', prompt: prompt.value, json: json.value, problem: problem.value,
           maxLength: MAX_AI_IMPORT_LENGTH, hasPreview: false,
           promptHelp: stage.value === 'direct' ? 'Import an existing Review knowledge set.' : scope.value
