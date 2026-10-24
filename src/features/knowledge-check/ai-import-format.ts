@@ -114,7 +114,12 @@ Use a top-level "confidence" object with EXACTLY these fields: overallCoverage, 
 The four percentages MUST be whole JSON numbers from 0 to 100 (85, NOT "85%" or 0.85). The two explanations must be nonempty strings (maximum 500 characters). uncoveredSubjects must be an array of specific omitted-topic strings, or [] if no particular missing topic can be identified. For coverage below 100 with no identifiable missing topics, explain the uncertainty or inadequate depth in coverageExplanation; do not invent topics.
 Verify this object and the entire JSON before responding.
 
-Return ONLY one fenced JSON code block in this structure:
+OUTPUT AS A DOWNLOADABLE JSON FILE, NOT A CHAT CODE BLOCK:
+- Create an actual UTF-8 .json file named dynamic-learner-review.json, containing the COMPLETE valid JSON object below, and attach the file to your reply so the user can download it.
+- Do not print the JSON in chat, do not split the response into multiple code blocks, and do not truncate the file. Validate its JSON syntax before providing it.
+- If this AI environment cannot create or attach a downloadable file, explain that limitation briefly and return the complete raw JSON as a fallback. Never falsely claim a file was attached.
+
+Write the following JSON STRUCTURE to the downloadable file (illustrative schema only):
 \`\`\`json
 ${JSON.stringify({ format: REVIEW_AI_FORMAT, version: 1, title: 'Short knowledge set title', description: 'Brief scope of this knowledge set.', ...(allowParameterized ? { solvers: [AI_SOLVER_EXAMPLE] } : {}), questions: enabledTypes.map(type => examples[type]), confidence: { overallCoverage: 85, examConfidence: 90, subjectConfidence: 86, studyConfidence: 90, coverageExplanation: 'Short explanation of coverage estimate.', uncoveredSubjects: ['Specific source topics not adequately tested'], confidenceExplanation: 'Short explanation of evidence and uncertainty.' } }, null, 2)}
 \`\`\`
