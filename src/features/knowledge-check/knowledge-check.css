@@ -882,3 +882,19 @@
   .knowledge-check-builder { padding: 16px 12px 24px; }
   .knowledge-check-type-card { min-height: 88px; }
 }
+/* Import and picker actions must stay usable with touch/large text. */
+@media (pointer: coarse) {
+  .knowledge-import-picker-toggle, .knowledge-import-picker-toggle-space { flex-basis: 44px; width: 44px; min-height: 44px; }
+  .knowledge-import-picker-row { min-height: 48px; }
+  .knowledge-import-picker-label, .knowledge-import-picker-set-copy { min-height: 44px; }
+  .knowledge-import-radio-option { min-height: 48px; }
+  .knowledge-import-item-actions button { min-height: 44px; }
+  .knowledge-import-picker input:not([type='checkbox']):not([type='radio']),
+  .knowledge-import-picker select { font-size: 16px; }
+}
+@container (max-width: 480px) {
+  .knowledge-import-picker-children { margin-left: 8px; padding-left: 4px; }
+  .knowledge-import-picker-header { gap: 8px; }
+  .knowledge-import-section-heading > button { min-height: 44px; }
+  .knowledge-import-source-copy { min-width: 0; overflow-wrap: anywhere; }
+}
