@@ -1,5 +1,7 @@
 import { computed, defineComponent, h, ref, type PropType } from 'vue';
 import { AiPromptExchange } from '../../components/ai-prompt-exchange.ts';
+import { AiCoverageAcceptance } from '../../components/ai-coverage-acceptance.ts';
+import { AI_COMPLETE_COVERAGE_PROMPT, parseAiSubjectCoverage, type AiSubjectCoverage } from '../../core/ai-subject-coverage.ts';
 import { inputValue } from '../../core/dom.ts';
 import { isRecord } from '../../core/validation.ts';
 import { AI_PLAIN_TEXT_ONLY_GUIDANCE } from '../../core/ai-formatting-guidance.ts';
@@ -34,6 +36,7 @@ export interface SimpleGuideImportSection {
 export interface SimpleListGuideImport {
   mode: 'list';
   title: string;
+  coverage?: AiSubjectCoverage[];
   sections: SimpleGuideImportSection[];
 }
 
@@ -48,6 +51,7 @@ export interface SimpleMapGuideImportTopic {
 export interface SimpleMapGuideImport {
   mode: 'map';
   title: string;
+  coverage?: AiSubjectCoverage[];
   startTopic: string;
   topics: SimpleMapGuideImportTopic[];
   connections: { from: string; to: string }[];
@@ -93,7 +97,9 @@ Selected preferences:
 - Coverage: ${COVERAGE_INSTRUCTIONS[options.coverage]}
 - Bullet style: ${BULLET_STYLE_INSTRUCTIONS[options.bulletStyle]}
 
-Condense freely when several facts can be represented by one useful note. Prefer losing low-value detail over making the guide long.
+Condense redundant wording, NEVER omit a source subject or subtopic. If the material exceeds application limits, ask for batches rather than silently dropping topics.
+${AI_COMPLETE_COVERAGE_PROMPT}
+For Guide, coverage itemNumbers are 1-based section indices in List mode and 1-based topic indices in Map mode.
 
 ${AI_PLAIN_TEXT_ONLY_GUIDANCE}
 
@@ -111,6 +117,7 @@ ${JSON_FENCE}json
   "format": "${LIST_IMPORT_FORMAT}",
   "version": ${IMPORT_VERSION},
   "title": "Short guide title",
+  "coverage": [{ "subject": "Specific source topic", "itemNumbers": [1] }],
   "sections": [
     {
       "title": "Major topic",
@@ -176,6 +183,7 @@ ${JSON_FENCE}json
   "version": ${IMPORT_VERSION},
   "title": "Short guide title",
   "startTopic": "foundations",
+  "coverage": [{ "subject": "Specific source topic", "itemNumbers": [1] }],
   "topics": [
     {
       "key": "foundations",
@@ -373,7 +381,7 @@ function parsedJson(text: string): unknown {
 
 function parseListImport(value: unknown): SimpleListGuideImport {
   if (!isRecord(value) ||
-      Object.keys(value).some((key) => !['format', 'version', 'title', 'sections'].includes(key)) ||
+      Object.keys(value).some((key) => !['format', 'version', 'title', 'sections', 'coverage'].includes(key)) ||
       (value.format !== LIST_IMPORT_FORMAT && value.format !== LEGACY_LIST_IMPORT_FORMAT) || value.version !== IMPORT_VERSION ||
       typeof value.title !== 'string' || !value.title.trim() || value.title.trim().length > MAX_NAME_LENGTH) {
     throw new Error('This is not a supported List-mode Guide import.');
@@ -383,12 +391,13 @@ function parseListImport(value: unknown): SimpleListGuideImport {
     mode: 'list',
     title: value.title.trim(),
     sections: parseImportSections(value.sections, state, 'Guide'),
+    coverage: value.coverage === undefined ? undefined : parseAiSubjectCoverage(value.coverage, Array.isArray(value.sections) ? value.sections.length : 0),
   };
 }
 
 function parseMapImport(value: unknown): SimpleMapGuideImport {
   if (!isRecord(value) ||
-      Object.keys(value).some((key) => !['format', 'version', 'title', 'startTopic', 'topics', 'connections'].includes(key)) ||
+      Object.keys(value).some((key) => !['format', 'version', 'title', 'startTopic', 'topics', 'connections', 'coverage'].includes(key)) ||
       (value.format !== MAP_IMPORT_FORMAT && value.format !== LEGACY_MAP_IMPORT_FORMAT) || value.version !== IMPORT_VERSION ||
       typeof value.title !== 'string' || !value.title.trim() || value.title.trim().length > MAX_NAME_LENGTH ||
       typeof value.startTopic !== 'string' || !value.startTopic.trim() ||
@@ -489,7 +498,8 @@ function parseMapImport(value: unknown): SimpleMapGuideImport {
     throw new Error('Every Map-mode topic must be connected to the starting topic.');
   }
 
-  return { mode: 'map', title: value.title.trim(), startTopic, topics, connections };
+  return { mode: 'map', title: value.title.trim(), startTopic, topics, connections,
+    coverage: value.coverage === undefined ? undefined : parseAiSubjectCoverage(value.coverage, topics.length) };
 }
 
 export function parseGuideAiImport(text: string, mode: GuideMode = 'list'): SimpleGuideImport {
@@ -521,8 +531,10 @@ export const GuideAiImportWorkspace = defineComponent({
     const json = ref('');
     const problem = ref('');
     const candidate = ref<SimpleGuideImport | null>(null);
+    const coverageAccepted = ref(false);
     const prompt = computed(() => guideAiPrompt({ detail: detail.value, coverage: coverage.value, bulletStyle: bulletStyle.value }, props.mode));
     function preview() {
+      coverageAccepted.value = false;
       candidate.value = null;
       problem.value = '';
       try {
@@ -530,8 +542,9 @@ export const GuideAiImportWorkspace = defineComponent({
           try { candidate.value = parseGuideAiImport(json.value, 'list'); }
           catch { candidate.value = parseGuideAiImport(json.value, 'map'); }
         } else candidate.value = parseGuideAiImport(json.value, props.mode);
+        if (!props.direct && !candidate.value.coverage) throw new Error('Missing subject inventory. Request full JSON with coverage itemNumbers for every source topic.');
       }
-      catch (error) { problem.value = error instanceof Error ? error.message : String(error); }
+      catch (error) { candidate.value = null; problem.value = error instanceof Error ? error.message : String(error); }
     }
     function optionField<T extends string>(
       id: string,
@@ -599,7 +612,7 @@ export const GuideAiImportWorkspace = defineComponent({
         hasPreview: candidate.value !== null,
         promptHelp: 'These instructions will turn your source material into a Guide.',
         importHelp: 'Paste your AI response to check and preview the Guide.',
-        onUpdateJson: (value: string) => { json.value = value; candidate.value = null; problem.value = ''; },
+        onUpdateJson: (value: string) => { json.value = value; candidate.value = null; coverageAccepted.value = false; problem.value = ''; },
         onValidate: preview,
       }, {
         options: () => h('div', { class: 'guide-ai-options' }, [
@@ -620,7 +633,12 @@ export const GuideAiImportWorkspace = defineComponent({
             ]),
         preview: () => candidate.value ? h('div', { class: 'guide-ai-preview' }, [
           ...importPreview(candidate.value),
-          h('button', { type: 'button', class: 'card-primary-button', onClick: () => { if (candidate.value) emit('import', candidate.value); } }, 'Import guide'),
+          candidate.value.coverage ? h(AiCoverageAcceptance, { key: json.value, coverage: candidate.value.coverage,
+            items: candidate.value.mode === 'list' ? candidate.value.sections.map(section => section.title + ': ' + section.bullets.join('; ')) : candidate.value.topics.map(topic => topic.title + ': ' + topic.sections.map(section => section.title + ': ' + section.bullets.join('; ')).join('; ')),
+            onApproval: (approved: boolean) => { coverageAccepted.value = approved; },
+          }) : h('p', { class: 'study-ai-muted' }, 'Legacy JSON has no coverage inventory; completeness is unverified.'),
+          h('button', { type: 'button', class: 'card-primary-button', disabled: Boolean(candidate.value.coverage) && !coverageAccepted.value,
+            onClick: () => { if (candidate.value && (!candidate.value.coverage || coverageAccepted.value)) emit('import', candidate.value); } }, 'Import guide'),
         ]) : null,
       }),
     ]);
