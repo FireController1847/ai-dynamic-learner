@@ -2,6 +2,7 @@ import { computed, defineComponent, h, ref, Transition, type PropType } from 'vu
 import { AiCategoryPicker } from '../../components/ai-category-picker.ts';
 import { AiScopeChoices } from '../../components/ai-scope-choices.ts';
 import { AiPromptExchange } from '../../components/ai-prompt-exchange.ts';
+import { AiCoverageAcceptance } from '../../components/ai-coverage-acceptance.ts';
 import { MAX_AI_IMPORT_LENGTH } from '../../core/ai-json.ts';
 import type { AiCardCategories, AiCardScope } from '../../core/ai-study-categories.ts';
 import { inputValue } from '../../core/dom.ts';
@@ -26,6 +27,7 @@ export const PuzzleAiCreation = defineComponent({
     const json = ref('');
     const problem = ref('');
     const candidate = ref<PuzzleAiResult | null>(null);
+    const coverageAccepted = ref(false);
     const backward = ref(false);
     const prompt = computed(() => puzzleAiPrompt(props.kind, scope.value, preferences.value));
     function updatePreferences(changes: Partial<PuzzleAiOptions>) {
@@ -69,10 +71,14 @@ export const PuzzleAiCreation = defineComponent({
       configured.value = true;
     }
     function validate() {
+      coverageAccepted.value = false;
       candidate.value = null;
       problem.value = '';
-      try { candidate.value = parsePuzzleAiImport(json.value, props.kind, scope.value, preferences.value); }
-      catch (error) { problem.value = error instanceof Error ? error.message : String(error); }
+      try {
+        candidate.value = parsePuzzleAiImport(json.value, props.kind, scope.value, preferences.value);
+        if (entry.value !== 'direct' && !candidate.value.coverage) throw new Error('Missing exhaustive subject coverage inventory. Ask the AI to add coverage with itemNumbers for every source topic.');
+      }
+      catch (error) { candidate.value = null; problem.value = error instanceof Error ? error.message : String(error); }
     }
     function choose(next: AiCardScope, list: AiCardCategories) {
       scope.value = next;
@@ -103,8 +109,12 @@ export const PuzzleAiCreation = defineComponent({
           h('strong', entry.answer),
           entry.clue ? h('span', entry.clue) : null,
         ]))),
-        h('button', { type: 'button', class: 'card-primary-button',
-          onClick: () => { if (candidate.value) emit('create', candidate.value); },
+        result.coverage ? h(AiCoverageAcceptance, { key: json.value, coverage: result.coverage,
+          items: entries.map(item => item.answer + (item.clue ? ' — ' + item.clue : '')),
+          onApproval: (value: boolean) => { coverageAccepted.value = value; },
+        }) : h('p', { class: 'study-ai-muted' }, 'Legacy import has no subject coverage inventory; completeness is unverified.'),
+        h('button', { type: 'button', class: 'card-primary-button', disabled: Boolean(result.coverage) && !coverageAccepted.value,
+          onClick: () => { if (candidate.value && (!result.coverage || coverageAccepted.value)) emit('create', candidate.value); },
         }, 'Create ' + (result.kind === 'word-search' ? 'word search' : 'crossword')),
       ]);
     }
@@ -279,7 +289,7 @@ export const PuzzleAiCreation = defineComponent({
             promptHelp: 'Import an existing puzzle response directly.', importHelp: 'Paste an existing AI response to preview your puzzle.',
             startInImport: true, importOnly: true, json: json.value, problem: problem.value, maxLength: MAX_AI_IMPORT_LENGTH,
             hasPreview: candidate.value !== null, validateLabel: 'Validate puzzle',
-            onUpdateJson: (value: string) => { json.value = value; candidate.value = null; problem.value = ''; }, onValidate: validate,
+            onUpdateJson: (value: string) => { json.value = value; candidate.value = null; coverageAccepted.value = false; problem.value = ''; }, onValidate: validate,
           }, { preview }),
         ]) : entry.value === 'settings'
         ? !configured.value ? settings()
@@ -310,7 +320,7 @@ export const PuzzleAiCreation = defineComponent({
             promptHelp: 'Create one puzzle for ' + (scope.value?.category.title ?? 'the overall subject') + '.',
             importHelp: 'Paste the response from your AI chat to preview the puzzle.',
             validateLabel: 'Validate puzzle',
-            onUpdateJson: (value: string) => { json.value = value; candidate.value = null; problem.value = ''; },
+            onUpdateJson: (value: string) => { json.value = value; candidate.value = null; coverageAccepted.value = false; problem.value = ''; },
             onValidate: validate,
           }, {
             guidance: () => h('p', { class: 'study-ai-muted' },
