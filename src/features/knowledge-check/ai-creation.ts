@@ -100,7 +100,34 @@ export const ReviewAiCreation = defineComponent({
     function countCorrection() {
       return `Return at most ${preferences.value.count} meaningful questions. Combine related concepts where useful; remove redundant questions without losing important distinctions. If the count prevents full coverage, identify the uncovered topics in confidence.uncoveredSubjects, adjust overallCoverage honestly, and return COMPLETE corrected JSON. Never exceed the requested question count.`;
     }
-    async function requestExactCount() {
+    function lowConfidencePrompt() {
+      const result = candidate.value;
+      if (!result?.confidence) return '';
+      const c = result.confidence;
+      const low = [
+        ['Overall coverage', c.overallCoverage], ['Exam confidence', c.examConfidence],
+        ['Subject confidence', c.subjectConfidence], ['Study confidence', c.studyConfidence],
+      ].filter(([, value]) => Number(value) < 80).map(([name, value]) => name + ': ' + value + '%');
+      const suggested = Math.min(MAX_QUESTIONS, Math.max(preferences.value.count + 10, Math.ceil(preferences.value.count * 1.5)));
+      return 'Please improve the existing Dynamic Learner Review knowledge set using the original source. These AI-estimated scores fell below 80%: ' +
+        low.join('; ') + '. Re-evaluate WHY each is low. If more questions would genuinely increase coverage or study value, regenerate up to ' +
+        suggested + ' meaningful questions (never exceed this limit), including underrepresented subjects; preserve accurate existing material and avoid filler. ' +
+        'If the problem is insufficient source evidence, subject mismatch, or unknown exam content, clearly identify what additional study material is needed rather than claiming more questions will fix it. ' +
+        'Update all four confidence estimates, explanations and uncoveredSubjects honestly. Return the COMPLETE corrected JSON in the same schema; explanations must gently guide reasoning without giving away answers.';
+    }
+    async function requestLowConfidence() {
+      const message = lowConfidencePrompt();
+      if (!message) return;
+      try {
+        await navigator.clipboard.writeText(message);
+        correctionMessage.value = 'Improvement request copied. Send it in the same AI conversation, then return to Step 4 to paste and validate the new JSON.';
+        correctionFallback.value = false;
+      } catch {
+        correctionMessage.value = 'Copy the improvement request below into the same AI conversation.';
+        correctionFallback.value = true;
+      }
+    }
+        async function requestExactCount() {
       const message = countCorrection();
       correctionMessage.value = '';
       correctionFallback.value = false;
@@ -295,7 +322,17 @@ export const ReviewAiCreation = defineComponent({
               h('p', candidate.value.confidence.confidenceExplanation),
             ]),
           ]) : h('p', { class: 'study-ai-muted' }, 'This older imported JSON does not contain confidence statistics. Its coverage has not been assessed.'),
-          h('h3', candidate.value.title),
+          candidate.value.confidence && [
+            candidate.value.confidence.overallCoverage, candidate.value.confidence.examConfidence,
+            candidate.value.confidence.subjectConfidence, candidate.value.confidence.studyConfidence,
+          ].some(value => value < 80) ? h('section', { class: 'review-ai-difference', role: 'status' }, [
+            h('strong', 'One or more confidence estimates are below 80%'),
+            h('p', 'You can ask the AI to improve the set. It will suggest more questions when useful, or explain what additional source material is needed.'),
+            h('button', { type: 'button', class: 'quiet-button', onClick: requestLowConfidence }, 'Copy improvement prompt'),
+            correctionMessage.value ? h('p', { role: 'status' }, correctionMessage.value) : null,
+            correctionFallback.value ? h('textarea', { readonly: true, rows: 5, value: lowConfidencePrompt(), 'aria-label': 'Confidence improvement prompt' }) : null,
+          ]) : null,
+                    h('h3', candidate.value.title),
           h('p', candidate.value.description),
           h('div', { class: 'review-ai-preview-counts', role: 'status' }, [
             !importedDirectly.value ? h('div', [h('strong', String(preferences.value.count)), h('span', 'Requested')]) : null,
