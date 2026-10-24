@@ -12,10 +12,20 @@ import { reviewAiFocusPrompt, type ReviewAiFocus } from './ai-focus.ts';
 
 export const REVIEW_AI_FORMAT = 'dynamic-learner-review';
 export interface ReviewAiSubjectCoverage { subject: string; questionNumbers: number[] }
+export interface ReviewAiConfidence {
+  overallCoverage: number;
+  examConfidence: number;
+  subjectConfidence: number;
+  studyConfidence: number;
+  coverageExplanation: string;
+  uncoveredSubjects: string[];
+  confidenceExplanation: string;
+}
 export interface ReviewAiImport {
   title: string; description: string; questions: Question[]; warnings: string[];
   /** A transient AI audit; it does not change the persisted question schema. */
   coverage: ReviewAiSubjectCoverage[] | null;
+  confidence: ReviewAiConfidence | null;
 }
 export type ReviewAiMixMode = 'custom' | 'ai';
 export interface ReviewAiPreferences {
@@ -79,7 +89,7 @@ Use ONLY these types: ${enabledTypes.map(questionTypeLabel).join(', ')}. If fewe
 MANDATORY SUBJECT COVERAGE — complete the audit BEFORE and AFTER writing questions:
 - Inventory EVERY testable subject in the supplied material: all study-guide objectives, headings, subheadings, bullets, definitions, facts, figures, numerical values, formulas, associations, exceptions, comparisons, and examples. A study guide is a checklist; do not skip any item, even if it seems minor.
 - For a selected category, inventory and test EVERY subject inside that category, not only its title/description or the most important points. For the overall subject, cover the entire supplied source. Questions may cover multiple subjects only if each one is genuinely tested.
-- Link each inventoried subject to at least one ACTUAL scored question in the response. Return a top-level "coverage" array of { "subject": "Specific source subject", "questionNumbers": [1, 3] }, using 1-based indices into "questions". Never cite an unscored Statement or a question that does not test that subject.
+- Ensure each inventoried subject is tested by at least one meaningful scored question. Do not output the internal subject-by-subject inventory.
 - Cross-check the original source against the inventory again before returning JSON. Do not falsely claim full coverage. If something cannot be tested, explicitly ask for help instead of omitting it.
 
 Choose the approach from the material (respect requested type counts where possible):
@@ -97,14 +107,14 @@ ${enabledTypes.map(type => quality[type]).join('\n')}
 
 ${AI_MARKDOWN_CONTEXT_GUIDANCE}
 
-Return ONLY one fenced JSON code block in this structure (list ALL source subjects in coverage, not just the example):
+Return ONLY one fenced JSON code block in this structure:
 \`\`\`json
-${JSON.stringify({ format: REVIEW_AI_FORMAT, version: 1, title: 'Short knowledge set title', description: 'Brief scope of this knowledge set.', ...(allowParameterized ? { solvers: [AI_SOLVER_EXAMPLE] } : {}), questions: enabledTypes.map(type => examples[type]), coverage: [{ subject: 'Chemical symbols', questionNumbers: [1, 2] }] }, null, 2)}
+${JSON.stringify({ format: REVIEW_AI_FORMAT, version: 1, title: 'Short knowledge set title', description: 'Brief scope of this knowledge set.', ...(allowParameterized ? { solvers: [AI_SOLVER_EXAMPLE] } : {}), questions: enabledTypes.map(type => examples[type]), confidence: { overallCoverage: 85, examConfidence: 90, subjectConfidence: 86, studyConfidence: 90, coverageExplanation: 'Short explanation of coverage estimate.', uncoveredSubjects: ['Specific source topics not adequately tested'], confidenceExplanation: 'Short explanation of evidence and uncertainty.' } }, null, 2)}
 \`\`\`
 
 Examples show structure only, not required types or facts. ${allowParameterized ? 'Include solvers only when a Parameterized question needs them. ' : ''}Title: 1–${MAX_NAME_LENGTH} characters; description, prompt, answer, explanation, and choices: at most ${MAX_TEXT} characters each; context: at most ${MAX_QUESTION_CONTEXT} characters. Escape newlines and backslashes inside JSON strings.
 ${enabledTypes.map(type => fields[type]).join('\n')}
-All scored types may include optional context. New AI-created sets REQUIRE a comprehensive coverage array with one distinct source subject per entry and valid scored question references.`;
+All scored types may include optional context. New AI-created sets REQUIRE a concise confidence object. Do NOT output a long subject checklist. All percentages are subjective estimates (integers 0–100), NOT verified probabilities. overallCoverage estimates the fraction of provided source/category assessed by the questions; examConfidence estimates likelihood these questions resemble exam content; subjectConfidence estimates relevance and accuracy to the chosen subject; studyConfidence estimates usefulness for learning AND exam preparation. Explain uncertainty, particularly if the supplied material is insufficient. If coverage is below 100, name specific gaps in uncoveredSubjects and explain them. Never report 100 unless all supplied material was assessed.`;
   return scope ? categoryScopedPrompt(prompt, scope, 'Review questions') : prompt;
 }
 
@@ -113,7 +123,7 @@ export function parseReviewAiImport(text: string, preferences: ReviewAiPreferenc
   if (countProblem) throw new Error(countProblem);
   const expected = preferences.mixMode === 'ai' ? null : allocateQuestions(preferences.weights, preferences.count);
   const value = parseAiImportJson(text);
-  if (!isRecord(value) || Object.keys(value).some(key => !['format', 'version', 'title', 'description', 'questions', 'solvers', 'coverage'].includes(key)) ||
+  if (!isRecord(value) || Object.keys(value).some(key => !['format', 'version', 'title', 'description', 'questions', 'solvers', 'coverage', 'confidence'].includes(key)) ||
       value.format !== REVIEW_AI_FORMAT || value.version !== 1 || typeof value.title !== 'string' ||
       !value.title.trim() || value.title.trim().length > MAX_NAME_LENGTH ||
       typeof value.description !== 'string' || value.description.length > MAX_TEXT ||
@@ -222,10 +232,27 @@ export function parseReviewAiImport(text: string, preferences: ReviewAiPreferenc
       seen.add(normalized);
       return { subject, questionNumbers: [...entry.questionNumbers] as number[] };
     });
-  } else if (options.requireCoverage) {
-    throw new Error('This AI response has no coverage inventory. Ask the AI to list EVERY source subject with the scored question numbers testing it, then paste the complete corrected JSON.');
   }
-  return { title: value.title.trim(), description: value.description.trim(), questions, warnings, coverage };
+  let confidence: ReviewAiConfidence | null = null;
+  if (value.confidence !== undefined) {
+    const data = value.confidence;
+    const percentageFields = ['overallCoverage', 'examConfidence', 'subjectConfidence', 'studyConfidence'] as const;
+    if (!isRecord(data) || Object.keys(data).some(key => ![...percentageFields, 'coverageExplanation', 'uncoveredSubjects', 'confidenceExplanation'].includes(key)) ||
+        percentageFields.some(key => !Number.isInteger(data[key]) || (data[key] as number) < 0 || (data[key] as number) > 100) ||
+        typeof data.coverageExplanation !== 'string' || !data.coverageExplanation.trim() || data.coverageExplanation.length > 500 ||
+        typeof data.confidenceExplanation !== 'string' || !data.confidenceExplanation.trim() || data.confidenceExplanation.length > 500 ||
+        !Array.isArray(data.uncoveredSubjects) || data.uncoveredSubjects.some(item => typeof item !== 'string' || !item.trim() || item.length > 160) ||
+        (data.overallCoverage as number) < 100 && data.uncoveredSubjects.length === 0) {
+      throw new Error('Confidence needs four percentages (0–100), brief explanations, and specific uncovered subjects when coverage is below 100%.');
+    }
+    confidence = { overallCoverage: data.overallCoverage as number, examConfidence: data.examConfidence as number,
+      subjectConfidence: data.subjectConfidence as number, studyConfidence: data.studyConfidence as number,
+      coverageExplanation: data.coverageExplanation.trim(), uncoveredSubjects: [...data.uncoveredSubjects] as string[],
+      confidenceExplanation: data.confidenceExplanation.trim() };
+  } else if (options.requireCoverage) {
+    throw new Error('The AI omitted the required confidence statistics. Ask for complete JSON with confidence percentages and explanations.');
+  }
+  return { title: value.title.trim(), description: value.description.trim(), questions, warnings, coverage, confidence };
 }
 
 /** Accept a complete AI knowledge-set response OR a bare question array.
