@@ -2,7 +2,7 @@ import { computed, defineComponent, h, onMounted, ref, Transition } from 'vue';
 import { AiCategoryPicker } from '../../components/ai-category-picker.ts';
 import { AiScopeChoices } from '../../components/ai-scope-choices.ts';
 import { Icon } from '../../components/icon.ts';
-import { AiPromptExchange } from '../../components/ai-prompt-exchange.ts';
+import { AiPromptExchange, type AiPromptExchangeHandle } from '../../components/ai-prompt-exchange.ts';
 import { MarkdownContent } from '../../components/markdown-content.ts';
 import { MAX_AI_IMPORT_LENGTH } from '../../core/ai-json.ts';
 import { DEFAULT_SESSION_QUESTION_LIMIT } from './set-options.ts';
@@ -34,6 +34,7 @@ export const ReviewAiCreation = defineComponent({
     const correctionFallback = ref(false);
     const backward = ref(false);
     const heading = ref<HTMLElement | null>(null);
+    const exchange = ref<AiPromptExchangeHandle | null>(null);
     const editingWeight = ref<AiQuestionType | null>(null);
     const weightText = ref('');
     const weightNotice = ref('');
@@ -76,6 +77,7 @@ export const ReviewAiCreation = defineComponent({
 
       problem.value = '';
       if (stage.value === 'review') go(importedDirectly.value ? 'direct' : 'generate', true);
+      else if ((stage.value === 'generate' || stage.value === 'direct') && exchange.value?.goBack()) return;
       else if (stage.value === 'direct') go('scope', true);
       else if (stage.value === 'generate') go('configure', true);
       else if (stage.value === 'configure') go(scope.value ? 'categories' : 'scope', true);
@@ -256,6 +258,13 @@ export const ReviewAiCreation = defineComponent({
             } }, 'Continue to AI'),
           ]),
         ] : stage.value === 'review' && candidate.value ? h('div', { class: 'review-ai-final' }, [
+          h('div', { class: 'ai-exchange-progress', 'aria-label': 'AI creation progress' }, [
+            h('span', { class: 'is-complete' }, '1 · Source'), h(Icon, { name: 'chevron' }),
+            h('span', { class: 'is-complete' }, '2 · Copy'), h(Icon, { name: 'chevron' }),
+            h('span', { class: 'is-complete' }, '3 · Send'), h(Icon, { name: 'chevron' }),
+            h('span', { class: 'is-complete' }, '4 · Return'), h(Icon, { name: 'chevron' }),
+            h('span', { class: 'is-active', 'aria-current': 'step' }, '5 · Review'),
+          ]),
           h('p', { class: 'study-ai-muted' }, 'Step 5 · Review the generated set before creating it. Percentages are the AI’s subjective estimates, not measured probabilities.'),
           candidate.value.confidence ? h('section', { class: 'review-ai-confidence', 'aria-label': 'AI confidence summary' }, [
             h('div', { class: 'review-ai-coverage-ring', style: { '--coverage': String(candidate.value.confidence.overallCoverage) + '%' } }, [
@@ -314,6 +323,7 @@ export const ReviewAiCreation = defineComponent({
             }, `Create set with ${candidate.value.questions.length} questions`),
           ]),
         ]) : h(AiPromptExchange, {
+          ref: exchange,
           startInImport: stage.value === 'direct', importOnly: stage.value === 'direct', skipSource: Boolean(scope.value),
           idPrefix: 'review-ai', label: 'Review', prompt: prompt.value, json: json.value, problem: problem.value,
           maxLength: MAX_AI_IMPORT_LENGTH, hasPreview: false,
