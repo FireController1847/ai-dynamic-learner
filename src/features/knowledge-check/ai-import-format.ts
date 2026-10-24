@@ -259,8 +259,7 @@ export function parseReviewAiImport(text: string, preferences: ReviewAiPreferenc
         percentageFields.some(key => !Number.isInteger(data[key]) || (data[key] as number) < 0 || (data[key] as number) > 100) ||
         typeof data.coverageExplanation !== 'string' || !data.coverageExplanation.trim() || data.coverageExplanation.length > 500 ||
         typeof data.confidenceExplanation !== 'string' || !data.confidenceExplanation.trim() || data.confidenceExplanation.length > 500 ||
-        !Array.isArray(data.uncoveredSubjects) || data.uncoveredSubjects.some(item => typeof item !== 'string' || !item.trim() || item.length > 160) ||
-        false) {
+        !Array.isArray(data.uncoveredSubjects) || data.uncoveredSubjects.some(item => typeof item !== 'string' || !item.trim() || item.length > 160)) {
       throw new Error('Confidence needs four whole-number percentages (0–100), two brief explanations, and an uncoveredSubjects array ([] is allowed if no specific omission can be named).');
     }
     confidence = { overallCoverage: data.overallCoverage as number, examConfidence: data.examConfidence as number,
