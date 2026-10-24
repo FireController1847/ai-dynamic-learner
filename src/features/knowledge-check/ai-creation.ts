@@ -10,6 +10,7 @@ import type { AiCardCategories, AiCardScope } from '../../core/ai-study-categori
 import { inputValue } from '../../core/dom.ts';
 import { parseFillBlankTemplate } from '../../core/fill-blank.ts';
 import { parseReviewAiImport, reviewAiPrompt, type ReviewAiImport, type ReviewAiPreferences } from './ai-import-format.ts';
+import { ReviewAiCoverageReview } from './ai-coverage-review.ts';
 import { REVIEW_AI_FOCUSES } from './ai-focus.ts';
 import { AI_QUESTION_TYPES, allocateQuestions, DEFAULT_AI_WEIGHTS, equalizeQuestionWeights, normalizeQuestionWeights, questionCountProblem, questionMixProblem, questionTypeLabel, rebalanceQuestionWeights, type QuestionWeights, type AiQuestionType } from './ai-question-mix.ts';
 import { MAX_QUESTIONS, questionDisplayPrompt, type Question } from './question-model.ts';
@@ -26,6 +27,8 @@ export const ReviewAiCreation = defineComponent({
     const json = ref('');
     const problem = ref('');
     const candidate = ref<ReviewAiImport | null>(null);
+    const coverageApproved = ref(false);
+    const validationRevision = ref(0);
     const correctionMessage = ref('');
     const correctionFallback = ref(false);
     const backward = ref(false);
@@ -69,6 +72,7 @@ export const ReviewAiCreation = defineComponent({
     function go(next: typeof stage.value, back = false) { backward.value = back; stage.value = next; }
     function back() {
       candidate.value = null;
+      coverageApproved.value = false;
       problem.value = '';
       if (stage.value === 'direct') go('scope', true);
       else if (stage.value === 'generate') go('configure', true);
@@ -77,12 +81,19 @@ export const ReviewAiCreation = defineComponent({
     }
     function validate() {
       candidate.value = null;
+      coverageApproved.value = false;
+      validationRevision.value++;
       problem.value = '';
-      try { candidate.value = parseReviewAiImport(json.value, preferences.value); }
+      try {
+        candidate.value = parseReviewAiImport(json.value, preferences.value, { requireCoverage: stage.value !== 'direct' });
+      }
       catch (error) { problem.value = error instanceof Error ? error.message : String(error); }
     }
+    function countCorrection() {
+      return `Aim for ${preferences.value.count} questions WITHOUT dropping any source subject. Keep every scored topic, update the complete "coverage" inventory and its 1-based questionNumbers, and return the FULL corrected JSON. If more questions are required for complete coverage, prioritize coverage over the target count.`;
+    }
     async function requestExactCount() {
-      const message = `Please redo the last Dynamic Learner Review response with exactly ${preferences.value.count} questions, not more or fewer. Keep the same response structure and subject, and return only the requested structured content.`;
+      const message = countCorrection();
       correctionMessage.value = '';
       correctionFallback.value = false;
       try {
@@ -249,9 +260,9 @@ export const ReviewAiCreation = defineComponent({
             : `Create questions covering the overall subject ${preferences.value.mixMode === 'ai' ? 'with an appropriate mix of question types' : 'using your percentages'}.`,
           validateLabel: 'Check and preview questions',
           importHelp: stage.value === 'direct' ? 'Paste a previously generated Review response.' : preferences.value.mixMode === 'ai'
-            ? 'Paste the AI response to preview your questions. Changes to your requested count will be noted.'
+            ? 'Paste the AI JSON to check and approve subject-by-subject coverage before creating.'
             : 'Paste the AI response to preview your questions and review any differences.',
-          onUpdateJson: (value: string) => { json.value = value; candidate.value = null; problem.value = ''; correctionMessage.value = ''; correctionFallback.value = false; }, onValidate: validate,
+          onUpdateJson: (value: string) => { json.value = value; candidate.value = null; coverageApproved.value = false; problem.value = ''; correctionMessage.value = ''; correctionFallback.value = false; }, onValidate: validate,
         }, { preview: () => candidate.value ? h('div', { class: 'study-ai-preview' }, [
           h('h3', 'Your questions are ready to review'),
           h('p', candidate.value.title + ' · ' + candidate.value.description),
@@ -265,10 +276,10 @@ export const ReviewAiCreation = defineComponent({
               h('strong', 'The AI made a different number of questions'),
               h('p', `You asked for ${preferences.value.count} and received ${candidate.value.questions.length}. All ${candidate.value.questions.length} passed format checks. Nothing was removed. You can keep them all or ask the AI to try again.`),
               h('button', { type: 'button', class: 'quiet-button', onClick: requestExactCount },
-                `Copy request for exactly ${preferences.value.count}`),
+                `Copy request to adjust count while preserving coverage`),
               correctionMessage.value ? h('p', { role: 'status' }, correctionMessage.value) : null,
               correctionFallback.value ? h('textarea', { readonly: true, rows: 3,
-                value: `Please redo the last Dynamic Learner Review response with exactly ${preferences.value.count} questions, not more or fewer. Keep the same response structure and subject, and return only the requested structured content.`,
+                value: countCorrection(),
                 'aria-label': 'Request for exact question count' }) : null,
             ]) : stage.value !== 'direct' ? h('p', { class: 'study-ai-muted' }, 'The number of questions matches your request.') : null,
           candidate.value.warnings.filter(warning => stage.value !== 'direct' || !warning.startsWith('Requested ')).length
@@ -281,8 +292,19 @@ export const ReviewAiCreation = defineComponent({
             h('summary', `Preview all ${candidate.value.questions.length} questions`),
             h('ol', { class: 'review-ai-preview' }, candidate.value.questions.map(previewQuestion)),
           ]),
-          h('button', { type: 'button', class: 'card-primary-button', onClick: () => { if (candidate.value) emit('create', candidate.value); } },
-            `Create set with ${candidate.value.questions.length} questions`),
+          candidate.value.coverage ? h(ReviewAiCoverageReview, {
+            key: validationRevision.value,
+            coverage: candidate.value.coverage, questions: candidate.value.questions,
+            onApproval: (approved: boolean) => { coverageApproved.value = approved; },
+          }) : h('p', { class: 'study-ai-muted' },
+            'Legacy direct import: no coverage checklist was included. Its completeness was not audited.'),
+          h('button', {
+            type: 'button', class: 'card-primary-button',
+            disabled: Boolean(candidate.value.coverage) && !coverageApproved.value,
+            onClick: () => {
+              if (candidate.value && (!candidate.value.coverage || coverageApproved.value)) emit('create', candidate.value);
+            },
+          }, `Create set with ${candidate.value.questions.length} questions`),
         ]) : null }),
       ]);
     }
