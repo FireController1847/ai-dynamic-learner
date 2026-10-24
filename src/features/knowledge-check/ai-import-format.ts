@@ -37,6 +37,21 @@ export interface ReviewAiPreferences {
   coverage: 'essentials' | 'balanced' | 'comprehensive';
 }
 
+/**
+ * FROZEN PROMPT CONTRACT — USER-APPROVED (October 2026).
+ *
+ * The Review AI generation prompt has been carefully tuned for source fidelity,
+ * question clarity, helpful non-spoiling explanations, question-count limits,
+ * coverage estimates, and file-based JSON output. Its wording is intentionally
+ * stable and fragile: DO NOT rewrite, simplify, reformat, consolidate, or
+ * "improve" the generated prompt as part of unrelated refactors, cleanup,
+ * UX changes, or shared-prompt migrations.
+ *
+ * Modify its instructions ONLY when the user EXPLICITLY requests a change to
+ * the Review AI prompt itself. Preserve all other prompt constraints and verify
+ * the resulting generated text and schema when such a change is authorized.
+ * Changes to surrounding application code do not authorize prompt edits.
+ */
 export function reviewAiPrompt(preferences: ReviewAiPreferences, scope: AiCardScope | null): string {
   const countProblem = questionCountProblem(preferences.count);
   if (countProblem) throw new Error(countProblem);
