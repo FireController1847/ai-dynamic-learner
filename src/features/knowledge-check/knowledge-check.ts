@@ -476,7 +476,11 @@ export const KnowledgeCheck = defineComponent({
           collapsed: libraryCollapsed.value,
           onToggleLibrary: () => setLibraryCollapsed(true),
           onSelect: selectItem,
-          onOpenItem: () => { if (libraryOverlay.value) setLibraryCollapsed(true); },
+          onOpenItem: () => {
+            if (!libraryOverlay.value) return;
+            libraryCollapsed.value = true;
+            nextTick(() => (workspaceHeading.value ?? showLibraryButton.value)?.focus({ preventScroll: true }));
+          },
           onNewCheck: openNewKnowledgeCheck,
           onImportCheck: openImportKnowledgeCheck,
           onAiCheck: openAiCreation,
