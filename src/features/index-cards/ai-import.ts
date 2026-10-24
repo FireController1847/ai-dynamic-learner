@@ -1,5 +1,6 @@
 import { computed, defineComponent, h, onMounted, ref, type PropType } from 'vue';
 import { AiPromptExchange } from '../../components/ai-prompt-exchange.ts';
+import { AiCoverageAcceptance } from '../../components/ai-coverage-acceptance.ts';
 import { inputValue } from '../../core/dom.ts';
 import { maskFillBlankAnswers, parseFillBlankTemplate } from '../../core/fill-blank.ts';
 import { fillBlankAiPrompt, parseFillBlankAiImport, type AiBlankStyle, type FillBlankCardsImport } from './fill-blank-ai-format.ts';
@@ -31,6 +32,7 @@ export const IndexCardsAiImport = defineComponent({
     const json = ref('');
     const problem = ref('');
     const candidate = ref<IndexCardsAiImportValue | null>(null);
+    const coverageAccepted = ref(false);
     const heading = ref<HTMLElement | null>(null);
     const modeLabel = computed(() => getSetMode(props.mode)?.label ?? 'Flash Cards');
     const isFillBlank = computed(() => props.mode === 'fill-in-the-blanks');
@@ -44,12 +46,14 @@ export const IndexCardsAiImport = defineComponent({
     onMounted(() => heading.value?.focus({ preventScroll: true }));
     function preview() {
       candidate.value = null;
+      coverageAccepted.value = false;
       problem.value = '';
       try {
         candidate.value = isFillBlank.value
           ? { mode: 'fill-in-the-blanks', data: parseFillBlankAiImport(json.value) }
           : { mode: 'flash-cards', data: parseFlashCardsAiImport(json.value) };
-      } catch (error) { problem.value = error instanceof Error ? error.message : String(error); }
+        if (!props.direct && !candidate.value.data.coverage) throw new Error('The AI omitted the mandatory source coverage inventory. Request complete JSON with every subject and matching itemNumbers.');
+      } catch (error) { candidate.value = null; problem.value = error instanceof Error ? error.message : String(error); }
     }
     function previewCards(value: IndexCardsAiImportValue) {
       if (value.mode === 'flash-cards') return value.data.cards.map((card, index) => h('li', { key: index }, [
@@ -86,7 +90,7 @@ export const IndexCardsAiImport = defineComponent({
         hasPreview: candidate.value !== null,
         promptHelp: props.scope ? 'Create cards for your selected category.' : 'Create cards covering the overall subject.',
         importHelp: 'Paste the response from your AI chat to preview the cards.',
-        onUpdateJson: (value: string) => { json.value = value; candidate.value = null; problem.value = ''; },
+        onUpdateJson: (value: string) => { json.value = value; candidate.value = null; coverageAccepted.value = false; problem.value = ''; },
         onValidate: preview,
       }, {
         options: () => h('div', { class: 'flash-ai-options' }, [
@@ -116,10 +120,14 @@ export const IndexCardsAiImport = defineComponent({
           h('p', { role: 'status' }, `${candidate.value.data.cards.length} cards · ${modeLabel.value} · ${props.remainingCards} card spaces available`),
           longAnswers.value ? h('p', { class: 'flash-ai-muted' }, `${longAnswers.value} ${longAnswers.value === 1 ? 'answer exceeds' : 'answers exceed'} 10 words. Ask your AI to split those into shorter cards, or shorten them after import.`) : null,
           h('ol', { class: 'flash-ai-cards' }, previewCards(candidate.value)),
+          candidate.value.data.coverage ? h(AiCoverageAcceptance, { key: json.value, coverage: candidate.value.data.coverage,
+            items: candidate.value.data.cards.map(card => 'question' in card ? card.question : card.text),
+            onApproval: (accepted: boolean) => { coverageAccepted.value = accepted; },
+          }) : h('p', { class: 'study-ai-muted' }, 'Legacy JSON without a source coverage inventory: completeness cannot be verified.'),
           overCapacity.value ? h('p', { class: 'flash-ai-error', role: 'alert' }, 'This set exceeds the remaining card capacity. Import fewer cards or remove existing cards first.') : null,
           h('button', {
-            type: 'button', class: 'card-primary-button', disabled: overCapacity.value,
-            onClick: () => { if (candidate.value && !overCapacity.value) emit('import', candidate.value); },
+            type: 'button', class: 'card-primary-button', disabled: overCapacity.value || (Boolean(candidate.value.data.coverage) && !coverageAccepted.value),
+            onClick: () => { if (candidate.value && !overCapacity.value && (!candidate.value.data.coverage || coverageAccepted.value)) emit('import', candidate.value); },
           }, isFillBlank.value ? 'Import Fill in the Blanks' : 'Import flash cards'),
         ]) : null,
       }),
