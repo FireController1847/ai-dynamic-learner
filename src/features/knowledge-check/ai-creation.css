@@ -95,3 +95,30 @@
 .review-ai-coverage-missing li { display:flex;align-items:center;justify-content:space-between;gap:8px;overflow-wrap:anywhere; }
 .review-ai-coverage-missing textarea { width:100%;min-width:0; }
 .review-ai-coverage-confirm { padding:8px 0;font-weight:600; }
+
+/* AI configuration respects the available Review pane width, not just viewport. */
+.review-ai-workspace { container-type: inline-size; }
+@container (max-width: 700px) {
+  .review-ai-settings { grid-template-columns: minmax(0, 1fr); }
+  .review-ai-focus-options { grid-template-columns: minmax(0, 1fr); }
+  .review-ai-weight { grid-template-columns: minmax(0, 1fr) 64px auto; }
+  .review-ai-weight > .study-ai-muted { grid-column: 1 / -1; }
+  .review-ai-bank-counts, .review-ai-preview-counts { gap: 8px 12px; }
+  .review-ai-coverage { padding: 12px; }
+  .review-ai-preview { max-height: min(48dvh, 340px); }
+}
+@container (max-width: 460px) {
+  .review-ai-mix, .review-ai-mix-strategy, .review-ai-focus { padding: 12px; }
+  .review-ai-weight { grid-template-columns: minmax(0, 1fr) 64px; }
+  .review-ai-weight > :nth-child(3) { grid-column: 1 / -1; }
+  .review-ai-coverage-add input { min-width: 100%; }
+  .review-ai-coverage-missing li { flex-wrap: wrap; }
+  .review-ai-workspace .study-ai-actions > button { min-height: 44px; }
+}
+@media (pointer: coarse) {
+  .review-ai-workspace input:not([type='checkbox']):not([type='radio']),
+  .review-ai-workspace select, .review-ai-workspace textarea { font-size: 16px; }
+  .review-ai-focus-option, .review-ai-mix-mode, .review-ai-coverage-list label,
+  .review-ai-coverage-confirm { min-height: 44px; }
+  .review-ai-difference button, .review-ai-coverage-actions button { min-height: 44px; }
+}

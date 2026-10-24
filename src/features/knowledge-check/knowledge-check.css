@@ -866,3 +866,19 @@
   .knowledge-import-resolution-footer { justify-content: flex-start; }
   .knowledge-import-resolution-footer > button { min-height: var(--control-height); }
 }
+
+/* Touch library: preserve readable labels even in deeply nested groups. */
+@media (max-width: 700px), (max-width: 1100px) and (pointer: coarse) {
+  .knowledge-check-library-row { min-width: 0; }
+  .knowledge-check-library-children { margin-left: 8px; padding-left: 2px; }
+  .knowledge-check-library-label { min-width: 0; }
+  .knowledge-check-library-toolbar .icon-button { min-width: 44px; min-height: 44px; }
+  .knowledge-check-library-footer button { min-height: 44px; }
+  .knowledge-check-library-scroll { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+}
+@media (max-width: 560px) {
+  .knowledge-check-item-heading { padding-inline: 12px; gap: 4px 8px; }
+  .knowledge-check-item-heading h2 { overflow-wrap: anywhere; }
+  .knowledge-check-builder { padding: 16px 12px 24px; }
+  .knowledge-check-type-card { min-height: 88px; }
+}

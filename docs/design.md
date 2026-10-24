@@ -161,3 +161,7 @@ JSON stays the validated internal interchange format but should not be required 
 ## Guided AI handoff and question bank clarity
 
 Treat manual AI generation as explicit checkpoints: share source in an external chat, customize instructions, copy instructions, **send them to that AI**, return with its reply, and check/preview before saving. Copying is never the same as sending. Use an illustrated confirmation screen between clipboard copy and response paste; never advance straight to import on a copy success. Distinguish the full question bank from per-session limits, and explain the randomized/balanced subset at Study and Quiz entry points. If the AI produces a different item count, show requested and received counts, clarify that valid extras are not silently discarded, and offer an actionable retry without hiding the main accept action. Keep large previews collapsed until opened.
+
+## Review mobile and tablet layouts
+
+Review's library is an overlay on narrow/touch viewports. The question editor presents a horizontally scrollable, keyboard-accessible question strip when its content pane is narrow; keep the selected question in view. Flag navigation docks above session questions on narrow panes instead of covering answers. Critical controls use touch-sized targets; form fields resist mobile focus zoom; AI creation and session/result layouts respond to the Review pane width rather than only the device viewport. Maintain desktop layouts and underlying question/session semantics, accessible names, focus, theme and reduced-motion behavior.
