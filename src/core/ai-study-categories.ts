@@ -13,7 +13,7 @@ export function studyCategoriesPrompt(product = 'Index Cards'): string {
 
 - Prefer the FEWEST useful categories that cover the source. Combine related short sections and overlapping topics; don't create a category for every heading. Keep genuinely different major topics separate.
 - Treat existing headings, chapters, and instructor-defined units as guidance, not strict boundaries. Keep their logical order, but merge, clarify, and rename headings when helpful. Resolve shorthand or uncertain labels from the actual content (e.g. "Carbohydrate (Issues?)" becomes "Carbohydrate Disorders" ONLY if disorders are covered).
-- Think like the course instructor: group what belongs in the same focused study set, without inventing subtopics, unsupported facts, or filler to reach a category count.
+- Keep categories minimal, but ACCOUNT FOR EVERY subject, subtopic, study-guide objective, question, and bullet in the source. Merging related material must NEVER drop a concept. Think like an instructor when grouping, without inventing unsupported content or filler.
 - Descriptions: one short plain-text phrase (3–8 words, at most 80 characters). No overlap, citations, Markdown, math markup, or application settings.
 
 Return ONLY one JSON code block:

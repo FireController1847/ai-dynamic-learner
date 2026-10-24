@@ -75,3 +75,23 @@
 .review-ai-warning-details summary,.review-ai-questions-details summary{font-weight:600;cursor:pointer}
 .review-ai-warning-details ul{margin:8px 0;padding-left:24px}
 .review-ai-warning-details p{margin:8px 0 0;color:var(--text-secondary)}
+
+/* Human confirmation of every source subject before AI set creation. */
+.review-ai-coverage { display:grid;gap:12px;padding:16px;border:1px solid var(--border-color);border-radius:var(--radius-dialog);min-width:0; }
+.review-ai-coverage h4,.review-ai-coverage p { margin:0; }
+.review-ai-coverage-actions { display:flex;flex-wrap:wrap;gap:8px; }
+.review-ai-coverage-list { display:grid;gap:8px;max-height:360px;overflow:auto;list-style:none;padding:0;margin:0; }
+.review-ai-coverage-list>li { display:grid;gap:6px;padding:10px;border:1px solid var(--border-color);border-radius:var(--radius);min-width:0; }
+.review-ai-coverage-list label,.review-ai-coverage-confirm { display:flex;gap:10px;align-items:flex-start;cursor:pointer; }
+.review-ai-coverage-list input,.review-ai-coverage-confirm input { flex:none;margin-top:4px;accent-color:var(--brand); }
+.review-ai-coverage-list label>span { display:grid;gap:4px;min-width:0;overflow-wrap:anywhere; }
+.review-ai-coverage-list details { padding-left:26px; }
+.review-ai-coverage-list summary { cursor:pointer; }
+.review-ai-coverage-list ol { padding-left:20px;overflow-wrap:anywhere; }
+.review-ai-coverage-missing { display:grid;gap:8px;padding:12px;background:var(--surface-subtle);border-radius:var(--radius);min-width:0; }
+.review-ai-coverage-add { display:flex;flex-wrap:wrap;gap:8px; }
+.review-ai-coverage-add input { flex:1;min-width:min(220px,100%); }
+.review-ai-coverage-missing ul { display:grid;gap:6px;list-style:none;padding:0;margin:0; }
+.review-ai-coverage-missing li { display:flex;align-items:center;justify-content:space-between;gap:8px;overflow-wrap:anywhere; }
+.review-ai-coverage-missing textarea { width:100%;min-width:0; }
+.review-ai-coverage-confirm { padding:8px 0;font-weight:600; }
