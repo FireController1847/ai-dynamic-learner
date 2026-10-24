@@ -2,11 +2,12 @@
 import type { PageMetadataOverrides } from '../core/metadata.ts';
 
 export type FeatureId = 'calculator' | 'notebook' | 'todo-list' | 'index-cards' | 'word-search' | 'crossword' | 'guide' | 'knowledge-check';
-export type FeatureGroup = 'helpers' | 'applications' | 'mastery';
+export type FeatureGroup = 'tools' | 'work' | 'study' | 'master';
 export const featureGroups: readonly { id: FeatureGroup; label: string }[] = [
-  { id: 'helpers', label: 'Utilities' },
-  { id: 'applications', label: 'Applications' },
-  { id: 'mastery', label: 'Mastery' },
+  { id: 'tools', label: 'Tools' },
+  { id: 'work', label: 'Work' },
+  { id: 'study', label: 'Study' },
+  { id: 'master', label: 'Master' },
 ];
 
 export interface FeatureDefinition {
@@ -25,7 +26,7 @@ export interface FeatureDefinition {
 export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'calculator', label: 'Calculator', path: '/calculator/', icon: 'calculator',
-    group: 'helpers',
+    group: 'tools',
     version: '1.9.4',
     image: 'assets/app-icons/calculator.png',
     description: 'A scientific calculator for expressions and functions.',
@@ -42,14 +43,14 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   },
   {
     id: 'notebook', label: 'Notebook', path: '/notebook/', icon: 'document',
-    group: 'helpers',
+    group: 'work',
     version: '1.6.2',
     image: 'assets/app-icons/notebook.png',
     description: 'Organize notes into groups and keep your documents together in one notebook.',
   },
   {
     id: 'todo-list', label: 'Todo List', path: '/todo-list/', icon: 'checklist',
-    group: 'helpers',
+    group: 'work',
     version: '1.6.3',
     image: 'assets/app-icons/todo-list.png',
     description: 'Write, organize, and prioritize tasks in simple lists that archive automatically.',
@@ -66,21 +67,21 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   },
   {
     id: 'index-cards', label: 'Index Cards', path: '/index-cards/', icon: 'cards',
-    group: 'applications',
+    group: 'study',
     version: '1.24.0',
     image: 'assets/app-icons/index-cards.png',
     description: 'Create flash cards or fill-in-the-blanks sets, then review or view them at your own pace.',
   },
   {
     id: 'word-search', label: 'Word Search', path: '/word-search/', icon: 'word-search',
-    group: 'applications',
+    group: 'study',
     version: '1.14.0',
     image: 'assets/app-icons/word-search.png',
     description: 'Create your own word searches, find every word, and pick up where you left off.'
   },
   {
     id: 'crossword', label: 'Crossword', path: '/crossword/', icon: 'crossword',
-    group: 'applications',
+    group: 'study',
     version: '1.9.0',
     image: 'assets/app-icons/crossword.png',
     description: 'Create your own crosswords, solve the clues, and pick up where you left off.',
@@ -97,7 +98,7 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   },
   {
     id: 'guide', label: 'Guide', path: '/guide/', icon: 'document',
-    group: 'mastery',
+    group: 'master',
     version: '1.12.0',
     image: 'assets/app-icons/guide.png',
     description: 'Build simple bullet lists or connected topic maps, then study a map one stop at a time.',
@@ -114,7 +115,7 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   },
   {
     id: 'knowledge-check', label: 'Review', path: '/knowledge-check/', icon: 'checklist',
-    group: 'mastery',
+    group: 'master',
     version: '1.36.5',
     image: 'assets/app-icons/knowledge-check.png',
     description: 'Make knowledge sets to study, quiz yourself, or take a test.',

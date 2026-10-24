@@ -1,9 +1,11 @@
-import type { FeatureDefinition } from '../features/feature-definitions.ts';
+import { featureGroups, type FeatureDefinition } from '../features/feature-definitions.ts';
 import { AppIcon, type AppIconName } from './app-icon.ts';
 export interface NavigationItem extends FeatureDefinition { href: string }
 import { Icon } from '../components/icon.ts';
 
 import { defineComponent, type PropType, h, Transition } from 'vue';
+
+const primaryGroups = featureGroups.filter(group => group.id !== 'tools');
 
 export const NavigationDrawer = defineComponent({
   name: 'NavigationDrawer',
@@ -17,6 +19,22 @@ export const NavigationDrawer = defineComponent({
   },
   emits: { 'close': () => true, 'navigate': (_event: MouseEvent, _path: string) => true, 'closed': () => true },
   setup(props, { emit, slots }) {
+    function navigationItem(item: NavigationItem) {
+      return h('li', { key: item.id }, [
+        h('a', {
+          href: item.href,
+          class: 'navigation-link',
+          'aria-current': props.activePath === item.path ? 'page' : undefined,
+          onClick: (event: MouseEvent) => emit('navigate', event, item.path),
+        }, [
+          item.image
+            ? h(AppIcon, { name: item.id, imageClass: 'navigation-link-icon' })
+            : item.icon ? h(Icon, { name: item.icon }) : null,
+          h('span', item.label),
+        ]),
+      ]);
+    }
+
     return () => h(Transition, {
       name: 'drawer',
       onEnter: (element) => { if (element instanceof HTMLDialogElement) element.showModal(); },
@@ -38,7 +56,7 @@ export const NavigationDrawer = defineComponent({
           h('a', {
             class: 'drawer-brand',
             href: props.homeHref,
-            'aria-label': `Go to ${props.title} home`,
+            'aria-label': 'Go to ' + props.title + ' home',
             onClick: (event: MouseEvent) => emit('navigate', event, '/'),
           }, [
             h(AppIcon, { name: props.logoName, imageClass: 'app-logo drawer-logo' }),
@@ -52,20 +70,31 @@ export const NavigationDrawer = defineComponent({
             onClick: () => emit('close'),
           }, [h('span', { 'aria-hidden': 'true' }, '×')]),
         ]),
-        h('nav', { 'aria-label': 'Applications' }, [
-          h('ul', props.items.map((item) => h('li', { key: item.id }, [
-            h('a', {
-              href: item.href,
-              class: 'navigation-link',
-              'aria-current': props.activePath === item.path ? 'page' : undefined,
-              onClick: (event: MouseEvent) => emit('navigate', event, item.path),
+        h('nav', { class: 'drawer-navigation', 'aria-label': 'Learning apps' }, [
+          (() => {
+            const tools = props.items.filter(item => item.group === 'tools');
+            return tools.length ? h('details', {
+              class: 'navigation-tools',
+              open: tools.some(item => item.path === props.activePath) || undefined,
             }, [
-              item.image
-                ? h(AppIcon, { name: item.id, imageClass: 'navigation-link-icon' })
-                : item.icon ? h(Icon, { name: item.icon }) : null,
-              h('span', item.label),
-            ]),
-          ]))),
+              h('summary', { class: 'navigation-tools-summary' }, [
+                h('span', 'Tools'),
+                h(Icon, { name: 'chevron-down' }),
+              ]),
+              h('ul', { class: 'navigation-tools-list' }, tools.map(navigationItem)),
+            ]) : null;
+          })(),
+          h('div', { class: 'navigation-primary' }, primaryGroups.flatMap(group => {
+            const items = props.items.filter(item => item.group === group.id);
+            return items.length ? [h('section', {
+              key: group.id,
+              class: 'navigation-group',
+              'aria-labelledby': 'navigation-group-' + group.id,
+            }, [
+              h('h2', { id: 'navigation-group-' + group.id, class: 'navigation-group-heading' }, group.label),
+              h('ul', items.map(navigationItem)),
+            ])] : [];
+          })),
         ]),
         slots.footer ? h('div', { class: 'drawer-footer' }, slots.footer()) : null,
       ])]) : null,

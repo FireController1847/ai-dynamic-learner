@@ -43,7 +43,7 @@ That distinction matters when reading the codebase:
 
 Dynamic Learner is a lightweight study workspace that runs in the browser. It is designed around small, focused tools that share one workspace instead of trying to turn studying into one giant all-purpose editor.
 
-On Home, tools are grouped into Utilities, Applications, and Mastery. Search app names and descriptions to find a tool.
+On Home, apps are grouped into Tools, Work, Study, and Master. Search app names and descriptions to find what you need.
 
 The current application includes:
 

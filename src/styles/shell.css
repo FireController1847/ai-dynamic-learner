@@ -91,7 +91,40 @@ body:has(.navigation-drawer[open]) { overflow: hidden; }
 .drawer-logo { width: 32px; height: 32px; }
 .drawer-title { font-weight: 600; overflow-wrap: anywhere; }
 .drawer-header .menu-toggle { font-size: 24px; font-weight: 400; }
+.drawer-navigation { display: flex; flex-direction: column; gap: 12px; }
 .drawer-panel ul { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.navigation-tools { padding-bottom: 12px; border-bottom: 1px solid var(--border-color); }
+.navigation-tools-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+  transition: background-color var(--motion-fast);
+}
+.navigation-tools-summary::-webkit-details-marker { display: none; }
+.navigation-tools-summary:hover { background: var(--surface-hover); }
+.navigation-tools-summary .ui-icon {
+  width: 16px;
+  height: 16px;
+  margin-left: auto;
+  color: var(--text-secondary);
+  transition: transform var(--motion-fast);
+}
+.navigation-tools[open] .navigation-tools-summary .ui-icon { transform: rotate(180deg); }
+.navigation-tools-list { margin-top: 4px !important; }
+.navigation-primary { display: grid; gap: 16px; }
+.navigation-group-heading {
+  margin: 0 0 4px 12px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 600;
+}
 .navigation-link {
   position: relative;
   display: flex;
@@ -155,5 +188,5 @@ body:has(.navigation-drawer[open]) { overflow: hidden; }
 }
 
 @media (pointer: coarse) {
-  .navigation-link { min-height: 44px; }
+  .navigation-link, .navigation-tools-summary { min-height: 44px; }
 }
