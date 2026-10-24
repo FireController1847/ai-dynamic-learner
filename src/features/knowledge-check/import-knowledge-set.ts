@@ -33,7 +33,7 @@ interface ImportPlanItem {
 type ImportTab = 'sources' | 'options';
 type ImportMixMode = 'grouped' | 'intermixed';
 
-const applicationSources = featureDefinitions.filter((feature) => feature.group === 'applications' && !feature.hidden);
+const applicationSources = featureDefinitions.filter((feature) => feature.group === 'study' && !feature.hidden);
 
 export const ImportKnowledgeSet = defineComponent({
   name: 'ImportKnowledgeSet',
