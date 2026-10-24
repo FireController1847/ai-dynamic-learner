@@ -1,6 +1,7 @@
 import { parseAiImportJson } from '../../core/ai-json.ts';
 export { parseAiImportJson, MAX_AI_IMPORT_LENGTH } from '../../core/ai-json.ts';
 import { isRecord } from '../../core/validation.ts';
+import { AI_COMPLETE_COVERAGE_PROMPT, parseAiSubjectCoverage, type AiSubjectCoverage } from '../../core/ai-subject-coverage.ts';
 import { AI_PLAIN_TEXT_ONLY_GUIDANCE } from '../../core/ai-formatting-guidance.ts';
 import { MAX_CARDS, MAX_CARD_TEXT_LENGTH } from './card-model.ts';
 import { MAX_NAME_LENGTH } from './tree-model.ts';
@@ -11,6 +12,7 @@ export type AiCardCoverage = 'essentials' | 'balanced' | 'comprehensive';
 export interface FlashCardsImport {
   title: string;
   cards: { question: string; answer: string }[];
+  coverage?: AiSubjectCoverage[];
 }
 
 export const AI_COVERAGE_INSTRUCTIONS: Record<AiCardCoverage, string> = {
@@ -36,7 +38,8 @@ Answer brevity is the highest writing priority:
 
 ${AI_PLAIN_TEXT_ONLY_GUIDANCE}
 
-Coverage: ${AI_COVERAGE_INSTRUCTIONS[coverage]}
+Coverage depth: ${AI_COVERAGE_INSTRUCTIONS[coverage]} This controls DETAIL, never subject inclusion.
+${AI_COMPLETE_COVERAGE_PROMPT}
 Create at most ${limit} useful cards. Fewer is better if the source does not support that many; do not invent filler.
 Do not create Fill in the Blanks, cloze syntax, card headings, explanations, IDs, groups, or application settings.
 
@@ -46,6 +49,7 @@ Return ONLY one JSON code block with this exact structure:
   "format": "${FLASH_CARDS_IMPORT_FORMAT}",
   "version": 1,
   "title": "Short set title",
+  "coverage": [{ "subject": "Chemical symbols", "itemNumbers": [1] }],
   "cards": [
     { "question": "What is the chemical symbol for gold?", "answer": "Au" }
   ]
@@ -59,7 +63,7 @@ Use only the fields shown. The title must be 1–${MAX_NAME_LENGTH} characters. 
 export function parseFlashCardsAiImport(text: string): FlashCardsImport {
   const value = parseAiImportJson(text);
   if (!isRecord(value) ||
-      Object.keys(value).some(key => !['format', 'version', 'title', 'cards'].includes(key)) ||
+      Object.keys(value).some(key => !['format', 'version', 'title', 'cards', 'coverage'].includes(key)) ||
       value.format !== FLASH_CARDS_IMPORT_FORMAT || value.version !== 1 ||
       typeof value.title !== 'string' || !value.title.trim() || value.title.trim().length > MAX_NAME_LENGTH) {
     throw new Error('This is not a supported Flash Cards import. Use the generated Flash Cards prompt.');
@@ -76,7 +80,8 @@ export function parseFlashCardsAiImport(text: string): FlashCardsImport {
     }
     return { question: card.question.trim(), answer: card.answer.trim() };
   });
-  return { title: value.title.trim(), cards };
+  const subjectCoverage = value.coverage === undefined ? undefined : parseAiSubjectCoverage(value.coverage, cards.length);
+  return { title: value.title.trim(), cards, coverage: subjectCoverage };
 }
 
 export function answerIsLong(answer: string): boolean {
