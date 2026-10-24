@@ -22,6 +22,7 @@ export const AiPromptExchange = defineComponent({
     startInImport: Boolean,
     importOnly: Boolean,
     skipSource: Boolean,
+    showReviewStep: Boolean,
   },
   emits: { 'update-json': (_value: string) => true, validate: () => true },
   setup(props, { emit, slots, expose }) {
@@ -101,6 +102,8 @@ export const AiPromptExchange = defineComponent({
         h('span', { class: stage.value === 'send' ? 'is-active' : stage.value === 'response' ? 'is-complete' : '', 'aria-current': stage.value === 'send' ? 'step' : undefined }, props.skipSource ? '2 · Send' : '3 · Send'),
         h(Icon, { name: 'chevron' }),
         h('span', { class: stage.value === 'response' ? 'is-active' : '', 'aria-current': stage.value === 'response' ? 'step' : undefined }, props.skipSource ? '3 · Return' : '4 · Return'),
+        props.showReviewStep ? h(Icon, { name: 'chevron' }) : null,
+        props.showReviewStep ? h('span', { 'aria-label': 'Upcoming step' }, props.skipSource ? '4 · Review' : '5 · Review') : null,
       ]),
       h('div', { class: 'ai-exchange-frame' }, [
         h(Transition, { name: 'ai-exchange-panel', mode: 'out-in', onAfterEnter: afterStepEnter }, {
