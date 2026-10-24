@@ -8,7 +8,7 @@ import { MAX_QUESTIONS, MAX_TEXT } from './question-model.ts';
 
 export const DEFAULT_QUIZ_ATTEMPTS = 3;
 export const DEFAULT_SESSION_QUESTION_LIMIT = 25;
-export const DEFAULT_TEST_QUESTION_LIMIT = 38;
+export const DEFAULT_TEST_QUESTION_LIMIT = 40;
 export type QuestionOrder = 'forward' | 'backward' | 'shuffle';
 export type QuestionPresentation = 'scroll' | 'one-at-a-time';
 export const QUESTION_PRESENTATIONS: readonly QuestionPresentation[] = ['scroll', 'one-at-a-time'];
