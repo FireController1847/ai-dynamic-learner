@@ -46,9 +46,24 @@ body {
 .study-question .markdown-content :is(td, th) { padding: 2pt; overflow-wrap: anywhere; }
 .study-question .katex-display { margin: 4pt 0; overflow-wrap: normal; }
 
-/* Independent CSS columns avoid row-height synchronization between paired items. */
+/* No top padding on flow items: it survives fragmentation at the beginning of a
+   new column and pushes that column's first question down the page. */
 .study-question-flow { width: 100%; }
 .study-flow-two-columns { column-count: 2; column-gap: 24pt; }
 .study-flow-item { margin-bottom: 18pt; break-inside: avoid; }
 .study-flow-item.study-comfortable { margin-bottom: 28pt; }
-.study-flow-item.study-section-start { padding-top: 14pt; }
+.study-flow-item.study-section-end { margin-bottom: 30pt; }
+.study-flow-item.study-comfortable.study-section-end { margin-bottom: 40pt; }
+/* Single-column sheets are less spread out, while preserving readable sections. */
+.study-question-flow:not(.study-flow-two-columns) .study-flow-item { margin-bottom: 12pt; }
+.study-question-flow:not(.study-flow-two-columns) .study-flow-item.study-comfortable { margin-bottom: 20pt; }
+.study-question-flow:not(.study-flow-two-columns) .study-flow-item.study-section-end { margin-bottom: 24pt; }
+.study-question-flow:not(.study-flow-two-columns) .study-flow-item.study-comfortable.study-section-end { margin-bottom: 32pt; }
+/* Indent A/B/C choices under the prompt for a clearer paper-reading hierarchy. */
+.study-choices { padding-left: 30pt; }
+.study-choices > li { padding-left: 6pt; }
+.study-question-flow:not(.study-flow-two-columns) .study-choices { padding-left: 40pt; }
+.study-question-style-bold { font-weight: 700; }
+.study-question-style-italic { font-style: italic; }
+.study-question-style-bold-italic { font-weight: 700; font-style: italic; }
+.study-question-style-underline { text-decoration: underline; text-underline-offset: 2pt; }

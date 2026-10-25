@@ -23,7 +23,7 @@ export const PublicationSetup = defineComponent({
   setup(props, { emit }) {
     const settings = ref<PublicationSettings>({
       layout: 'study', paper: 'letter', orientation: 'portrait', margin: 'standard',
-      titleLayout: 'comfortable', columns: 2, alignColumns: false, font: 'times', fontSize: 12, seed: newVariantSeed(),
+      titleLayout: 'comfortable', columns: 1, alignColumns: false, questionStyle: 'regular', font: 'times', fontSize: 12, seed: newVariantSeed(),
     });
     const modeSelected = ref(false);
     const studyHeading = ref<HTMLElement | null>(null);
@@ -104,7 +104,7 @@ export const PublicationSetup = defineComponent({
       } catch (error) { message.value = error instanceof Error ? error.message : String(error); }
     }
 
-    function choice<K extends 'paper' | 'orientation' | 'margin' | 'titleLayout' | 'font'>(
+    function choice<K extends 'paper' | 'orientation' | 'margin' | 'titleLayout' | 'font' | 'questionStyle'>(
       key: K, label: string, icon: string, options: readonly (PublicationOption & { id: PublicationSettings[K] })[],
     ) {
       return h(PublicationDropdown, { label, icon, value: settings.value[key], options, onSelect: (id: string) => {
@@ -160,6 +160,13 @@ export const PublicationSetup = defineComponent({
                 onChange: (event: Event) => { settings.value.alignColumns = (event.target as HTMLInputElement).checked; },
               }),
               h('span', 'Align questions'),
+            ]),
+            choice('questionStyle', 'Question text', 'text-font', [
+              { id: 'regular', label: 'Regular' },
+              { id: 'bold', label: 'Bold' },
+              { id: 'italic', label: 'Italic' },
+              { id: 'bold-italic', label: 'Bold italic' },
+              { id: 'underline', label: 'Underline' },
             ]),
             choice('titleLayout', 'Layout', 'page-layout', [{ id: 'cover', label: 'Cover page', description: 'Title and name on a separate page' },
               { id: 'comfortable', label: 'Comfortable', description: 'More space around the title and questions' },

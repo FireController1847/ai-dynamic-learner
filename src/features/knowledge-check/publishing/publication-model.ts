@@ -9,6 +9,7 @@ export const PUBLICATION_FONTS = [
   { id: 'verdana', label: 'Verdana', css: 'Verdana, Geneva, sans-serif' },
 ] as const;
 export type PublicationFont = typeof PUBLICATION_FONTS[number]['id'];
+export type PublicationQuestionStyle = 'regular' | 'bold' | 'italic' | 'bold-italic' | 'underline';
 
 /** Document layouts are independent of delivery formats (print, PDF, HTML, etc.). */
 export const PUBLICATION_LAYOUTS = [
@@ -27,6 +28,7 @@ export interface PublicationSettings {
   margin: 'standard' | 'compact';
   columns: 1 | 2;
   alignColumns: boolean;
+  questionStyle: PublicationQuestionStyle;
   titleLayout: 'cover' | 'comfortable' | 'compact';
   font: PublicationFont;
   fontSize: number;
@@ -36,13 +38,14 @@ export interface PublicationSettings {
 
 export function validatePublicationSettings(value: unknown): asserts value is PublicationSettings {
   if (!isRecord(value) || Object.keys(value).some(key =>
-    !['layout', 'paper', 'orientation', 'margin', 'columns', 'alignColumns', 'titleLayout', 'font', 'fontSize', 'seed'].includes(key)) ||
+    !['layout', 'paper', 'orientation', 'margin', 'columns', 'alignColumns', 'questionStyle', 'titleLayout', 'font', 'fontSize', 'seed'].includes(key)) ||
     !PUBLICATION_LAYOUTS.some(layout => layout.id === value.layout) ||
     (value.paper !== 'letter' && value.paper !== 'a4') ||
     (value.orientation !== 'portrait' && value.orientation !== 'landscape') ||
     (value.margin !== 'standard' && value.margin !== 'compact') ||
     (value.columns !== 1 && value.columns !== 2) ||
     typeof value.alignColumns !== 'boolean' ||
+    !['regular', 'bold', 'italic', 'bold-italic', 'underline'].includes(value.questionStyle as string) ||
     (value.titleLayout !== 'cover' && value.titleLayout !== 'comfortable' && value.titleLayout !== 'compact') ||
     !PUBLICATION_FONTS.some(font => font.id === value.font) ||
     typeof value.fontSize !== 'number' || !Number.isFinite(value.fontSize) || value.fontSize < 8 ||

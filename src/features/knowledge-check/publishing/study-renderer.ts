@@ -6,9 +6,10 @@ import studyStyles from './study-sheet.css?publication';
 import type { PublicationQuestion, PublicationView } from './publication-model.ts';
 import type { PublicationRenderer } from './paged-runtime.ts';
 
-function questionContent(question: PublicationQuestion, newSection = false): VNodeChild {
+function questionContent(question: PublicationQuestion, style: PublicationView['settings']['questionStyle'],
+  newSection = false): VNodeChild {
   return h('article', { class: ['study-question', { 'study-question-section': newSection }], 'data-publication-question': '' }, [
-    h('p', { class: 'study-question-prompt' }, [h('span', { class: 'study-question-number' }, `${question.number}.`),
+    h('p', { class: ['study-question-prompt', `study-question-style-${style}`] }, [h('span', { class: 'study-question-number' }, `${question.number}.`),
       h('span', question.prompt)]),
     question.context ? h(MarkdownContent, { text: question.context }) : null,
     question.selection === 'multiple' ? h('p', { class: 'study-instruction' }, 'Circle all that apply.') : null,
@@ -33,7 +34,7 @@ function studyQuestions(view: PublicationView): VNodeChild[] {
     for (let index = 0; index < view.questions.length; index += 2) {
       const cells = [0, 1].map(offset => {
         const question = view.questions[index + offset];
-        return h('td', question ? [questionContent(question,
+        return h('td', question ? [questionContent(question, view.settings.questionStyle,
           offset === 1 && startsSection(question, view.questions[index]))] : []);
       });
       pairs.push(h('table', { class: ['study-question-grid', {
@@ -47,9 +48,12 @@ function studyQuestions(view: PublicationView): VNodeChild[] {
     key: question.id,
     class: ['study-flow-item', {
       'study-comfortable': comfortable,
-      'study-section-start': startsSection(question, view.questions[index - 1]),
+      // Assign extra section spacing to the preceding item, not the next one:
+      // top padding on the first item of a new CSS column caused visible offsets.
+      'study-section-end': Boolean(view.questions[index + 1] &&
+        startsSection(view.questions[index + 1]!, question)),
     }],
-  }, [questionContent(question)]));
+  }, [questionContent(question, view.settings.questionStyle)]));
   return [h('div', {
     class: ['study-question-flow', { 'study-flow-two-columns': view.settings.columns === 2 }],
   }, items)];
