@@ -23,7 +23,7 @@ export const PublicationSetup = defineComponent({
   setup(props, { emit }) {
     const settings = ref<PublicationSettings>({
       layout: 'study', paper: 'letter', orientation: 'portrait', margin: 'standard',
-      titleLayout: 'comfortable', font: 'times', fontSize: 12, seed: newVariantSeed(),
+      titleLayout: 'comfortable', columns: 2, alignColumns: false, font: 'times', fontSize: 12, seed: newVariantSeed(),
     });
     const modeSelected = ref(false);
     const studyHeading = ref<HTMLElement | null>(null);
@@ -149,6 +149,18 @@ export const PublicationSetup = defineComponent({
               { id: 'portrait', label: 'Portrait', icon: 'page-portrait' }, { id: 'landscape', label: 'Landscape', icon: 'page-landscape' }]),
             choice('margin', 'Margins', 'page-margins', [
               { id: 'standard', label: 'Standard margins' }, { id: 'compact', label: 'Compact margins' }]),
+            h(PublicationDropdown, {
+              label: 'Columns', icon: 'page-layout', value: String(settings.value.columns),
+              options: [{ id: '1', label: '1 column' }, { id: '2', label: '2 columns' }],
+              onSelect: (id: string) => { if (id === '1' || id === '2') settings.value.columns = id === '1' ? 1 : 2; },
+            }),
+            h('label', { class: 'publication-align-toggle', title: 'Align left and right questions in pairs' }, [
+              h('input', {
+                type: 'checkbox', disabled: settings.value.columns === 1, checked: settings.value.alignColumns,
+                onChange: (event: Event) => { settings.value.alignColumns = (event.target as HTMLInputElement).checked; },
+              }),
+              h('span', 'Align questions'),
+            ]),
             choice('titleLayout', 'Layout', 'page-layout', [{ id: 'cover', label: 'Cover page', description: 'Title and name on a separate page' },
               { id: 'comfortable', label: 'Comfortable', description: 'More space around the title and questions' },
               { id: 'compact', label: 'Compact', description: 'Closer spacing with the same font and size' }]),

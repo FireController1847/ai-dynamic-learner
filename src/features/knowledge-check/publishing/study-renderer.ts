@@ -25,35 +25,45 @@ function startsSection(question: PublicationQuestion, previous: PublicationQuest
   return Boolean(previous && (question.sourceType !== previous.sourceType || question.kind === 'statement' || previous.kind === 'statement'));
 }
 
-/**
- * Row-major pairs match the Study reference: 1/2, then 3/4. Each pair is a separate
- * presentation table and a top-level pagination block. Do not put the entire bank
- * in one table behind a keep-with-next heading: Paged.js can move that heading
- * backwards when the table overflows and leave the opening page empty.
- * No answers, explanations or correctness markers are rendered.
- */
+/** Paired tables align opposite questions; independent columns flow naturally. */
+function studyQuestions(view: PublicationView): VNodeChild[] {
+  const comfortable = view.settings.titleLayout !== 'compact';
+  if (view.settings.columns === 2 && view.settings.alignColumns) {
+    const pairs: VNodeChild[] = [];
+    for (let index = 0; index < view.questions.length; index += 2) {
+      const cells = [0, 1].map(offset => {
+        const question = view.questions[index + offset];
+        return h('td', question ? [questionContent(question,
+          offset === 1 && startsSection(question, view.questions[index]))] : []);
+      });
+      pairs.push(h('table', { class: ['study-question-grid', {
+        'study-comfortable': comfortable,
+        'study-section-start': startsSection(view.questions[index]!, view.questions[index - 1]),
+      }], role: 'presentation' }, [h('tbody', [h('tr', cells)])]));
+    }
+    return pairs;
+  }
+  const items = view.questions.map((question, index) => h('div', {
+    key: question.id,
+    class: ['study-flow-item', {
+      'study-comfortable': comfortable,
+      'study-section-start': startsSection(question, view.questions[index - 1]),
+    }],
+  }, [questionContent(question)]));
+  return [h('div', {
+    class: ['study-question-flow', { 'study-flow-two-columns': view.settings.columns === 2 }],
+  }, items)];
+}
+
 function studyContent(view: PublicationView, document: Document): DocumentFragment {
   if (view.settings.layout !== 'study') throw new Error('Choose Study to create this sheet.');
-  const pairs: VNodeChild[] = [];
-  for (let index = 0; index < view.questions.length; index += 2) {
-    const cells = [0, 1].map(offset => {
-      const question = view.questions[index + offset];
-      return h('td', question ? [questionContent(question,
-        offset === 1 && startsSection(question, view.questions[index]))] : []);
-    });
-    pairs.push(h('table', { class: ['study-question-grid', {
-      'study-comfortable': view.settings.titleLayout !== 'compact',
-      'study-section-start': startsSection(view.questions[index]!, view.questions[index - 1]),
-    }],
-      role: 'presentation' }, [h('tbody', [h('tr', cells)])]));
-  }
   const mount = document.createElement('div');
   try {
     render(h(Fragment, [
       h('header', { class: ['study-sheet-heading', `study-heading-${view.settings.titleLayout}`] }, [h('h1', view.title),
         h('p', { class: 'study-name-field' }, [h('span', 'Name:'),
           h('span', { class: 'study-name-line', 'aria-label': 'Write your name' }, '\u00a0')])]),
-      ...pairs,
+      ...studyQuestions(view),
     ]), mount);
     const fragment = document.createDocumentFragment();
     for (const child of mount.childNodes) fragment.append(document.importNode(child, true));

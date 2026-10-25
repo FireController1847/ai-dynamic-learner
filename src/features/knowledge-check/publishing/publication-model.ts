@@ -17,7 +17,7 @@ export const PUBLICATION_LAYOUTS = [
   { id: 'gap', label: 'Gap', icon: 'pencil', available: false,
     description: 'Two or three questions per page with generous space for written answers.' },
   { id: 'study', label: 'Study', icon: 'document', available: true,
-    description: 'A compact two-column sheet with numbered questions and lettered choices to circle.' },
+    description: 'A printable one- or two-column sheet with lettered choices to circle.' },
 ] as const;
 export type PublicationLayout = typeof PUBLICATION_LAYOUTS[number]['id'];
 export interface PublicationSettings {
@@ -25,6 +25,8 @@ export interface PublicationSettings {
   paper: 'letter' | 'a4';
   orientation: 'portrait' | 'landscape';
   margin: 'standard' | 'compact';
+  columns: 1 | 2;
+  alignColumns: boolean;
   titleLayout: 'cover' | 'comfortable' | 'compact';
   font: PublicationFont;
   fontSize: number;
@@ -34,11 +36,13 @@ export interface PublicationSettings {
 
 export function validatePublicationSettings(value: unknown): asserts value is PublicationSettings {
   if (!isRecord(value) || Object.keys(value).some(key =>
-    !['layout', 'paper', 'orientation', 'margin', 'titleLayout', 'font', 'fontSize', 'seed'].includes(key)) ||
+    !['layout', 'paper', 'orientation', 'margin', 'columns', 'alignColumns', 'titleLayout', 'font', 'fontSize', 'seed'].includes(key)) ||
     !PUBLICATION_LAYOUTS.some(layout => layout.id === value.layout) ||
     (value.paper !== 'letter' && value.paper !== 'a4') ||
     (value.orientation !== 'portrait' && value.orientation !== 'landscape') ||
     (value.margin !== 'standard' && value.margin !== 'compact') ||
+    (value.columns !== 1 && value.columns !== 2) ||
+    typeof value.alignColumns !== 'boolean' ||
     (value.titleLayout !== 'cover' && value.titleLayout !== 'comfortable' && value.titleLayout !== 'compact') ||
     !PUBLICATION_FONTS.some(font => font.id === value.font) ||
     typeof value.fontSize !== 'number' || !Number.isFinite(value.fontSize) || value.fontSize < 8 ||

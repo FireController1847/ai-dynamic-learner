@@ -45,3 +45,10 @@ body {
 .study-question .markdown-content table { display: table; width: 100%; overflow: visible; }
 .study-question .markdown-content :is(td, th) { padding: 2pt; overflow-wrap: anywhere; }
 .study-question .katex-display { margin: 4pt 0; overflow-wrap: normal; }
+
+/* Independent CSS columns avoid row-height synchronization between paired items. */
+.study-question-flow { width: 100%; }
+.study-flow-two-columns { column-count: 2; column-gap: 24pt; }
+.study-flow-item { margin-bottom: 18pt; break-inside: avoid; }
+.study-flow-item.study-comfortable { margin-bottom: 28pt; }
+.study-flow-item.study-section-start { padding-top: 14pt; }

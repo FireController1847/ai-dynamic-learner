@@ -141,3 +141,11 @@
   .review-publication-toolbar-actions button { flex: 1; }
   .review-publication-field > :is(select, input) { font-size: 16px; }
 }
+
+.publication-align-toggle {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 36px;
+  padding: 6px 8px; cursor: pointer; font-size: 13px; white-space: nowrap;
+}
+.publication-align-toggle > input { accent-color: var(--brand); }
+.publication-align-toggle:has(input:disabled) { opacity: .55; cursor: default; }
+@media (pointer: coarse) { .publication-align-toggle { min-height: 44px; } }
