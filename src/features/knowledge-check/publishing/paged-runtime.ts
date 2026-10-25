@@ -29,13 +29,21 @@ export function publicationPageStyles(settings: PublicationSettings): string {
   validatePublicationSettings(settings);
   const paper = publicationPaperDimensions(settings);
   const font = PUBLICATION_FONTS.find(font => font.id === settings.font)!;
-  const margin = settings.margin === 'standard' ? '20mm' : '12mm';
+  const marginMm = settings.margin === 'standard' ? 20 : 12;
+  const margin = `${marginMm}mm`;
+  // Leave a few millimetres of safety room for Paged.js rounding/fragmentation.
+  const coverHeight = paper.height - 2 * marginMm - 4;
+  const coverPageNumber = settings.titleLayout === 'cover'
+    ? '@page :first { @bottom-center { content: none; } }'
+    : '';
   return `@page {
     size: ${paper.width}mm ${paper.height}mm; margin: ${margin};
     @bottom-center { content: counter(page); font: ${settings.fontSize}pt ${font.css}; }
   }
+  ${coverPageNumber}
   html { color-scheme: light; }
-  body { margin: 0; color: #000; background: #fff; font: ${settings.fontSize}pt/1.4 ${font.css}; }
+  body { margin: 0; color: #000; background: #fff; font: ${settings.fontSize}pt/1.4 ${font.css};
+    --publication-cover-height: ${coverHeight}mm; }
   img, table { max-width: 100%; }
   img { height: auto; }
   pre { white-space: pre-wrap; overflow-wrap: anywhere; }

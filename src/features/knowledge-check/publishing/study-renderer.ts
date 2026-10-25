@@ -57,14 +57,60 @@ function studyQuestions(view: PublicationView): VNodeChild[] {
   }, items)];
 }
 
+/**
+ * The optional first page is a print-ready document cover, not a question header
+ * with a large top margin. Keep authored titles as text nodes and never print
+ * answers, explanations, or a detailed knowledge-set description here.
+ */
+function studyHeading(view: PublicationView): VNodeChild {
+  if (view.settings.titleLayout !== 'cover') {
+    return h('header', { class: ['study-sheet-heading', `study-heading-${view.settings.titleLayout}`] }, [
+      h('h1', view.title),
+      h('p', { class: 'study-name-field' }, [
+        h('span', 'Name:'),
+        h('span', { class: 'study-name-line', 'aria-label': 'Write your name' }, '\u00a0'),
+      ]),
+    ]);
+  }
+
+  const questionCount = view.questions.length;
+  return h('section', { class: 'study-sheet-cover', 'aria-label': 'Study sheet cover' }, [
+    h('div', { class: 'study-cover-masthead' }, [
+      h('span', { class: 'study-cover-brand' }, 'DYNAMIC LEARNER'),
+      h('span', { class: 'study-cover-edition' }, 'REVIEW / STUDY SHEET'),
+    ]),
+    h('div', { class: 'study-cover-main' }, [
+      h('div', { class: 'study-cover-accent', 'aria-hidden': 'true' }),
+      h('p', { class: 'study-cover-kicker' }, 'STUDY MATERIAL'),
+      h('h1', { class: 'study-cover-title' }, view.title),
+      h('p', { class: 'study-cover-subtitle' },
+        `${questionCount} practice ${questionCount === 1 ? 'question' : 'questions'}`),
+    ]),
+    h('div', { class: 'study-cover-bottom' }, [
+      h('div', { class: 'study-cover-fields' }, [
+        h('div', { class: 'study-cover-field' }, [
+          h('span', { class: 'study-cover-field-label' }, 'Name'),
+          h('span', { class: 'study-cover-field-line', 'aria-label': 'Write your name' }, '\u00a0'),
+        ]),
+        h('div', { class: 'study-cover-field' }, [
+          h('span', { class: 'study-cover-field-label' }, 'Date'),
+          h('span', { class: 'study-cover-field-line', 'aria-label': 'Write the date' }, '\u00a0'),
+        ]),
+      ]),
+      h('div', { class: 'study-cover-footer' }, [
+        h('span', 'STUDY / PRACTICE'),
+        h('span', `${questionCount} ${questionCount === 1 ? 'QUESTION' : 'QUESTIONS'}`),
+      ]),
+    ]),
+  ]);
+}
+
 function studyContent(view: PublicationView, document: Document): DocumentFragment {
   if (view.settings.layout !== 'study') throw new Error('Choose Study to create this sheet.');
   const mount = document.createElement('div');
   try {
     render(h(Fragment, [
-      h('header', { class: ['study-sheet-heading', `study-heading-${view.settings.titleLayout}`] }, [h('h1', view.title),
-        h('p', { class: 'study-name-field' }, [h('span', 'Name:'),
-          h('span', { class: 'study-name-line', 'aria-label': 'Write your name' }, '\u00a0')])]),
+      studyHeading(view),
       ...studyQuestions(view),
     ]), mount);
     const fragment = document.createDocumentFragment();

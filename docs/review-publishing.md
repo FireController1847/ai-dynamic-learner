@@ -30,8 +30,14 @@ disabled and marked Coming soon.
   default: title and blank Name line on the first question page with a larger gap
   below and more space between questions in every column mode. Compact uses
   significantly tighter spacing. Cover page
-  puts the title and Name line on a separate opening page, followed by comfortable
-  question pages. Layout choices never change font family or size. No description,
+  now produces a dedicated, modern, ink-friendly title sheet with a slim
+  Dynamic Learner masthead, generous editorial title hierarchy, a practice-question
+  count, lined Name and Date fields, and a quiet footer. Its height follows the
+  selected paper/orientation/margins with extra space for pagination rounding,
+  and the first-page number is suppressed. The questions begin on the next page
+  with Comfortable spacing; Compact/Comfortable layouts otherwise retain their
+  original compact headings. Layout choices never change question font family
+  or size. No description,
   correct-answer highlighting, explanations, or answer key are printed.
 
 At every Review pane width (including desktop), the document settings occupy

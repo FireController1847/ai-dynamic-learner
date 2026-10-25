@@ -15,12 +15,62 @@ body {
 .study-name-field { display: flex; flex: 0 0 180pt; align-items: baseline; gap: 6pt; margin: 0; white-space: nowrap; }
 .study-name-line { display: inline-block; flex: 1; min-width: 100pt; border-bottom: 0.6pt solid #333; }
 .study-heading-comfortable { margin-bottom: 40pt; }
-.study-heading-cover {
-  flex-direction: column; align-items: stretch; gap: 28pt; padding: 30mm 0 0;
-  margin: 0; break-after: page;
+/* A full-height editorial cover: black-and-white, ink-friendly, and independent
+   of the compact/comfortable question pages. Height is derived from the paper
+   size and margins to keep its page break reliable in portrait or landscape. */
+.study-sheet-cover {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: var(--publication-cover-height, 165mm);
+  padding: 6mm 1mm 4mm;
+  break-inside: avoid;
+  break-after: page;
+  overflow-wrap: anywhere;
 }
-.study-heading-cover h1 { flex: 0 0 auto; }
-.study-heading-cover .study-name-field { flex: 0 0 auto; width: 240pt; max-width: 100%; }
+.study-cover-masthead {
+  display: flex; justify-content: space-between; align-items: center; gap: 10pt;
+  padding-bottom: 13pt; border-bottom: 0.85pt solid #222;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 8pt; line-height: 1.5; letter-spacing: 0.12em;
+}
+.study-cover-brand { font-weight: 700; }
+.study-cover-edition { color: #555; text-align: right; }
+.study-cover-main {
+  margin: auto 0; padding: 22pt 0 34pt;
+  max-width: 95%;
+}
+.study-cover-accent { width: 46pt; height: 2.5pt; margin-bottom: 26pt; background: #252525; }
+.study-cover-kicker {
+  margin: 0 0 14pt; color: #555;
+  font-family: Arial, Helvetica, sans-serif; font-size: 8pt;
+  font-weight: 600; letter-spacing: 0.18em;
+}
+.study-cover-title {
+  margin: 0; font-size: 2.25em; font-weight: 700; line-height: 1.16;
+  letter-spacing: -0.02em; overflow-wrap: anywhere;
+}
+.study-cover-subtitle {
+  margin: 18pt 0 0; color: #555; font-size: 0.95em; line-height: 1.4;
+}
+.study-cover-bottom { flex: 0 0 auto; }
+.study-cover-fields {
+  display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+  gap: 24pt; margin: 0 0 30pt;
+}
+.study-cover-field { display: flex; flex-direction: column; gap: 10pt; min-width: 0; }
+.study-cover-field-label {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 8pt; font-weight: 600; color: #444; letter-spacing: 0.04em;
+}
+.study-cover-field-line { display: block; height: 12pt; border-bottom: 0.75pt solid #777; }
+.study-cover-footer {
+  display: flex; justify-content: space-between; gap: 12pt;
+  padding-top: 12pt; border-top: 0.75pt solid #bbb; color: #555;
+  font-family: Arial, Helvetica, sans-serif; font-size: 7.5pt;
+  line-height: 1.4; letter-spacing: 0.1em;
+}
 .study-question-grid { width: 100%; table-layout: fixed; border-collapse: collapse; font: inherit; }
 /* Both column strategies share the same question spacing: Compact is deliberately
    tight, while Comfortable provides an obvious additional gap between questions. */
