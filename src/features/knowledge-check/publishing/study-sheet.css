@@ -29,7 +29,6 @@ body {
 .study-question-grid > tbody > tr > td:first-child { padding-right: 12pt; }
 .study-question-grid > tbody > tr > td:last-child { padding-left: 12pt; }
 .study-question { overflow-wrap: anywhere; }
-.study-question-section { padding-top: 14pt; }
 .study-question-prompt { display: flex; gap: 6pt; margin: 0 0 6pt; white-space: pre-wrap; }
 .study-question-number { flex: 0 0 auto; }
 .study-choices { margin: 8pt 0 0; padding-left: 25pt; list-style-type: upper-alpha; }

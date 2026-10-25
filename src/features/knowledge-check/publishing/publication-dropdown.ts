@@ -1,4 +1,4 @@
-import { defineComponent, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref, Transition, useId, type PropType } from 'vue';
+import { defineComponent, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref, Teleport, Transition, useId, type PropType } from 'vue';
 import { Icon } from '../../../components/icon.ts';
 
 export interface PublicationOption {
@@ -24,6 +24,11 @@ export const PublicationDropdown = defineComponent({
     const trigger = ref<HTMLButtonElement | null>(null);
     const menu = ref<HTMLElement | null>(null);
     const open = ref(false);
+    const menuPosition = ref({ top: 0, left: 0 });
+    let toolbar: Element | null = null;
+    function inside(target: Node | null): boolean {
+      return Boolean(target && (root.value?.contains(target) || menu.value?.contains(target)));
+    }
     function close(restoreFocus = false) {
       open.value = false;
       if (restoreFocus) trigger.value?.focus();
@@ -35,22 +40,33 @@ export const PublicationDropdown = defineComponent({
     async function expand(last = false) {
       open.value = true;
       await nextTick();
+      const anchor = trigger.value?.getBoundingClientRect();
       const bounds = menu.value?.getBoundingClientRect();
-      const boundary = root.value?.closest('.review-publication')?.getBoundingClientRect();
-      if (bounds && boundary && menu.value) {
-        const right = Math.min(window.innerWidth, boundary.right) - 8;
-        const left = Math.max(0, boundary.left) + 8;
-        const offset = Math.max(left - bounds.left, Math.min(0, right - bounds.right));
-        menu.value.style.setProperty('--publication-menu-offset', `${offset}px`);
+      if (anchor && bounds) {
+        const left = Math.max(8, Math.min(anchor.left, window.innerWidth - bounds.width - 8));
+        const below = anchor.bottom + 6;
+        const top = below + bounds.height + 8 <= window.innerHeight
+          ? below : Math.max(8, anchor.top - bounds.height - 6);
+        menuPosition.value = { top, left };
       }
       const selected = props.options.findIndex(option => option.id === props.value);
       focus(last ? props.options.length - 1 : Math.max(0, selected));
     }
     function outside(event: PointerEvent) {
-      if (open.value && event.target instanceof Node && !root.value?.contains(event.target)) close();
+      if (open.value && event.target instanceof Node && !inside(event.target)) close();
     }
-    onMounted(() => document.addEventListener('pointerdown', outside));
-    onBeforeUnmount(() => document.removeEventListener('pointerdown', outside));
+    const closeOnScroll = () => close();
+    onMounted(() => {
+      document.addEventListener('pointerdown', outside);
+      toolbar = root.value?.closest('.review-publication-toolbar-scroll') ?? null;
+      toolbar?.addEventListener('scroll', closeOnScroll, { passive: true });
+      window.addEventListener('resize', closeOnScroll);
+    });
+    onBeforeUnmount(() => {
+      document.removeEventListener('pointerdown', outside);
+      toolbar?.removeEventListener('scroll', closeOnScroll);
+      window.removeEventListener('resize', closeOnScroll);
+    });
     onDeactivated(() => close());
 
     function navigate(event: KeyboardEvent) {
@@ -71,7 +87,7 @@ export const PublicationDropdown = defineComponent({
       const selected = props.options.find(option => option.id === props.value);
       return h('div', { ref: root, class: ['publication-dropdown', { 'is-open': open.value }],
         onFocusout: (event: FocusEvent) => {
-          if (!(event.relatedTarget instanceof Node) || !root.value?.contains(event.relatedTarget)) close();
+          if (!(event.relatedTarget instanceof Node) || !inside(event.relatedTarget)) close();
         },
       }, [
         h('button', { ref: trigger, type: 'button', class: 'quiet-button publication-tool', title: props.label,
@@ -86,12 +102,17 @@ export const PublicationDropdown = defineComponent({
         }, [h(Icon, { name: selected?.icon ?? props.icon }),
           h('span', { class: 'publication-tool-value', style: { fontFamily: selected?.fontFamily } }, selected?.label ?? props.value),
           h(Icon, { name: 'chevron-down', class: 'publication-tool-chevron' })]),
-        h(Transition, { name: 'publication-menu', onBeforeLeave: (element: Element) => {
+        h(Teleport, { to: 'body' }, [h(Transition, { name: 'publication-menu', onBeforeLeave: (element: Element) => {
           if (element instanceof HTMLElement) element.inert = true;
         }, onLeaveCancelled: (element: Element) => {
           if (element instanceof HTMLElement) element.inert = false;
         } }, { default: () => open.value ? h('div', {
-          ref: menu, id, role: 'menu', 'aria-label': props.label, class: 'publication-menu', onKeydown: navigate,
+          ref: menu, id, role: 'menu', 'aria-label': props.label, class: 'publication-menu',
+          style: { top: `${menuPosition.value.top}px`, left: `${menuPosition.value.left}px` },
+          onKeydown: navigate,
+          onFocusout: (event: FocusEvent) => {
+            if (!(event.relatedTarget instanceof Node) || !inside(event.relatedTarget)) close();
+          },
         }, props.options.map(option => h('button', {
           key: option.id, type: 'button', role: 'menuitemradio', tabindex: -1,
           'aria-checked': option.id === props.value, class: 'publication-menu-option',
@@ -100,7 +121,7 @@ export const PublicationDropdown = defineComponent({
           h('span', { class: 'publication-menu-copy' }, [
             h('span', { style: { fontFamily: option.fontFamily } }, option.label),
             option.description ? h('small', option.description) : null,
-          ]), option.id === props.value ? h(Icon, { name: 'check', class: 'publication-menu-check' }) : null]))) : null }),
+          ]), option.id === props.value ? h(Icon, { name: 'check', class: 'publication-menu-check' }) : null]))) : null })]),
       ]);
     };
   },

@@ -132,7 +132,9 @@ export const PublicationSetup = defineComponent({
     function documentWorkspace() {
       const paper = publicationPaperDimensions(settings.value);
       return h('div', { key: 'document', class: 'review-publication-study', onVnodeMounted: schedulePreview }, [
-        h('div', { class: 'review-publication-toolbar', role: 'group', 'aria-label': 'Document settings' }, [
+        h('div', { class: 'review-publication-toolbar-scroll', role: 'region',
+          'aria-label': 'Document settings, scroll horizontally for more options', tabindex: 0 }, [
+          h('div', { class: 'review-publication-toolbar', role: 'group', 'aria-label': 'Document settings' }, [
           h('div', { class: 'publication-toolbar-group', role: 'group', 'aria-label': 'Typography' }, [
             choice('font', 'Font', 'text-font', PUBLICATION_FONTS.map(font => ({ id: font.id, label: font.label, fontFamily: font.css }))),
             h('label', { class: 'publication-font-size', title: 'Font size' }, [h(Icon, { name: 'text-size' }),
@@ -172,15 +174,18 @@ export const PublicationSetup = defineComponent({
               { id: 'comfortable', label: 'Comfortable', description: 'More space around the title and questions' },
               { id: 'compact', label: 'Compact', description: 'Closer spacing with the same font and size' }]),
           ]),
-          h('div', { class: 'review-publication-toolbar-actions' }, [
+          ]),
+        ]),
+        h('div', { class: 'review-publication-toolbar-actions', role: 'group', 'aria-label': 'Document actions' }, [
             h('button', { ref: versionButton, type: 'button', class: 'quiet-button', 'aria-expanded': showVersion.value,
               'aria-controls': 'review-publication-version', onClick: () => { showVersion.value = !showVersion.value; } },
               [h(Icon, { name: 'settings' }), 'Version']),
-            h('button', { type: 'button', class: 'quiet-button', disabled: busy.value, onClick: prepare,
-              title: 'Refresh the preview' }, [h(Icon, { name: 'rotate' }), 'Refresh']),
-            h('button', { type: 'button', class: 'card-primary-button', disabled: !preview.value || busy.value || dirty.value,
-              title: 'Print or save as PDF', onClick: print }, [h(Icon, { name: 'printer' }), 'Print']),
-          ]),
+            h('div', { class: 'review-publication-run-actions' }, [
+              h('button', { type: 'button', class: 'quiet-button', disabled: busy.value, onClick: prepare,
+                title: 'Refresh the preview' }, [h(Icon, { name: 'rotate' }), 'Refresh']),
+              h('button', { type: 'button', class: 'card-primary-button', disabled: !preview.value || busy.value || dirty.value,
+                title: 'Print or save as PDF', onClick: print }, [h(Icon, { name: 'printer' }), 'Print']),
+            ]),
         ]),
         h(Transition, { name: 'publication-panel', onBeforeLeave: leaveReviewPanel,
           onLeaveCancelled: restoreReviewPanel, onAfterEnter: restoreReviewPanel,

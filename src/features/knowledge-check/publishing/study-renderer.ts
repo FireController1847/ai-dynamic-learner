@@ -6,9 +6,8 @@ import studyStyles from './study-sheet.css?publication';
 import type { PublicationQuestion, PublicationView } from './publication-model.ts';
 import type { PublicationRenderer } from './paged-runtime.ts';
 
-function questionContent(question: PublicationQuestion, style: PublicationView['settings']['questionStyle'],
-  newSection = false): VNodeChild {
-  return h('article', { class: ['study-question', { 'study-question-section': newSection }], 'data-publication-question': '' }, [
+function questionContent(question: PublicationQuestion, style: PublicationView['settings']['questionStyle']): VNodeChild {
+  return h('article', { class: 'study-question', 'data-publication-question': '' }, [
     h('p', { class: ['study-question-prompt', `study-question-style-${style}`] }, [h('span', { class: 'study-question-number' }, `${question.number}.`),
       h('span', question.prompt)]),
     question.context ? h(MarkdownContent, { text: question.context }) : null,
@@ -34,8 +33,7 @@ function studyQuestions(view: PublicationView): VNodeChild[] {
     for (let index = 0; index < view.questions.length; index += 2) {
       const cells = [0, 1].map(offset => {
         const question = view.questions[index + offset];
-        return h('td', question ? [questionContent(question, view.settings.questionStyle,
-          offset === 1 && startsSection(question, view.questions[index]))] : []);
+        return h('td', question ? [questionContent(question, view.settings.questionStyle)] : []);
       });
       pairs.push(h('table', { class: ['study-question-grid', {
         'study-comfortable': comfortable,
