@@ -32,6 +32,13 @@ const paths: Record<string, string> = {
   loading: 'M21 12a9 9 0 1 1-9-9',
   clock: 'M21 12a9 9 0 1 1-18 0a9 9 0 0 1 18 0ZM12 7v5l3 2',
   upload: 'M12 16V4m-5 5 5-5 5 5M4 16v5h16v-5',
+  printer: 'M6 9V3h12v6M6 17H3V9h18v8h-3M6 14h12v7H6ZM17 11h1',
+  'page-portrait': 'M5 2h14v20H5ZM8 6h8M8 10h8',
+  'page-landscape': 'M2 5h20v14H2ZM6 9h12M6 13h8',
+  'page-margins': 'M4 2h16v20H4ZM7 5h10v14H7M2 8h4M18 8h4M2 16h4M18 16h4',
+  'page-layout': 'M3 3h18v18H3ZM6 6h12M6 10h4v8H6ZM14 10h4v8h-4',
+  'text-font': 'M3 19 9 4l6 15M5 14h8M17 19V9h5M17 13h4',
+  'text-size': 'M3 5h12M9 5v15M5 20h8M16 10h6M19 10v10M17 20h4',
   lightbulb: 'M9 18h6M10 22h4M8.5 15.2A7 7 0 1 1 15.5 15.2C14.5 16.1 14 16.9 14 18h-4c0-1.1-.5-1.9-1.5-2.8Z',
   ai: 'M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5ZM19 13l.8 2.2L22 16l-2.2.8L19 19l-.8-2.2L16 16l2.2-.8ZM5 15l.7 1.8L8 17.5l-2.3.7L5 20l-.7-1.8L2 17.5l2.3-.7Z',
 };

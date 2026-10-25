@@ -15,7 +15,7 @@ export const ModePicker = defineComponent({
   },
   emits: {
     choose: (_mode: CheckModeId) => true, build: () => true,
-    history: () => true, 'review-last': () => true,
+    history: () => true, publish: () => true, 'review-last': () => true,
   },
   setup(props, { emit }) {
     return () => h('section', { class: 'knowledge-check-builder', 'aria-label': 'Choose how to use this knowledge set' }, [
@@ -34,11 +34,13 @@ export const ModePicker = defineComponent({
         })])]))),
       h('div', { class: 'knowledge-check-builder-actions knowledge-history-actions' }, [
         h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('history') },
-          'History (' + props.historyCount + ')'),
+          [h(Icon, { name: 'clock' }), 'History (' + props.historyCount + ')']),
+        h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('publish') },
+          [h(Icon, { name: 'printer' }), 'Publish']),
+        h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('build') },
+          [h(Icon, { name: 'pencil' }), 'Build']),
         props.hasLastQuiz ? h('button', { type: 'button', class: 'quiet-button',
           onClick: () => emit('review-last') }, 'Review last quiz') : null,
-        h('button', { type: 'button', class: 'quiet-button',
-          onClick: () => emit('build') }, 'Build questions'),
       ]),
     ]);
   },

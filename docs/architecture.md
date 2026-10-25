@@ -66,6 +66,14 @@ Browser-local presentation state that is not part of user content (for example t
 
 ## Build and assets
 
+Review's publishing foundation lives in `features/knowledge-check/publishing/`:
+validated authored snapshots become concrete, layout-specific document views for
+future delivery adapters. Paged.js pagination runs on demand inside a dedicated
+iframe so its global DOM/style work cannot affect the app. Setup/preparation is
+transient; Study has a compact sheet renderer and browser print/Save as PDF, while
+Bubble and Gap remain planned modes. See
+`review-publishing.md` for the pipeline and extension/lifecycle contracts.
+
 Webpack emits hashed JS/CSS bundles and copies `src/assets/` recursively to `dist/assets/` with stable asset paths. Full-resolution per-app PNGs live directly under `src/assets/app-icons/`; lightweight visible variants live in `app-icons/webp`, `app-icons/png`, and `app-icons/gif`.
 
 `build/site-config.mts` and `build/page-metadata.mts` create route HTML and metadata. GitHub Pages uses the same production build; see `github-pages.md`.

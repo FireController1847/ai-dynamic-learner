@@ -62,6 +62,7 @@ Use this as a starting-file index, not a feature specification. Follow imports o
 | Review Dropdown matching | `dropdown-model.ts`, `dropdown-editor.ts`, `question-model.ts`, `knowledge-session.ts`, `session-settings.ts` |
 | Review Markdown context | `context-editor.ts`, `question-model.ts`, `knowledge-session.ts`, shared Markdown components |
 | Review Study/Quiz/Test | `knowledge-set.ts`, `session-setup.ts`, `session-settings.ts`, `session-intro.ts`, `session-state.ts`, `knowledge-session.ts`, `review-motion.ts`, `review-motion.css` |
+| Review publishing modes / Study sheets / Paged.js | `src/features/knowledge-check/publishing/` (`publication-model.ts`, `prepare-publication.ts`, `publication-job.ts`, `paged-runtime.ts`, `publication-viewport.ts`, `publication-setup.ts`, `publication-dropdown.ts`, `study-renderer.ts`, `study-sheet.css`); see `docs/review-publishing.md` |
 | Review imports | `import-knowledge-set.ts`, `index-cards-import-picker.ts`, `fill-blank-import-resolution.ts`, `import-index-cards.ts` |
 | Review AI creation / question mix | `ai-creation.ts`, `ai-creation.css`, `ai-import-format.ts`, `ai-question-mix.ts`, `knowledge-check.ts`, `library.ts` |
 | Responsive/touch overrides | `src/styles/mobile.css` plus the owning feature stylesheet |

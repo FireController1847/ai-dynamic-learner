@@ -1,0 +1,47 @@
+/* Print typography is independent of the app's theme. */
+body {
+  --border-color: #bbb;
+  --control-border: #bbb;
+  --text-secondary: #333;
+  --surface-subtle: #f4f4f4;
+  --brand-text: #000;
+  --radius: 0;
+}
+.study-sheet-heading {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 6pt 16pt;
+  margin: 0 0 24pt; break-inside: avoid; break-after: auto;
+}
+.study-sheet-heading h1 { flex: 1 1 180pt; margin: 0; font-size: 1.25em; line-height: 1.2; break-after: auto; }
+.study-name-field { display: flex; flex: 0 0 180pt; align-items: baseline; gap: 6pt; margin: 0; white-space: nowrap; }
+.study-name-line { display: inline-block; flex: 1; min-width: 100pt; border-bottom: 0.6pt solid #333; }
+.study-heading-comfortable { margin-bottom: 40pt; }
+.study-heading-cover {
+  flex-direction: column; align-items: stretch; gap: 28pt; padding: 30mm 0 0;
+  margin: 0; break-after: page;
+}
+.study-heading-cover h1 { flex: 0 0 auto; }
+.study-heading-cover .study-name-field { flex: 0 0 auto; width: 240pt; max-width: 100%; }
+.study-question-grid { width: 100%; table-layout: fixed; border-collapse: collapse; font: inherit; }
+.study-question-grid.study-comfortable > tbody > tr > td { padding-bottom: 28pt; }
+.study-question-grid.study-section-start { margin-top: 16pt; }
+.study-question-grid > tbody > tr { break-inside: avoid; }
+.study-question-grid > tbody > tr > td { box-sizing: border-box; width: 50%; padding: 0 0 18pt; vertical-align: top; }
+.study-question-grid > tbody > tr > td:first-child { padding-right: 12pt; }
+.study-question-grid > tbody > tr > td:last-child { padding-left: 12pt; }
+.study-question { overflow-wrap: anywhere; }
+.study-question-section { padding-top: 14pt; }
+.study-question-prompt { display: flex; gap: 6pt; margin: 0 0 6pt; white-space: pre-wrap; }
+.study-question-number { flex: 0 0 auto; }
+.study-choices { margin: 8pt 0 0; padding-left: 25pt; list-style-type: upper-alpha; }
+.study-choices > li { padding-left: 4pt; margin: 0 0 4pt; white-space: pre-wrap; }
+.study-responses { margin: 6pt 0 0 18pt; }
+.study-responses p { margin: 4pt 0 0; }
+.study-response-line { display: inline-block; min-width: 50pt; border-bottom: 0.5pt solid #555; }
+.study-instruction { margin: 6pt 0 8pt 18pt; font-style: italic; }
+.study-question .markdown-content { margin: 10pt 0 12pt 18pt; font-size: 1em; line-height: inherit; }
+.study-question .markdown-content :is(h1, h2, h3, h4, h5, h6) { margin: 12pt 0 8pt; }
+.study-question .markdown-content :is(p, ul, ol, pre, blockquote) { margin-bottom: 4pt; }
+.study-question .markdown-content pre { padding: 4pt; overflow: visible; }
+.study-question .markdown-content table { display: table; width: 100%; overflow: visible; }
+.study-question .markdown-content :is(td, th) { padding: 2pt; overflow-wrap: anywhere; }
+.study-question .katex-display { margin: 4pt 0; overflow-wrap: normal; }

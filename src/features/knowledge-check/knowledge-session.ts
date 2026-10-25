@@ -588,7 +588,8 @@ export const KnowledgeSession = defineComponent({
       ]);
       if (!props.historyAttempt && !questionCount.value && !state.resumable.value) return h('section', { key: 'empty', class: 'knowledge-session knowledge-builder-empty' }, [
         h('h3', 'Add questions to get started'), h('p', 'Complete a question and its correct answer in the builder.'),
-        h('button', { type: 'button', class: 'card-primary-button', onClick: () => emit('build') }, 'Build questions'),
+        h('button', { type: 'button', class: 'card-primary-button', onClick: () => emit('build') },
+          [h(Icon, { name: 'pencil' }), 'Build']),
       ]);
       if (!started.value && props.mode === 'study' && viewingLastStudy.value && props.item.lastStudy) {
         const saved = props.item.lastStudy;
