@@ -14,8 +14,8 @@ export type PublicationContent = 'questions' | 'both' | 'key';
 
 /** Document layouts are independent of delivery formats (print, PDF, HTML, etc.). */
 export const PUBLICATION_LAYOUTS = [
-  { id: 'bubble', label: 'Bubble', icon: 'checklist', available: false,
-    description: 'A question sheet with A–D choices, a name field, and a bubble answer sheet on the last page.' },
+  { id: 'bubble', label: 'Bubble', icon: 'checklist', available: true,
+    description: 'Lettered question sheets with a separate bubble and written-response sheet.' },
   { id: 'gap', label: 'Gap', icon: 'pencil', available: false,
     description: 'Two or three questions per page with generous space for written answers.' },
   { id: 'study', label: 'Study', icon: 'document', available: true,

@@ -1,0 +1,68 @@
+/* Black-and-white printable bubble response sheet. Never render correct answers
+   or filled circles here; the separate key is the only answer-bearing view. */
+.bubble-response-sheet {
+  break-before: page;
+  page-break-before: always;
+  break-inside: auto;
+}
+.bubble-sheet-heading {
+  margin: 0 0 20pt;
+  padding-bottom: 12pt;
+  border-bottom: 0.75pt solid #999;
+  break-inside: avoid;
+}
+.bubble-sheet-kicker {
+  margin: 0 0 6pt;
+  font: 700 8pt/1.4 Arial, Helvetica, sans-serif;
+  letter-spacing: 0.12em;
+  color: #555;
+}
+.bubble-sheet-heading h1 { margin: 0; font-size: 1.65em; line-height: 1.25; }
+.bubble-sheet-title { margin: 5pt 0 0; font-size: 1em; overflow-wrap: anywhere; }
+.bubble-sheet-note { margin: 10pt 0 0; font-size: 0.85em; color: #444; }
+.bubble-sheet-identification {
+  display: grid;
+  grid-template-columns: 1.7fr 1fr;
+  gap: 18pt;
+  margin: 18pt 0 0;
+}
+.bubble-sheet-identification p {
+  display: flex;
+  align-items: end;
+  gap: 8pt;
+  margin: 0;
+  font-size: 0.85em;
+}
+.bubble-sheet-id-line { flex: 1; min-width: 0; border-bottom: 0.75pt solid #555; height: 12pt; }
+.bubble-response-rows { width: 100%; }
+.bubble-response-two-columns { column-count: 2; column-gap: 20pt; }
+.bubble-response-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 7pt;
+  box-sizing: border-box;
+  min-width: 0;
+  margin: 0 0 11pt;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+.bubble-response-number { flex: 0 0 22pt; line-height: 20pt; font-weight: 700; }
+.bubble-response-marks { display: flex; flex-wrap: wrap; gap: 5pt; min-width: 0; }
+.bubble-response-mark {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  box-sizing: border-box;
+  width: 19pt;
+  height: 19pt;
+  border: 1pt solid #222;
+  border-radius: 50%;
+  font: 700 9pt/1 Arial, Helvetica, sans-serif;
+  color: #111;
+  background: white;
+}
+.bubble-response-multiple { font: italic 8pt/19pt Arial, Helvetica, sans-serif; color: #555; white-space: nowrap; }
+.bubble-write-fields { flex: 1; min-width: 0; }
+.bubble-write-field { display: flex; align-items: flex-end; gap: 5pt; margin-bottom: 7pt; min-width: 0; }
+.bubble-write-label { flex: 0 1 auto; font-size: 0.85em; overflow-wrap: anywhere; }
+.bubble-write-line { flex: 1; min-width: 25pt; height: 16pt; border-bottom: 0.65pt solid #777; }

@@ -1,11 +1,21 @@
 # Review publishing
 
 Publish is a browser-local, transient workspace mode like Build. Large choice
-buttons offer Bubble, Gap, and Study. Only Study is available; Bubble and Gap are
+buttons offer Bubble, Gap, and Study. Study and Bubble are available; Gap is
 disabled and marked Coming soon.
 
-- **Bubble (planned):** A–D question sheet, a name field, and a bubble answer sheet
-  on the last page.
+- **Bubble:** numbered printable questions and lettered choices (A–H when
+  needed), with a separate response sheet after the final question page.
+  Multiple Choice/True-False get empty lettered circles to mark; multiple
+  selections are explicitly supported. Short Answer, Fill in the Blanks,
+  Dropdown/matching, and Parameterized questions get numbered, labeled
+  write-in lines on the response sheet. Statements need no answer. All
+  authored questions remain included, even in mixed sets. The question pages
+  have no answer indicators or extra writing lines. When Content is Questions
+  and Answer Key, the answer key follows the response sheet on its own page;
+  Answer Key Only omits both questions and response sheet. The response sheet
+  follows the configured page and column settings and can span pages in large
+  sets. The printed name/date fields allow the response sheet to be detached.
 - **Gap (planned):** two or three questions vertically per page with large spaces
   for written responses.
 - **Study:** compact one- or two-column sheets, numbered in document order, with
@@ -117,7 +127,11 @@ them feature-local until another app actually needs shared publication behavior.
    The original question type is retained as transient display metadata for spacing.
 4. `preparePublicationJob` is the preparation entry point. Its view can feed paged
    or non-paged delivery adapters.
-5. `study-renderer.ts` supplies a DOM fragment and self-contained typography. It
+5. `study-renderer.ts` supplies reusable question/cover/key sections and
+   print-only typography. `bubble-renderer.ts` reuses those sections but adds a
+   separate, printable bubble/write-in response sheet; its CSS is scoped to
+   Bubble mode. Both renderers use text nodes and sanctioned Markdown rendering.
+   Study uses
    uses Vue/text nodes and the shared sanitized Markdown/KaTeX pipeline. A borderless
    presentation table holds each question pair as an independent top-level block.
    The compact header permits a break after itself rather than keeping with one
@@ -132,8 +146,8 @@ them feature-local until another app actually needs shared publication behavior.
 
 `study-sheet.css` controls dense, black-on-white paper typography. CSS imports
 ending in `?publication` use css-loader's string export: font URLs remain bundled
-assets, while the app's chrome/theme styles are excluded. The renderer is loaded
-only when Study generates a preview.
+assets, while the app's chrome/theme styles are excluded. Renderers are lazy
+loaded only when the selected publishing mode generates a preview.
 
 ## Determinism and lifecycle
 
@@ -179,8 +193,9 @@ white sheets, gaps, and shadows visible on screen while excluding them from prin
 
 ## Manual checks
 
-- Open Publish from either action row. Verify Bubble/Gap show Coming soon and
-  cannot start; Study opens settings. Check keyboard/focus, Change mode, Back,
+- Open Publish from either action row. Verify Gap shows Coming soon and cannot
+  start; Bubble and Study each open settings and the correct preview. Check
+  keyboard/focus, Change mode, Back,
   active-session leave confirmation, Light/Dark, narrow panes, and touch controls.
 - Generate a mixed-type set. Verify tighter question gaps and deeper answer-letter
   indent in the default full-width one-column output, regular/bold/italic/bold-italic/
@@ -193,6 +208,13 @@ white sheets, gaps, and shadows visible on screen while excluding them from prin
   Comfortable/Compact should start with their title, Name line and questions,
   without a blank page. Only Cover page should put the questions on page two.
   Check title/question spacing and the Version panel's input, wrapping, Done, and themes.
+- In Bubble, verify choice bubbles A/B through A–H, multiple-select directions,
+  label-matched written answer areas, optional cover, Name/Date fields on the
+  detachable response sheet, and responsive layout across paper sizes and
+  orientations. For a large mixed set, ensure response sheets paginate without
+  clipping, skipping questions, or inadvertently revealing correct answers.
+  Verify Bubble's Questions Only includes a blank response sheet, the combined
+  mode adds a separate answer key after it, and key-only prints only the key.
 - Switch Content between Questions Only, Questions and Answer Key, and Answer Key
   Only. Verify no answers leak onto question pages, the key begins on a new sheet
   after all questions, and key-only omits questions and the cover even when Cover

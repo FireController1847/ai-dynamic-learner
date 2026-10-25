@@ -47,7 +47,7 @@ export async function preparePublication(
   item: CheckItem, settings: PublicationSettings, signal?: AbortSignal,
 ): Promise<PreparedPublication> {
   validatePublicationSettings(settings);
-  if (settings.layout !== 'study') throw new Error('This publishing mode is coming soon. Choose Study.');
+  if (settings.layout === 'gap') throw new Error('Gap publishing is coming soon. Choose Study or Bubble.');
   const seed = settings.seed;
   const sourceId = item.id, title = item.name, description = item.options?.description ?? '';
   if (!title.trim() || title.length > MAX_NAME_LENGTH || description.length > MAX_TEXT) {

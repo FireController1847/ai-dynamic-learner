@@ -6,7 +6,8 @@ import studyStyles from './study-sheet.css?publication';
 import type { PublicationQuestion, PublicationView } from './publication-model.ts';
 import type { PublicationRenderer } from './paged-runtime.ts';
 
-function questionContent(question: PublicationQuestion, style: PublicationView['settings']['questionStyle']): VNodeChild {
+function questionContent(question: PublicationQuestion, style: PublicationView['settings']['questionStyle'],
+  includeResponseLines = true): VNodeChild {
   return h('article', { class: 'study-question', 'data-publication-question': '' }, [
     h('p', { class: ['study-question-prompt', `study-question-style-${style}`] }, [h('span', { class: 'study-question-number' }, `${question.number}.`),
       h('span', question.prompt)]),
@@ -16,7 +17,7 @@ function questionContent(question: PublicationQuestion, style: PublicationView['
       question.choices.map(choice => h('li', choice))) : null,
     question.kind === 'matching' || question.kind === 'response'
       ? h('div', { class: 'study-responses' }, question.responseLabels.map(label => h('p', [
-        h('span', `${label}: `), h('span', { class: 'study-response-line' }, '\u00a0'),
+        h('span', `${label}: `), includeResponseLines ? h('span', { class: 'study-response-line' }, '\u00a0') : null,
       ]))) : null,
   ]);
 }
@@ -26,14 +27,14 @@ function startsSection(question: PublicationQuestion, previous: PublicationQuest
 }
 
 /** Paired tables align opposite questions; independent columns flow naturally. */
-function studyQuestions(view: PublicationView): VNodeChild[] {
+export function studyQuestions(view: PublicationView, includeResponseLines = true): VNodeChild[] {
   const comfortable = view.settings.titleLayout !== 'compact';
   if (view.settings.columns === 2 && view.settings.alignColumns) {
     const pairs: VNodeChild[] = [];
     for (let index = 0; index < view.questions.length; index += 2) {
       const cells = [0, 1].map(offset => {
         const question = view.questions[index + offset];
-        return h('td', question ? [questionContent(question, view.settings.questionStyle)] : []);
+        return h('td', question ? [questionContent(question, view.settings.questionStyle, includeResponseLines)] : []);
       });
       pairs.push(h('table', { class: ['study-question-grid', {
         'study-comfortable': comfortable,
@@ -51,7 +52,7 @@ function studyQuestions(view: PublicationView): VNodeChild[] {
       'study-section-end': Boolean(view.questions[index + 1] &&
         startsSection(view.questions[index + 1]!, question)),
     }],
-  }, [questionContent(question, view.settings.questionStyle)]));
+  }, [questionContent(question, view.settings.questionStyle, includeResponseLines)]));
   return [h('div', {
     class: ['study-question-flow', { 'study-flow-two-columns': view.settings.columns === 2 }],
   }, items)];
@@ -62,7 +63,7 @@ function studyQuestions(view: PublicationView): VNodeChild[] {
  * with a large top margin. Keep authored titles as text nodes and never print
  * answers, explanations, or a detailed knowledge-set description here.
  */
-function studyHeading(view: PublicationView): VNodeChild {
+export function studyHeading(view: PublicationView, edition = 'STUDY SHEET'): VNodeChild {
   if (view.settings.titleLayout !== 'cover') {
     return h('header', { class: ['study-sheet-heading', `study-heading-${view.settings.titleLayout}`] }, [
       h('h1', view.title),
@@ -77,7 +78,7 @@ function studyHeading(view: PublicationView): VNodeChild {
   return h('section', { class: 'study-sheet-cover', 'aria-label': 'Study sheet cover' }, [
     h('div', { class: 'study-cover-masthead' }, [
       h('span', { class: 'study-cover-brand' }, 'DYNAMIC LEARNER'),
-      h('span', { class: 'study-cover-edition' }, 'REVIEW / STUDY SHEET'),
+      h('span', { class: 'study-cover-edition' }, `REVIEW / ${edition}`),
     ]),
     h('div', { class: 'study-cover-main' }, [
       h('div', { class: 'study-cover-accent', 'aria-hidden': 'true' }),
@@ -98,7 +99,7 @@ function studyHeading(view: PublicationView): VNodeChild {
         ]),
       ]),
       h('div', { class: 'study-cover-footer' }, [
-        h('span', 'STUDY / PRACTICE'),
+        h('span', edition === 'BUBBLE SHEET' ? 'BUBBLE / PRACTICE' : 'STUDY / PRACTICE'),
         h('span', `${questionCount} ${questionCount === 1 ? 'QUESTION' : 'QUESTIONS'}`),
       ]),
     ]),
@@ -106,7 +107,7 @@ function studyHeading(view: PublicationView): VNodeChild {
 }
 
 /** A separate, paginated answer-key section; no answers are embedded in question pages. */
-function studyAnswerKey(view: PublicationView): VNodeChild {
+export function studyAnswerKey(view: PublicationView): VNodeChild {
   return h('section', { class: ['study-answer-key', {
     'study-answer-key-appended': view.settings.content === 'both',
   }], 'aria-label': 'Answer key' }, [

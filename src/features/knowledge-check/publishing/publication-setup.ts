@@ -27,7 +27,7 @@ export const PublicationSetup = defineComponent({
     });
     const modeSelected = ref(false);
     const studyHeading = ref<HTMLElement | null>(null);
-    const studyButton = ref<HTMLButtonElement | null>(null);
+    const firstModeButton = ref<HTMLButtonElement | null>(null);
     const prepared = shallowRef<PublicationJob | null>(null);
     const preview = shallowRef<PaginatedPublication | null>(null);
     const previewHost = ref<HTMLElement | null>(null);
@@ -69,11 +69,13 @@ export const PublicationSetup = defineComponent({
       pending = controller; busy.value = true;
       try {
         const job = await preparePublicationJob(props.item, settings.value, controller.signal);
-        const { studyRenderer } = await import('./study-renderer.ts');
+        const renderer = settings.value.layout === 'bubble'
+          ? (await import('./bubble-renderer.ts')).bubbleRenderer
+          : (await import('./study-renderer.ts')).studyRenderer;
         controller.signal.throwIfAborted();
         await nextTick();
         if (!previewHost.value) throw new Error('The preview could not be opened.');
-        const pages = await job.paginate(previewHost.value, studyRenderer, controller.signal);
+        const pages = await job.paginate(previewHost.value, renderer, controller.signal);
         if (controller.signal.aborted) pages.dispose();
         else {
           const previous = preview.value;
@@ -119,7 +121,7 @@ export const PublicationSetup = defineComponent({
         h('div', { class: 'knowledge-check-type-grid', 'aria-label': 'Publishing modes' },
           PUBLICATION_LAYOUTS.map(mode => h('button', {
             type: 'button', class: 'knowledge-check-type-card', disabled: !mode.available,
-            ref: mode.id === 'study' ? studyButton : undefined,
+            ref: mode.id === 'bubble' ? firstModeButton : undefined,
             onClick: () => { if (mode.available) { settings.value.layout = mode.id; modeSelected.value = true; } },
           }, [
             h(Icon, { name: mode.icon, class: 'knowledge-check-type-icon' }),
@@ -207,7 +209,7 @@ export const PublicationSetup = defineComponent({
           } }, 'Done'),
         ])]),
         ]) : null }),
-        h('div', { ref: previewHost, class: 'review-publication-preview', 'aria-label': 'Study sheet pages', 'aria-busy': busy.value }, [
+        h('div', { ref: previewHost, class: 'review-publication-preview', 'aria-label': 'Publication pages', 'aria-busy': busy.value }, [
           !preview.value ? h('div', { class: 'review-publication-placeholder' }, [
             h('div', { class: 'review-publication-empty-page', style: {
               aspectRatio: `${paper.width} / ${paper.height}`,
@@ -256,7 +258,8 @@ export const PublicationSetup = defineComponent({
     }, [
       h('header', { class: 'knowledge-builder-header review-publication-header' }, [
         h('div', [h('h2', { id: 'review-publication-title', ref: modeSelected.value ? studyHeading : undefined,
-          'data-review-focus': '', tabindex: -1 }, modeSelected.value ? 'Study' : 'Publish'),
+          'data-review-focus': '', tabindex: -1 }, modeSelected.value
+            ? PUBLICATION_LAYOUTS.find(layout => layout.id === settings.value.layout)?.label ?? 'Publish' : 'Publish'),
         h('p', { class: 'knowledge-muted' }, props.item.name)]),
         h('div', { class: 'knowledge-actions' }, [
           modeSelected.value ? h('button', { type: 'button', class: 'quiet-button', onClick: () => {
@@ -270,7 +273,7 @@ export const PublicationSetup = defineComponent({
         onAfterLeave: (element: Element) => { if (element.classList.contains('review-publication-study')) invalidate(); },
         onAfterEnter: (element: Element) => {
           restoreReviewPanel(element);
-          const target = modeSelected.value ? studyHeading.value : studyButton.value;
+          const target = modeSelected.value ? studyHeading.value : firstModeButton.value;
           target?.focus();
         },
       }, { default: () => modeSelected.value ? documentWorkspace() : modePicker() }),
