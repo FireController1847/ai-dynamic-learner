@@ -29,9 +29,11 @@ disabled and marked Coming soon.
   question pages. Layout choices never change font family or size. No description,
   correct-answer highlighting, explanations, or answer key are printed.
 
-On narrow Review panes, the document settings bar scrolls sideways without
-clipping its menus. Version, Refresh, and Print sit together in a dedicated action
-row just above the preview, rather than crowding the settings controls. Aligned
+At every Review pane width (including desktop), the document settings occupy
+one horizontally scrollable row without wrapping or stray group separators;
+the native scrollbar and keyboard focus keep hidden settings reachable.
+Dropdown menus stay outside the clipped scrolling surface. Version, Refresh,
+and Print sit in a dedicated action row just above the preview. Aligned
 pairs no longer add offset padding to right-side questions of a different type.
 
 Study uses a read-only document workspace: page settings, version, refresh, and

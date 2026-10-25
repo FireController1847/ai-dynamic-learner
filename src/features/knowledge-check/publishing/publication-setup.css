@@ -10,15 +10,27 @@
 .review-publication.is-document .review-publication-header h2 { margin: 0; font-size: 16px; line-height: 22px; }
 .review-publication.is-document .review-publication-header p { font-size: 12px; }
 .review-publication-study { display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 0; }
+/* All viewport sizes share one scrollable settings strip. On desktop, long
+   controls must not create a second toolbar row or widen the Review pane. */
+.review-publication-toolbar-scroll {
+  flex: 0 0 auto; width: 100%; min-width: 0; max-width: 100%;
+  overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain;
+  scrollbar-width: thin; -webkit-overflow-scrolling: touch;
+  border-bottom: 1px solid var(--border-color);
+}
+.review-publication-toolbar-scroll:focus-visible {
+  outline: 2px solid var(--brand); outline-offset: -2px;
+}
 .review-publication-toolbar {
   position: relative; z-index: 3;
-  display: flex; flex: 0 0 auto; flex-wrap: wrap; align-items: center; gap: 8px;
-  padding: 8px 16px; border-bottom: 1px solid var(--border-color); background: var(--surface-subtle);
+  display: flex; flex: 0 0 auto; flex-wrap: nowrap; align-items: center; gap: 16px;
+  box-sizing: border-box; width: max-content; min-width: 100%;
+  padding: 8px 16px; background: var(--surface-subtle);
 }
 .review-publication-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .review-publication-field > span { font-size: 12px; color: var(--text-secondary); }
 .review-publication-field > :is(select, input) { width: 100%; min-width: 0; min-height: 36px; }
-.publication-toolbar-group { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding-right: 8px; border-right: 1px solid var(--border-color); }
+.publication-toolbar-group { display: flex; flex: 0 0 auto; flex-wrap: nowrap; align-items: center; gap: 4px; }
 .publication-dropdown { position: relative; min-width: 0; }
 .publication-dropdown.is-open { z-index: 10; }
 .publication-tool.quiet-button {
@@ -126,14 +138,6 @@
   .review-publication-mode-picker .knowledge-check-type-grid { grid-template-columns: minmax(0, 1fr); }
   .review-publication-mode-picker .knowledge-check-type-card { min-height: 200px; }
   .review-publication-mode-picker .knowledge-check-type-icon { width: 64px; height: 64px; }
-  .review-publication-toolbar-scroll {
-    min-width: 0; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain;
-    scrollbar-width: thin; -webkit-overflow-scrolling: touch;
-    border-bottom: 1px solid var(--border-color);
-  }
-  .review-publication-toolbar-scroll:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px; }
-  .review-publication-toolbar { width: max-content; min-width: 100%; flex-wrap: nowrap; border-bottom: 0; }
-  .publication-toolbar-group { flex: 0 0 auto; flex-wrap: nowrap; }
   .review-publication-version { grid-template-columns: minmax(0, 1fr) auto; }
   .review-publication-version > label { grid-column: 1; grid-row: 1; }
   .review-publication-version > button { grid-column: 2; grid-row: 1; }
@@ -148,7 +152,6 @@
 }
 @container (max-width: 480px) {
   .review-publication-toolbar { padding: 8px 12px; }
-  .publication-toolbar-group { width: auto; flex: 0 0 auto; flex-wrap: nowrap; border-right: 1px solid var(--border-color); padding-right: 8px; }
   .publication-font-size input { font-size: 16px; }
   .review-publication-toolbar-actions { padding: 6px 12px; min-width: 0; }
   .review-publication-toolbar-actions button { flex: 0 0 auto; }
