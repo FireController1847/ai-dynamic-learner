@@ -47,6 +47,16 @@ Dropdown menus stay outside the clipped scrolling surface. Version, Refresh,
 and Print sit in a dedicated action row just above the preview. Aligned
 pairs no longer add offset padding to right-side questions of a different type.
 
+
+Publish mode selection has its own compact card sizing. Wide panes keep three
+balanced choice cards, while Review panes at or below 900px arrange them as short
+horizontal rows with icons beside text. At 420px and below, the header's mode
+navigation can wrap to a second right-aligned row; above that it stays right of
+the title. The selection screen reserves bottom breathing room for the global
+fixed version label. The shared Study/Quiz/Test picker and app-wide footer are
+unchanged. The Publish Refresh action uses a two-arrow circular icon rather
+than a single-arrow symbol.
+
 Study uses a read-only document workspace: page settings, version, refresh, and
 print controls sit above a scrolling canvas of separate white pages on a gray
 background. Zoom out/in and the zoom selector sit at the bottom right. Fit width

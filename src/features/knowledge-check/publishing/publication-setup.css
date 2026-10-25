@@ -129,15 +129,85 @@
 .review-publication-zoom select { width: 104px; min-height: 28px; font-size: 12px; }
 .review-publication-zoom .icon-button { width: 28px; height: 28px; min-height: 28px; }
 .review-publication-zoom .ui-icon { width: 16px; height: 16px; }
+/* Publish uses the same card language as Review, but the full-sized Review
+   picker cards become absurdly tall in this pane. Scope the compact sizing
+   here so the main Study/Quiz/Test selector retains its existing layout. */
+.review-publication:not(.is-document) {
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  min-width: 0;
+  padding: clamp(16px, 3vw, 32px);
+  padding-bottom: max(48px, env(safe-area-inset-bottom));
+}
+.review-publication-mode-picker { display: grid; gap: 16px; min-width: 0; }
+.review-publication-mode-picker > p { margin: 0; line-height: 1.5; }
+.review-publication-mode-picker .knowledge-check-type-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.review-publication-mode-picker .knowledge-check-type-card {
+  box-sizing: border-box;
+  min-height: 190px;
+  gap: 12px;
+  padding: 20px 16px;
+}
+.review-publication-mode-picker .knowledge-check-type-icon { width: 56px; height: 56px; }
+.review-publication-mode-picker .knowledge-check-type-copy { gap: 6px; }
+.review-publication-mode-picker .knowledge-check-type-copy > strong { font-size: 16px; }
+.review-publication-mode-picker .knowledge-check-type-copy > span:not(.entry-statistics) {
+  font-size: 13px; line-height: 1.45;
+}
 .review-publication-mode-picker .knowledge-check-type-card:disabled {
   cursor: default; opacity: 0.65; transform: none; box-shadow: none;
   border-color: var(--border-color); background: var(--page-background);
 }
 .review-publication-coming-soon { font-weight: 600; }
-@container (max-width: 700px) {
+/* Respond to the actual Review pane, not the desktop window width. */
+@container (max-width: 900px) {
   .review-publication-mode-picker .knowledge-check-type-grid { grid-template-columns: minmax(0, 1fr); }
-  .review-publication-mode-picker .knowledge-check-type-card { min-height: 200px; }
-  .review-publication-mode-picker .knowledge-check-type-icon { width: 64px; height: 64px; }
+  .review-publication-mode-picker .knowledge-check-type-card {
+    display: grid;
+    grid-template-columns: 52px minmax(0, 1fr);
+    min-height: 104px;
+    align-content: center;
+    align-items: center;
+    justify-items: stretch;
+    gap: 14px;
+    padding: 14px 16px;
+    text-align: left;
+  }
+  .review-publication-mode-picker .knowledge-check-type-icon { width: 48px; height: 48px; }
+  .review-publication-mode-picker .knowledge-check-type-copy { align-items: flex-start; text-align: left; }
+  /* Mode navigation remains on the right until the pane is genuinely tiny. */
+  .review-publication:not(.is-document) > .review-publication-header {
+    align-items: center;
+    flex-wrap: nowrap;
+  }
+  .review-publication:not(.is-document) > .review-publication-header > div:first-child {
+    flex: 1 1 0; min-width: 0;
+  }
+  .review-publication:not(.is-document) > .review-publication-header > div:first-child > p {
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .review-publication:not(.is-document) > .review-publication-header > .knowledge-actions {
+    flex: 0 0 auto; flex-wrap: nowrap; width: auto; margin-left: auto;
+  }
+}
+@container (max-width: 420px) {
+  .review-publication:not(.is-document) > .review-publication-header { flex-wrap: wrap; }
+  .review-publication:not(.is-document) > .review-publication-header > div:first-child {
+    flex: 1 1 100%;
+  }
+  .review-publication:not(.is-document) > .review-publication-header > .knowledge-actions {
+    justify-content: flex-end; width: 100%; margin-left: 0;
+  }
+  .review-publication-mode-picker .knowledge-check-type-card {
+    grid-template-columns: 44px minmax(0, 1fr);
+    min-height: 96px; padding: 12px; gap: 12px;
+  }
+  .review-publication-mode-picker .knowledge-check-type-icon { width: 40px; height: 40px; }
+}
+@container (max-width: 700px) {
   .review-publication-version { grid-template-columns: minmax(0, 1fr) auto; }
   .review-publication-version > label { grid-column: 1; grid-row: 1; }
   .review-publication-version > button { grid-column: 2; grid-row: 1; }
