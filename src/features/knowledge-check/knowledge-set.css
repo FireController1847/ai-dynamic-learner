@@ -732,3 +732,70 @@
   .knowledge-set-workspace .knowledge-flag-jump,
   .knowledge-set-workspace .knowledge-results-tab { min-height: 44px; }
 }
+/* The primary Review actions become three equal, tappable tiles when the
+   Review pane itself is narrow (even inside a wide desktop browser). */
+@container (max-width: 640px) {
+  .knowledge-set-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px 8px;
+  }
+  .knowledge-set-toolbar > .knowledge-mode-control {
+    grid-column: 1;
+    min-width: 0;
+    flex: none;
+  }
+  .knowledge-set-toolbar > .knowledge-muted {
+    grid-column: 2;
+    margin: 0;
+    white-space: nowrap;
+    text-align: right;
+    font-size: 12px;
+  }
+  .knowledge-set-toolbar-actions,
+  .knowledge-check-builder-actions.knowledge-history-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 8px;
+    width: 100%;
+    margin: 0;
+  }
+  .knowledge-set-toolbar-actions { grid-column: 1 / -1; }
+  .knowledge-set-toolbar-actions > button,
+  .knowledge-history-actions > button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    min-height: 72px;
+    padding: 10px 4px;
+    border-radius: var(--radius-dialog);
+    background: var(--surface-subtle);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.25;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .knowledge-set-toolbar-actions > button > .ui-icon,
+  .knowledge-history-actions > button > .ui-icon {
+    flex: 0 0 auto;
+    width: 22px;
+    height: 22px;
+  }
+  .knowledge-set-toolbar-actions > button:disabled { opacity: 0.6; }
+}
+@container (max-width: 380px) {
+  .knowledge-set-toolbar > .knowledge-mode-control { gap: 6px; }
+  .knowledge-set-toolbar > .knowledge-mode-control select { min-width: 0; }
+  .knowledge-set-toolbar-actions,
+  .knowledge-check-builder-actions.knowledge-history-actions { gap: 6px; }
+  .knowledge-set-toolbar-actions > button,
+  .knowledge-history-actions > button { padding-inline: 2px; font-size: 11px; }
+}

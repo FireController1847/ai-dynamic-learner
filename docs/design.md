@@ -165,3 +165,13 @@ Treat manual AI generation as explicit checkpoints: share source in an external 
 ## Review mobile and tablet layouts
 
 Review's library is an overlay on narrow/touch viewports. The question editor presents a horizontally scrollable, keyboard-accessible question strip when its content pane is narrow; keep the selected question in view. Flag navigation docks above session questions on narrow panes instead of covering answers. Critical controls use touch-sized targets; form fields resist mobile focus zoom; AI creation and session/result layouts respond to the Review pane width rather than only the device viewport. Maintain desktop layouts and underlying question/session semantics, accessible names, focus, theme and reduced-motion behavior.
+
+## Review narrow-pane actions
+
+The Review knowledge-set toolbar and the matching History, Publish, Build actions
+beneath the mode choices retain their existing desktop buttons. When the local
+Review pane is 640px wide or narrower, they become a three-column row of compact,
+evenly sized action tiles with icons above labels, readable counts, and 72px
+minimum height. The Mode selector and question count remain above them. The
+layout responds to the pane/container width, not just the device viewport, and
+keeps native button focus, disabled states, and semantics.

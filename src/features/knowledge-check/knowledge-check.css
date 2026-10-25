@@ -372,7 +372,6 @@
   .knowledge-check-type-grid { gap: 12px; }
   .knowledge-check-type-card { padding: 20px 16px; gap: 12px; }
   .knowledge-check-type-icon { width: 52px; height: 52px; }
-  .knowledge-check-builder-actions > button { flex: 1 1 auto; }
 }
 .knowledge-check-placeholder { padding: 32px 20px; color: var(--text-secondary); }
 
