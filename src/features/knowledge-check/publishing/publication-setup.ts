@@ -23,7 +23,7 @@ export const PublicationSetup = defineComponent({
   setup(props, { emit }) {
     const settings = ref<PublicationSettings>({
       layout: 'study', paper: 'letter', orientation: 'portrait', margin: 'standard',
-      titleLayout: 'comfortable', columns: 1, alignColumns: false, questionStyle: 'regular', font: 'times', fontSize: 12, seed: newVariantSeed(),
+      titleLayout: 'comfortable', columns: 1, alignColumns: false, questionStyle: 'regular', content: 'questions', font: 'times', fontSize: 12, seed: newVariantSeed(),
     });
     const modeSelected = ref(false);
     const studyHeading = ref<HTMLElement | null>(null);
@@ -104,7 +104,7 @@ export const PublicationSetup = defineComponent({
       } catch (error) { message.value = error instanceof Error ? error.message : String(error); }
     }
 
-    function choice<K extends 'paper' | 'orientation' | 'margin' | 'titleLayout' | 'font' | 'questionStyle'>(
+    function choice<K extends 'paper' | 'orientation' | 'margin' | 'titleLayout' | 'font' | 'questionStyle' | 'content'>(
       key: K, label: string, icon: string, options: readonly (PublicationOption & { id: PublicationSettings[K] })[],
     ) {
       return h(PublicationDropdown, { label, icon, value: settings.value[key], options, onSelect: (id: string) => {
@@ -135,6 +135,13 @@ export const PublicationSetup = defineComponent({
         h('div', { class: 'review-publication-toolbar-scroll', role: 'region',
           'aria-label': 'Document settings, scroll horizontally for more options', tabindex: 0 }, [
           h('div', { class: 'review-publication-toolbar', role: 'group', 'aria-label': 'Document settings' }, [
+          h('div', { class: 'publication-toolbar-group', role: 'group', 'aria-label': 'Included pages' }, [
+            choice('content', 'Content', 'document', [
+              { id: 'questions', label: 'Questions Only', description: 'Print the question sheet without answers.' },
+              { id: 'both', label: 'Questions and Answer Key', description: 'Append a separate answer key after the questions.' },
+              { id: 'key', label: 'Answer Key Only', description: 'Print the answer key without question pages.' },
+            ]),
+          ]),
           h('div', { class: 'publication-toolbar-group', role: 'group', 'aria-label': 'Typography' }, [
             choice('font', 'Font', 'text-font', PUBLICATION_FONTS.map(font => ({ id: font.id, label: font.label, fontFamily: font.css }))),
             h('label', { class: 'publication-font-size', title: 'Font size' }, [h(Icon, { name: 'text-size' }),

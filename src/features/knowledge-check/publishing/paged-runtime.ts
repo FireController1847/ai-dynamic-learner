@@ -33,7 +33,7 @@ export function publicationPageStyles(settings: PublicationSettings): string {
   const margin = `${marginMm}mm`;
   // Leave a few millimetres of safety room for Paged.js rounding/fragmentation.
   const coverHeight = paper.height - 2 * marginMm - 4;
-  const coverPageNumber = settings.titleLayout === 'cover'
+  const coverPageNumber = settings.content !== 'key' && settings.titleLayout === 'cover'
     ? '@page :first { @bottom-center { content: none; } }'
     : '';
   return `@page {

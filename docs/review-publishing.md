@@ -37,8 +37,15 @@ disabled and marked Coming soon.
   and the first-page number is suppressed. The questions begin on the next page
   with Comfortable spacing; Compact/Comfortable layouts otherwise retain their
   original compact headings. Layout choices never change question font family
-  or size. No description,
-  correct-answer highlighting, explanations, or answer key are printed.
+  or size. Question pages never display correct-answer highlighting or explanations.
+  A new **Content** selector in the leftmost settings group controls which pages
+  are generated: Questions Only (default), Questions and Answer Key, or Answer Key
+  Only. The combined setting appends a separately titled key on a new page;
+  key-only omits question sheets and any optional cover. The key matches the
+  *generated* question/choice order and numbered questions, including lettered
+  multiple choice (all correct letters), True/False, Fill in the Blanks, matching,
+  short answers, parameterized generated values, and informational Statements.
+  Long keys can continue across pages. Key layout follows the chosen column count.
 
 At every Review pane width (including desktop), the document settings occupy
 one horizontally scrollable row without wrapping or stray group separators;
@@ -94,13 +101,16 @@ them feature-local until another app actually needs shared publication behavior.
 
 1. `publication-model.ts` owns mode definitions, validated page settings, and the
    renderer-neutral document/view contracts. Publishing modes are separate from
-   future delivery formats. Views omit answer records and explanations.
+   future delivery formats. Question views always omit answer records and
+   explanations; a separate, minimal answer-key projection is populated only
+   when the user explicitly selects a key-producing content option.
 2. `prepare-publication.ts` validates a deep copy of the authored bank, resolves
    parameterized questions through the existing generator/sandbox, and resolves
    choice pools. It rejects unfinished banks and unimplemented publishing modes.
    All authored items keep their order; session limits, responses, history, and
    statistics are excluded. It never mutates the authored set.
-3. `publicationView` projects the detached source into learner-facing content.
+3. `publicationView` projects the detached source into learner-facing content
+   and, only by explicit user choice, a separately numbered key.
    Source snapshots contain answers and must not be exported directly. Fill-in-
    the-Blanks prompts are masked. Multiple-answer choices, matching labels,
    generated answer fields, Markdown contexts, and Statements retain their meaning.
@@ -179,10 +189,16 @@ white sheets, gaps, and shadows visible on screen while excluding them from prin
   aligned pairs (1/2, 3/4); the alignment control disables in one-column mode.
   Check FitB height differences, numbered flow, page breaks, and no clipped or
   duplicated questions in preview/print/PDF. Check lettered choices, odd item counts, wrapped
-  prompts/options, readable margins, no answer markings, and accurate page counts.
+  prompts/options, readable margins, no answer markings on question pages, and accurate page counts.
   Comfortable/Compact should start with their title, Name line and questions,
   without a blank page. Only Cover page should put the questions on page two.
   Check title/question spacing and the Version panel's input, wrapping, Done, and themes.
+- Switch Content between Questions Only, Questions and Answer Key, and Answer Key
+  Only. Verify no answers leak onto question pages, the key begins on a new sheet
+  after all questions, and key-only omits questions and the cover even when Cover
+  is selected. Check correct letters after randomized choice pools, every correct
+  answer for multi-select, True/False, typed blanks, matching, generated variables,
+  and Statements; check key continuation across multiple pages and PDF output.
 - Verify all three layouts keep Times New Roman 12pt by default. Change font and
   point size, then change layouts: typography must persist. Check section/type
   spacing and font fallback on systems without a selected font.

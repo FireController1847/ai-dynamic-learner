@@ -10,6 +10,7 @@ export const PUBLICATION_FONTS = [
 ] as const;
 export type PublicationFont = typeof PUBLICATION_FONTS[number]['id'];
 export type PublicationQuestionStyle = 'regular' | 'bold' | 'italic' | 'bold-italic' | 'underline';
+export type PublicationContent = 'questions' | 'both' | 'key';
 
 /** Document layouts are independent of delivery formats (print, PDF, HTML, etc.). */
 export const PUBLICATION_LAYOUTS = [
@@ -29,6 +30,7 @@ export interface PublicationSettings {
   columns: 1 | 2;
   alignColumns: boolean;
   questionStyle: PublicationQuestionStyle;
+  content: PublicationContent;
   titleLayout: 'cover' | 'comfortable' | 'compact';
   font: PublicationFont;
   fontSize: number;
@@ -38,7 +40,7 @@ export interface PublicationSettings {
 
 export function validatePublicationSettings(value: unknown): asserts value is PublicationSettings {
   if (!isRecord(value) || Object.keys(value).some(key =>
-    !['layout', 'paper', 'orientation', 'margin', 'columns', 'alignColumns', 'questionStyle', 'titleLayout', 'font', 'fontSize', 'seed'].includes(key)) ||
+    !['layout', 'paper', 'orientation', 'margin', 'columns', 'alignColumns', 'questionStyle', 'content', 'titleLayout', 'font', 'fontSize', 'seed'].includes(key)) ||
     !PUBLICATION_LAYOUTS.some(layout => layout.id === value.layout) ||
     (value.paper !== 'letter' && value.paper !== 'a4') ||
     (value.orientation !== 'portrait' && value.orientation !== 'landscape') ||
@@ -46,6 +48,7 @@ export function validatePublicationSettings(value: unknown): asserts value is Pu
     (value.columns !== 1 && value.columns !== 2) ||
     typeof value.alignColumns !== 'boolean' ||
     !['regular', 'bold', 'italic', 'bold-italic', 'underline'].includes(value.questionStyle as string) ||
+    (value.content !== 'questions' && value.content !== 'both' && value.content !== 'key') ||
     (value.titleLayout !== 'cover' && value.titleLayout !== 'comfortable' && value.titleLayout !== 'compact') ||
     !PUBLICATION_FONTS.some(font => font.id === value.font) ||
     typeof value.fontSize !== 'number' || !Number.isFinite(value.fontSize) || value.fontSize < 8 ||
@@ -86,14 +89,38 @@ export interface PreparedPublication {
   readonly seed: string;
   readonly questions: readonly PublicationQuestion[];
 }
+export interface PublicationKeyLine { readonly label: string; readonly text: string }
+export interface PublicationKeyEntry {
+  readonly number: number;
+  readonly lines: readonly PublicationKeyLine[];
+}
 export interface PublicationView {
   readonly title: string;
   readonly description: string;
   readonly settings: Readonly<PublicationSettings>;
+  /** Question pages are always answer-free, even if a separate key was requested. */
   readonly questions: readonly PublicationQuestion[];
+  /** Only projected when explicitly requested; never included in Questions Only. */
+  readonly answerKey: readonly PublicationKeyEntry[];
 }
 
-/** Renderers consume this projection, never the answer-bearing source snapshot. */
+/** Convert concrete, already randomized choice answers to the printed choice letters. */
+function keyEntry(question: PublicationQuestion): PublicationKeyEntry {
+  if (question.kind === 'statement') {
+    return { number: question.number, lines: [{ label: '', text: 'Information only — no answer required' }] };
+  }
+  const lines = question.answers.map(answer => {
+    if (question.sourceType === 'multiple-choice') {
+      const index = question.choices.indexOf(answer.text);
+      return { label: index >= 0 && index < 26 ? String.fromCharCode(65 + index) : 'Answer', text: answer.text };
+    }
+    return { label: question.kind === 'matching' || question.kind === 'blanks' ||
+        question.answers.length > 1 ? answer.label : '', text: answer.text };
+  });
+  return { number: question.number, lines };
+}
+
+/** Project detached sources according to the explicit print-content choice. */
 export function publicationView(source: PreparedPublication, settings: PublicationSettings): PublicationView {
   validatePublicationSettings(settings);
   if (source.seed !== settings.seed) throw new Error('Prepare content again after changing the seed.');
@@ -105,5 +132,6 @@ export function publicationView(source: PreparedPublication, settings: Publicati
       answers: [],
       explanation: '',
     })),
+    answerKey: settings.content === 'questions' ? [] : source.questions.map(keyEntry),
   };
 }

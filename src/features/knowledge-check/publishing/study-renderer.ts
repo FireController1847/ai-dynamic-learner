@@ -105,13 +105,38 @@ function studyHeading(view: PublicationView): VNodeChild {
   ]);
 }
 
+/** A separate, paginated answer-key section; no answers are embedded in question pages. */
+function studyAnswerKey(view: PublicationView): VNodeChild {
+  return h('section', { class: ['study-answer-key', {
+    'study-answer-key-appended': view.settings.content === 'both',
+  }], 'aria-label': 'Answer key' }, [
+    h('header', { class: 'study-answer-key-heading' }, [
+      h('p', { class: 'study-answer-key-eyebrow' }, 'DYNAMIC LEARNER / REVIEW'),
+      h('h1', 'Answer key'),
+      h('p', { class: 'study-answer-key-title' }, view.title),
+      h('p', { class: 'study-answer-key-note' }, 'Answers correspond to the numbered questions in this version.'),
+    ]),
+    h('div', { class: ['study-answer-key-entries', {
+      'study-answer-key-two-columns': view.settings.columns === 2,
+    }] }, view.answerKey.map(entry =>
+      h('div', { key: entry.number, class: 'study-answer-key-entry' }, [
+        h('strong', { class: 'study-answer-key-number' }, `${entry.number}.`),
+        h('div', { class: 'study-answer-key-lines' }, entry.lines.map(line =>
+          h('p', [
+            line.label ? h('strong', `${line.label}: `) : null,
+            h('span', line.text),
+          ]))),
+      ]))),
+  ]);
+}
+
 function studyContent(view: PublicationView, document: Document): DocumentFragment {
   if (view.settings.layout !== 'study') throw new Error('Choose Study to create this sheet.');
   const mount = document.createElement('div');
   try {
     render(h(Fragment, [
-      studyHeading(view),
-      ...studyQuestions(view),
+      ...(view.settings.content === 'key' ? [] : [studyHeading(view), ...studyQuestions(view)]),
+      ...(view.settings.content === 'questions' ? [] : [studyAnswerKey(view)]),
     ]), mount);
     const fragment = document.createDocumentFragment();
     for (const child of mount.childNodes) fragment.append(document.importNode(child, true));

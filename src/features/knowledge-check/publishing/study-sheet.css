@@ -113,3 +113,26 @@ body {
 .study-question-style-italic { font-style: italic; }
 .study-question-style-bold-italic { font-weight: 700; font-style: italic; }
 .study-question-style-underline { text-decoration: underline; text-underline-offset: 2pt; }
+
+/* Distinct printable answer key, starting on a fresh sheet when appended.
+   The first sheet starts normally for Answer Key Only (even with Cover selected). */
+.study-answer-key { break-inside: auto; }
+.study-answer-key-appended { break-before: page; page-break-before: always; }
+.study-answer-key-heading { margin: 0 0 20pt; padding-bottom: 14pt; border-bottom: 0.75pt solid #aaa; break-inside: avoid; }
+.study-answer-key-heading h1 { font-size: 1.6em; line-height: 1.2; margin: 6pt 0; }
+.study-answer-key-eyebrow {
+  margin: 0; color: #555; font: 700 8pt/1.4 Arial, Helvetica, sans-serif;
+  letter-spacing: .12em;
+}
+.study-answer-key-title { margin: 0; font-size: 1em; overflow-wrap: anywhere; }
+.study-answer-key-note { color: #555; margin: 8pt 0 0; font-size: .8em; }
+.study-answer-key-entries { width: 100%; }
+.study-answer-key-two-columns { column-count: 2; column-gap: 24pt; }
+.study-answer-key-entry {
+  display: flex; align-items: flex-start; gap: 9pt;
+  margin: 0 0 12pt; break-inside: avoid; overflow-wrap: anywhere;
+}
+.study-answer-key-number { flex: 0 0 22pt; font-weight: 700; }
+.study-answer-key-lines { flex: 1; min-width: 0; }
+.study-answer-key-lines p { margin: 0 0 3pt; line-height: 1.4; white-space: pre-wrap; }
+.study-answer-key-lines p:last-child { margin-bottom: 0; }
