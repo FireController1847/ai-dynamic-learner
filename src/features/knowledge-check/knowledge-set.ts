@@ -37,14 +37,6 @@ export const KnowledgeSet = defineComponent({
     const historyOpen = ref(false);
     const publishing = ref(false);
     const viewedAttempt = ref<ReviewAttempt | null>(null);
-    const lastQuiz = () => [...(props.item.history ?? [])].reverse().find(attempt => attempt.mode === 'quiz') ?? null;
-    function reviewLastQuiz() {
-      const attempt = lastQuiz();
-      if (!attempt) return;
-      viewedAttempt.value = attempt;
-      historyOpen.value = true;
-      mode.value = null; sessionSettings.value = null; resumeRequested.value = false;
-    }
     function openHistory() {
       if (!requestLeave()) return;
       viewedAttempt.value = null; historyOpen.value = true;
@@ -106,8 +98,7 @@ export const KnowledgeSet = defineComponent({
         pausedStudy: props.statisticsEnabled && Boolean(pausedSessionSettings(props.item.id, 'study')),
         pausedQuiz: props.statisticsEnabled && Boolean(pausedSessionSettings(props.item.id, 'quiz')),
         historyCount: props.item.history?.length ?? 0,
-        hasLastQuiz: Boolean(lastQuiz()),
-        onHistory: openHistory, onPublish: openPublishing, onReviewLast: reviewLastQuiz,
+        onHistory: openHistory, onPublish: openPublishing,
         onChoose: chooseMode, onBuild: openBuilder,
       });
       if (!sessionSettings.value) return h(SessionSetup, {
@@ -125,8 +116,6 @@ export const KnowledgeSet = defineComponent({
         key: `session-${revision.value}-${mode.value}`, item: props.item, mode: mode.value, settings: sessionSettings.value,
         statisticsEnabled: props.statisticsEnabled,
         autoResume: resumeRequested.value,
-        lastQuizAvailable: Boolean(lastQuiz()),
-        onReviewLast: reviewLastQuiz,
         onPaused: () => {
           mode.value = null;
           sessionSettings.value = null;

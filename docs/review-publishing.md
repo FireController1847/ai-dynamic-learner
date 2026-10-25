@@ -8,9 +8,14 @@ disabled and marked Coming soon.
   on the last page.
 - **Gap (planned):** two or three questions vertically per page with large spaces
   for written responses.
-- **Study:** compact two-column sheets, numbered left to right in pairs, with
+- **Study:** compact one- or two-column sheets, numbered in document order, with
   lettered choices learners can circle. Questions without choices retain compact
   response lines, authored blanks, or matching rows; Statements stay informational.
+  Two columns are the default. With alignment off, columns flow independently,
+  so a tall Fill in the Blanks question does not create a matching gap across
+  the page; question order reads downward through each column. With **Align
+  questions** on, paired rows (1/2, 3/4) preserve the original start alignment.
+  One column uses the full printable width and disables the checkbox.
   Title layouts offer Cover page, Comfortable, and Compact. Comfortable is the
   default: title and blank Name line on the first question page with a larger gap
   below and more space between pairs. Compact uses tighter spacing. Cover page
@@ -24,7 +29,7 @@ background. Zoom out/in and the zoom selector sit at the bottom right. Fit width
 is the default; Fit page remains available. Version opens a responsive inline
 panel using shared themed input styles, with Done returning focus to its button.
 Entering Study automatically generates its preview. Paper, orientation, margin,
-title-layout, version-code, or content changes debounce a replacement preview; Print stays
+title-layout, column count, alignment, version-code, or content changes debounce a replacement preview; Print stays
 unavailable until it is ready. Zoom offers Fit page, Fit width, and 25–200%, and resizes only
 the screen canvas without regenerating questions or changing printed dimensions.
 
@@ -133,8 +138,11 @@ white sheets, gaps, and shadows visible on screen while excluding them from prin
 - Open Publish from either action row. Verify Bubble/Gap show Coming soon and
   cannot start; Study opens settings. Check keyboard/focus, Change mode, Back,
   active-session leave confirmation, Light/Dark, narrow panes, and touch controls.
-- Generate a sufficiently large multiple-choice set. Verify dense two-column
-  pages, left-to-right numbering, lettered choices, odd item counts, wrapped
+- Generate a mixed-type set. Verify full-width one-column output, natural
+  independent two-column flow without synchronized row heights, and optional
+  aligned pairs (1/2, 3/4); the alignment control disables in one-column mode.
+  Check FitB height differences, numbered flow, page breaks, and no clipped or
+  duplicated questions in preview/print/PDF. Check lettered choices, odd item counts, wrapped
   prompts/options, readable margins, no answer markings, and accurate page counts.
   Comfortable/Compact should start with their title, Name line and questions,
   without a blank page. Only Cover page should put the questions on page two.

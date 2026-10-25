@@ -26,9 +26,8 @@ export const KnowledgeSession = defineComponent({
     statisticsEnabled: { type: Boolean, default: true },
     autoResume: Boolean,
     historyAttempt: { type: Object as PropType<ReviewAttempt | null>, default: null },
-    lastQuizAvailable: Boolean,
   },
-  emits: { back: () => true, build: () => true, paused: () => true, 'review-last': () => true },
+  emits: { back: () => true, build: () => true, paused: () => true },
   setup(props, { emit }) {
     const state = useKnowledgeSession(props.item, props.mode, props.settings,
       props.statisticsEnabled && !props.historyAttempt);
@@ -606,9 +605,9 @@ export const KnowledgeSession = defineComponent({
       }
       if (!started.value) return h(SessionIntro, { key: 'intro', item: props.item, mode: props.mode, settings: props.settings,
         count: questionCount.value, ended: ended.value, resumable: state.resumable.value,
-        savedCompleted: state.savedCompleted.value, lastQuizAvailable: props.lastQuizAvailable,
+        savedCompleted: state.savedCompleted.value,
         lastStudyAvailable: Boolean(props.item.lastStudy),
-        message: state.storageMessage.value, onReviewLast: () => emit('review-last'),
+        message: state.storageMessage.value,
         onReviewLastStudy: () => { viewingLastStudy.value = true; },
         onResume: state.resume, onBack: () => emit('back'), onStart: start });
       if (props.mode === 'study' && reviewingStudy.value) {

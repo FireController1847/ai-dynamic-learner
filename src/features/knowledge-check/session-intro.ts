@@ -13,8 +13,8 @@ export const SessionIntro = defineComponent({
     mode: { type: String as PropType<CheckModeId>, required: true },
     settings: { type: Object as PropType<SessionSettings>, required: true },
     count: { type: Number, required: true }, ended: Boolean, resumable: Boolean, message: String,
-    savedCompleted: Boolean, lastQuizAvailable: Boolean, lastStudyAvailable: Boolean },
-  emits: { back: () => true, start: () => true, resume: () => true, 'review-last': () => true, 'review-last-study': () => true },
+    savedCompleted: Boolean, lastStudyAvailable: Boolean },
+  emits: { back: () => true, start: () => true, resume: () => true, 'review-last-study': () => true },
   setup(props, { emit }) {
     return () => {
       const test = props.mode === 'test';
@@ -83,12 +83,6 @@ export const SessionIntro = defineComponent({
           study && props.lastStudyAvailable
             ? h('button', { type: 'button', class: 'quiet-button',
               onClick: () => emit('review-last-study') }, 'Review last Study session')
-            : null,
-          props.mode === 'quiz' && props.lastQuizAvailable
-            ? h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('review-last') }, 'Review last quiz')
-            : null,
-          props.resumable && props.savedCompleted && !props.lastQuizAvailable
-            ? h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('resume') }, 'Review last quiz')
             : null,
           h('button', { type: 'button', class: 'card-primary-button', disabled: !props.count,
             onClick: () => emit('start') }, [
