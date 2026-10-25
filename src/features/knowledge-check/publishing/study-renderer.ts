@@ -7,7 +7,7 @@ import type { PublicationQuestion, PublicationView } from './publication-model.t
 import type { PublicationRenderer } from './paged-runtime.ts';
 
 function questionContent(question: PublicationQuestion, style: PublicationView['settings']['questionStyle'],
-  includeResponseLines = true): VNodeChild {
+  includeResponseLines = true, bubbleMatching = false): VNodeChild {
   return h('article', { class: 'study-question', 'data-publication-question': '' }, [
     h('p', { class: ['study-question-prompt', `study-question-style-${style}`] }, [h('span', { class: 'study-question-number' }, `${question.number}.`),
       h('span', question.prompt)]),
@@ -16,8 +16,9 @@ function questionContent(question: PublicationQuestion, style: PublicationView['
     question.choices.length ? h('ol', { class: 'study-choices', type: 'A' },
       question.choices.map(choice => h('li', choice))) : null,
     question.kind === 'matching' || question.kind === 'response'
-      ? h('div', { class: 'study-responses' }, question.responseLabels.map(label => h('p', [
-        h('span', `${label}: `), includeResponseLines ? h('span', { class: 'study-response-line' }, '\u00a0') : null,
+      ? h('div', { class: 'study-responses' }, question.responseLabels.map((label, i) => h('p', [
+        h('span', bubbleMatching && question.kind === 'matching' ? `${question.number}.${i + 1} ${label}` : `${label}: `),
+        includeResponseLines ? h('span', { class: 'study-response-line' }, '\u00a0') : null,
       ]))) : null,
   ]);
 }
@@ -27,14 +28,15 @@ function startsSection(question: PublicationQuestion, previous: PublicationQuest
 }
 
 /** Paired tables align opposite questions; independent columns flow naturally. */
-export function studyQuestions(view: PublicationView, includeResponseLines = true): VNodeChild[] {
+export function studyQuestions(view: PublicationView, includeResponseLines = true,
+  bubbleMatching = false): VNodeChild[] {
   const comfortable = view.settings.titleLayout !== 'compact';
   if (view.settings.columns === 2 && view.settings.alignColumns) {
     const pairs: VNodeChild[] = [];
     for (let index = 0; index < view.questions.length; index += 2) {
       const cells = [0, 1].map(offset => {
         const question = view.questions[index + offset];
-        return h('td', question ? [questionContent(question, view.settings.questionStyle, includeResponseLines)] : []);
+        return h('td', question ? [questionContent(question, view.settings.questionStyle, includeResponseLines, bubbleMatching)] : []);
       });
       pairs.push(h('table', { class: ['study-question-grid', {
         'study-comfortable': comfortable,
@@ -52,7 +54,7 @@ export function studyQuestions(view: PublicationView, includeResponseLines = tru
       'study-section-end': Boolean(view.questions[index + 1] &&
         startsSection(view.questions[index + 1]!, question)),
     }],
-  }, [questionContent(question, view.settings.questionStyle, includeResponseLines)]));
+  }, [questionContent(question, view.settings.questionStyle, includeResponseLines, bubbleMatching)]));
   return [h('div', {
     class: ['study-question-flow', { 'study-flow-two-columns': view.settings.columns === 2 }],
   }, items)];

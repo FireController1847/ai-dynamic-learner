@@ -4,54 +4,46 @@ import type { PublicationRenderer } from './paged-runtime.ts';
 import { studyAnswerKey, studyHeading, studyQuestions, studyRenderer } from './study-renderer.ts';
 import bubbleStyles from './bubble-sheet.css?publication';
 
-const letter = (index: number) => String.fromCharCode(65 + index);
+const letter = (i: number) => String.fromCharCode(65 + i);
 
-/** An ordinary choice uses unfilled circles; written types receive ruled spaces. */
-function answerRow(question: PublicationQuestion): VNodeChild {
-  if (question.kind === 'choice') return h('div', {
-    key: question.id, class: 'bubble-response-row bubble-response-choice',
-  }, [
-    h('strong', { class: 'bubble-response-number' }, `${question.number}.`),
-    h('div', { class: 'bubble-response-marks', 'aria-label': `Choices for question ${question.number}` },
-      question.choices.map((_choice, index) =>
-        h('span', { class: 'bubble-response-mark', 'aria-label': `Choice ${letter(index)}` }, letter(index)))),
-    question.selection === 'multiple' ? h('span', { class: 'bubble-response-multiple' }, 'Select all') : null,
-  ]);
-
-  const labels = question.responseLabels.length ? question.responseLabels : ['Answer'];
-  return h('div', { key: question.id, class: 'bubble-response-row bubble-response-written' }, [
-    h('strong', { class: 'bubble-response-number' }, `${question.number}.`),
-    h('div', { class: 'bubble-write-fields' }, labels.map(label =>
-      h('div', { class: 'bubble-write-field' }, [
-        h('span', { class: 'bubble-write-label' }, label),
-        h('span', { class: 'bubble-write-line', 'aria-hidden': 'true' }),
-      ]))),
+/** Choice-only optical rows: one per question, or one per matching sub-question. */
+function bubbleRow(number: string, count: number, multiple: boolean): VNodeChild {
+  return h('div', { key: number, class: 'bubble-response-row' }, [
+    h('strong', { class: 'bubble-response-number' }, number),
+    h('div', { class: 'bubble-response-marks', 'aria-label': `Bubbles for question ${number}` },
+      Array.from({ length: count }, (_, i) => h('span', { class: 'bubble-response-mark' }, letter(i)))),
+    multiple ? h('span', { class: 'bubble-response-multiple', title: 'Select all that apply' }, '*') : null,
   ]);
 }
 
+function bubbleRows(question: PublicationQuestion): VNodeChild[] {
+  if (question.kind === 'choice') return [
+    bubbleRow(`${question.number}.`, question.choices.length, question.selection === 'multiple'),
+  ];
+  if (question.kind === 'matching') return question.responseLabels.map((_label, i) =>
+    bubbleRow(`${question.number}.${i + 1}`, question.choices.length, false));
+  // Other scored kinds are rejected in preparation; Statements have no answers.
+  return [];
+}
+
 function responseSheet(view: PublicationView): VNodeChild {
-  const questions = view.questions.filter(question => question.kind !== 'statement');
   return h('section', { class: 'bubble-response-sheet', 'aria-label': 'Bubble answer sheet' }, [
     h('header', { class: 'bubble-sheet-heading' }, [
       h('p', { class: 'bubble-sheet-kicker' }, 'DYNAMIC LEARNER / REVIEW'),
       h('h1', 'Answer sheet'),
       h('p', { class: 'bubble-sheet-title' }, view.title),
       h('p', { class: 'bubble-sheet-note' },
-        'Fill in the circle for each chosen letter. Mark all answers where instructed. Write other responses on the lines.'),
+        'Darken the circle for your answer. For questions marked *, select all that apply.'),
       h('div', { class: 'bubble-sheet-identification' }, [
         h('p', ['Name', h('span', { class: 'bubble-sheet-id-line', 'aria-hidden': 'true' })]),
         h('p', ['Date', h('span', { class: 'bubble-sheet-id-line', 'aria-hidden': 'true' })]),
       ]),
     ]),
-    questions.length
-      ? h('div', { class: ['bubble-response-rows', {
-        'bubble-response-two-columns': view.settings.columns === 2,
-      }] }, questions.map(answerRow))
-      : h('p', { class: 'bubble-sheet-note' }, 'No responses are required for the informational items in this set.'),
+    h('div', { class: 'bubble-response-rows' }, view.questions.flatMap(bubbleRows)),
   ]);
 }
 
-/** Uses exactly the same detached, answer-free questions and content policy as Study. */
+/** The optical sheet never contains correct answers; the optional key follows it. */
 function bubbleContent(view: PublicationView, document: Document): DocumentFragment {
   if (view.settings.layout !== 'bubble') throw new Error('Choose Bubble to create this sheet.');
   const mount = document.createElement('div');
@@ -59,7 +51,7 @@ function bubbleContent(view: PublicationView, document: Document): DocumentFragm
     render(h(Fragment, [
       ...(view.settings.content === 'key' ? [] : [
         studyHeading(view, 'BUBBLE SHEET'),
-        ...studyQuestions(view, false),
+        ...studyQuestions(view, false, true),
         responseSheet(view),
       ]),
       ...(view.settings.content === 'questions' ? [] : [studyAnswerKey(view)]),
@@ -73,6 +65,5 @@ function bubbleContent(view: PublicationView, document: Document): DocumentFragm
 }
 
 export const bubbleRenderer: PublicationRenderer = {
-  content: bubbleContent,
-  styles: [...studyRenderer.styles, bubbleStyles],
+  content: bubbleContent, styles: [...studyRenderer.styles, bubbleStyles],
 };

@@ -4,18 +4,20 @@ Publish is a browser-local, transient workspace mode like Build. Large choice
 buttons offer Bubble, Gap, and Study. Study and Bubble are available; Gap is
 disabled and marked Coming soon.
 
-- **Bubble:** numbered printable questions and lettered choices (A–H when
-  needed), with a separate response sheet after the final question page.
-  Multiple Choice/True-False get empty lettered circles to mark; multiple
-  selections are explicitly supported. Short Answer, Fill in the Blanks,
-  Dropdown/matching, and Parameterized questions get numbered, labeled
-  write-in lines on the response sheet. Statements need no answer. All
-  authored questions remain included, even in mixed sets. The question pages
-  have no answer indicators or extra writing lines. When Content is Questions
-  and Answer Key, the answer key follows the response sheet on its own page;
-  Answer Key Only omits both questions and response sheet. The response sheet
-  follows the configured page and column settings and can span pages in large
-  sets. The printed name/date fields allow the response sheet to be detached.
+- **Bubble:** Only Multiple Choice (including multi-select), True/False,
+  Dropdown/matching, and informational Statements. Short Answer, Fill in the
+  Blanks, and Parameterized typed-answer questions are incompatible: the picker
+  disables Bubble with an explanation, and preparation rejects incompatible
+  mixed sets rather than silently discarding questions. Multiple Choice/Dropdown
+  must have no more than eight choices (A–H). The bubble sheet has three densely
+  packed columns with 10.5pt circular bubbles and minimal vertical gaps, regardless
+  of the question-page columns. No written-answer lines. Dropdown matches are
+  shown as 2.1, 2.2, 2.3 etc. on the questions and response grid; the key gives
+  each sub-answer's letter. Multi-select rows have an * indicator, and Statements
+  have no bubbles. Questions Only includes a blank bubble sheet, Questions and
+  Answer Key places the key after the bubble sheet, Answer Key Only prints just
+  the key.
+
 - **Gap (planned):** two or three questions vertically per page with large spaces
   for written responses.
 - **Study:** compact one- or two-column sheets, numbered in document order, with
@@ -208,13 +210,12 @@ white sheets, gaps, and shadows visible on screen while excluding them from prin
   Comfortable/Compact should start with their title, Name line and questions,
   without a blank page. Only Cover page should put the questions on page two.
   Check title/question spacing and the Version panel's input, wrapping, Done, and themes.
-- In Bubble, verify choice bubbles A/B through A–H, multiple-select directions,
-  label-matched written answer areas, optional cover, Name/Date fields on the
-  detachable response sheet, and responsive layout across paper sizes and
-  orientations. For a large mixed set, ensure response sheets paginate without
-  clipping, skipping questions, or inadvertently revealing correct answers.
-  Verify Bubble's Questions Only includes a blank response sheet, the combined
-  mode adds a separate answer key after it, and key-only prints only the key.
+- Check Bubble's dense optical rows, A–H circles, multi-select markers and
+  Dropdown subquestion numbers matching across question pages, response grid
+  and optional key. Test incompatibility messages with typed/blank/parameterized
+  questions and Dropdowns with more than eight choices. Ensure no written-answer
+  lines and no omitted questions. Print long sets with Letter/A4 and both
+  orientations to check pagination, then verify Questions Only/Both/Key Only.
 - Switch Content between Questions Only, Questions and Answer Key, and Answer Key
   Only. Verify no answers leak onto question pages, the key begins on a new sheet
   after all questions, and key-only omits questions and the cover even when Cover

@@ -15,7 +15,7 @@ export type PublicationContent = 'questions' | 'both' | 'key';
 /** Document layouts are independent of delivery formats (print, PDF, HTML, etc.). */
 export const PUBLICATION_LAYOUTS = [
   { id: 'bubble', label: 'Bubble', icon: 'checklist', available: true,
-    description: 'Lettered question sheets with a separate bubble and written-response sheet.' },
+    description: 'Choice-based questions with a compact bubble answer sheet.' },
   { id: 'gap', label: 'Gap', icon: 'pencil', available: false,
     description: 'Two or three questions per page with generous space for written answers.' },
   { id: 'study', label: 'Study', icon: 'document', available: true,
@@ -105,11 +105,16 @@ export interface PublicationView {
 }
 
 /** Convert concrete, already randomized choice answers to the printed choice letters. */
-function keyEntry(question: PublicationQuestion): PublicationKeyEntry {
+function keyEntry(question: PublicationQuestion, layout: PublicationLayout): PublicationKeyEntry {
   if (question.kind === 'statement') {
     return { number: question.number, lines: [{ label: '', text: 'Information only — no answer required' }] };
   }
-  const lines = question.answers.map(answer => {
+  const lines = question.answers.map((answer, i) => {
+    if (question.sourceType === 'dropdown' && layout === 'bubble') {
+      const choiceIndex = question.choices.indexOf(answer.text);
+      const letter = choiceIndex < 0 ? '?' : String.fromCharCode(65 + choiceIndex);
+      return { label: `${i + 1} (${answer.label})`, text: `${letter} — ${answer.text}` };
+    }
     if (question.sourceType === 'multiple-choice') {
       const index = question.choices.indexOf(answer.text);
       return { label: index >= 0 && index < 26 ? String.fromCharCode(65 + index) : 'Answer', text: answer.text };
@@ -132,6 +137,6 @@ export function publicationView(source: PreparedPublication, settings: Publicati
       answers: [],
       explanation: '',
     })),
-    answerKey: settings.content === 'questions' ? [] : source.questions.map(keyEntry),
+    answerKey: settings.content === 'questions' ? [] : source.questions.map(q => keyEntry(q, settings.layout)),
   };
 }

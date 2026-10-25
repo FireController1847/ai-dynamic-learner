@@ -4,6 +4,7 @@ import { inputValue } from '../../../core/dom.ts';
 import { newVariantSeed } from '../../../core/parameterized/random.ts';
 import type { CheckItem } from '../library-model.ts';
 import { preparePublicationJob, type PublicationJob } from './publication-job.ts';
+import { bubblePublicationProblem } from './prepare-publication.ts';
 import { PUBLICATION_FONTS, PUBLICATION_LAYOUTS, publicationPaperDimensions, type PublicationSettings } from './publication-model.ts';
 import { PublicationDropdown, type PublicationOption } from './publication-dropdown.ts';
 import { leaveReviewPanel, restoreReviewPanel } from '../review-motion.ts';
@@ -116,17 +117,25 @@ export const PublicationSetup = defineComponent({
     }
 
     function modePicker() {
+      const bubbleIssue = bubblePublicationProblem(props.item.questions);
       return h('div', { class: 'review-publication-mode-picker' }, [
         h('p', 'Choose how to publish this knowledge set.'),
         h('div', { class: 'knowledge-check-type-grid', 'aria-label': 'Publishing modes' },
           PUBLICATION_LAYOUTS.map(mode => h('button', {
-            type: 'button', class: 'knowledge-check-type-card', disabled: !mode.available,
-            ref: mode.id === 'bubble' ? firstModeButton : undefined,
-            onClick: () => { if (mode.available) { settings.value.layout = mode.id; modeSelected.value = true; } },
+            type: 'button', class: 'knowledge-check-type-card',
+            disabled: !mode.available || (mode.id === 'bubble' && Boolean(bubbleIssue)),
+            ref: mode.id === (bubbleIssue ? 'study' : 'bubble') ? firstModeButton : undefined,
+            onClick: () => {
+              if (mode.available && (mode.id !== 'bubble' || !bubbleIssue)) {
+                settings.value.layout = mode.id; modeSelected.value = true;
+              }
+            },
           }, [
             h(Icon, { name: mode.icon, class: 'knowledge-check-type-icon' }),
             h('span', { class: 'knowledge-check-type-copy' }, [h('strong', mode.label), h('span', mode.description),
-              !mode.available ? h('span', { class: 'review-publication-coming-soon' }, 'Coming soon') : null]),
+              !mode.available ? h('span', { class: 'review-publication-coming-soon' }, 'Coming soon') :
+                mode.id === 'bubble' && bubbleIssue
+                  ? h('span', { class: 'review-publication-compatibility', role: 'note' }, bubbleIssue) : null]),
           ]))),
       ]);
     }

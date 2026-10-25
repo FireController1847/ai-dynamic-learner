@@ -38,6 +38,19 @@ function normalizeQuestion(question: Question, number: number, sourceType: Quest
   }
 }
 
+/** Optical Bubble publishing must never omit a question silently. */
+export function bubblePublicationProblem(questions: readonly Pick<Question, 'type' | 'choices'>[]): string {
+  const incompatible = questions.flatMap((q, i) =>
+    ['multiple-choice','true-false','dropdown','statement'].includes(q.type) ? [] : [i + 1]);
+  if (incompatible.length) return `Bubble supports only Multiple Choice, True/False, and Dropdown. ` +
+    `Question${incompatible.length === 1 ? '' : 's'} ${incompatible.slice(0,5).join(', ')}` +
+    `${incompatible.length > 5 ? ', …' : ''} require typed answers. Choose Study or replace them.`;
+  const wide = questions.findIndex(q => ['multiple-choice','dropdown'].includes(q.type) && q.choices.length > 8);
+  if (wide >= 0) return `Question ${wide + 1} has more than eight choices. Bubble supports up to A–H; use Study or reduce the choices.`;
+  if (!questions.some(q => q.type !== 'statement')) return 'Bubble requires a question with selectable answers.';
+  return '';
+}
+
 /**
  * Validates a detached authored snapshot before async work. Never reads sessions,
  * attempts or statistics, mutates the set, or saves generated variants. Uploaded
@@ -57,6 +70,10 @@ export async function preparePublication(
   validateQuestions(snapshot);
   if (!snapshot.length) throw new Error('Add questions before preparing a publication.');
   if (snapshot.some(question => !questionReady(question))) throw new Error('Complete every question before publishing.');
+  if (settings.layout === 'bubble') {
+    const issue = bubblePublicationProblem(snapshot);
+    if (issue) throw new Error(issue);
+  }
   const questions: PublicationQuestion[] = [];
   for (const [index, original] of snapshot.entries()) {
     signal?.throwIfAborted();
