@@ -9,7 +9,7 @@ body {
 }
 .study-sheet-heading {
   display: flex; flex-wrap: wrap; align-items: baseline; gap: 6pt 16pt;
-  margin: 0 0 24pt; break-inside: avoid; break-after: auto;
+  margin: 0 0 16pt; break-inside: avoid; break-after: auto;
 }
 .study-sheet-heading h1 { flex: 1 1 180pt; margin: 0; font-size: 1.25em; line-height: 1.2; break-after: auto; }
 .study-name-field { display: flex; flex: 0 0 180pt; align-items: baseline; gap: 6pt; margin: 0; white-space: nowrap; }
@@ -22,10 +22,12 @@ body {
 .study-heading-cover h1 { flex: 0 0 auto; }
 .study-heading-cover .study-name-field { flex: 0 0 auto; width: 240pt; max-width: 100%; }
 .study-question-grid { width: 100%; table-layout: fixed; border-collapse: collapse; font: inherit; }
-.study-question-grid.study-comfortable > tbody > tr > td { padding-bottom: 28pt; }
-.study-question-grid.study-section-start { margin-top: 16pt; }
+/* Both column strategies share the same question spacing: Compact is deliberately
+   tight, while Comfortable provides an obvious additional gap between questions. */
+.study-question-grid.study-comfortable > tbody > tr > td { padding-bottom: 20pt; }
+.study-question-grid.study-section-start { margin-top: 12pt; }
 .study-question-grid > tbody > tr { break-inside: avoid; }
-.study-question-grid > tbody > tr > td { box-sizing: border-box; width: 50%; padding: 0 0 18pt; vertical-align: top; }
+.study-question-grid > tbody > tr > td { box-sizing: border-box; width: 50%; padding: 0 0 6pt; vertical-align: top; }
 .study-question-grid > tbody > tr > td:first-child { padding-right: 12pt; }
 .study-question-grid > tbody > tr > td:last-child { padding-left: 12pt; }
 .study-question { overflow-wrap: anywhere; }
@@ -49,15 +51,10 @@ body {
    new column and pushes that column's first question down the page. */
 .study-question-flow { width: 100%; }
 .study-flow-two-columns { column-count: 2; column-gap: 24pt; }
-.study-flow-item { margin-bottom: 18pt; break-inside: avoid; }
-.study-flow-item.study-comfortable { margin-bottom: 28pt; }
-.study-flow-item.study-section-end { margin-bottom: 30pt; }
-.study-flow-item.study-comfortable.study-section-end { margin-bottom: 40pt; }
-/* Single-column sheets are less spread out, while preserving readable sections. */
-.study-question-flow:not(.study-flow-two-columns) .study-flow-item { margin-bottom: 12pt; }
-.study-question-flow:not(.study-flow-two-columns) .study-flow-item.study-comfortable { margin-bottom: 20pt; }
-.study-question-flow:not(.study-flow-two-columns) .study-flow-item.study-section-end { margin-bottom: 24pt; }
-.study-question-flow:not(.study-flow-two-columns) .study-flow-item.study-comfortable.study-section-end { margin-bottom: 32pt; }
+.study-flow-item { margin-bottom: 6pt; break-inside: avoid; }
+.study-flow-item.study-comfortable { margin-bottom: 20pt; }
+.study-flow-item.study-section-end { margin-bottom: 18pt; }
+.study-flow-item.study-comfortable.study-section-end { margin-bottom: 32pt; }
 /* Indent A/B/C choices under the prompt for a clearer paper-reading hierarchy. */
 .study-choices { padding-left: 30pt; }
 .study-choices > li { padding-left: 6pt; }

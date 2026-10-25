@@ -11,8 +11,12 @@ disabled and marked Coming soon.
 - **Study:** compact one- or two-column sheets, numbered in document order, with
   lettered choices learners can circle. Questions without choices retain compact
   response lines, authored blanks, or matching rows; Statements stay informational.
-  One column is now the default and uses slightly closer question spacing and
-  additional letter-choice indentation. Two columns remain available. With
+  One column is now the default and uses deeper letter-choice indentation.
+  All column layouts (single, independent two-column, and row-aligned two-column)
+  use matching question spacing: Compact has a tight 6pt gap and a 16pt title gap;
+  Comfortable has a visibly looser 20pt gap and a 40pt title gap. Type/section
+  transitions receive a consistent additional 12pt separation. Two columns remain
+  available. With
   alignment off, columns flow independently,
   so a tall Fill in the Blanks question does not create a matching gap across
   the page; question order reads downward through each column. With **Align
@@ -24,7 +28,8 @@ disabled and marked Coming soon.
   question prompts, not answer choices or document headings.
   Title layouts offer Cover page, Comfortable, and Compact. Comfortable is the
   default: title and blank Name line on the first question page with a larger gap
-  below and more space between pairs. Compact uses tighter spacing. Cover page
+  below and more space between questions in every column mode. Compact uses
+  significantly tighter spacing. Cover page
   puts the title and Name line on a separate opening page, followed by comfortable
   question pages. Layout choices never change font family or size. No description,
   correct-answer highlighting, explanations, or answer key are printed.
