@@ -21,6 +21,7 @@ const paths: Record<string, string> = {
   duplicate: 'M8 8h13v13H8ZM16 8V3H3v13h5',
   flip: 'M4 8a8 8 0 0 1 14-2l3 3M21 3v6h-6M20 16a8 8 0 0 1-14 2l-3-3M3 21v-6h6',
   rotate: 'M20 8V3m0 0h-5m5 0-4 4a8 8 0 1 0 2.3 8.7',
+  'refresh-cw': 'M21 8V3h-5M3 16v5h5M3.6 9a9 9 0 0 1 15-3.5L21 8M3 16l2.4 2.5A9 9 0 0 0 20.4 15',
   shuffle: 'M3 6h3c5 0 7 12 12 12h3m-4-4 4 4-4 4M3 18h3c2 0 4-3 5-6m2-3c2-2 3-3 5-3h3m-4-4 4 4-4 4',
   chevron: 'm9 5 7 7-7 7',
   'chevron-up': 'm5 15 7-7 7 7',

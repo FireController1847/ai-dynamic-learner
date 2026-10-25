@@ -182,7 +182,7 @@ export const PublicationSetup = defineComponent({
               [h(Icon, { name: 'settings' }), 'Version']),
             h('div', { class: 'review-publication-run-actions' }, [
               h('button', { type: 'button', class: 'quiet-button', disabled: busy.value, onClick: prepare,
-                title: 'Refresh the preview' }, [h(Icon, { name: 'rotate' }), 'Refresh']),
+                title: 'Refresh the preview' }, [h(Icon, { name: 'refresh-cw' }), 'Refresh']),
               h('button', { type: 'button', class: 'card-primary-button', disabled: !preview.value || busy.value || dirty.value,
                 title: 'Print or save as PDF', onClick: print }, [h(Icon, { name: 'printer' }), 'Print']),
             ]),
