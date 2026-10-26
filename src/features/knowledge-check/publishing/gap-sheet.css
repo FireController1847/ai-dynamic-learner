@@ -1,0 +1,34 @@
+/* Gap is a full-width written-response sheet. True border rules print without
+   requiring browser background-graphics settings. The question and its writing
+   space are kept together whenever they fit on one page. */
+.gap-question {
+  margin: 0 0 9mm;
+  break-inside: avoid;
+  page-break-inside: avoid;
+  overflow-wrap: anywhere;
+}
+.gap-question-prompt {
+  display: flex;
+  align-items: baseline;
+  gap: 8pt;
+  margin: 0 0 4mm;
+  white-space: pre-wrap;
+  line-height: 1.4;
+}
+.gap-question-number { flex: 0 0 auto; font-weight: 700; }
+.gap-question .markdown-content { margin: 0 0 5mm 17pt; font-size: 1em; line-height: inherit; }
+.gap-question .markdown-content :is(p, ul, ol, pre, blockquote) { margin: 0 0 3mm; }
+.gap-question .markdown-content pre { white-space: pre-wrap; }
+.gap-question .katex-display { margin: 3mm 0; }
+.gap-response-part { margin-bottom: 3mm; }
+.gap-response-label {
+  margin: 0 0 2mm 17pt;
+  font: 600 8pt/1.3 Arial, Helvetica, sans-serif;
+  color: #555; letter-spacing: .04em;
+}
+.gap-writing-lines { margin-left: 17pt; }
+.gap-writing-line {
+  box-sizing: border-box;
+  height: 8mm;
+  border-bottom: .6pt solid #aaa;
+}

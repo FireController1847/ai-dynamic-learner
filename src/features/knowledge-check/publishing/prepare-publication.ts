@@ -50,9 +50,22 @@ function bubbleExclusion(question: Pick<Question, 'type' | 'choices'>): string {
   }
 }
 
-export function bubblePublicationExclusions(questions: readonly Pick<Question, 'type' | 'choices'>[]) {
+function gapExclusion(question: Pick<Question, 'type'>): string {
+  switch (question.type) {
+    case 'multiple-choice': return 'Multiple Choice uses selectable answers';
+    case 'true-false': return 'True/False uses selectable answers';
+    case 'dropdown': return 'Dropdown uses selectable matches';
+    case 'fill-in-the-blanks': return 'Fill in the Blanks already has in-prompt spaces';
+    default: return '';
+  }
+}
+
+export function publicationExclusions(
+  questions: readonly Pick<Question, 'type' | 'choices'>[], layout: PublicationSettings['layout'],
+) {
+  if (layout === 'study') return [];
   return questions.flatMap((question, index) => {
-    const reason = bubbleExclusion(question);
+    const reason = layout === 'bubble' ? bubbleExclusion(question) : gapExclusion(question);
     return reason ? [{ number: index + 1, reason }] : [];
   });
 }
@@ -66,7 +79,6 @@ export async function preparePublication(
   item: CheckItem, settings: PublicationSettings, signal?: AbortSignal,
 ): Promise<PreparedPublication> {
   validatePublicationSettings(settings);
-  if (settings.layout === 'gap') throw new Error('Gap publishing is coming soon. Choose Study or Bubble.');
   const seed = settings.seed;
   const sourceId = item.id, title = item.name, description = item.options?.description ?? '';
   if (!title.trim() || title.length > MAX_NAME_LENGTH || description.length > MAX_TEXT) {
@@ -75,9 +87,10 @@ export async function preparePublication(
   const snapshot: unknown = JSON.parse(JSON.stringify(item.questions));
   validateQuestions(snapshot);
   if (!snapshot.length) throw new Error('Add questions before preparing a publication.');
+  const excludedNumbers = new Set(publicationExclusions(snapshot, settings.layout).map(item => item.number));
   const included = snapshot.map((question, index) => ({ question, number: index + 1 }))
-    .filter(({ question }) => settings.layout !== 'bubble' || !bubbleExclusion(question));
-  if (!included.length) throw new Error('No supported questions remain for Bubble. Add a choice-based question or choose Study.');
+    .filter(({ number }) => !excludedNumbers.has(number));
+  if (!included.length) throw new Error(`No supported questions remain for ${settings.layout}. Choose Study or another layout.`);
   if (included.some(({ question }) => !questionReady(question))) throw new Error('Complete every included question before publishing.');
   const questions: PublicationQuestion[] = [];
   for (const { question: original, number } of included) {

@@ -2,7 +2,7 @@
 
 Publish is a browser-local, transient workspace mode like Build. Large choice
 buttons offer Study, Gap, and Bubble. Study and Bubble are available; Gap is
-disabled and marked Coming soon.
+Gap is available alongside Study and Bubble.
 
 - **Bubble:** Only Multiple Choice (including multi-select), True/False,
   Dropdown/matching, and informational Statements. Short Answer, Fill in the
@@ -31,8 +31,22 @@ disabled and marked Coming soon.
   bubble sheet; Questions and Answer Key appends the filled bubble key on a new
   page after it; Answer Key Only starts directly with the filled bubble key.
 
-- **Gap (planned):** two or three questions vertically per page with large spaces
-  for written responses.
+- **Gap:** for handwriting-oriented **Short Answer**, informational **Statement**,
+  and generated **Parameterized** written responses. Printed questions span the
+  usable page width and have generous, individually ruled writing spaces
+  (roughly two or three items per portrait page, depending on prompt height).
+  Statement items have a Notes / reflection area; they have no fixed correct
+  response. Parameterized items keep their generated prompts, context and answer
+  labels, with space to show work. Multiple Choice, True/False, Dropdown and Fill
+  in the Blanks are excluded after the same explicit, grouped warning/Continue
+  screen as Bubble. Excluded items do not appear in question pages or the key;
+  included items retain their authored numbers. No unsupported uploaded
+  parameterized solver runs. Questions Only prints writable pages, Questions
+  and Answer Key appends a separately titled *textual* key (no writing lines),
+  and Answer Key Only prints just that key without questions or a cover.
+  Gap question pages always use full-width handwriting space; Columns affects
+  the answer key only. All existing page, typography, metadata, cover and
+  version-code settings are retained.
 - **Study:** compact one- or two-column sheets, numbered in document order, with
   lettered choices learners can circle. Questions without choices retain compact
   response lines, authored blanks, or matching rows; Statements stay informational.
@@ -108,8 +122,9 @@ Publish and the preceding Study/Quiz/Test selection use `choice-screen.ts` for
 one shared screen/header/card renderer and the same `knowledge-check-builder`
 and `knowledge-check-type-*` styles. Publish orders its cards Study, Gap, Bubble.
 The Publish heading describes the layout choice instead of repeating the knowledge-set title.
-There are no Publish-specific card sizes or responsive overrides. Gap uses the
-shared disabled-card treatment and shows Coming soon. The main selector retains
+There are no Publish-specific card sizes or responsive overrides. Gap is selectable
+and, like Bubble, displays the grouped exclusions warning when a mixed bank needs
+confirmation; Study remains the complete-set alternative. The main selector retains
 its resume labels, statistics, and actions. The Publish Refresh action uses a
 two-arrow circular icon.
 
@@ -159,9 +174,10 @@ them feature-local until another app actually needs shared publication behavior.
    when the user explicitly selects a key-producing content option.
 2. `prepare-publication.ts` validates a deep copy of the authored bank, resolves
    parameterized questions through the existing generator/sandbox, and resolves
-   choice pools. It rejects unfinished included questions and unimplemented publishing modes.
-   Included authored items keep their order and original numbers; Bubble omits
-   unsupported items using the same policy as its visible warnings. Session limits,
+   choice pools. It rejects unfinished included questions. Gap and Bubble exclude unsupported
+   questions using the same policy that powers their warning screens.
+   Included authored items keep their order and original numbers; Bubble and
+   Gap omit unsupported items only after explicit user acceptance. Session limits,
    responses, history, and statistics are excluded. It never mutates the authored set.
 3. `publicationView` projects the detached source into learner-facing content
    and, only by explicit user choice, a separately numbered key.
@@ -172,7 +188,8 @@ them feature-local until another app actually needs shared publication behavior.
 4. `preparePublicationJob` is the preparation entry point. Its view can feed paged
    or non-paged delivery adapters.
 5. `study-renderer.ts` supplies reusable question/cover/key sections and
-   print-only typography. `bubble-renderer.ts` reuses those sections but adds a
+   print-only typography. `gap-renderer.ts` renders full-width writing lines
+   for Gap-compatible prompts and reuses Study's cover and textual key. `bubble-renderer.ts` reuses those sections but adds a
    separate, printable bubble/write-in response sheet; its CSS is scoped to
    Bubble mode. Both renderers use text nodes and sanctioned Markdown rendering.
    Study uses
@@ -217,7 +234,7 @@ Publish selection, warning, and document screens have distinct transition keys
 inside one stable workspace shell. Their headings/content travel together through
 the same Review screen transitions, including focus/inert and reduced-motion
 behavior. Pagination starts after the document entrance finishes. Changed exclusion
-lists (including cross-tab updates) return Bubble to the warning screen before
+lists (including cross-tab updates) return Bubble or Gap to the warning screen before
 regenerating; acceptance applies only to the displayed list.
 Menus, Version-panel expansion, mode navigation, loading indicators, page reveal,
 and zoom transitions animate. Reduced motion disables movement and transitions;
@@ -252,8 +269,8 @@ white sheets, gaps, and shadows visible on screen while excluding them from prin
 
 ## Manual checks
 
-- Open Publish from either action row. Verify Gap shows Coming soon and cannot
-  start; Bubble and Study each open settings and the correct preview. Check
+- Open Publish from either action row. Verify Study, Gap and Bubble all open
+  the appropriate preview (or compatibility warning for a mixed set). Check
   keyboard/focus, Back from document to publishing selection and Back again to
   Review, the visible disabled Review toolbar, active-session leave confirmation,
   Light/Dark, narrow panes, and touch controls.
@@ -268,6 +285,17 @@ white sheets, gaps, and shadows visible on screen while excluding them from prin
   Comfortable/Compact should start with their title, Name line and questions,
   without a blank page. Only Cover page should put the questions on page two.
   Check title/question spacing and the Version panel's input, wrapping, Done, and themes.
+- Check Gap with a Short Answer/Statement/Parameterized bank: generous ruled
+  space under each prompt, sanitized Markdown/math context, original numbering,
+  and natural page breaks without losing writing space. Check portrait/landscape,
+  Letter/A4, both margins and font sizes, with long questions that may exceed
+  a typical three-question page. Verify Statement notes/reflection has no fixed
+  answer in the textual key, and parameterized generated answers are correct.
+  Confirm its mixed-set warning names excluded Multiple Choice, True/False,
+  Dropdown and Fill in the Blanks, disabled Continue for fully unsupported sets,
+  accepted omissions matching the preview/key, and return to warning when another
+  tab changes exclusions. Questions Only/Both/Key Only and Cover should work
+  without extra blank pages; column changes only affect Gap's answer key.
 - Check Bubble's dense optical rows, A–H circles, multi-select markers and
   Dropdown subquestion numbers matching across question pages, response grid
   and optional key. Choose Bubble with Short Answer, Fill in the Blanks,

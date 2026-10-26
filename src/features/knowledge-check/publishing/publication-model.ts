@@ -16,8 +16,8 @@ export type PublicationContent = 'questions' | 'both' | 'key';
 export const PUBLICATION_LAYOUTS = [
   { id: 'study', label: 'Study', icon: 'document', available: true,
     description: 'A printable one- or two-column sheet with lettered choices to circle.' },
-  { id: 'gap', label: 'Gap', icon: 'pencil', available: false,
-    description: 'Two or three questions per page with generous space for written answers.' },
+  { id: 'gap', label: 'Gap', icon: 'pencil', available: true,
+    description: 'Short Answer, Statement, and generated written-response questions with room to write.' },
   { id: 'bubble', label: 'Bubble', icon: 'checklist', available: true,
     description: 'Choice-based questions with a compact bubble answer sheet.' },
 ] as const;
@@ -146,7 +146,8 @@ export interface PublicationView {
 /** Convert concrete, already randomized choice answers to the printed choice letters. */
 function keyEntry(question: PublicationQuestion, layout: PublicationLayout): PublicationKeyEntry {
   if (question.kind === 'statement') {
-    return { number: question.number, lines: [{ label: '', text: 'Information only — no answer required' }] };
+    return { number: question.number, lines: [{ label: '', text: layout === 'gap'
+      ? 'Open response — no fixed answer' : 'Information only — no answer required' }] };
   }
   const lines = question.answers.map((answer, i) => {
     if (question.sourceType === 'dropdown' && layout === 'bubble') {
@@ -192,7 +193,7 @@ export function publicationView(source: PreparedPublication, settings: Publicati
       answers: [],
       explanation: '',
     })),
-    answerKey: settings.layout !== 'study' || settings.content === 'questions'
+    answerKey: settings.layout === 'bubble' || settings.content === 'questions'
       ? [] : source.questions.map(q => keyEntry(q, settings.layout)),
     bubbleKey: settings.layout !== 'bubble' || settings.content === 'questions' ? []
       : source.questions.flatMap(question => {

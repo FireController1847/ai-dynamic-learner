@@ -68,7 +68,8 @@ export function studyQuestions(view: PublicationView, includeResponseLines = tru
  */
 export function studyHeading(view: PublicationView, edition = 'STUDY SHEET'): VNodeChild {
   if (view.settings.titleLayout !== 'cover') {
-    return documentHeading(edition === 'BUBBLE SHEET' ? 'Bubble sheet' : 'Study sheet', view.title,
+    return documentHeading(edition === 'BUBBLE SHEET' ? 'Bubble sheet' :
+      edition === 'GAP SHEET' ? 'Gap sheet' : 'Study sheet', view.title,
       view.settings.questionMetadata, ['study-sheet-heading', `study-heading-${view.settings.titleLayout}`]);
   }
 
@@ -90,7 +91,8 @@ export function studyHeading(view: PublicationView, edition = 'STUDY SHEET'): VN
     h('div', { class: 'study-cover-bottom' }, [
       publicationFields(metadata, true),
       metadata.headerRight || metadata.questionCount ? h('div', { class: 'study-cover-footer' }, [
-        metadata.headerRight ? h('span', edition === 'BUBBLE SHEET' ? 'BUBBLE / PRACTICE' : 'STUDY / PRACTICE') : null,
+        metadata.headerRight ? h('span', edition === 'BUBBLE SHEET' ? 'BUBBLE / PRACTICE' :
+          edition === 'GAP SHEET' ? 'WRITTEN / PRACTICE' : 'STUDY / PRACTICE') : null,
         metadata.questionCount ? h('span', `${questionCount} ${questionCount === 1 ? 'QUESTION' : 'QUESTIONS'}`) : null,
       ]) : null,
     ]),

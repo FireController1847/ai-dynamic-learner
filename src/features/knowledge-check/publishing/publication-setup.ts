@@ -4,7 +4,7 @@ import { inputValue } from '../../../core/dom.ts';
 import { newVariantSeed } from '../../../core/parameterized/random.ts';
 import type { CheckItem } from '../library-model.ts';
 import { preparePublicationJob, type PublicationJob } from './publication-job.ts';
-import { bubblePublicationExclusions } from './prepare-publication.ts';
+import { publicationExclusions } from './prepare-publication.ts';
 import { PUBLICATION_FONTS, PUBLICATION_LAYOUTS, defaultPublicationMetadata, publicationPaperDimensions, type PublicationSettings } from './publication-model.ts';
 import { PublicationSettingsDialog } from './publication-settings-dialog.ts';
 import { PublicationDropdown, type PublicationOption } from './publication-dropdown.ts';
@@ -59,7 +59,7 @@ export const PublicationSetup = defineComponent({
     function schedulePreview() {
       cancelPending(); dirty.value = true; message.value = '';
       if (screen.value !== 'document') return;
-      if (settings.value.layout === 'bubble' && exclusionSignature() !== acceptedExclusions) {
+      if (settings.value.layout !== 'study' && exclusionSignature() !== acceptedExclusions) {
         screen.value = 'warning'; return;
       }
       busy.value = true;
@@ -83,7 +83,9 @@ export const PublicationSetup = defineComponent({
         const job = await preparePublicationJob(props.item, settings.value, controller.signal);
         const renderer = settings.value.layout === 'bubble'
           ? (await import('./bubble-renderer.ts')).bubbleRenderer
-          : (await import('./study-renderer.ts')).studyRenderer;
+          : settings.value.layout === 'gap'
+            ? (await import('./gap-renderer.ts')).gapRenderer
+            : (await import('./study-renderer.ts')).studyRenderer;
         controller.signal.throwIfAborted();
         await nextTick();
         if (!previewHost.value) throw new Error('The preview could not be opened.');
@@ -128,9 +130,12 @@ export const PublicationSetup = defineComponent({
       } });
     }
 
+    function exclusions() {
+      return publicationExclusions(props.item.questions, settings.value.layout);
+    }
     function exclusionSignature() {
-      return JSON.stringify(bubblePublicationExclusions(props.item.questions).map(exclusion =>
-        ({ ...exclusion, id: props.item.questions[exclusion.number - 1]?.id })));
+      return JSON.stringify({ layout: settings.value.layout, items: exclusions().map(exclusion =>
+        ({ ...exclusion, id: props.item.questions[exclusion.number - 1]?.id })) });
     }
 
     function openDocument() {
@@ -148,15 +153,17 @@ export const PublicationSetup = defineComponent({
       ]);
     }
 
-    function bubbleWarning() {
-      const exclusions = bubblePublicationExclusions(props.item.questions);
-      const included = props.item.questions.length - exclusions.length;
+    function compatibilityWarning() {
+      const excluded = exclusions();
+      const included = props.item.questions.length - excluded.length;
       const groups = new Map<string, number[]>();
-      for (const { number, reason } of exclusions) groups.set(reason, [...(groups.get(reason) ?? []), number]);
+      for (const { number, reason } of excluded) groups.set(reason, [...(groups.get(reason) ?? []), number]);
+      const gap = settings.value.layout === 'gap';
       return h('div', { key: 'warning', class: 'knowledge-check-builder' }, [
-        selectionHeader('Some questions cannot use bubbles', backToSelection),
+        selectionHeader(gap ? 'Some questions cannot use Gap' : 'Some questions cannot use bubbles', backToSelection),
         h('div', { class: 'review-publication-warning' }, [
-          h('p', `${exclusions.length} ${exclusions.length === 1 ? 'question will' : 'questions will'} be left out of the question sheet, bubble sheet, and answer key.`),
+          h('p', `${excluded.length} ${excluded.length === 1 ? 'question will' : 'questions will'} be left out of the ${gap
+            ? 'Gap question sheet and answer key' : 'question sheet, bubble sheet, and answer key'}.`),
           h('ul', [...groups].map(([reason, numbers]) => h('li', [
             h('strong', reason), h('p', `Questions: ${numbers.join(', ')}`),
           ]))),
@@ -184,7 +191,7 @@ export const PublicationSetup = defineComponent({
         })),
         onChoose: id => {
           settings.value.layout = id;
-          if (id === 'bubble' && bubblePublicationExclusions(props.item.questions).length) screen.value = 'warning';
+          if (id !== 'study' && publicationExclusions(props.item.questions, id).length) screen.value = 'warning';
           else openDocument();
         },
         onBack: () => emit('close'),
@@ -194,7 +201,8 @@ export const PublicationSetup = defineComponent({
     function documentWorkspace() {
       const paper = publicationPaperDimensions(settings.value);
       return h('div', { key: 'document', ref: documentFocus, class: 'review-publication-study',
-        role: 'region', 'aria-label': `${settings.value.layout === 'bubble' ? 'Bubble' : 'Study'} sheet publishing settings`,
+        role: 'region', 'aria-label': `${settings.value.layout === 'bubble' ? 'Bubble' : settings.value.layout === 'gap'
+          ? 'Gap' : 'Study'} sheet publishing settings`,
         tabindex: -1, 'data-review-focus': '' }, [
         h('div', { class: 'review-publication-toolbar-scroll', role: 'region',
           'aria-label': 'Document settings, scroll horizontally for more options', tabindex: 0 }, [
@@ -321,7 +329,7 @@ export const PublicationSetup = defineComponent({
           if (screen.value === 'document') schedulePreview();
         },
       }, { default: () => screen.value === 'document' ? documentWorkspace() :
-        screen.value === 'warning' ? bubbleWarning() : modePicker() }),
+        screen.value === 'warning' ? compatibilityWarning() : modePicker() }),
       showSettings.value && screen.value === 'document' ? h(PublicationSettingsDialog, { settings: settings.value,
         onClose: () => { showSettings.value = false; }, onUpdate: (value: PublicationSettings) => { settings.value = value; } }) : null,
     ]);
