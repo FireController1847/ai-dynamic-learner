@@ -103,6 +103,17 @@ export function useBackupReminders() {
     writeMetadata();
   }
 
+  function workspaceCleared(id: string) {
+    workspaceId.value = id;
+    authoredRevision.value = 0;
+    hasData.value = false;
+    processing.value = false;
+    // Reset backup history for the discarded workspace, not the reminder interval.
+    metadata.value = { ...defaultBackupMetadata(), intervalDays: metadata.value.intervalDays };
+    dismissedThisSession.value = false;
+    writeMetadata();
+  }
+
   function interval(days: number | null) {
     if (days !== null && !REMINDER_INTERVALS.some(value => value === days)) return;
     metadata.value.intervalDays = days;
@@ -155,7 +166,7 @@ export function useBackupReminders() {
   return {
     metadata, problem, changed, hasData, processing, stage, legacy, needsAttention,
     showBanner, showIndicator, status, recordExport, workspaceRestored, workspaceLoaded,
-    workspaceChanged, interval, dismiss, snooze,
+    workspaceChanged, workspaceCleared, interval, dismiss, snooze,
   };
 }
 export type BackupReminders = ReturnType<typeof useBackupReminders>;

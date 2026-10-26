@@ -1,5 +1,5 @@
 import { directionsFor, validateGame } from './game-model.ts';
-import { validatePuzzle } from './puzzle-model.ts';
+import { MAX_LAYOUT_WORDS, validatePuzzle } from './puzzle-model.ts';
 import type { Direction, Game, WordPlacement } from './game-model.ts';
 
 function candidates(word: string, size: number, directions: readonly Direction[]): number[][] {
@@ -17,23 +17,57 @@ function candidates(word: string, size: number, directions: readonly Direction[]
   return result;
 }
 
+// Choose without replacement; a new board samples the authored pool again.
+function chooseWords(pool: readonly string[], count: number): string[] {
+  const entries = [...pool];
+  for (let index = 0; index < count; index += 1) {
+    const other = index + Math.floor(Math.random() * (entries.length - index));
+    [entries[index], entries[other]] = [entries[other]!, entries[index]!];
+  }
+  return entries.slice(0, count);
+}
+
 // Bounded randomized packing: longer words first, favoring compatible intersections.
 // Yield between attempts so dense/impossible setups keep the interface responsive.
 export async function generatePuzzle(puzzle: unknown, signal?: AbortSignal): Promise<Game | null> {
   validatePuzzle(puzzle);
-  const { size, words, difficulty } = puzzle;
-  const options = new Map(words.map((word) => [word, candidates(word, size, directionsFor(difficulty))]));
+  const { size, words, difficulty, selection } = puzzle;
+  const target = selection
+    ? selection.min + Math.floor(Math.random() * (selection.max - selection.min + 1))
+    : words.length;
+  const directions = directionsFor(difficulty);
+  const options = new Map<string, number[][]>();
   for (let attempt = 0; attempt < 48; attempt += 1) {
+    // If a densely selected layout cannot fit, retry toward the requested minimum.
+    const count = selection && attempt >= 24
+      ? Math.max(selection.min, target - Math.ceil(((attempt - 23) * (target - selection.min)) / 24))
+      : target;
+    const activeWords = selection ? chooseWords(words, count) : words;
+    const activeOptions = new Map<string, number[][]>();
+    for (const word of activeWords) {
+      let paths = options.get(word);
+      if (!paths) {
+        paths = candidates(word, size, directions);
+        // Cache only a bounded number of words across attempts. Keep the
+        // current layout's candidates separately so eviction cannot affect it.
+        if (options.size >= MAX_LAYOUT_WORDS * 2) {
+          const oldest = options.keys().next().value;
+          if (oldest !== undefined) options.delete(oldest);
+        }
+        options.set(word, paths);
+      }
+      activeOptions.set(word, paths);
+    }
     await new Promise((resolve) => setTimeout(resolve, 0));
     if (signal?.aborted) return null;
     const cells: string[] = Array<string>(size * size).fill('');
     const placements: WordPlacement[] = [];
-    const order = words.map((word) => ({ word, priority: word.length + Math.random() * 2 }))
+    const order = activeWords.map((word) => ({ word, priority: word.length + Math.random() * 2 }))
       .sort((a, b) => b.priority - a.priority);
     for (const { word } of order) {
       let best: number[] | null = null;
       let bestScore = -Infinity;
-      for (const path of options.get(word) ?? []) {
+      for (const path of activeOptions.get(word) ?? []) {
         let overlap = 0;
         let fits = true;
         for (let index = 0; index < path.length; index += 1) {
@@ -48,11 +82,12 @@ export async function generatePuzzle(puzzle: unknown, signal?: AbortSignal): Pro
       best.forEach((cell, index) => { cells[cell] = word[index]; });
       placements.push({ word, start: best[0], end: best[best.length - 1] });
     }
-    if (placements.length !== words.length) continue;
+    if (placements.length !== activeWords.length) continue;
     const letters = cells.map((letter) => letter || String.fromCharCode(65 + Math.floor(Math.random() * 26)));
-    const game = {
+    const game: Game = {
       rows: Array.from({ length: size }, (_, row) => letters.slice(row * size, (row + 1) * size).join('')),
       placements, found: [],
+      ...(selection ? { selectedWords: [...activeWords] } : {}),
     };
     validateGame(puzzle, game);
     return game;

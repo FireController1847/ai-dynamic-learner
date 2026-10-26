@@ -25,12 +25,12 @@ export const BackupReminderBanner = defineComponent({
         h('button', { type: 'button', class: 'card-primary-button', disabled: props.busy,
           onClick: () => emit('backup') }, props.busy ? 'Preparing backup…' : 'Back Up Now'),
         h('button', { type: 'button', class: 'quiet-button', onClick: props.reminders.snooze }, 'Remind Me Later'),
-        h('button', {
-          type: 'button', class: 'icon-button', title: 'Dismiss for this session',
-          'aria-label': 'Dismiss backup reminder for this session',
-          onClick: props.reminders.dismiss,
-        }, '×'),
       ]),
+      h('button', {
+        type: 'button', class: 'icon-button backup-reminder-dismiss', title: 'Dismiss for this session',
+        'aria-label': 'Dismiss backup reminder for this session',
+        onClick: props.reminders.dismiss,
+      }, '×'),
     ]) : null;
   },
 });

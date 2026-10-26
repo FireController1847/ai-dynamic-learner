@@ -58,7 +58,7 @@ export const Guide=defineComponent({
       }
     } catch { /* Storage can be restricted; resizing still works without a saved width. */ }
     const creationTarget=ref<GuideTarget|null>(null);
-    const aiTarget=ref<GuideTarget|null>(null),aiStage=ref<'choose'|'import'|null>(null),aiMode=ref<GuideMode|null>(null);
+    const aiTarget=ref<GuideTarget|null>(null),aiStage=ref<'choose'|'import'|null>(null),aiMode=ref<GuideMode|null>(null),aiDirect=ref(false);
     const selectedId=useLibrarySelection({
       firstId:()=>firstEntry(props.model.items)?.id??null,
       hasItem:id=>findItem(props.model.items,id)!==null,
@@ -87,9 +87,10 @@ export const Guide=defineComponent({
     async function cancel(){creationTarget.value=null;await nextTick();if(collapsed.value)showLibrary.value?.focus();else library.value?.focusNewGuide();}
     function create(mode:GuideMode){if(!creationTarget.value)return;try{const item=insertGuide(props.model.items,creationTarget.value,mode);selectedId.value=item.id;editingMapId.value=null;creationTarget.value=null;library.value?.reveal(item.id);message.value='Created '+item.name+'.';nextTick(()=>library.value?.beginRename(item.id));}catch(error){message.value=error instanceof Error?error.message:String(error);}}
 
-    function beginAi(){creationTarget.value=null;aiTarget.value=target();aiStage.value='choose';aiMode.value=null;message.value='';if(overlay.value)collapsed.value=true;}
+    function beginAi(){creationTarget.value=null;aiTarget.value=target();aiStage.value='choose';aiMode.value=null;aiDirect.value=false;message.value='';if(overlay.value)collapsed.value=true;}
     function cancelAi(){aiTarget.value=null;aiStage.value=null;aiMode.value=null;message.value='';}
-    function chooseAiMode(mode:GuideMode){if(!aiTarget.value)return;aiMode.value=mode;aiStage.value='import';}
+    function chooseAiMode(mode:GuideMode){if(!aiTarget.value)return;aiDirect.value=false;aiMode.value=mode;aiStage.value='import';}
+    function importExistingAi(){if(!aiTarget.value)return;aiDirect.value=true;aiMode.value='list';aiStage.value='import';}
     function importAi(value:SimpleGuideImport){
       if(!aiTarget.value)return;
       try{
@@ -122,10 +123,11 @@ export const Guide=defineComponent({
     function detail(){
       if(aiTarget.value&&aiStage.value==='choose')return h('section',{class:'guide-detail guide-builder-detail',inert:overlay.value&&!collapsed.value},[
         h(GuideModePicker,{destination:aiTarget.value.parentName,onCreate:chooseAiMode,onCancel:cancelAi}),
+        h('button',{type:'button',class:'quiet-button',onClick:importExistingAi},'Import an AI response'),
         h('p',{class:'visually-hidden',role:'status'},message.value)
       ]);
       if(aiTarget.value&&aiStage.value==='import'&&aiMode.value)return h('section',{'data-ai-scroll-region':'',class:'guide-detail guide-builder-detail',inert:overlay.value&&!collapsed.value},[
-        h(GuideAiImportWorkspace,{destination:aiTarget.value.parentName,mode:aiMode.value,onBack:()=>{aiMode.value=null;aiStage.value='choose';},onCancel:cancelAi,onImport:importAi}),
+        h(GuideAiImportWorkspace,{destination:aiTarget.value.parentName,mode:aiMode.value,direct:aiDirect.value,onBack:()=>{aiMode.value=null;aiDirect.value=false;aiStage.value='choose';},onCancel:cancelAi,onImport:importAi}),
         h('p',{class:'visually-hidden',role:'status'},message.value)
       ]);
       if(creationTarget.value)return h('section',{class:'guide-detail guide-builder-detail',inert:overlay.value&&!collapsed.value},[

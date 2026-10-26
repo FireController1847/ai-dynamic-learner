@@ -42,8 +42,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  min-height: calc(var(--control-height) + 16px);
-  padding: 8px 8px 8px 16px;
+  min-height: calc(var(--control-height) + 12px);
+  padding: 6px 8px 6px 16px;
   border-bottom: 1px solid var(--border-color);
 }
 .knowledge-check-library-toolbar h3 { font-size: 14px; line-height: 20px; }
@@ -166,7 +166,7 @@
 .knowledge-check-library-floating-toggle {
   position: absolute;
   left: 8px;
-  top: 8px;
+  top: 6px;
   z-index: 3;
   border-color: var(--control-border);
   background: var(--page-background);
@@ -189,8 +189,8 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 4px 16px;
-  min-height: calc(var(--control-height) + 16px);
-  padding: 8px 20px;
+  min-height: calc(var(--control-height) + 12px);
+  padding: 6px 20px;
   border-bottom: 1px solid var(--border-color);
   background: var(--page-background);
 }
@@ -314,9 +314,25 @@
   outline-offset: 3px;
 }
 .knowledge-check-type-icon { width: 104px; height: 104px; color: var(--brand); }
-.knowledge-check-type-copy { display: grid; gap: 8px; }
-.knowledge-check-type-copy strong { font-size: 18px; }
-.knowledge-check-type-copy span { color: var(--text-secondary); line-height: 1.5; }
+.knowledge-check-type-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+.knowledge-check-type-copy > strong { font-size: 18px; }
+.knowledge-check-type-copy > span:not(.entry-statistics) { color: var(--text-secondary); line-height: 1.5; }
+.knowledge-check-type-copy > .entry-statistics {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-self: stretch;
+  white-space: normal;
+  gap: 3px;
+  margin-top: 8px;
+}
 .knowledge-check-builder-actions { display: flex; justify-content: flex-end; }
 
 @media (max-width: 900px) {
@@ -324,10 +340,38 @@
   .knowledge-check-type-card {
     grid-template-columns: auto minmax(0, 1fr);
     min-height: 0;
-    justify-items: start;
+    align-content: start;
+    align-items: center;
+    justify-items: stretch;
+    gap: 16px;
     text-align: left;
   }
+  .knowledge-check-type-copy { align-items: flex-start; text-align: left; }
+  .knowledge-check-type-copy > .entry-statistics { justify-content: flex-start; text-align: left; }
   .knowledge-check-type-icon { width: 76px; height: 76px; }
+}
+/* A wide browser may still have a narrow Review pane beside its library. */
+.knowledge-check-builder { container-type: inline-size; }
+@container (max-width: 900px) {
+  .knowledge-check-type-grid { grid-template-columns: minmax(0, 1fr); }
+  .knowledge-check-type-card {
+    grid-template-columns: auto minmax(0, 1fr);
+    min-height: 0;
+    align-content: start;
+    align-items: center;
+    justify-items: stretch;
+    gap: 16px;
+    text-align: left;
+  }
+  .knowledge-check-type-copy { align-items: flex-start; text-align: left; }
+  .knowledge-check-type-copy > .entry-statistics { justify-content: flex-start; text-align: left; }
+  .knowledge-check-type-icon { width: 76px; height: 76px; }
+}
+@media (max-width: 560px) {
+  .knowledge-check-builder { gap: 20px; padding: 20px 16px; }
+  .knowledge-check-type-grid { gap: 12px; }
+  .knowledge-check-type-card { padding: 20px 16px; gap: 12px; }
+  .knowledge-check-type-icon { width: 52px; height: 52px; }
 }
 .knowledge-check-placeholder { padding: 32px 20px; color: var(--text-secondary); }
 
@@ -339,7 +383,7 @@
 }
 
 
-.knowledge-import-builder { min-height: 100%; }
+.knowledge-import-builder { min-height: 100%; container-type: inline-size; }
 .knowledge-import-sync-note {
   display: flex;
   align-items: flex-start;
@@ -765,3 +809,100 @@
 @media (max-width: 560px) {
   .knowledge-import-resolution-actions { grid-template-columns: 1fr; }
 }
+
+.knowledge-parameterized-editor,
+.knowledge-parameterized-answers,
+.knowledge-parameterized-preview {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.knowledge-parameter-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: 12px;
+  padding-block: 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+.knowledge-parameter-row > details {
+  grid-column: 1 / -1;
+}
+.knowledge-parameterized-preview dl {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: 8px 16px;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.knowledge-parameterized-preview dd {
+  margin: 0;
+}
+
+/* Review imports adapt to the content area after the library takes its width. */
+@container (max-width: 840px) {
+  .knowledge-import-item { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .knowledge-import-item-options { grid-column: 2 / -1; }
+  .knowledge-import-section-heading, .knowledge-import-picker-header {
+    flex-wrap: wrap; justify-content: flex-start;
+  }
+  .knowledge-import-section-heading > *, .knowledge-import-picker-header > * { min-width: 0; }
+}
+@container (max-width: 600px) {
+  .knowledge-import-item {
+    grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 10px;
+  }
+  .knowledge-import-item-order { grid-row: 1 / 3; }
+  .knowledge-import-item-actions, .knowledge-import-item-options { grid-column: 2; }
+  .knowledge-import-item-options { grid-template-columns: minmax(0, 1fr); }
+  .knowledge-import-item-options > p { grid-column: auto; }
+  .knowledge-import-source-card { grid-template-columns: auto minmax(0, 1fr); }
+  .knowledge-import-source-add, .knowledge-import-coming-soon { grid-column: 2; justify-self: start; }
+  .knowledge-import-picker-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .knowledge-import-picker-header > button { width: auto; max-width: 100%; }
+}
+@media (max-width: 560px) {
+  .knowledge-import-resolution { padding: 16px; }
+  .knowledge-import-resolution-footer { justify-content: flex-start; }
+  .knowledge-import-resolution-footer > button { min-height: var(--control-height); }
+}
+
+/* Touch library: preserve readable labels even in deeply nested groups. */
+@media (max-width: 700px), (max-width: 1100px) and (pointer: coarse) {
+  .knowledge-check-library-row { min-width: 0; }
+  .knowledge-check-library-children { margin-left: 8px; padding-left: 2px; }
+  .knowledge-check-library-label { min-width: 0; }
+  .knowledge-check-library-toolbar .icon-button { min-width: 44px; min-height: 44px; }
+  .knowledge-check-library-footer button { min-height: 44px; }
+  .knowledge-check-library-scroll { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+}
+@media (max-width: 560px) {
+  .knowledge-check-item-heading { padding-inline: 12px; gap: 4px 8px; }
+  .knowledge-check-item-heading h2 { overflow-wrap: anywhere; }
+  .knowledge-check-builder { padding: 16px 12px 24px; }
+  .knowledge-check-type-card { min-height: 88px; }
+}
+/* Import and picker actions must stay usable with touch/large text. */
+@media (pointer: coarse) {
+  .knowledge-import-picker-toggle, .knowledge-import-picker-toggle-space { flex-basis: 44px; width: 44px; min-height: 44px; }
+  .knowledge-import-picker-row { min-height: 48px; }
+  .knowledge-import-picker-label, .knowledge-import-picker-set-copy { min-height: 44px; }
+  .knowledge-import-radio-option { min-height: 48px; }
+  .knowledge-import-item-actions button { min-height: 44px; }
+  .knowledge-import-picker input:not([type='checkbox']):not([type='radio']),
+  .knowledge-import-picker select { font-size: 16px; }
+}
+@container (max-width: 480px) {
+  .knowledge-import-picker-children { margin-left: 8px; padding-left: 4px; }
+  .knowledge-import-picker-header { gap: 8px; }
+  .knowledge-import-section-heading > button { min-height: 44px; }
+  .knowledge-import-source-copy { min-width: 0; overflow-wrap: anywhere; }
+}
+
+.knowledge-choice-screen-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.knowledge-choice-screen-header > .knowledge-check-builder-intro { min-width: 0; overflow-wrap: anywhere; }
+.knowledge-choice-screen-header > button { flex: 0 0 auto; }
+.knowledge-check-type-card:disabled {
+  cursor: default; opacity: .65; transform: none; box-shadow: none;
+  border-color: var(--border-color); background: var(--page-background);
+}
+.knowledge-choice-note { font-weight: 600; }

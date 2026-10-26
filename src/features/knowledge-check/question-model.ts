@@ -7,8 +7,19 @@ import { fillBlankCorrectness as evaluateFillBlankTemplate, maskFillBlankAnswers
 import { createId, isValidId } from '../../core/ids.ts';
 import { isRecord } from '../../core/validation.ts';
 import { dropdownCorrectness, dropdownProblem, MAX_DROPDOWN_CHOICES, validateDropdownMatches, type DropdownMatch } from './dropdown-model.ts';
+import { defaultParameterization, parameterizedProblem, validateParameterization, type Parameterization } from './parameterized-model.ts';
+import type { GeneratedVariant } from '../../core/parameterized/generator.ts';
+import { generatedAnswerCorrect } from '../../core/parameterized/answers.ts';
 
-export type QuestionType = 'multiple-choice' | 'true-false' | 'short-answer' | 'fill-in-the-blanks' | 'dropdown' | 'statement';
+export interface ChoicePool {
+  /** Total number of response options displayed per session (correct options included). */
+  displayCount: number;
+  /** Additional incorrect terms; the authored incorrect choices are candidates too. */
+  distractors: string[];
+}
+export const MAX_CHOICE_POOL_TERMS = 100;
+
+export type QuestionType = 'multiple-choice' | 'true-false' | 'short-answer' | 'fill-in-the-blanks' | 'dropdown' | 'statement' | 'parameterized';
 export interface Question {
   id: string;
   type: QuestionType;
@@ -17,7 +28,12 @@ export interface Question {
   explanation: string;
   context?: string;
   choices: string[];
+  /** When present, Multiple Choice uses checkboxes; legacy single-answer questions omit this. */
+  correctAnswers?: string[];
+  choicePool?: ChoicePool;
   matches?: DropdownMatch[];
+  parameters?: Parameterization;
+  generated?: GeneratedVariant;
 }
 export type QuestionResponse = string | string[];
 
@@ -27,6 +43,7 @@ export const QUESTION_TYPES: readonly { id: QuestionType; label: string }[] = [
   { id: 'short-answer', label: 'Short Answer' },
   { id: 'fill-in-the-blanks', label: 'Fill in the Blanks' },
   { id: 'dropdown', label: 'Dropdown' },
+  { id: 'parameterized', label: 'Parameterized' },
   { id: 'statement', label: 'Statement' },
 ];
 export const MAX_QUESTIONS = 200;
@@ -36,40 +53,96 @@ export const MAX_QUESTION_CONTEXT = 12000;
 export function createQuestion(type: QuestionType = 'multiple-choice'): Question {
   return { id: createId(), type, prompt: '', answer: '', explanation: '',
     choices: type === 'multiple-choice' || type === 'dropdown' ? ['', '', '', ''] : [],
-    ...(type === 'dropdown' ? { matches: [{ label: '', answer: '' }, { label: '', answer: '' }] } : {}) };
+    ...(type === 'dropdown' ? { matches: [{ label: '', answer: '' }, { label: '', answer: '' }] } : {}),
+    ...(type === 'parameterized' ? { prompt: 'What is {{a}} + {{b}}?', parameters: defaultParameterization() } : {}) };
 }
 
 export function cloneQuestion(question: Question): Question {
   return { ...question, choices: [...question.choices],
+    ...(question.correctAnswers !== undefined ? { correctAnswers: [...question.correctAnswers] } : {}),
+    ...(question.choicePool ? { choicePool: {
+      displayCount: question.choicePool.displayCount,
+      distractors: [...question.choicePool.distractors],
+    } } : {}),
+    ...(question.parameters ? { parameters: JSON.parse(JSON.stringify(question.parameters)) as Parameterization } : {}),
     ...(question.matches ? { matches: question.matches.map(row => ({ ...row })) } : {}) };
+}
+
+/** Used for authored questions; generated sessions receive their own final choices. */
+export function choicePoolProblem(question: Question): string {
+  const pool = question.choicePool;
+  if (!pool) return '';
+  if (question.type !== 'multiple-choice') return 'Choice pools are only supported for Multiple Choice.';
+  if (!Number.isInteger(pool.displayCount) || pool.displayCount < 2 || pool.displayCount > 8) {
+    return 'Choose 2–8 options to display per session.';
+  }
+  if (!Array.isArray(pool.distractors) || pool.distractors.length < 1 ||
+      pool.distractors.length > MAX_CHOICE_POOL_TERMS ||
+      pool.distractors.some(term => typeof term !== 'string' || !term.trim() || term.length > MAX_TEXT)) {
+    return `Add 1–${MAX_CHOICE_POOL_TERMS} non-empty additional incorrect terms.`;
+  }
+  const source = question.choices.map(choice => choice.trim()).filter(Boolean);
+  const correct = question.correctAnswers ?? [question.answer];
+  const correctSet = new Set(correct.map(term => term.trim().toLocaleLowerCase()));
+  if (correct.length < 1 || correct.some(term => !term.trim()) ||
+      pool.displayCount <= correctSet.size) {
+    return 'Display more options than the number of correct answers, leaving room for incorrect terms.';
+  }
+  const all = [...source, ...pool.distractors].map(term => term.toLocaleLowerCase());
+  if (new Set(all).size !== all.length) {
+    return 'Incorrect terms must be unique and must not repeat existing answer choices.';
+  }
+  const distractors = source.filter(term => !correctSet.has(term.toLocaleLowerCase())).length +
+    pool.distractors.length;
+  if (distractors < pool.displayCount - correctSet.size) {
+    return 'Add more incorrect terms or reduce the number of displayed options.';
+  }
+  return '';
 }
 
 export function questionReady(question: Question): boolean {
   if (!question.prompt.trim()) return false;
   if (question.type === 'statement') return true;
+  if (question.type === 'parameterized') return question.generated ? true : !parameterizedProblem(question);
   if (question.type === 'dropdown') return !dropdownProblem(question.matches ?? [], question.choices);
   if (question.type === 'fill-in-the-blanks') return parseFillBlankTemplate(question.prompt).answers.length > 0;
-  if (!question.answer.trim()) return false;
-  if (question.type !== 'multiple-choice') return true;
-  const choices = question.choices.map((choice) => choice.trim()).filter(Boolean);
-  return choices.length >= 2 && choices.every(Boolean) && new Set(choices).size === choices.length &&
-    choices.includes(question.answer.trim());
+  if (question.type !== 'multiple-choice') return Boolean(question.answer.trim());
+  const choices = question.choices.map(choice => choice.trim()).filter(Boolean);
+  if (choices.length < 2 || new Set(choices).size !== choices.length ||
+      choicePoolProblem(question)) return false;
+  if (question.correctAnswers !== undefined) {
+    const correct = question.correctAnswers.map(answer => answer.trim());
+    return correct.length > 0 && new Set(correct).size === correct.length &&
+      correct.every(answer => choices.includes(answer)) && !question.answer.trim();
+  }
+  return choices.includes(question.answer.trim());
 }
 
 export function questionHasContent(question: Question): boolean {
   return Boolean(question.prompt.trim() || question.explanation.trim() || question.choices.some(choice => choice.trim()) ||
-    question.answer.trim() || question.context?.trim() || question.matches?.some(row => row.label.trim() || row.answer.trim()));
+    question.answer.trim() || question.correctAnswers?.some(answer => answer.trim()) ||
+    question.choicePool?.distractors.some(term => term.trim()) ||
+    question.context?.trim() || question.matches?.some(row => row.label.trim() || row.answer.trim()));
 }
 
 export function questionProblem(question: Question): string {
   if (!question.prompt.trim()) return question.type === 'statement' ? 'Enter the statement.' : 'Enter the question.';
   if (question.type === 'statement') return '';
+  if (question.type === 'parameterized') return parameterizedProblem(question);
   if (question.type === 'dropdown') return dropdownProblem(question.matches ?? [], question.choices);
   if (question.type === 'fill-in-the-blanks') {
     return parseFillBlankTemplate(question.prompt).answers.length ? '' : 'Create at least one blank in the question.';
   }
-  if (!question.answer.trim()) return question.type === 'multiple-choice' ? 'Select a correct answer.' : 'Enter the correct answer.';
-  if (!questionReady(question)) return 'Add at least two distinct answer choices and select one as correct.';
+  if (question.type === 'multiple-choice') {
+    if (question.correctAnswers !== undefined && !question.correctAnswers.length) return 'Select at least one correct answer.';
+    if (question.correctAnswers === undefined && !question.answer.trim()) return 'Select a correct answer.';
+    const poolProblem = choicePoolProblem(question);
+    if (poolProblem) return poolProblem;
+    if (!questionReady(question)) return 'Add at least two distinct answer choices and mark the correct choices.';
+    return '';
+  }
+  if (!question.answer.trim()) return 'Enter the correct answer.';
+  if (!questionReady(question)) return 'Complete the question and its correct answer.';
   return '';
 }
 
@@ -79,7 +152,17 @@ export function questionsForSave(questions: Question[]): Question[] {
     const problem = questionProblem(question);
     if (problem) throw new Error(`Question ${index + 1}: ${problem}`);
   }
-  return entered.map(question => ({ ...cloneQuestion(question), choices: question.choices.filter(choice => choice.trim()) }));
+  return entered.map(question => ({
+    ...cloneQuestion(question),
+    choices: question.choices.map(choice => choice.trim()).filter(Boolean),
+    ...(question.correctAnswers !== undefined
+      ? { correctAnswers: question.correctAnswers.map(answer => answer.trim()) }
+      : {}),
+    ...(question.choicePool ? { choicePool: {
+      displayCount: question.choicePool.displayCount,
+      distractors: question.choicePool.distractors.map(term => term.trim()),
+    } } : {}),
+  }));
 }
 
 export function questionDisplayPrompt(question: Question): string {
@@ -92,11 +175,15 @@ export function questionScored(question: Question): boolean {
 
 export function questionResponseAnswered(question: Question, response: QuestionResponse | undefined): boolean {
   if (question.type === 'statement') return true;
+  if (question.type === 'parameterized') return Boolean(question.generated?.answers.length) && Array.isArray(response) && question.generated!.answers.every((_answer, index) => Boolean(response[index]?.trim()));
   if (question.type === 'dropdown') return Boolean(question.matches?.length) && Array.isArray(response) &&
     question.matches!.every((_row, index) => question.choices.some(choice => choice.trim() === response[index]?.trim()));
   if (question.type === 'fill-in-the-blanks') {
     const answers = parseFillBlankTemplate(question.prompt).answers;
     return answers.length > 0 && Array.isArray(response) && answers.every((_answer, index) => Boolean(response[index]?.trim()));
+  }
+  if (question.type === 'multiple-choice' && question.correctAnswers !== undefined) {
+    return Array.isArray(response) && response.length > 0;
   }
   return typeof response === 'string' && Boolean(response.trim());
 }
@@ -107,6 +194,7 @@ export function fillBlankCorrectness(
   strictness: AnswerStrictness = DEFAULT_ANSWER_STRICTNESS,
 ): boolean[] {
   if (question.type !== 'fill-in-the-blanks') return [];
+  if (question.generated) return question.generated.answers.map((answer, index) => generatedAnswerCorrect(answer, Array.isArray(response) ? response[index] ?? '' : ''));
   const template = parseFillBlankTemplate(question.prompt);
   const responses = Array.isArray(response) ? response : [];
   return evaluateFillBlankTemplate(template, responses,
@@ -127,36 +215,71 @@ export function answerCorrect(
   strictness: AnswerStrictness = DEFAULT_ANSWER_STRICTNESS,
 ): boolean {
   if (question.type === 'statement') return false;
+  if (question.type === 'parameterized') return Boolean(question.generated?.answers.length) && Array.isArray(response) && question.generated!.answers.every((answer, index) => generatedAnswerCorrect(answer, response[index] ?? ''));
   if (question.type === 'dropdown') return Boolean(question.matches?.length) && dropdownCorrectness(question.matches!, response).every(Boolean);
   if (question.type === 'fill-in-the-blanks') {
     const template = parseFillBlankTemplate(question.prompt);
     if (!template.answers.length || !Array.isArray(response)) return false;
     return fillBlankCorrectness(question, response, strictness).every(Boolean);
   }
+  if (question.type === 'multiple-choice' && question.correctAnswers !== undefined) {
+    if (!Array.isArray(response) || !question.correctAnswers.length) return false;
+    const selected = new Set(response);
+    return selected.size === question.correctAnswers.length &&
+      question.correctAnswers.every(answer => selected.has(answer));
+  }
   if (typeof response !== 'string') return false;
   if (question.type !== 'short-answer') return question.answer.trim() === response.trim();
   return isAnswerCorrect(question.answer, response, { strictness });
 }
 
-export function validateQuestions(value: unknown): asserts value is Question[] {
+export function validateQuestions(
+  value: unknown,
+  options: { allowGeneratedHistorySnapshots?: boolean } = {},
+): asserts value is Question[] {
   if (!Array.isArray(value) || value.length > MAX_QUESTIONS) throw new Error(`A knowledge set supports up to ${MAX_QUESTIONS} questions.`);
   const ids = new Set<string>();
   for (const question of value as unknown[]) {
     if (!isRecord(question) || !isValidId(question.id) || ids.has(question.id) ||
         !QUESTION_TYPES.some((type) => type.id === question.type) ||
-        Object.keys(question).some((key) => !['id', 'type', 'prompt', 'answer', 'explanation', 'choices', 'matches', 'context'].includes(key)) ||
+        Object.keys(question).some((key) => !['id', 'type', 'prompt', 'answer', 'explanation', 'choices', 'correctAnswers', 'choicePool', 'matches', 'context', 'parameters'].includes(key)) ||
         (Object.hasOwn(question, 'context') && (typeof question.context !== 'string' || question.context.length > MAX_QUESTION_CONTEXT)) ||
         [question.prompt, question.answer, question.explanation].some((text) => typeof text !== 'string' || text.length > MAX_TEXT) ||
         !Array.isArray(question.choices) || question.choices.length > (question.type === 'dropdown' ? MAX_DROPDOWN_CHOICES : 8) ||
         question.choices.some((choice) => typeof choice !== 'string' || choice.length > MAX_TEXT) ||
+        (Object.hasOwn(question, 'choicePool') &&
+          (question.type !== 'multiple-choice' || !isRecord(question.choicePool) ||
+            Object.keys(question.choicePool).some(key => !['displayCount', 'distractors'].includes(key)) ||
+            !Number.isInteger(question.choicePool.displayCount) ||
+            (question.choicePool.displayCount as number) < 2 ||
+            (question.choicePool.displayCount as number) > 8 ||
+            !Array.isArray(question.choicePool.distractors) ||
+            question.choicePool.distractors.length < 1 ||
+            question.choicePool.distractors.length > MAX_CHOICE_POOL_TERMS ||
+            question.choicePool.distractors.some(term =>
+              typeof term !== 'string' || !term.trim() || term.length > MAX_TEXT) ||
+            Boolean(choicePoolProblem(question as unknown as Question)))) ||
+        (Object.hasOwn(question, 'correctAnswers') &&
+          (question.type !== 'multiple-choice' || !Array.isArray(question.correctAnswers) ||
+            question.correctAnswers.length < 1 || question.correctAnswers.length > 8 ||
+            question.correctAnswers.some(answer => typeof answer !== 'string' || !answer.trim() || answer.length > MAX_TEXT) ||
+            new Set(question.correctAnswers).size !== question.correctAnswers.length ||
+            question.answer !== '')) ||
         (question.type !== 'multiple-choice' && question.type !== 'dropdown' && question.choices.length !== 0) ||
         (question.type === 'true-false' && !['', 'True', 'False'].includes(String(question.answer))) ||
-        ((question.type === 'fill-in-the-blanks' || question.type === 'statement' || question.type === 'dropdown') && question.answer !== '') ||
+        ((question.type === 'fill-in-the-blanks' || question.type === 'statement' || question.type === 'dropdown' || question.type === 'parameterized') && question.answer !== '') ||
+        (question.type !== 'parameterized' && Object.hasOwn(question, 'parameters')) ||
         (question.type !== 'dropdown' && Object.hasOwn(question, 'matches')) ||
         (question.type === 'statement' && question.explanation !== '')) {
       throw new Error('A knowledge set contains invalid question data.');
     }
     if (question.type === 'dropdown') validateDropdownMatches(question.matches, MAX_TEXT);
+    // Completed attempts store materialized prompts/answers, not their authoring rules.
+    // Only the history validator opts into those snapshots and checks their variants separately.
+    if (question.type === 'parameterized' &&
+        !(options.allowGeneratedHistorySnapshots && !Object.hasOwn(question, 'parameters'))) {
+      validateParameterization(question.parameters);
+    }
     ids.add(question.id);
   }
 }

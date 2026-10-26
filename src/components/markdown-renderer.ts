@@ -3,6 +3,7 @@ import DOMPurify from 'dompurify';
 
 import { h } from 'vue';
 import type { VNodeChild } from 'vue';
+import { markdownMathExtensions, renderLatexAttribute } from './latex-module.ts';
 
 export interface MarkdownHeading {
   id: string;
@@ -10,6 +11,7 @@ export interface MarkdownHeading {
   title: string;
 }
 const parser = new Marked({ gfm: true, breaks: false, async: false });
+parser.use({ extensions: markdownMathExtensions });
 const allowedTags = [
   'a', 'abbr', 'b', 'blockquote', 'br', 'caption', 'code', 'dd', 'del', 'details',
   'div', 'dl', 'dt', 'em', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr', 'i', 'img',
@@ -19,7 +21,7 @@ const allowedTags = [
 ];
 const allowedAttributes = [
   'href', 'src', 'alt', 'title', 'align', 'colspan', 'rowspan', 'start', 'reversed',
-  'type', 'checked', 'disabled', 'open',
+  'type', 'checked', 'disabled', 'open', 'data-dl-latex',
 ];
 const booleanAttributes = new Set(['checked', 'disabled', 'open', 'reversed']);
 
@@ -28,6 +30,15 @@ function previewNode(node: Node, headings: MarkdownHeading[], headingPrefix: str
   if (!(node instanceof Element)) return null;
 
   const tag = node.localName;
+  if ((tag === 'span' || tag === 'div') && node.hasAttribute('data-dl-latex')) {
+    const encoded = node.getAttribute('data-dl-latex') ?? '';
+    const html = renderLatexAttribute(encoded, tag === 'div');
+    if (html !== null) return h(tag, {
+      class: tag === 'div' ? 'markdown-latex-block' : 'markdown-latex-inline',
+      innerHTML: html,
+    });
+    return h('code', encoded);
+  }
   // HTML inputs are display-only task checkboxes, never interactive form controls.
   if (tag === 'input' && node.getAttribute('type') !== 'checkbox') return null;
   const props: Record<string, string | boolean> = {};

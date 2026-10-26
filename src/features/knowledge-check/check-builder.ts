@@ -1,8 +1,12 @@
 import { defaultSetOptions, validateSetOptions, type SetOptions } from './set-options.ts';
 import { SetOptionsEditor } from './set-options-editor.ts';
+import { ReviewQuestionImport } from './question-import.ts';
+import { MultipleChoicePoolEditor } from './multiple-choice-pool-editor.ts';
 import type { CheckItem } from './library-model.ts';
 import { MAX_NAME_LENGTH } from './library-model.ts';
 import { cloneQuestion, createQuestion, questionDisplayPrompt, questionHasContent, questionProblem, questionsForSave, MAX_QUESTIONS, MAX_TEXT, QUESTION_TYPES, type Question, type QuestionType } from './question-model.ts';
+import type { SolverPackage } from '../../core/parameterized/solver-package.ts';
+import { ParameterizedEditor } from './parameterized-editor.ts';
 import { DropdownEditor } from './dropdown-editor.ts';
 import { QuestionContextEditor } from './context-editor.ts';
 import { ReviewFillBlankEditor } from './fill-blank-editor.ts';
@@ -10,7 +14,7 @@ import { restoreFillBlankAnswers } from '../../core/fill-blank.ts';
 import { inputValue } from '../../core/dom.ts';
 import { Icon } from '../../components/icon.ts';
 import { DeleteConfirmation } from '../../components/delete-confirmation.ts';
-import { defineComponent, h, ref, computed, type PropType } from 'vue';
+import { defineComponent, h, ref, computed, nextTick, watch, type PropType } from 'vue';
 
 export const CheckBuilder = defineComponent({
   name: 'KnowledgeSetBuilder',
@@ -22,10 +26,28 @@ export const CheckBuilder = defineComponent({
   setup(props, { emit }) {
     const name = ref(props.item?.name ?? 'New knowledge set');
     const questions = ref<Question[]>(props.item?.questions.map(cloneQuestion) ?? []);
+    const uploadedSolvers = ref<SolverPackage[]>([]);
+    for (const question of questions.value) { const pkg = question.parameters?.rules.solver?.package;
+      if (pkg && !uploadedSolvers.value.some(entry => entry.id === pkg.id && entry.solverVersion === pkg.solverVersion)) uploadedSolvers.value.push(JSON.parse(JSON.stringify(pkg)) as SolverPackage);
+    }
     const selected = ref(0);
+    const questionStrip = ref<HTMLElement | null>(null);
+    watch(selected, async () => {
+      await nextTick();
+      const strip = questionStrip.value;
+      const active = strip?.querySelector<HTMLElement>('.knowledge-question-row.is-selected');
+      if (!strip || !active || strip.scrollWidth <= strip.clientWidth) return;
+      const left = active.offsetLeft - strip.offsetLeft;
+      const right = left + active.offsetWidth;
+      if (left < strip.scrollLeft) strip.scrollLeft = left;
+      else if (right > strip.scrollLeft + strip.clientWidth) strip.scrollLeft = right - strip.clientWidth;
+    });
     const tab = ref<'questions' | 'options'>('questions');
+    const importing = ref(false);
+    const importNotice = ref('');
     const options = ref<SetOptions>({ ...defaultSetOptions(), ...props.item?.options });
     const message = ref('');
+    const draftProblems = ref<Record<string, string>>({});
     const invalid = computed(() => questions.value.findIndex(question => questionHasContent(question) && Boolean(questionProblem(question))));
     const optionsProblem = computed(() => {
       try { validateSetOptions(options.value); return ''; }
@@ -33,6 +55,7 @@ export const CheckBuilder = defineComponent({
     });
     function canLeaveQuestion(): boolean {
       const current = questions.value[selected.value];
+      if (current && draftProblems.value[current.id]) return false;
       if (current && questionHasContent(current) && questionProblem(current)) {
         return false;
       }
@@ -40,6 +63,7 @@ export const CheckBuilder = defineComponent({
     }
     function save() {
       try {
+        if (Object.values(draftProblems.value).some(Boolean)) return;
         if (invalid.value >= 0) { selected.value = invalid.value; tab.value = 'questions'; return; }
         validateSetOptions(options.value);
         emit('save', name.value.trim(), questionsForSave(questions.value), { ...options.value });
@@ -52,9 +76,35 @@ export const CheckBuilder = defineComponent({
       questions.value.push(createQuestion());
       selected.value = questions.value.length - 1;
     }
+    function appendQuestions(incoming: Question[]) {
+      if (!incoming.length || questions.value.length + incoming.length > MAX_QUESTIONS) {
+        message.value = 'This import exceeds the maximum number of questions.';
+        return;
+      }
+      const used = new Set(questions.value.map(question => question.id));
+      const added = incoming.map(question => {
+        let id = createQuestion().id;
+        while (used.has(id)) id = createQuestion().id;
+        used.add(id);
+        const copy = cloneQuestion(question);
+        const pkg = copy.parameters?.rules.solver?.package;
+        if (pkg && !uploadedSolvers.value.some(entry => entry.id === pkg.id && entry.solverVersion === pkg.solverVersion)) {
+          uploadedSolvers.value.push(JSON.parse(JSON.stringify(pkg)) as SolverPackage);
+        }
+        return { ...copy, id };
+      });
+      const first = questions.value.length;
+      questions.value.push(...added);
+      selected.value = first;
+      tab.value = 'questions';
+      importing.value = false;
+      message.value = '';
+      importNotice.value = `${added.length} ${added.length === 1 ? 'question was' : 'questions were'} added to the builder. Save questions to keep the changes.`;
+    }
     function removeQuestion(question: Question) {
       questions.value = questions.value.filter((entry) => entry.id !== question.id);
       selected.value = Math.min(selected.value, Math.max(0, questions.value.length - 1));
+      delete draftProblems.value[question.id];
       pendingDelete.value = null;
     }
     function changeType(question: Question, event: Event) {
@@ -65,6 +115,10 @@ export const CheckBuilder = defineComponent({
       }
       const replacement = createQuestion(type as QuestionType);
       Object.assign(question, { type: replacement.type, answer: replacement.answer, choices: replacement.choices });
+      delete question.parameters; delete question.correctAnswers; delete question.choicePool;
+      delete draftProblems.value[question.id];
+      if (replacement.parameters) { question.parameters = replacement.parameters;
+        if (!question.prompt.trim()) question.prompt = replacement.prompt; }
       delete question.matches;
       if (replacement.matches) question.matches = replacement.matches;
       if (replacement.type === 'statement') question.explanation = '';
@@ -77,6 +131,11 @@ export const CheckBuilder = defineComponent({
       })]);
     }
     return () => {
+      if (importing.value) return h(ReviewQuestionImport, {
+        setName: name.value, existing: questions.value,
+        onBack: () => { importing.value = false; },
+        onAppend: appendQuestions,
+      });
       const question = questions.value[selected.value];
       return h('section', { class: 'knowledge-set-builder', 'aria-label': 'Knowledge set builder' }, [
         h('header', { class: 'knowledge-builder-header' }, [
@@ -84,7 +143,11 @@ export const CheckBuilder = defineComponent({
             h('p', 'Add questions, then use them to study or test yourself.')]),
           h('div', { class: 'knowledge-actions' }, [
             h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel') }, 'Cancel'),
-            h('button', { type: 'button', class: 'card-primary-button', disabled: !name.value.trim() || invalid.value >= 0 || Boolean(optionsProblem.value),
+            h('button', { type: 'button', class: 'quiet-button',
+              disabled: questions.value.length >= MAX_QUESTIONS,
+              onClick: () => { importNotice.value = ''; importing.value = true; },
+            }, 'Import questions'),
+            h('button', { type: 'button', class: 'card-primary-button', disabled: !name.value.trim() || invalid.value >= 0 || Boolean(optionsProblem.value) || Object.values(draftProblems.value).some(Boolean),
               onClick: save },
             props.item ? 'Save questions' : 'Create knowledge set'),
           ]),
@@ -99,17 +162,24 @@ export const CheckBuilder = defineComponent({
         }, page === 'questions' ? 'Questions' : 'Set options'))),
         invalid.value >= 0 ? h('p', { class: 'knowledge-message', role: 'status' }, `Question ${invalid.value + 1}: ${questionProblem(questions.value[invalid.value]!)}`) : null,
         message.value ? h('p', { class: 'knowledge-message', role: 'alert' }, message.value) : null,
+        importNotice.value ? h('p', { class: 'knowledge-import-add-notice', role: 'status' }, importNotice.value) : null,
         optionsProblem.value ? h('p', { class: 'knowledge-message', role: 'alert' }, optionsProblem.value) : null,
         tab.value === 'options' ? h(SetOptionsEditor, { options: options.value, questionCount: questions.value.length }) : h('div', { class: 'knowledge-builder-layout' }, [
           h('aside', { class: 'knowledge-question-list', 'aria-label': 'Questions' }, [
             h('div', { class: 'knowledge-builder-header' }, [h('h3', `Questions (${questions.value.length})`),
               h('button', { type: 'button', class: 'icon-button', title: 'Add question', 'aria-label': 'Add question',
                 disabled: questions.value.length >= MAX_QUESTIONS, onClick: addQuestion }, [h(Icon, { name: 'plus' })])]),
-            ...questions.value.map((entry, index) => h('button', { key: entry.id, type: 'button',
-              class: ['knowledge-question-row', { 'is-selected': index === selected.value }],
-              'aria-pressed': index === selected.value, onClick: () => { if (index === selected.value || canLeaveQuestion()) selected.value = index; } },
-            `${index + 1}. ${questionDisplayPrompt(entry).trim() || 'Untitled question'}`)),
-            !questions.value.length ? h('p', { class: 'knowledge-muted' }, 'Add your first question.') : null,
+            h('div', { ref: questionStrip, class: 'knowledge-question-strip', role: 'group', 'aria-label': 'Select a question to edit' }, [
+              ...questions.value.map((entry, index) => h('button', { key: entry.id, type: 'button',
+                class: ['knowledge-question-row', { 'is-selected': index === selected.value }],
+                'aria-label': `Question ${index + 1}: ${questionDisplayPrompt(entry).trim() || 'Untitled question'}`,
+                'aria-pressed': index === selected.value,
+                onClick: () => { if (index === selected.value || canLeaveQuestion()) selected.value = index; } }, [
+                  h('span', { class: 'knowledge-question-row-number' }, `${index + 1}.`),
+                  h('span', { class: 'knowledge-question-row-title' }, questionDisplayPrompt(entry).trim() || 'Untitled question'),
+                ])),
+              !questions.value.length ? h('p', { class: 'knowledge-muted' }, 'Add your first question.') : null,
+            ]),
           ]),
           question ? h('div', { class: 'knowledge-question-editor', key: question.id }, [
             h('div', { class: 'knowledge-builder-header' }, [h('h3', `Question ${selected.value + 1}`),
@@ -127,24 +197,65 @@ export const CheckBuilder = defineComponent({
             }, QUESTION_TYPES.map((type) => h('option', { value: type.id }, type.label)))]),
             question.type === 'fill-in-the-blanks'
               ? h(ReviewFillBlankEditor, { question, onMessage: (value: string) => { message.value = value; } })
-              : textField(question.type === 'statement' ? 'Statement' : 'Question', 'prompt', question),
+              : textField(question.type === 'parameterized' ? 'Question template' : question.type === 'statement' ? 'Statement' : 'Question', 'prompt', question),
             h(QuestionContextEditor, { key: question.id, question }),
-            question.type === 'statement' ? null : question.type === 'dropdown' ? h(DropdownEditor, { question }) : question.type === 'multiple-choice' ? h('fieldset', { class: 'knowledge-choice-editor' }, [
+            question.type === 'parameterized' ? h(ParameterizedEditor, { question, key: question.id, packages: uploadedSolvers.value,
+              onUploadSolver: (pkg: SolverPackage) => { if (!uploadedSolvers.value.some(entry => entry.id === pkg.id && entry.solverVersion === pkg.solverVersion)) uploadedSolvers.value.push(pkg); },
+              onDraftProblem: (value: string) => { draftProblems.value[question.id] = value; } }) : question.type === 'statement' ? null : question.type === 'dropdown' ? h(DropdownEditor, { question }) : question.type === 'multiple-choice' ? h('fieldset', { class: 'knowledge-choice-editor' }, [
               h('legend', 'Answer choices'),
-              h('p', { class: 'knowledge-muted' }, 'Choose the correct answer.'),
+              h('label', { class: 'knowledge-option-toggle' }, [
+                h('input', {
+                  type: 'checkbox', checked: question.correctAnswers !== undefined,
+                  onChange: (event: Event) => {
+                    if ((event.target as HTMLInputElement).checked) {
+                      question.correctAnswers = question.answer.trim() ? [question.answer] : [];
+                      question.answer = '';
+                    } else {
+                      question.answer = question.correctAnswers?.[0] ?? '';
+                      delete question.correctAnswers;
+                    }
+                  },
+                }),
+                'Allow multiple correct answers',
+              ]),
+              h('p', { class: 'knowledge-muted' }, question.correctAnswers !== undefined
+                ? 'Check every correct choice. Learners must select all correct choices and no incorrect choices.'
+                : 'Choose the one correct answer.'),
               ...question.choices.map((choice, index) => h('div', { class: 'knowledge-choice-row', key: index }, [
-                h('input', { type: 'radio', name: `correct-${question.id}`, checked: Boolean(choice) && question.answer === choice,
-                  disabled: !choice.trim(), 'aria-label': `Choice ${index + 1} is correct`, onChange: () => { question.answer = choice; } }),
-                h('input', { value: choice, maxlength: MAX_TEXT, 'aria-label': `Choice ${index + 1}`,
-                  onInput: (event: Event) => { const next = inputValue(event); if (choice && question.answer === choice) question.answer = next;
-                    question.choices[index] = next; } }),
+                h('input', {
+                  type: question.correctAnswers !== undefined ? 'checkbox' : 'radio',
+                  name: `correct-${question.id}`,
+                  checked: Boolean(choice) && (question.correctAnswers !== undefined
+                    ? question.correctAnswers.includes(choice) : question.answer === choice),
+                  disabled: !choice.trim(), 'aria-label': `Choice ${index + 1} is correct`,
+                  onChange: (event: Event) => {
+                    if (question.correctAnswers !== undefined) {
+                      const selected = (event.target as HTMLInputElement).checked;
+                      question.correctAnswers = selected
+                        ? [...question.correctAnswers, choice]
+                        : question.correctAnswers.filter(answer => answer !== choice);
+                    } else question.answer = choice;
+                  },
+                }),
+                h('input', { type: 'text', value: choice, maxlength: MAX_TEXT, 'aria-label': `Choice ${index + 1}`,
+                  onInput: (event: Event) => {
+                    const next = inputValue(event);
+                    if (choice && question.answer === choice) question.answer = next;
+                    if (question.correctAnswers !== undefined && question.correctAnswers.includes(choice)) {
+                      question.correctAnswers = question.correctAnswers.map(answer => answer === choice ? next : answer);
+                    }
+                    question.choices[index] = next;
+                  } }),
                 h('button', { type: 'button', class: 'icon-button delete-button', disabled: question.choices.length <= 2,
                   title: 'Remove choice', 'aria-label': `Remove choice ${index + 1}`, onClick: () => {
-                    if (question.answer === choice) question.answer = ''; question.choices.splice(index, 1);
+                    if (question.answer === choice) question.answer = '';
+                    if (question.correctAnswers !== undefined) question.correctAnswers = question.correctAnswers.filter(answer => answer !== choice);
+                    question.choices.splice(index, 1);
                   } }, [h(Icon, { name: 'trash' })]),
               ])),
               h('button', { type: 'button', class: 'quiet-button', disabled: question.choices.length >= 8,
                 onClick: () => question.choices.push('') }, 'Add choice'),
+              h(MultipleChoicePoolEditor, { question, key: question.id }),
             ]) : question.type === 'true-false' ? h('label', { class: 'knowledge-field' }, ['Correct answer', h('select', {
               value: question.answer, onChange: (event: Event) => { question.answer = inputValue(event); },
             }, [h('option', { value: '', disabled: true }, 'Select the correct answer'), ...['True', 'False'].map((answer) => h('option', { value: answer }, answer))])])

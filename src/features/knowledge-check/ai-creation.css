@@ -1,0 +1,147 @@
+.review-ai-settings { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px; }
+.review-ai-settings label { display:grid;gap:6px;min-width:0; }
+.review-ai-settings input,.review-ai-settings select { width:100%;min-width:0; }
+.review-ai-mix { display:grid;gap:12px;margin:0;padding:16px;border:1px solid var(--border-color);border-radius:var(--radius-dialog); }
+.review-ai-mix legend { padding-inline:6px;font-weight:600; }
+.review-ai-weight { display:grid;grid-template-columns:minmax(0,1fr) 80px auto 72px;gap:8px;align-items:center; }
+.review-ai-weight input { width:100%;min-width:0; }
+.review-ai-preview { display:grid;gap:12px;max-height:420px;overflow:auto;margin:0;padding:4px 12px 4px 28px; }
+.review-ai-preview>li { padding-block:8px;border-bottom:1px solid var(--border-color);overflow-wrap:anywhere; }
+.review-ai-preview strong,.review-ai-preview>li>.study-ai-muted { display:block;white-space:pre-wrap; }
+.review-ai-preview summary { cursor:pointer;color:var(--brand-text); }
+.review-ai-preview details { margin-top:8px; }
+.review-ai-workspace button.card-primary-button { justify-self:start; }
+@media(max-width:600px) { .review-ai-settings { grid-template-columns:1fr; } .review-ai-weight { grid-template-columns:minmax(0,1fr) 64px auto; } .review-ai-weight>.study-ai-muted { grid-column:1/-1; } }
+.knowledge-check-library-actions { flex-wrap:wrap;justify-content:flex-end; }
+
+.review-ai-import-warning { padding:12px;border-inline-start:3px solid var(--text-secondary);background:var(--surface-subtle);overflow-wrap:anywhere; }
+.review-ai-import-warning ul { margin-block:8px;padding-inline-start:24px; }
+.review-ai-import-warning p { margin-block:8px 0; }
+
+/* Review AI generation: keep mode selection distinct from the percentage editor. */
+.review-ai-mix-strategy {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-dialog);
+}
+.review-ai-mix-strategy legend { padding-inline: 6px; font-weight: 600; }
+.review-ai-mix-mode { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
+.review-ai-mix-mode > input { flex: 0 0 auto; margin-top: 4px; accent-color: var(--brand); }
+.review-ai-mix-mode > span { display: grid; gap: 3px; }
+.review-ai-mix-mode > span > span { color: var(--text-secondary); font-size: 12px; }
+
+/* Single qualitative priority under Let AI choose, with native radio semantics. */
+.review-ai-focus {
+  min-width: 0; margin: 0; padding: 16px;
+  border: 1px solid var(--border-color); border-radius: var(--radius-dialog);
+}
+.review-ai-focus legend { padding-inline: 6px; font-weight: 600; }
+.review-ai-focus-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.review-ai-focus-option {
+  display: flex; align-items: flex-start; gap: 10px; min-width: 0; padding: 12px;
+  border: 1px solid var(--control-border); border-radius: var(--radius); cursor: pointer;
+}
+.review-ai-focus-option:has(input:checked) { border-color: var(--brand); background: var(--brand-tint); }
+.review-ai-focus-option:focus-within { outline: 2px solid var(--brand); outline-offset: 2px; }
+.review-ai-focus-option > input { flex: 0 0 auto; margin-top: 3px; accent-color: var(--brand); }
+.review-ai-focus-copy { display: grid; gap: 4px; min-width: 0; }
+.review-ai-focus-copy > span { font-size: 12px; color: var(--text-secondary); }
+@media (max-width: 600px) {
+  .review-ai-focus-options { grid-template-columns: minmax(0, 1fr); }
+}
+
+.review-ai-focus-option > .ui-icon {
+  flex: 0 0 20px; width: 20px; height: 20px;
+  margin-top: 2px; color: var(--text-secondary);
+}
+.review-ai-focus-option:has(input:checked) > .ui-icon { color: var(--brand); }
+
+/* Preview is a decision screen rather than a 70-question wall. */
+.review-ai-question-bank,.review-ai-difference{display:grid;gap:10px;padding:12px;border:1px solid var(--border-color);border-radius:var(--radius-dialog);background:var(--surface-subtle)}
+.review-ai-question-bank p,.review-ai-difference p{margin:0;color:var(--text-secondary);line-height:20px}
+.review-ai-bank-counts,.review-ai-preview-counts{display:flex;align-items:center;flex-wrap:wrap;gap:16px;padding:6px 0}
+.review-ai-bank-counts>div,.review-ai-preview-counts>div{display:grid;gap:2px;min-width:110px}
+.review-ai-bank-counts strong,.review-ai-preview-counts strong{font-size:22px;line-height:28px;color:var(--text-color)}
+.review-ai-bank-counts span,.review-ai-preview-counts span{font-size:12px;color:var(--text-secondary)}
+.review-ai-bank-counts>.ui-icon,.review-ai-preview-counts>.ui-icon{width:18px;height:18px;color:var(--brand-text)}
+.review-ai-preview-counts{border-bottom:1px solid var(--border-color);padding:8px 0 12px}
+.review-ai-difference{border-left:3px solid var(--brand)}
+.review-ai-difference .quiet-button{justify-self:start}
+.review-ai-difference textarea{width:100%;min-width:0}
+.review-ai-warning-details,.review-ai-questions-details{padding:10px 12px;border:1px solid var(--border-color);border-radius:var(--radius-dialog)}
+.review-ai-warning-details summary,.review-ai-questions-details summary{font-weight:600;cursor:pointer}
+.review-ai-warning-details ul{margin:8px 0;padding-left:24px}
+.review-ai-warning-details p{margin:8px 0 0;color:var(--text-secondary)}
+
+/* Human confirmation of every source subject before AI set creation. */
+.review-ai-coverage { display:grid;gap:12px;padding:16px;border:1px solid var(--border-color);border-radius:var(--radius-dialog);min-width:0; }
+.review-ai-coverage h4,.review-ai-coverage p { margin:0; }
+.review-ai-coverage-actions { display:flex;flex-wrap:wrap;gap:8px; }
+.review-ai-coverage-list { display:grid;gap:8px;max-height:360px;overflow:auto;list-style:none;padding:0;margin:0; }
+.review-ai-coverage-list>li { display:grid;gap:6px;padding:10px;border:1px solid var(--border-color);border-radius:var(--radius);min-width:0; }
+.review-ai-coverage-list label,.review-ai-coverage-confirm { display:flex;gap:10px;align-items:flex-start;cursor:pointer; }
+.review-ai-coverage-list input,.review-ai-coverage-confirm input { flex:none;margin-top:4px;accent-color:var(--brand); }
+.review-ai-coverage-list label>span { display:grid;gap:4px;min-width:0;overflow-wrap:anywhere; }
+.review-ai-coverage-list details { padding-left:26px; }
+.review-ai-coverage-list summary { cursor:pointer; }
+.review-ai-coverage-list ol { padding-left:20px;overflow-wrap:anywhere; }
+.review-ai-coverage-missing { display:grid;gap:8px;padding:12px;background:var(--surface-subtle);border-radius:var(--radius);min-width:0; }
+.review-ai-coverage-add { display:flex;flex-wrap:wrap;gap:8px; }
+.review-ai-coverage-add input { flex:1;min-width:min(220px,100%); }
+.review-ai-coverage-missing ul { display:grid;gap:6px;list-style:none;padding:0;margin:0; }
+.review-ai-coverage-missing li { display:flex;align-items:center;justify-content:space-between;gap:8px;overflow-wrap:anywhere; }
+.review-ai-coverage-missing textarea { width:100%;min-width:0; }
+.review-ai-coverage-confirm { padding:8px 0;font-weight:600; }
+
+/* AI configuration respects the available Review pane width, not just viewport. */
+.review-ai-workspace { container-type: inline-size; }
+@container (max-width: 700px) {
+  .review-ai-settings { grid-template-columns: minmax(0, 1fr); }
+  .review-ai-focus-options { grid-template-columns: minmax(0, 1fr); }
+  .review-ai-weight { grid-template-columns: minmax(0, 1fr) 64px auto; }
+  .review-ai-weight > .study-ai-muted { grid-column: 1 / -1; }
+  .review-ai-bank-counts, .review-ai-preview-counts { gap: 8px 12px; }
+  .review-ai-coverage { padding: 12px; }
+  .review-ai-preview { max-height: min(48dvh, 340px); }
+}
+@container (max-width: 460px) {
+  .review-ai-mix, .review-ai-mix-strategy, .review-ai-focus { padding: 12px; }
+  .review-ai-weight { grid-template-columns: minmax(0, 1fr) 64px; }
+  .review-ai-weight > :nth-child(3) { grid-column: 1 / -1; }
+  .review-ai-coverage-add input { min-width: 100%; }
+  .review-ai-coverage-missing li { flex-wrap: wrap; }
+  .review-ai-workspace .study-ai-actions > button { min-height: 44px; }
+}
+@media (pointer: coarse) {
+  .review-ai-workspace input:not([type='checkbox']):not([type='radio']),
+  .review-ai-workspace select, .review-ai-workspace textarea { font-size: 16px; }
+  .review-ai-focus-option, .review-ai-mix-mode, .review-ai-coverage-list label,
+  .review-ai-coverage-confirm { min-height: 44px; }
+  .review-ai-difference button, .review-ai-coverage-actions button { min-height: 44px; }
+}
+/* Review step: coverage is independent from confidence estimates. */
+.review-ai-final { display:grid;gap:18px;min-width:0; }
+.review-ai-confidence { display:grid;grid-template-columns:minmax(160px,220px) minmax(0,1fr);align-items:center;gap:24px;padding:24px;border:1px solid var(--border-color);border-radius:var(--radius-dialog);background:var(--surface-subtle); }
+@property --review-coverage-sweep { syntax: '<percentage>'; inherits: false; initial-value: 0%; }
+.review-ai-coverage-ring { display:grid;place-items:center;width:min(100%,210px);aspect-ratio:1;margin:auto;border-radius:50%;background:conic-gradient(var(--brand) var(--review-coverage-sweep),var(--control-border) 0);animation:review-ai-ring-enter .85s var(--ease-out) both; }
+.review-ai-coverage-ring>div { display:grid;place-content:center;gap:3px;width:79%;height:79%;border-radius:50%;background:var(--page-background);text-align:center; }
+.review-ai-coverage-ring strong { font-size:clamp(26px,4vw,38px);font-variant-numeric:tabular-nums;line-height:1.2; }
+.review-ai-coverage-ring span { font-size:12px;color:var(--text-secondary); }
+.review-ai-confidence-metrics { display:grid;gap:17px;min-width:0; }
+.review-ai-metric { display:grid;gap:6px; }
+.review-ai-metric>div:first-child { display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:13px; }
+.review-ai-metric>div:first-child span { font-weight:700;font-variant-numeric:tabular-nums; }
+.review-ai-meter { height:10px;overflow:hidden;border-radius:99px;background:var(--control-border); }
+.review-ai-meter>span { display:block;height:100%;border-radius:inherit;background:var(--brand);transform-origin:left;animation:review-ai-bar-enter .8s var(--ease-out) both; }
+.review-ai-metric-help { margin:0;color:var(--text-secondary);font-size:12px;line-height:1.45; }
+.review-ai-coverage-help { grid-column:1/-1;margin:0;color:var(--text-secondary);font-size:12px;line-height:1.5; }
+.review-ai-confidence-notes { grid-column:1/-1;display:grid;gap:9px;font-size:13px;line-height:1.6; }
+.review-ai-confidence-notes p { margin:0; }
+.review-ai-confidence-notes ul { margin:6px 0 0;padding-left:22px; }
+@keyframes review-ai-ring-enter { from { --review-coverage-sweep:0%; } to { --review-coverage-sweep:var(--coverage); } }
+@keyframes review-ai-bar-enter { from { transform:scaleX(0); } to { transform:scaleX(1); } }
+@container (max-width:520px) { .review-ai-confidence { grid-template-columns:1fr;padding:16px;gap:18px; } }
+@media (prefers-reduced-motion:reduce) { .review-ai-coverage-ring { animation:none;--review-coverage-sweep:var(--coverage); } .review-ai-meter>span { animation:none; } }

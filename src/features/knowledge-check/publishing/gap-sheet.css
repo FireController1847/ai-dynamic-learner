@@ -1,0 +1,26 @@
+/* Gap leaves a generous, completely unmarked handwriting area after each
+   question. Keeping it as padding within the question keeps the open space with
+   its prompt across page breaks when there is enough room. */
+.gap-question {
+  box-sizing: border-box;
+  margin: 0 0 7mm;
+  padding-bottom: 55mm;
+  break-inside: avoid;
+  page-break-inside: avoid;
+  overflow-wrap: anywhere;
+}
+/* Landscape pages have less printable height, so scale down the whitespace. */
+.gap-question-landscape { padding-bottom: 34mm; }
+.gap-question-prompt {
+  display: flex;
+  align-items: baseline;
+  gap: 8pt;
+  margin: 0 0 4mm;
+  white-space: pre-wrap;
+  line-height: 1.4;
+}
+.gap-question-number { flex: 0 0 auto; font-weight: 700; }
+.gap-question .markdown-content { margin: 0 0 5mm 17pt; font-size: 1em; line-height: inherit; }
+.gap-question .markdown-content :is(p, ul, ol, pre, blockquote) { margin: 0 0 3mm; }
+.gap-question .markdown-content pre { white-space: pre-wrap; }
+.gap-question .katex-display { margin: 3mm 0; }

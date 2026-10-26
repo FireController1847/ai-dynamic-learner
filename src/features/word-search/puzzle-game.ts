@@ -3,10 +3,11 @@ import type { ConfiguredWordSearch, BoardRotation } from './library-model.ts';
 import type { DisplayOptions } from './display-options.ts';
 import type { PuzzleGridHandle, SelectionAttempt, WordCelebration } from './puzzle-grid.ts';
 import { DIFFICULTIES } from './puzzle-model.ts';
-import { lineCells, matchSelection, wordOnLine } from './game-model.ts';
+import { boardScore, hasCompletedBoard, isFinishedGame, lineCells, matchSelection, wordOnLine, wordScore } from './game-model.ts';
 import { generatePuzzle } from './puzzle-generator.ts';
 import { PuzzleGrid } from './puzzle-grid.ts';
 import { Icon } from '../../components/icon.ts';
+import { EntryStatistics } from '../../components/entry-statistics.ts';
 import { defaultDisplayOptions, displayStyles } from './display-options.ts';
 
 import { defineComponent, type PropType, computed, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue';
@@ -24,8 +25,8 @@ export const PuzzleGame = defineComponent({
     const message = ref('');
     const revealed = ref(false);
     const hint = ref<number | null>(null);
-    const revealedWords = ref(new Set<string>());
-    const pending = ref<'new' | 'restart' | null>(null);
+    const pending = ref<'new' | 'restart' | 'give-up' | null>(null);
+    const viewingBoard = ref(false);
     const grid = ref<PuzzleGridHandle | null>(null);
     const gridVersion = ref(0);
     const attempt = ref<SelectionAttempt | null>(null);
@@ -50,9 +51,19 @@ export const PuzzleGame = defineComponent({
     let controller: AbortController | null = null;
     let actionTrigger: HTMLElement | null = null;
     const game = computed(() => props.item.game);
+    // Include legacy assisted finds so their answers remain revealed when replaying an older saved board.
+    const revealedAnswers = computed(() => new Set([
+      ...(game.value?.revealedAnswers ?? []),
+      ...(game.value?.found.filter(({ revealed }) => revealed).map(({ word }) => word) ?? []),
+    ]));
+    const activeWords = computed(() => game.value?.selectedWords ?? props.item.puzzle.words);
     const foundWords = computed(() => new Set(game.value?.found.map(({ word }) => word) ?? []));
     const hintMode = computed(() => (props.item.puzzle.studyMode ?? 'words') === 'hints');
-    const complete = computed(() => foundWords.value.size === props.item.puzzle.words.length);
+    const complete = computed(() => Boolean(game.value) && foundWords.value.size === activeWords.value.length);
+    const finished = computed(() => isFinishedGame(game.value));
+    const score = computed(() => game.value ? boardScore(game.value) : { earned: 0, possible: 0 });
+    const showCompletionOverlay = computed(() =>
+      finished.value && !celebration.value?.complete && !viewingBoard.value);
     const statistics = useStatistics();
     let completionRecorded = complete.value;
     watch(complete, value => {
@@ -69,8 +80,8 @@ export const PuzzleGame = defineComponent({
     });
     onDeactivated(() => {
       pending.value = null;
+      viewingBoard.value = false;
       revealed.value = false;
-      revealedWords.value = new Set<string>();
       hint.value = null;
       clearAttempt();
       clearCelebration();
@@ -86,6 +97,7 @@ export const PuzzleGame = defineComponent({
       loading.value = true;
       error.value = '';
       pending.value = null;
+      viewingBoard.value = false;
       try {
         const result = await generatePuzzle(props.item.puzzle, request.signal);
         if (!result || request.signal.aborted) return;
@@ -94,7 +106,6 @@ export const PuzzleGame = defineComponent({
         props.item.game = result;
         gridVersion.value += 1;
         revealed.value = false;
-        revealedWords.value = new Set<string>();
         hint.value = null;
         message.value = hintMode.value
           ? 'Puzzle ready. Use the clues to find every hidden answer.'
@@ -107,11 +118,12 @@ export const PuzzleGame = defineComponent({
     }
 
     function select(start: number, end: number) {
-      if (!game.value || loading.value || revealed.value) return;
+      if (!game.value || loading.value || revealed.value || finished.value) return;
       statistics?.record('word-search', props.item.id, 'wordAttempts');
       const match = matchSelection(props.item.puzzle, game.value, start, end);
       const cells = lineCells(start, end, props.item.puzzle.size);
       const text = wordOnLine(game.value.rows, start, end);
+      const assisted = Boolean(match && hintMode.value && revealedAnswers.value.has(match.word));
       clearAttempt();
       attempt.value = {
         id: ++attemptId,
@@ -119,6 +131,7 @@ export const PuzzleGame = defineComponent({
         end,
         cells: cells.length ? cells : [start, end],
         matched: Boolean(match),
+        revealed: assisted,
       };
       attemptTimer = setTimeout(clearAttempt, match ? 230 : 2250);
       const recognized = text ? `Selected “${text}”. ` : '';
@@ -129,22 +142,24 @@ export const PuzzleGame = defineComponent({
       }
       if (foundWords.value.has(match.word)) { message.value = `${recognized}${match.word} is already found.`; return; }
       statistics?.record('word-search', props.item.id, 'wordsSolved');
-      game.value.found.push(match);
+      game.value.found.push(assisted ? { ...match, revealed: true } : match);
       hint.value = null;
-      const completed = game.value.found.length === props.item.puzzle.words.length;
+      const completed = game.value.found.length === activeWords.value.length;
+      if (completed) game.value.completed = true;
       clearCelebration();
       celebration.value = {
         id: ++celebrationId,
         start: match.start,
         end: match.end,
         complete: completed,
+        revealed: assisted,
       };
       celebrationTimer = setTimeout(clearCelebration, completed ? 2100 : 1050);
       message.value = recognized + (completed ? `You found ${match.word}—and completed the puzzle!` : `Found ${match.word}!`);
     }
 
     function giveHint() {
-      if (!game.value) return;
+      if (!game.value || finished.value) return;
       const remaining = game.value.placements.filter(({ word }) => !foundWords.value.has(word));
       const placement = remaining[Math.floor(Math.random() * remaining.length)];
       if (!placement) return;
@@ -155,11 +170,11 @@ export const PuzzleGame = defineComponent({
         : `${placement.word} starts at row ${Math.floor(placement.start / props.item.puzzle.size) + 1}, column ${placement.start % props.item.puzzle.size + 1}.`;
     }
 
-    function toggleWordReveal(word: string) {
-      const next = new Set(revealedWords.value);
-      if (next.has(word)) next.delete(word);
-      else next.add(word);
-      revealedWords.value = next;
+    function revealWord(word: string) {
+      if (!game.value || finished.value || !hintMode.value ||
+          foundWords.value.has(word) || revealedAnswers.value.has(word)) return;
+      game.value.revealedAnswers = [...(game.value.revealedAnswers ?? []), word];
+      message.value = `Answer revealed: ${word}. It will stay visible until you generate a new grid.`;
     }
 
     function rotateBoard() {
@@ -177,11 +192,12 @@ export const PuzzleGame = defineComponent({
       message.value = `Board rotated to ${props.item.boardRotation}°.`;
     }
 
-    async function requestAction(action: 'new' | 'restart', event: MouseEvent) {
+    async function requestAction(action: 'new' | 'restart' | 'give-up', event: MouseEvent) {
       actionTrigger = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
       pending.value = action;
       await nextTick();
-      cancelButton.value?.focus();
+      if (finished.value) grid.value?.focusCompletionCancel();
+      else cancelButton.value?.focus();
     }
 
     async function cancelAction() {
@@ -196,18 +212,30 @@ export const PuzzleGame = defineComponent({
       const action = pending.value;
       pending.value = null;
       if (action === 'new') await generate();
-      else if (game.value) {
+      else if (action === 'give-up' && game.value && !finished.value) {
+        game.value.gaveUp = true;
+        hint.value = null;
+        viewingBoard.value = false;
+        message.value = `You gave up. Final score: ${score.value.earned} / ${score.value.possible}.`;
+      } else if (action === 'restart' && game.value) {
+        // An older completed save may lack the optional flag. Keep its achievement
+        // when restarting the same layout, even though found words are cleared.
+        if (hasCompletedBoard(game.value)) game.value.completed = true;
         completionRecorded = false;
         statistics?.record('word-search', props.item.id, 'gamesStarted');
+        // Preserve revealed clues from this layout, including legacy assisted finds.
+        if (revealedAnswers.value.size) game.value.revealedAnswers = [...revealedAnswers.value];
         game.value.found = [];
+        delete game.value.gaveUp;
+        viewingBoard.value = false;
         revealed.value = false;
-        revealedWords.value = new Set<string>();
         hint.value = null;
         gridVersion.value += 1;
         message.value = 'Progress cleared. Same puzzle, fresh start.';
       }
       await nextTick();
-      restartButton.value?.focus();
+      if (finished.value) grid.value?.focusCompletionAction();
+      else restartButton.value?.focus();
     }
 
     return () => {
@@ -218,12 +246,45 @@ export const PuzzleGame = defineComponent({
         'aria-label': 'Play word search', 'aria-busy': loading.value,
       }, [
         h('div', { class: 'word-search-game-toolbar' }, [
-          h('p', { class: 'word-search-help' }, `${puzzle.size} × ${puzzle.size} · ${difficulty?.label} · ${difficulty?.description}`),
-          h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('edit') }, 'Edit puzzle'),
+          h('div', { class: 'word-search-game-meta', 'aria-label': 'Board settings' }, [
+            h('span', { class: 'word-search-meta-chip' }, `${puzzle.size} × ${puzzle.size}`),
+            h('span', { class: 'word-search-meta-chip', title: difficulty?.description },
+              `${difficulty?.label ?? 'Medium'} difficulty`),
+            game.value?.selectedWords ? h('span', { class: 'word-search-meta-chip' },
+              `${activeWords.value.length} of ${puzzle.words.length} pool words`) : null,
+          ]),
+          h('div', { class: 'word-search-game-toolbar-actions' }, [
+            h('details', {
+              class: 'word-search-how-to-play',
+              onKeydown: (event: KeyboardEvent) => {
+                if (event.key === 'Escape' && event.currentTarget instanceof HTMLDetailsElement) {
+                  event.preventDefault();
+                  event.currentTarget.open = false;
+                  event.currentTarget.querySelector('summary')?.focus();
+                }
+              },
+            }, [
+              h('summary', { class: 'quiet-button' }, [
+                h(Icon, { name: 'lightbulb' }), 'How to play',
+              ]),
+              h('div', { class: 'word-search-help-popover' }, [
+                h('strong', 'How to play'),
+                h('p', difficulty?.description ?? ''),
+                h('p', 'Drag across a word, or tap its first and last letters. Either direction works.'),
+                h('p', 'Keyboard: arrow keys move between letters; Enter or Space selects an endpoint; Escape cancels. Larger grids can scroll sideways.'),
+              ]),
+            ]),
+            h('button', { type: 'button', class: 'quiet-button',
+              onClick: () => emit('edit') }, [
+              h(Icon, { name: 'pencil' }), 'Edit puzzle',
+            ]),
+          ]),
         ]),
         puzzle.instructions ? h('p', { class: 'word-search-instructions' }, puzzle.instructions) : null,
-        h('p', { id: 'word-search-play-help', class: 'word-search-help' },
-          'Drag across a word with a mouse, or tap its first and last letters. Select either end first. Keyboard: use arrow keys to move, Enter or Space to choose each end, and Escape to cancel. Scroll sideways for larger grids.'),
+        h('p', { id: 'word-search-play-help', class: 'visually-hidden' },
+          finished.value
+            ? 'This board is finished and read-only. View results or start another attempt.'
+            : 'Drag across a word or select first and last letters. Arrow keys move between cells; Enter or Space selects a letter; Escape cancels.'),
         loading.value ? h('p', { role: 'status' }, 'Arranging your words…') : null,
         error.value ? h('div', { class: 'word-search-generation-error', role: 'alert' }, [
           h('p', error.value),
@@ -232,10 +293,32 @@ export const PuzzleGame = defineComponent({
         game.value ? h('div', { class: 'word-search-play-layout', inert: loading.value }, [
           h(PuzzleGrid, {
             ref: grid, key: gridVersion.value, game: game.value,
-            revealed: revealed.value, hint: hint.value, onSelect: select,
+            revealed: revealed.value || game.value.gaveUp === true, hint: hint.value, onSelect: select,
             options: props.options,
             attempt: attempt.value,
             celebration: celebration.value,
+            covered: showCompletionOverlay.value,
+            finished: finished.value && !celebration.value?.complete,
+            score: score.value,
+            viewingBoard: viewingBoard.value,
+            randomSelection: Boolean(puzzle.selection),
+            pendingAction: finished.value ? (pending.value === 'give-up' ? null : pending.value) : null,
+            onViewBoard: async () => {
+              viewingBoard.value = true;
+              pending.value = null;
+              await nextTick();
+              grid.value?.focusViewButton();
+            },
+            onViewResults: async () => {
+              viewingBoard.value = false;
+              pending.value = null;
+              await nextTick();
+              grid.value?.focusViewButton();
+            },
+            onRestart: (event: MouseEvent) => requestAction('restart', event),
+            onNewLayout: (event: MouseEvent) => requestAction('new', event),
+            onCancelAction: cancelAction,
+            onConfirmAction: confirmAction,
             rotationTurns: boardTurns.value,
             rotating: rotating.value,
           }),
@@ -245,24 +328,31 @@ export const PuzzleGame = defineComponent({
           }, hintMode.value ? [
             h('header', { class: 'word-search-clue-header' }, [
               h('div', {}, [
-                h('h3', complete.value ? 'Nicely done!' : 'Clues'),
+                h('h3', finished.value ? game.value?.gaveUp ? 'Board ended' : 'Nicely done!' : 'Clues'),
                 h('p', { class: 'word-search-clue-progress' },
-                  `${foundWords.value.size} of ${puzzle.words.length} found`),
+                  `${foundWords.value.size} of ${activeWords.value.length} found · ${score.value.earned} points`),
               ]),
               h('progress', {
-                max: puzzle.words.length,
+                max: activeWords.value.length,
                 value: foundWords.value.size,
                 'aria-label': 'Words found',
               }),
             ]),
-            h('ol', { class: 'word-search-clue-list' }, puzzle.words.map((word, index) => {
+            h('ol', { class: 'word-search-clue-list' }, activeWords.value.map((word, index) => {
               const found = foundWords.value.has(word);
-              const individuallyRevealed = revealedWords.value.has(word);
-              const answerVisible = revealed.value || found || individuallyRevealed;
-              const location = revealed.value ? game.value?.placements.find((entry) => entry.word === word) : null;
+              const assisted = Boolean(game.value?.found.some((entry) => entry.word === word && entry.revealed));
+              const individuallyRevealed = revealedAnswers.value.has(word);
+              const answerVisible = revealed.value || game.value?.gaveUp === true || found || individuallyRevealed;
+              const location = (revealed.value || finished.value)
+                ? game.value?.placements.find((entry) => entry.word === word) : null;
+              const points = game.value ? wordScore(game.value, word) : 0;
               return h('li', {
                 key: word,
-                class: ['word-search-clue', { 'is-found': found }],
+                class: ['word-search-clue', {
+                  'is-found': found,
+                  'is-revealed-found': assisted,
+                  'is-answer-revealed': individuallyRevealed,
+                }],
               }, [
                 h('span', { class: 'word-search-clue-number', 'aria-hidden': 'true' }, index + 1),
                 h('div', { class: 'word-search-clue-content' }, [
@@ -271,29 +361,41 @@ export const PuzzleGame = defineComponent({
                   location ? h('p', { class: 'word-search-answer-location' },
                     `Row ${Math.floor(location.start / puzzle.size) + 1}, column ${location.start % puzzle.size + 1} → row ${Math.floor(location.end / puzzle.size) + 1}, column ${location.end % puzzle.size + 1}`) : null,
                   h('div', { class: 'word-search-clue-footer' }, [
-                    h('span', { class: 'word-search-word-state' }, found ? '✓ Found' : 'Not found'),
-                    !found && !revealed.value ? h('button', {
+                    h('span', { class: 'word-search-word-state' },
+                      found ? (assisted ? '✓ Found · answer revealed' : '✓ Found')
+                        : individuallyRevealed ? 'Answer revealed' : 'Not found'),
+                    (finished.value || found || individuallyRevealed)
+                      ? h('span', { class: 'word-search-word-points',
+                        'aria-label': `${points} points` }, `+${points}`) : null,
+                    !found && !finished.value && !revealed.value && !individuallyRevealed ? h('button', {
                       type: 'button',
                       class: 'word-search-word-reveal',
-                      'aria-pressed': individuallyRevealed,
-                      onClick: () => toggleWordReveal(word),
-                    }, individuallyRevealed ? 'Hide answer' : 'Reveal answer') : null,
+                      onClick: () => revealWord(word),
+                    }, 'Reveal answer') : null,
                   ]),
                 ]),
               ]);
             })),
           ] : [
-            h('h3', complete.value ? 'Nicely done!' : 'Words to find'),
-            h('p', { class: 'word-search-progress' }, `${foundWords.value.size} of ${puzzle.words.length} found`),
-            h('progress', { max: puzzle.words.length, value: foundWords.value.size, 'aria-label': 'Words found' }),
-            h('ul', {}, puzzle.words.map((word) => {
+            h('h3', finished.value ? game.value?.gaveUp ? 'Board ended' : 'Nicely done!' : 'Words to find'),
+            h('p', { class: 'word-search-progress' },
+              `${foundWords.value.size} of ${activeWords.value.length} found · ${score.value.earned} points`),
+            h('progress', { max: activeWords.value.length, value: foundWords.value.size, 'aria-label': 'Words found' }),
+            h('ul', {}, activeWords.value.map((word) => {
               const found = foundWords.value.has(word);
-              const location = revealed.value ? game.value?.placements.find((entry) => entry.word === word) : null;
+              const location = (revealed.value || finished.value)
+                ? game.value?.placements.find((entry) => entry.word === word) : null;
+              const points = game.value ? wordScore(game.value, word) : 0;
               return h('li', {
                 key: word, class: { 'is-found': found },
               }, [
                 h('span', { class: 'word-search-answer-text' }, word),
-                h('span', { class: 'word-search-word-state' }, found ? '✓ Found' : 'To find'),
+                h('span', { class: 'word-search-word-state' }, [
+                  found ? '✓ Found' : game.value?.gaveUp ? 'Not found' : 'To find',
+                  (finished.value || found)
+                    ? h('span', { class: 'word-search-word-points',
+                      'aria-label': `${points} points` }, ` +${points}`) : null,
+                ]),
                 location ? h('span', { class: 'word-search-answer-location' },
                   `Row ${Math.floor(location.start / puzzle.size) + 1}, column ${location.start % puzzle.size + 1} → row ${Math.floor(location.end / puzzle.size) + 1}, column ${location.end % puzzle.size + 1}`) : null,
               ]);
@@ -301,7 +403,7 @@ export const PuzzleGame = defineComponent({
           ]),
         ]) : null,
         h('p', { class: 'word-search-game-message', role: 'status', 'aria-live': 'polite' }, message.value),
-        game.value ? h('div', { class: 'word-search-game-actions' }, [
+        game.value && !finished.value ? h('div', { class: 'word-search-game-actions' }, [
           h('button', {
             type: 'button',
             class: ['quiet-button', 'word-search-rotate-button', { 'is-rotating': rotating.value }],
@@ -327,27 +429,45 @@ export const PuzzleGame = defineComponent({
             },
           }, revealed.value ? 'Hide answers' : 'Show answers'),
           h('button', {
+            type: 'button', class: 'quiet-button word-search-give-up-button',
+            disabled: loading.value,
+            onClick: (event: MouseEvent) => requestAction('give-up', event),
+          }, 'Give up'),
+          h('button', {
             ref: restartButton, type: 'button', class: 'quiet-button', disabled: loading.value,
             onClick: (event: MouseEvent) => requestAction('restart', event),
           }, 'Start over'),
           h('button', {
             type: 'button', class: 'quiet-button', disabled: loading.value,
             onClick: (event: MouseEvent) => requestAction('new', event),
-          }, 'New layout'),
+          }, 'New grid'),
         ]) : null,
-        pending.value ? h('div', {
-          class: 'word-search-restart-review', role: 'group', 'aria-label': 'Confirm restart',
+        pending.value && !finished.value ? h('div', {
+          class: 'word-search-restart-review', role: 'group',
+          'aria-label': pending.value === 'give-up' ? 'Confirm giving up' : 'Confirm puzzle reset',
           onKeydown: (event: KeyboardEvent) => { if (event.key === 'Escape') { event.preventDefault(); cancelAction(); } },
         }, [
           h('p', pending.value === 'new'
-            ? 'Create a new arrangement? Your current progress will be cleared once the new grid is ready.'
-            : 'Clear your found words and start this grid again?'),
+            ? puzzle.selection
+              ? 'Create a new grid? Your progress will be cleared, and a different selection of words may be chosen from the pool.'
+              : 'Create a new grid? Your progress will be cleared, but the words will stay the same.'
+            : pending.value === 'give-up'
+              ? 'Give up and end this board? Unfound answers will be shown and the score finalized. You can start over afterward.'
+              : 'Clear your found words and start this grid again?'),
           h('div', { class: 'word-search-game-actions' }, [
             h('button', { ref: cancelButton, type: 'button', class: 'quiet-button', onClick: cancelAction }, 'Cancel'),
             h('button', { type: 'button', class: 'card-primary-button', onClick: confirmAction },
-              pending.value === 'new' ? 'Create new layout' : 'Start over'),
+              pending.value === 'new' ? 'Create new grid' : pending.value === 'give-up' ? 'Give up' : 'Start over'),
           ]),
         ]) : null,
+        h('details', { class: 'word-search-lifetime-activity' }, [
+          h('summary', 'Lifetime activity'),
+          h('div', { class: 'word-search-lifetime-values' }, [
+            h(EntryStatistics, { app: 'word-search', id: props.item.id, metric: 'gamesCompleted' }),
+            h(EntryStatistics, { app: 'word-search', id: props.item.id, metric: 'wordsSolved' }),
+            h(EntryStatistics, { app: 'word-search', id: props.item.id, metric: 'wordAttempts' }),
+          ]),
+        ]),
       ]);
     };
   },

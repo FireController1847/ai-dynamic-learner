@@ -496,7 +496,7 @@ export const tipsCatalog: TipsCatalog = {
           },
           {
             title: 'Use help if you need it',
-            body: 'Hint gives you a small clue. You can also show answers, start over, or make a new layout.',
+            body: 'Hint gives you a small clue. You can also show answers, start over, or make a new grid.',
             target: '.word-search-game-actions',
             targetLabel: 'Puzzle buttons',
             placement: 'top',

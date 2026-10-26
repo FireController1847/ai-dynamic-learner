@@ -25,6 +25,10 @@ Full-resolution app PNGs live directly under `src/assets/app-icons/`. Visible Ho
 
 Home app icons render at 56px; sidebar icons at 24px; header artwork at 28px. Keep source files substantially larger than those render sizes but do not use full-resolution metadata assets for routine UI painting.
 
+App artwork shares the main book-and-leaf mark's layered blue palette, with icy-blue paper and restrained cyan accents. Keep shading subtle and preserve each icon's approved optical scale within the shared square canvas; equal bounding boxes do not produce equal visual weight.
+
+Extract approved artwork directly when preparing assets from a concept sheet. Regenerating individual icons can change their silhouettes, internal spacing, and details even when the prompt requests a faithful copy. Preserve the source proportions and native detail; use transparent padding for square canvases.
+
 ## Responsive behavior
 
 Desktop is the baseline. `src/styles/mobile.css` owns phone/coarse-pointer overrides; feature styles own layout-specific container behavior. Keep controls reachable in narrow/short windows, preserve safe-area insets, and avoid horizontal page overflow unless the feature intentionally scrolls a bounded surface.
@@ -66,3 +70,110 @@ Review pre-session setup follows the same choice-card language as Index Cards re
 
 
 Review Statements display authored text as a normal session item with no answer control, feedback, hint/reveal tools, or score effect; navigation simply continues to the next item. Fill-in-the-Blanks Index Card imports surface a modal resolver when selected sources contain visible cards without blanks. Every affected card independently chooses **Convert to Statement** or **Discard**, and those decisions remain reviewable from the source row before creation.
+
+
+## Review question presentation
+
+Review Study displays all questions in one vertical list by default; each card shows its own “Question N of M” label, its answer controls, and its own Check answer/feedback/hints. Quiz and Test authors separately select either **All questions (vertical scroll)** (the default) or **One at a time** in Set options. Quiz may override its saved presentation in Customize Settings; Test uses its saved layout. One-at-a-time Quiz/Test may disable returning to earlier questions; this is enforced by navigation state and reflected in the overview. Scrolling Test still holds feedback until final submission. Statement items remain unscored, and scores/attempts stay per question regardless of layout.
+
+
+Study respects the knowledge set's optional Quiz question limit (shared with Study). When available questions exceed that limit, each Study session divides the authored sequence into that many contiguous, nearly equal sections and randomly selects one question per section. In-order, reverse-order, and shuffled presentation apply **after** selection. Revisited, finalized one-at-a-time Quiz answers can be edited if the creator permits backward navigation; editing clears prior feedback and restarts that question's attempt window, requiring a new Check answer before moving forward. The same ability is not added to forward-only Quiz or scrolling Quiz layouts.
+
+
+## Review pause and resume
+
+Question limits are creator-only: Study and Quiz share the Quiz question limit, while Test uses a separately configurable Test limit. The Quiz Customize Settings flow never shows or changes the creator's Quiz limit. Existing knowledge sets migrate their old shared limit to both independent limits. An active Study or untimed Quiz presents **Pause Studying** / **Pause Quiz** immediately to the left of **End studying** / **End quiz** in either question layout. Pausing saves the current question order and session progress to this browser before returning to the Review mode picker, whose corresponding card becomes **Resume Study** or **Resume Quiz**. Resume skips setup and restores the saved state. Test stays end-only, with no Pause option. A failed save keeps the session open and displays the error; End discards saved state.
+
+
+## Review question flags
+
+During Study, Quiz, and Test, each question card has a small toggleable top-right flag, independent of the authored knowledge set and of scoring. Flagged question numbers appear in a compact sticky rail to the right of the session content; clicking a number scrolls to that question in the full-list presentation or changes the active question in one-at-a-time mode. Jump controls honor existing forward-only restrictions and Quiz check-before-next requirements rather than bypassing them. The rail reserves space consistently, even with no bookmarked questions, and its compact numbered bookmarks are shown in the order they were selected (unmarking and marking again moves one to the bottom). The right lane is deliberately separated from the cards with a wider gap on desktop. A bookmark ribbon replaces the literal flag graphic; its per-card toggle overlays existing card padding without inserting a tall header or shifting question content. Jump controls are keyboard-accessible with descriptive labels. Reduced-motion preferences disable smooth scrolling. Flags persist in paused/recoverable browser-local session snapshots and are cleared on a fresh session or End.
+
+One-at-a-time Review does not render a disabled Previous button at the beginning of a session or when backward navigation is disallowed. The remaining primary navigation control stays right-aligned.
+
+
+## Review Multiple Choice with multiple correct answers
+
+Multiple Choice remains single-answer by default. In the question builder, **Allow multiple correct answers** changes the correct-choice indicators from radio buttons to checkboxes; previously selected answers are carried across toggle changes. During Study, Quiz, and Test the question presents checkboxes with a **Select all that apply** legend. At least one option must be selected before checking, and correctness requires an exact set match: all correct answers and no incorrect extras. Review score counts one question, not one point per selected option, and Quiz attempts are per check as before. Study's Show answer lists the selected correct choices. Results show the learner's selected choices.
+
+Test question cards do not repeat the pre-start overview's explanation that feedback is held until submission or that answers remain editable. This reminder appears only on the session introduction, not beneath each active question.
+
+The Multiple Choice builder positions its correct-choice radio buttons and checkboxes identically next to the answer text fields; only explicit text inputs receive full-width form-control styling. Checkboxes never stretch, shift the answer fields, or inherit text-field padding.
+
+## Review AI question-type strategy
+
+The AI knowledge-set creation workflow offers a choice of **Custom percentages** (the default and existing flow) or **Let AI choose** after selecting scope. Custom keeps its interactive percentage editor, type enable/disable behavior, rounding, and imported-mix warnings. AI choice hides the percentage editor and asks the AI to select a content-appropriate distribution of supported types, including omitting types that do not fit, without fixed type quotas. Total question count and coverage remain user-controlled in both modes. The AI's response is still validated question by question and discrepancies from the requested total are warned about, but AI-chosen distributions never produce percentage-mismatch warnings. The import preview labels AI-selected mixes accurately. Switching between modes retains the custom percentages without silently modifying them. Let AI choose also offers a mutually exclusive, optional focus: Default (no extra focus prompt), numerics, typed answers, memorization, relationships, or application. Every non-default focus gives brief qualitative guidance rather than imposing percentages, excluding question types, or changing import validation; the selection remains intact when switching between AI and Custom modes. The shared prompt rejects giveaway questions and obviously implausible distractors.
+
+In **Let AI choose**, the generated prompt strongly prioritizes fully valid procedural/Parameterized questions whenever source-backed numeric concepts can be varied and computed, avoids multi-word Fill in the Blanks answers, minimizes ambiguous Short Answer questions, and encourages an appropriate balance of single-answer and multi-answer Multiple Choice. None of these preferences force unsupported facts, invalid solvers, meaningless generated parameters, or artificial multiple correct answers; exact user-specified percentages continue to control Custom mode.
+
+In Review **Study** mode, clicking **Show answer** permanently makes subsequent correct checks on that question uncredited for the current session, even after **Hide answer**; previous correct checks retain their credit. Such checks still receive correctness feedback, but no celebratory effect or increment to session/global correct-check statistics. Total checks still include these attempts. The Study recap separates revealed-answer (correct but uncredited) checks from incorrect checks, and records answers ever revealed even if hidden later. This state persists through Study pause/resume and parameterized-session recovery; starting a fresh session resets it. Quiz and Test grading are unchanged.
+
+## Review results navigation and filtering
+
+On completion (manual submission or timed Test expiry), Quiz and Test scroll their Review detail pane smoothly to the top so the score and results heading are visible; reduced-motion preferences use an immediate scroll instead. When detailed results are permitted, the results view offers accessible All / Correct / Incorrect tabs with item counts and arrow-key/Home/End navigation. All includes unscored Statements; Correct and Incorrect include only graded questions. The tabs filter the response list without changing the score or original question numbers. Empty tabs show a friendly message. Score-only Tests continue to hide all detailed responses and do not offer filtering tabs. Starting a fresh session resets the selected tab to All.
+
+Review results show a **Done reviewing** action near the score and again below the response list, avoiding a long scroll to leave review. Both actions end result inspection and return to the overview. In active Study/Quiz/Test sessions, the compact sticky bookmark rail overlays the same layout column as the question content and floats to its right without occupying a second grid track, preserving the original 940px scrolling and 820px paginated session width caps. On narrow panes, the rail docks along the trailing edge without altering card width.
+
+Review's mode picker keeps text and per-mode statistics aligned together (and responsive to actual workspace width beside the library), with compact stacked cards on small screens. Session status metadata stays grouped at the start of the header, while **Pause** and **End** stay together as a distinct action cluster; the progress track spans the entire header in one-at-a-time mode. At narrow widths the actions move below the metadata rather than being spaced arbitrarily across rows. Session-introduction statistics appear separately from Back/Resume/Start actions. Intentional centered artwork and scores are preserved.
+
+## Append Review questions in the builder
+
+The Review question builder has an **Import questions** action. It opens a separate staged AI Prompt / JSON Import workspace, offering a request for additional questions that lists existing prompts to avoid duplication. A user can also paste existing Review-format AI JSON or a bare JSON array of questions. The shared AI import validator checks all supported types, including generated parameters and solver packages. The import previews new questions, correct answers on demand, and any warnings; it cannot exceed the knowledge set's maximum question count. Confirming adds independent copies with new question IDs at the end of the in-progress builder, selects the first added question, and returns to authoring. Existing question text/order, set name, and options are preserved; the changes only persist when **Save questions** is pressed, and cancelling the builder still discards draft additions.
+
+## Review attempt history
+
+Each knowledge set offers History from the mode picker and toolbar, listing every completed Quiz and Test in completion order with the original date, score, question count, and timeout status. Selecting Review opens the existing score/results presentation (including All/Correct/Incorrect tabs) in read-only mode, without creating a new attempt, changing the statistics, or altering current question data. The latest completed Quiz can be opened quickly with **Review last quiz** on the picker or Quiz intro; **Resume saved session** stays reserved for unfinished paused work. Results display the recorded grading and exact original questions. Score-only Test settings remain enforced for historical viewing. History layout stacks gracefully in narrower Review panes.
+
+The Review knowledge-set toolbar groups **History** and **Build questions** at the right as one action cluster, never spacing the two controls independently across the header. At narrower workspace widths the action cluster wraps together beneath the mode/question count and remains usable.
+
+## LaTeX math in Markdown
+
+Shared Markdown content supports inline `$...$` or `\(...\)` and display `$$...$$` or `\[...\]` (display formulas work best on their own line). Render with bundled KaTeX and local fonts; equations inherit their surrounding text color, and long display equations scroll horizontally instead of widening the workspace. Notebook's Markdown cheatsheet documents examples. LaTeX is rendering-only: no changes to authored Markdown or the saved data format; backtick code remains literal.
+
+Review newly created knowledge sets default to a saved maximum of **25 questions per session** and **Shuffle** question order. This number stays configured as 25 even when the knowledge set contains fewer questions; session selection uses all available questions up to the cap. Study's initial order selection follows the saved order while remaining changeable for that session. Enabling the question-limit toggle in the builder also starts at 25 regardless of current set size. Previously saved, explicit order and limit settings remain unchanged, including unlimited sessions.
+
+## Variable incorrect options in Review Multiple Choice
+
+The question builder offers **Vary incorrect choices between sessions**. Authors can choose a displayed count of 2–8 answer options and add up to 100 extra distinct incorrect terms. Every correct answer remains present, including multiple-correct-answer questions; the remaining slots randomly sample both the base incorrect choices and the larger term pool. The final displayed options are shuffled to avoid revealing the answer's position. Sampling happens once per seeded session instance, not while a question is displayed. The same options are reconstructed after Pause/Resume, and Quiz/Test History keeps exactly the choices presented. Ordinary Multiple Choice questions remain unchanged. Review AI JSON accepts the optional `choicePool: { displayCount, distractors }` property.
+
+Dropdown matching questions always shuffle their available answer options for every new Study, Quiz, or Test session, independently of the order of the matching rows and regardless of the optional Multiple Choice choice-shuffle setting. If the random permutation accidentally reproduces the complete row-to-answer order, it is rotated to avoid revealing all matches by position. Only the options are rearranged, not the labels or the correct mappings. Session-seeded order remains stable while answering, across Pause/Resume, and in completed-attempt history. The choice-shuffling toggle now labels only Multiple Choice.
+
+The **Shuffle multiple-choice choices** setting defaults to enabled for new Review knowledge sets. Study, Quiz, and Test all honor the saved Multiple Choice shuffle preference; explicitly saved disabled settings remain disabled. Dropdown options remain automatically shuffled regardless of this preference.
+
+In scrolling and one-at-a-time Study, the final footer groups **End studying** on the left of **Keep studying**. End returns to the overview; Keep studying records any completed Study pass, starts a genuinely fresh session with newly selected/generated questions, resets the current responses, checks, reveals, attempts, flags and Study score, and smoothly scrolls the Review detail pane to the top (immediately if reduced motion is preferred). The buttons remain adjacent and usable on small screens. The inline question-by-question Previous/Next navigation still moves within the current round without resetting it.
+
+Review feedback should appear at its natural width and text scale, without translating/shaking answer cards, fields, or the feedback panel. Study and Quiz correctness feedback expands/collapses in a clipped, full-width grid row (vertical space only, fading its opacity); Test and submitted Quiz results fade in without moving the response text. Correct and incorrect feedback retain their distinct colors and subtle non-positional highlight animations. Respect reduced-motion by disabling these transitions, showing full-height content immediately.
+
+## Study session review screen
+
+The final Study footer offers **End studying** and **Review study session**, replacing the direct Keep studying restart. Review study session opens a separate read-only recap of check accuracy, total/correct/incorrect checks, unique questions practiced, hints open and answers revealed, plus individual questions with last-checked result and check count. These are practice metrics, not a graded test score. A learner can return to questions (preserving the current round), end studying, or choose Keep studying to start a newly seeded round and clear only per-round responses and check counts. End studying is available on both screens. Completion statistics are credited when opening the review and not duplicated on navigation. The layout adapts to narrow Review workspaces and respects reduced motion.
+
+## AI creation and category discovery
+
+Keep AI generation a clear user-directed handoff: first choose scope/options, then copy the generated prompt to an external AI chat with the source material, then paste the response and preview before adding content. Do not imply Dynamic Learner sends information to AI services. Introduce one action at a time rather than simultaneously exposing prompt, import, category history, and preview. Use a distinct source-sharing step before instruction customization and response import, not an illustrated tutorial embedded among options. Source sharing illustrates attaching a file or pasting text directly in the learner's external AI chat. Example animations must respect reduced motion. No external uploads occur inside Dynamic Learner, and completion is not falsely verified. Explain the effect of options beside their controls rather than showing prompt-authoring rules to learners.
+
+Category-based creation shares the source once, before choosing saved or new categories. Its new-category prompt and subsequent category-specific content prompt use the same external AI conversation and skip repeated source instructions. Returning to category selection should retain the chosen list. The overall-subject path still starts at the source illustration.
+
+The scope choices keep the established labels "Overall subject" and "Choose a category". Category discovery first offers saved lists (when available) or AI discovery. Browsing saved categories opens the category choices directly, without a JSON interchange. Creating categories with AI is a separate guided screen; success opens its category choices directly. Secondary direct-import actions bypass prompt copy. Category history remains independently clearable.
+
+JSON stays the validated internal interchange format but should not be required vocabulary for primary creation actions. Keep technical help secondary and expandable. Preserve existing content validators and preview approvals, and support keyboard focus, accessible labels, mobile, light/dark, and reduced motion.
+
+## Guided AI handoff and question bank clarity
+
+Treat manual AI generation as explicit checkpoints: share source in an external chat, customize instructions, copy instructions, **send them to that AI**, return with its reply, and check/preview before saving. Copying is never the same as sending. Use an illustrated confirmation screen between clipboard copy and response paste; never advance straight to import on a copy success. Distinguish the full question bank from per-session limits, and explain the randomized/balanced subset at Study and Quiz entry points. If the AI produces a different item count, show requested and received counts, clarify that valid extras are not silently discarded, and offer an actionable retry without hiding the main accept action. Keep large previews collapsed until opened.
+
+## Review mobile and tablet layouts
+
+Review's library is an overlay on narrow/touch viewports. The question editor presents a horizontally scrollable, keyboard-accessible question strip when its content pane is narrow; keep the selected question in view. Flag navigation docks above session questions on narrow panes instead of covering answers. Critical controls use touch-sized targets; form fields resist mobile focus zoom; AI creation and session/result layouts respond to the Review pane width rather than only the device viewport. Maintain desktop layouts and underlying question/session semantics, accessible names, focus, theme and reduced-motion behavior.
+
+## Review narrow-pane actions
+
+The Review knowledge-set toolbar and the matching History, Publish, Build actions
+beneath the mode choices retain their existing desktop buttons. When the local
+Review pane is 640px wide or narrower, they become a three-column row of compact,
+evenly sized action tiles with icons above labels, readable counts, and 72px
+minimum height. The knowledge-set title and question count share the left side
+of the unified header; History, Publish, and Build occupy the right, and wrap
+beneath the title in narrow panes. Mode selection uses the Study/Quiz/Test cards.
+The layout responds to the pane/container width, not just the device viewport, and
+keeps native button focus, disabled states, and semantics.

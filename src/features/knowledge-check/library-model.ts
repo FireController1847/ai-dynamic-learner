@@ -4,8 +4,10 @@ import { createId, isValidId } from '../../core/ids.ts';
 import { createTreeOperations, type TreeMovePosition } from '../../core/tree.ts';
 import { isCheckMode, type CheckModeId } from './check-types.ts';
 import { validateQuestions, type Question } from './question-model.ts';
+import { validateReviewHistory, type ReviewAttempt } from './attempt-history.ts';
+import { validateLastStudySession, type LastStudySession } from './last-study-session.ts';
 
-export interface CheckItem { id: string; kind: 'set'; name: string; questions: Question[]; mode?: CheckModeId; options?: SetOptions }
+export interface CheckItem { id: string; kind: 'set'; name: string; questions: Question[]; mode?: CheckModeId; options?: SetOptions; history?: ReviewAttempt[]; lastStudy?: LastStudySession }
 export interface Group { id: string; kind: 'group'; name: string; children: LibraryItem[] }
 export type LibraryItem = Group | CheckItem;
 export interface KnowledgeCheck { items: LibraryItem[] }
@@ -78,12 +80,14 @@ export function validateKnowledgeCheck(value: unknown): asserts value is Knowled
           item.questions = [];
           delete item.type;
         }
-        if (item.kind !== 'set' || Object.keys(item).some((key) => !['id', 'kind', 'name', 'questions', 'mode', 'options'].includes(key))) {
+        if (item.kind !== 'set' || Object.keys(item).some((key) => !['id', 'kind', 'name', 'questions', 'mode', 'options', 'history', 'lastStudy'].includes(key))) {
           throw new Error('A knowledge set contains unsupported data.');
         }
         if (Object.hasOwn(item, 'mode') && !isCheckMode(item.mode)) throw new Error('The knowledge set mode is invalid.');
         validateQuestions(item.questions);
         if (Object.hasOwn(item, 'options')) validateSetOptions(item.options);
+        if (Object.hasOwn(item, 'history')) validateReviewHistory(item.history);
+        if (Object.hasOwn(item, 'lastStudy')) validateLastStudySession(item.lastStudy);
       }
     }
   }

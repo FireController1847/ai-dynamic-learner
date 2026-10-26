@@ -8,7 +8,7 @@ Dynamic Learner is a browser-only Vue 3 application built with webpack and stric
 
 Node.js 24+ runs build tooling. `npm start` launches webpack-dev-server, `npm run typecheck` checks browser and Node configurations, and `npm run build` emits production output to ignored `dist/`.
 
-Markdown preview uses Marked plus DOMPurify. Sanitization stays explicit; generated preview HTML must not become an unchecked route to Vue props, handlers, styles, or arbitrary DOM behavior.
+Markdown preview uses Marked plus DOMPurify, with the shared KaTeX LaTeX module for inline and display math. Sanitization stays explicit: user HTML is sanitized before DOM-to-Vue conversion; the Markdown lexer emits encoded math placeholders and only those sanitized placeholders are replaced with KaTeX-generated HTML using `trust: false` and bounded expansion. Ordinary Markdown HTML still cannot supply Vue handlers, classes, or styles.
 
 `src/components/markdown-renderer.ts` owns the shared synchronous GFM parser, DOMPurify allowlist, and safe DOM-to-VNode conversion. `MarkdownContent` gives independent rendered regions unique heading IDs; `src/styles/markdown-content.css` owns shared Markdown typography. Notebook retains an adapter for its existing outline heading IDs and paper presentation. Review stores optional question context as Markdown source and renders it separately from the plain-text question title and answer controls.
 
@@ -50,8 +50,8 @@ Important shared modules include:
 - `src/components/use-dialog.ts`: native dialog lifecycle.
 - `src/components/delete-confirmation.ts`: shared destructive confirmation.
 - `src/components/use-persisted-panel-resize.ts`: shared persisted panel resizing.
-- `src/components/ai-prompt-exchange.ts`: common AI prompt/JSON tabs, clipboard handoff, validation/preview slots, and reduced-motion-aware transitions for Guide, Index Cards, and Review. Features own prompt contracts and validators.
-- `src/components/ai-category-picker.ts`: category selection shared by Index Cards and Review, using the validated content-only category contract and local history in `src/core/ai-study-categories.ts` / `ai-category-history.ts`. `src/core/ai-json.ts` owns bounded bare/fenced JSON parsing. Review and Index Cards retain their own generated-content validators.
+- `src/components/ai-prompt-exchange.ts`: guided, sequential AI instruction/response steps, clipboard handoff, direct import, validation/preview slots, and reduced-motion-aware transitions for Guide, Index Cards, and Review. Features own prompt contracts and validators.
+- `src/components/ai-category-picker.ts`: category selection shared by Index Cards and Review, using the validated content-only category contract and separate saved-list, new-list, and category-selection screens backed by local history in `src/core/ai-study-categories.ts` / `ai-category-history.ts`. `src/core/ai-json.ts` owns bounded bare/fenced JSON parsing. Review and Index Cards retain their own generated-content validators.
 - `src/app/app-icon.ts`: visible 256px app artwork selection (WebP, then PNG, GIF fallback).
 
 Reusable packages live under `packages/`. Tips owns guided-tutorial UI; `@dynamic-learner/answer-matching` owns generic answer equivalency. `src/components/answer-strictness-field.ts` provides the shared 1–4 UI control. Index Cards persists one app-wide Fill-in-the-Blanks strictness value; Review persists separate Short Answer and Fill-in-the-Blanks strictness values per knowledge set.
@@ -66,6 +66,14 @@ Browser-local presentation state that is not part of user content (for example t
 
 ## Build and assets
 
+Review's publishing foundation lives in `features/knowledge-check/publishing/`:
+validated authored snapshots become concrete, layout-specific document views for
+future delivery adapters. Paged.js pagination runs on demand inside a dedicated
+iframe so its global DOM/style work cannot affect the app. Setup/preparation is
+transient; Study has a compact sheet renderer and browser print/Save as PDF, while
+Bubble and Gap remain planned modes. See
+`review-publishing.md` for the pipeline and extension/lifecycle contracts.
+
 Webpack emits hashed JS/CSS bundles and copies `src/assets/` recursively to `dist/assets/` with stable asset paths. Full-resolution per-app PNGs live directly under `src/assets/app-icons/`; lightweight visible variants live in `app-icons/webp`, `app-icons/png`, and `app-icons/gif`.
 
 `build/site-config.mts` and `build/page-metadata.mts` create route HTML and metadata. GitHub Pages uses the same production build; see `github-pages.md`.
@@ -73,9 +81,34 @@ Webpack emits hashed JS/CSS bundles and copies `src/assets/` recursively to `dis
 
 ## Review session configuration
 
-Review keeps saved assessment defaults in the knowledge set but transient per-session choices outside persistence. `session-settings.ts` converts saved options into mode-specific runtime settings and prepares a stable question/choice order when a session starts. `session-setup.ts` owns pre-session choices: Study always chooses an order, Quiz chooses saved defaults or temporary customization, and Test bypasses customization and uses saved builder settings exactly.
+Review keeps saved assessment defaults in the knowledge set but transient per-session choices outside persistence. Study always uses the all-questions scrolling layout; Quiz/Test persist separate scroll-or-one-at-a-time layouts and backward-navigation settings in `set-options.ts`. A Quiz may temporarily override its saved layout through Customize Settings; Test has no session override. `knowledge-session.ts` renders question controls from one shared per-question renderer in either a complete vertical list or one-at-a-time flow. `session-state.ts` accepts per-question check targets and prepares all generated variants before starting scrolling sessions, including on resume; older saved parameterized sessions retain one-at-a-time presentation by default. `session-settings.ts` converts saved options into mode-specific runtime settings and prepares a stable question/choice order when a session starts. `session-setup.ts` owns pre-session choices: Study always chooses an order, Quiz chooses saved defaults or temporary customization, and Test bypasses customization and uses saved builder settings exactly.
 
 
 ## Review Statements and Fill-in-the-Blanks import resolution
 
 Review `statement` items use the normal question model/order pipeline but are intentionally non-scorable and require no response. They count toward session length, ordering, limits, and navigation while remaining outside answered/scored denominators. Fill-in-the-Blanks Index Card imports preserve cards with authored blanks normally; visible cards without blanks require an explicit per-card transient decision to convert to Statement or discard before the import is created.
+
+## Parameterized Review questions
+
+`src/core/parameterized/` is a Vue- and subject-independent procedural engine: template rules, seeded RNG, restricted expressions, trusted versioned solver registration, concrete instance generation, and computed answer matching. Review's `parameterized-model.ts` adapts generated instances into the existing question/feedback/scoring pipeline. The editor uses focused variable/answer controls with an advanced JSON escape hatch; template strings stay canonical in the question's prompt/context/explanation.
+
+`parameterized-session.ts` owns the bounded browser-local session snapshot and deterministic choice order. `session-state.ts` generates a question on first presentation, caches it for retries/revisits, and saves template snapshots plus effective seeds and session state. Static-only sessions retain transient behavior. Templates are workspace content; generated instances are runtime data and are never saved into the authored question array. See `parameterized-questions.md` for the extension contract.
+
+Uploaded solver definitions live inside their question's `rules.solver.package`; they never register as trusted application functions. `solver-package.ts` owns metadata/result validation and `solver-sandbox.ts` owns the browser boundary (opaque sandbox frame, inherited restrictive CSP, dedicated Worker, cancellation/time limits). The core generator shares one procedural pipeline between its synchronous trusted entry point and asynchronous uploaded-code entry point. `solver-editor.ts` handles upload/selection/input mappings; `ai-parameterized-format.ts` owns the AI solver contract and reference resolution. Resumable generated sessions retain validated concrete instances alongside templates/seeds, avoiding code re-execution for already presented questions.
+
+
+Study question selection: `session-settings.ts` uses contiguous-section sampling when Study's configured question limit is smaller than the authored set, one draw from each section before applying requested display order. `session-state.ts` generates the sample only on Start; generated question templates remain stable while navigating. In revisitable one-at-a-time Quiz, `knowledge-session.ts` clears finalized status and prior feedback upon answer revision so checking and per-question score state remain coherent.
+
+
+`parameterized-session.ts` is also Review's validated, bounded browser-local session persistence layer. Explicit Study and untimed Quiz pauses serialize the existing session fields, including static-only question sets, using `paused: true`; the mode picker only advertises snapshots with this flag. `knowledge-set.ts` routes the paused mode directly back to the saved effective settings, and `knowledge-session.ts` resumes rather than rebuilding the randomized session. Ordinary sessions cease being marked paused on resume; automatic generated-session interruption recovery remains separate.
+
+
+Fill-in-the-Blanks number matching is centralized in `src/core/fill-blank.ts` for both Review and Index Cards. A fully parseable finite numeric expected answer (allowing comma separators, signed decimals and scientific notation) bypasses all fuzzy/linguistic/semantic text heuristics and requires the submitted value to be numerically identical. Comparison uses canonical decimal digits and exponents to avoid IEEE-754 rounding collisions. Nonnumeric blanks retain the configured text matcher and adjacent and/or swap handling.
+
+Review AI generation uses `ReviewAiPreferences.mixMode` (`custom` or `ai`) as transient configuration in `ai-creation.ts`, with conditional prompt generation/import warning policy in `ai-import-format.ts`. Count validity is independent of weights; custom mode allocates/compares type quotas, while AI mode presents all supported question-type schemas and validates generated questions without a quota. Neither mode changes persisted question records or workspace format.
+
+Review completed assessment history is modeled and validated in `src/features/knowledge-check/attempt-history.ts`, stored with the set's `history` collection, and surfaced in `attempt-history-view.ts`. The archive owns original question templates and separately validated generated variants; it is independent of browser-local active/paused session snapshots. Workspace IndexedDB mapping and observer preserve the optional history field in the `reviewSets` record, so backups and cross-tab restoration are consistent. `KnowledgeSession` reuses its results UI for a read-only archived view without recording statistics.
+
+`src/components/latex-module.ts` owns math tokenization/rendering for the shared `markdown-renderer.ts`, so Notebook previews and every `MarkdownContent` consumer use the same math support. CSS and font resources are bundled via webpack (no runtime CDN); Markdown source and exported content remain unchanged. Code spans and fenced blocks stay literal.
+
+Generated AI study-content prompts share formatting guidance in `src/core/ai-formatting-guidance.ts`. Review AI JSON explicitly encourages GFM and KaTeX only in optional `context`; its plain-text questions, grading keys, parameters, and solver code remain unformatted. Guide, Index Cards, category discovery, and Word Search/Crossword generation have no Markdown-rendered JSON content fields, so their prompts acknowledge Markdown/KaTeX support elsewhere while prohibiting markup in their own outputs. The Review append-questions prompt composes the same Review guidance automatically.

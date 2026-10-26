@@ -1,0 +1,11 @@
+{
+  "format": "dynamic-learner-solver",
+  "version": 1,
+  "id": "combine-values",
+  "solverVersion": "1",
+  "label": "Combine values",
+  "outputs": [
+    "computedTotal"
+  ],
+  "source": "function solve(parameters) { const { left, right } = parameters; if (typeof left !== \"number\" || typeof right !== \"number\") throw new Error(\"Numeric inputs required\"); return { answers: { computedTotal: left + right }, explanation: `${left} + ${right} = ${left + right}.`, trace: [\"Read both inputs\", \"Add them together\"] }; }"
+}

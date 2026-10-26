@@ -44,8 +44,40 @@ export function parseFillBlankTemplate(source: string): FillBlankTemplate {
 
 export type FillBlankAnswerMatcher = (answer: string, response: string) => boolean;
 
+/**
+ * Numeric blanks are mathematical values, not spelling exercises. Strip
+ * formatting commas, require the entire value to be a finite decimal number,
+ * then compare canonical decimals without floating-point rounding.
+ */
+function numericBlankKey(value: string): string | null {
+  const text = value.trim().replace(/,/g, '');
+  const parts = /^([+-]?)(?:(\d+)(?:\.(\d*))?|\.(\d+))(?:[eE]([+-]?\d+))?$/.exec(text);
+  if (!parts || !Number.isFinite(Number(text))) return null;
+
+  const fraction = parts[3] ?? parts[4] ?? '';
+  const digits = ((parts[2] ?? '0') + fraction).replace(/^0+/, '');
+  if (!digits) return '0';
+
+  const significant = digits.replace(/0+$/, '');
+  const exponent = BigInt(parts[5] ?? '0') - BigInt(fraction.length) +
+    BigInt(digits.length - significant.length);
+  return `${parts[1] === '-' ? '-' : ''}${significant}e${exponent}`;
+}
+
+export function fillBlankAnswerMatches(
+  answer: string,
+  response: string,
+  matches: FillBlankAnswerMatcher = isAnswerCorrect,
+): boolean {
+  const expectedNumber = numericBlankKey(answer);
+  if (expectedNumber !== null) {
+    return numericBlankKey(response) === expectedNumber;
+  }
+  return matches(answer, response);
+}
+
 export function isFillBlankAnswerCorrect(answer: string, response: string): boolean {
-  return isAnswerCorrect(answer, response);
+  return fillBlankAnswerMatches(answer, response);
 }
 
 export function fillBlankCorrectness(
@@ -53,8 +85,9 @@ export function fillBlankCorrectness(
   responses: readonly string[],
   matches: FillBlankAnswerMatcher = isFillBlankAnswerCorrect,
 ): boolean[] {
+  const matchesBlank = (answer: string, response: string) => fillBlankAnswerMatches(answer, response, matches);
   const result = template.answers.map((answer, index) =>
-    matches(answer, responses[index] ?? ''));
+    matchesBlank(answer, responses[index] ?? ''));
 
   for (let index = 0; index <= template.segments.length - 3; index += 1) {
     const left = template.segments[index];
@@ -65,8 +98,8 @@ export function fillBlankCorrectness(
       continue;
     }
 
-    if (matches(left.answer, responses[right.index] ?? '') &&
-        matches(right.answer, responses[left.index] ?? '')) {
+    if (matchesBlank(left.answer, responses[right.index] ?? '') &&
+        matchesBlank(right.answer, responses[left.index] ?? '')) {
       result[left.index] = true;
       result[right.index] = true;
     }

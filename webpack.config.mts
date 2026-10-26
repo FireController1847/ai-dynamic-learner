@@ -47,7 +47,11 @@ export default (_env: unknown, argv: { mode?: Configuration['mode'] }): Configur
             },
           },
         },
-        { test: /\.css$/i, use: [MiniCssExtractPlugin.loader, 'css-loader'] },
+        { test: /\.css$/i, oneOf: [
+          // Publication frames need self-contained CSS strings with bundled font URLs.
+          { resourceQuery: /publication/, use: [{ loader: 'css-loader', options: { exportType: 'string' } }] },
+          { use: [MiniCssExtractPlugin.loader, 'css-loader'] },
+        ] },
         { test: /\.(png|jpe?g|gif|svg|webp|ico|woff2?)$/i, type: 'asset/resource' },
       ],
     },
@@ -77,6 +81,8 @@ export default (_env: unknown, argv: { mode?: Configuration['mode'] }): Configur
         { from: '@vue/*/LICENSE', to: 'licenses/[path][name]', context: 'node_modules' },
         { from: 'node_modules/marked/LICENSE', to: 'licenses/marked.txt' },
         { from: 'node_modules/dompurify/LICENSE', to: 'licenses/dompurify.txt' },
+        { from: 'node_modules/katex/LICENSE', to: 'licenses/katex.txt' },
+        { from: 'node_modules/pagedjs/LICENSE.md', to: 'licenses/pagedjs.txt' },
       ] }),
     ],
     optimization: {

@@ -75,11 +75,14 @@ export function normalizeAnswer(value: string): string {
     .toLocaleLowerCase();
 }
 
-function levenshteinDistance(left: string, right: string): number {
+function editDistanceWithLetterTranspositions(left: string, right: string): number {
   if (left === right) return 0;
   if (!left.length) return right.length;
   if (!right.length) return left.length;
 
+  // Optimal string alignment distance: adjacent letter swaps count as one typo.
+  // Numbers and punctuation cannot be transposed into a matching answer.
+  let previousPrevious = new Array<number>(right.length + 1);
   let previous = Array.from({ length: right.length + 1 }, (_value, index) => index);
   let current = new Array<number>(right.length + 1);
 
@@ -92,8 +95,18 @@ function levenshteinDistance(left: string, right: string): number {
         current[rightIndex - 1]! + 1,
         previous[rightIndex - 1]! + substitutionCost,
       );
+      if (leftIndex > 1 && rightIndex > 1 &&
+          left[leftIndex - 1] === right[rightIndex - 2] &&
+          left[leftIndex - 2] === right[rightIndex - 1] &&
+          /\p{L}/u.test(left[leftIndex - 1]!) &&
+          /\p{L}/u.test(left[leftIndex - 2]!)) {
+        current[rightIndex] = Math.min(
+          current[rightIndex]!,
+          previousPrevious[rightIndex - 2]! + 1,
+        );
+      }
     }
-    [previous, current] = [current, previous];
+    [previousPrevious, previous, current] = [previous, current, previousPrevious];
   }
 
   return previous[right.length] ?? 0;
@@ -111,7 +124,7 @@ export function answerSimilarity(answer: string, response: string): number {
   const submitted = normalizeAnswer(response);
   const longest = Math.max(expected.length, submitted.length);
   if (!longest) return 1;
-  return 1 - (levenshteinDistance(expected, submitted) / longest);
+  return 1 - (editDistanceWithLetterTranspositions(expected, submitted) / longest);
 }
 
 function consonant(value: string): boolean {

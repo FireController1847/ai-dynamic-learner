@@ -19,8 +19,8 @@
   flex-shrink: 0;
   align-items: center;
   gap: 8px;
-  min-height: 48px;
-  padding: 2px 8px;
+  min-height: 44px;
+  padding: 0 8px;
   border-bottom: 1px solid var(--border-color);
   background: var(--page-background);
 }
@@ -91,7 +91,40 @@ body:has(.navigation-drawer[open]) { overflow: hidden; }
 .drawer-logo { width: 32px; height: 32px; }
 .drawer-title { font-weight: 600; overflow-wrap: anywhere; }
 .drawer-header .menu-toggle { font-size: 24px; font-weight: 400; }
+.drawer-navigation { display: flex; flex-direction: column; gap: 12px; }
 .drawer-panel ul { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.navigation-tools { padding-bottom: 12px; border-bottom: 1px solid var(--border-color); }
+.navigation-tools-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+  transition: background-color var(--motion-fast);
+}
+.navigation-tools-summary::-webkit-details-marker { display: none; }
+.navigation-tools-summary:hover { background: var(--surface-hover); }
+.navigation-tools-summary .ui-icon {
+  width: 16px;
+  height: 16px;
+  margin-left: auto;
+  color: var(--text-secondary);
+  transition: transform var(--motion-fast);
+}
+.navigation-tools[open] .navigation-tools-summary .ui-icon { transform: rotate(180deg); }
+.navigation-tools-list { margin-top: 4px !important; }
+.navigation-primary { display: grid; gap: 16px; }
+.navigation-group-heading {
+  margin: 0 0 4px 12px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 600;
+}
 .navigation-link {
   position: relative;
   display: flex;
@@ -133,6 +166,10 @@ body:has(.navigation-drawer[open]) { overflow: hidden; }
 .workspace-tools > .workspace-actions { flex-direction: column; gap: 4px; }
 .workspace-tools > .workspace-actions .quiet-button { justify-content: flex-start; border-color: transparent; background: transparent; font-weight: 400; }
 .workspace-tools > .workspace-actions .quiet-button:hover:not(:disabled) { background: var(--surface-hover); }
+/* Destructive workspace actions are separated from routine backup controls. */
+.workspace-danger-actions { margin: 8px 0 0; padding: 8px 0 0; border-top: 1px solid var(--border-color); }
+.workspace-danger-actions .quiet-button { justify-content: flex-start; width: 100%; border-color: transparent; background: transparent; font-weight: 400; }
+.workspace-danger-actions .quiet-button:hover:not(:disabled) { color: var(--danger); background: var(--danger-tint); }
 .workspace-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .workspace-storage-warning { flex-shrink: 0; margin: 0; padding: 8px var(--page-padding); color: var(--danger); background: var(--danger-tint); }
 .backup-review { margin-top: 12px; padding: 12px; border: 1px solid var(--control-border); border-radius: var(--radius); background: var(--page-background); overflow-wrap: anywhere; }
@@ -151,5 +188,5 @@ body:has(.navigation-drawer[open]) { overflow: hidden; }
 }
 
 @media (pointer: coarse) {
-  .navigation-link { min-height: 44px; }
+  .navigation-link, .navigation-tools-summary { min-height: 44px; }
 }

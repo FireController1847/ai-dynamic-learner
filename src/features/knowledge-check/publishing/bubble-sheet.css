@@ -1,0 +1,23 @@
+/* Compact black-and-white optical sheet, independent of the question columns. */
+.bubble-response-sheet { break-inside: auto; }
+.bubble-response-sheet-appended { break-before: page; page-break-before: always; }
+.bubble-sheet-heading { margin: 0 0 10pt; padding-bottom: 7pt; border-bottom: .6pt solid #999; break-inside: avoid; }
+.bubble-sheet-note { margin: 5pt 0 0; font-size: .7em; color: #444; }
+.bubble-response-rows { width: 100%; column-count: 3; column-gap: 9pt; }
+.bubble-response-row {
+  display: flex; align-items: center; gap: 3pt; box-sizing: border-box; min-width: 0;
+  margin: 0 0 2.5pt; break-inside: avoid; page-break-inside: avoid;
+}
+.bubble-response-number { flex: 0 0 24pt; font: 700 8.5pt/12pt Arial, Helvetica, sans-serif; white-space: nowrap; }
+.bubble-response-marks { display: flex; flex: 0 0 auto; gap: 2.25pt; align-items: center; }
+.bubble-response-mark {
+  display: inline-flex; justify-content: center; align-items: center;
+  box-sizing: border-box; width: 10.5pt; height: 10.5pt;
+  border: .7pt solid #222; border-radius: 50%;
+  font: 700 6.4pt/1 Arial, Helvetica, sans-serif; color: #111; background: white;
+}
+.bubble-response-mark-filled {
+  background: #111; border-color: #111; color: #fff;
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+.bubble-response-multiple { font: 700 8pt/12pt Arial, Helvetica, sans-serif; color: #555; }

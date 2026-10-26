@@ -3,6 +3,7 @@ import type { Workspace, WorkspaceController } from './workspace.ts';
 import { requestLeave } from '../core/leave-guards.ts';
 import { inputValue } from '../core/dom.ts';
 import { Icon } from '../components/icon.ts';
+import { DeleteConfirmation } from '../components/delete-confirmation.ts';
 import { countDocuments, countItems as countNotebookItems } from '../features/notebook/library-model.ts';
 import { countCards, countItems as countIndexCardItems } from '../features/index-cards/tree-model.ts';
 import {
@@ -26,6 +27,7 @@ export const WorkspaceTools = defineComponent({
     const downloading = ref(false);
     const message = ref('');
     const error = ref('');
+    const clearStep = ref<0 | 1 | 2>(0);
 
     async function upload(event: Event) {
       if (!(event.target instanceof HTMLInputElement)) return;
@@ -75,7 +77,24 @@ export const WorkspaceTools = defineComponent({
       }
     }
 
-    return () => h('section', { class: 'workspace-tools', 'aria-label': 'Workspace backups' }, [
+    async function clearWorkspace() {
+      if (busy.value) return;
+      clearStep.value = 0;
+      busy.value = true;
+      pending.value = null;
+      error.value = '';
+      message.value = '';
+      try {
+        await props.workspace.clearWorkspace();
+        message.value = 'Workspace data cleared. You can start fresh or upload a previously downloaded backup.';
+      } catch (problem) {
+        error.value = problem instanceof Error ? problem.message : String(problem);
+      } finally {
+        busy.value = false;
+      }
+    }
+
+    return () => h('section', { class: 'workspace-tools', 'aria-label': 'Workspace data and backups' }, [
       h('h2', { class: 'workspace-tools-heading' }, 'Workspace'),
       h('div', { class: 'workspace-actions' }, [
         h('button', { type: 'button', class: 'quiet-button', disabled: downloading.value, onClick: () => { void download(); } }, [
@@ -89,6 +108,14 @@ export const WorkspaceTools = defineComponent({
           ref: fileInput, type: 'file', accept: '.json,application/json', hidden: true,
           onChange: upload,
         }),
+      ]),
+      h('div', { class: 'workspace-danger-actions' }, [
+        h('button', {
+          type: 'button', class: 'quiet-button delete-button',
+          disabled: busy.value || downloading.value ||
+            (!props.workspace.ready.value && !props.workspace.storageProblem.value),
+          onClick: () => { error.value = ''; message.value = ''; clearStep.value = 1; },
+        }, [h(Icon, { name: 'trash' }), busy.value ? 'Clearing workspace…' : 'Clear workspace data']),
       ]),
       h('details', { class: 'backup-preferences' }, [
         h('summary', 'Backup status and reminders'),
@@ -132,6 +159,20 @@ export const WorkspaceTools = defineComponent({
       error.value ? h('p', { class: 'workspace-error', role: 'alert' }, error.value) : null,
       props.workspace.storageProblem.value
         ? h('p', { class: 'workspace-error', role: 'alert' }, props.workspace.storageProblem.value) : null,
+      clearStep.value ? h(DeleteConfirmation, {
+        key: clearStep.value,
+        itemName: 'Dynamic Learner workspace',
+        title: clearStep.value === 1 ? 'Clear workspace data?' : 'Are you sure?',
+        detail: clearStep.value === 1
+          ? 'This removes all notebooks, tasks, cards, puzzles, guides, Review questions, and saved statistics from this browser. Download a backup before continuing if you want to keep anything.'
+          : 'This deletes every saved workspace and its browser-local study sessions, including old recovery copies. The data is unrecoverable from this browser after clearing. Only a previously downloaded backup can restore it.',
+        confirmLabel: clearStep.value === 1 ? 'Continue' : 'Yes, clear everything',
+        onCancel: () => { clearStep.value = 0; },
+        onConfirm: () => {
+          if (clearStep.value === 1) clearStep.value = 2;
+          else if (clearStep.value === 2) void clearWorkspace();
+        },
+      }) : null,
     ]);
   },
 });

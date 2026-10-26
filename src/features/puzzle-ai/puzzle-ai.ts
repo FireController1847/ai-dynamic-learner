@@ -1,0 +1,346 @@
+import { computed, defineComponent, h, ref, Transition, type PropType } from 'vue';
+import { AiCategoryPicker } from '../../components/ai-category-picker.ts';
+import { AiScopeChoices } from '../../components/ai-scope-choices.ts';
+import { AiPromptExchange } from '../../components/ai-prompt-exchange.ts';
+import { AiCoverageAcceptance } from '../../components/ai-coverage-acceptance.ts';
+import { MAX_AI_IMPORT_LENGTH } from '../../core/ai-json.ts';
+import type { AiCardCategories, AiCardScope } from '../../core/ai-study-categories.ts';
+import { inputValue } from '../../core/dom.ts';
+import { DIFFICULTIES, GRID_SIZES, MAX_LAYOUT_WORDS, MIN_WORDS, MAX_INSTRUCTIONS_LENGTH, STUDY_MODES, type Difficulty, type GridSize, type StudyMode } from '../word-search/puzzle-model.ts';
+import { defaultPuzzleAiOptions, parsePuzzleAiImport, puzzleAiLimits, puzzleAiPrompt, type PuzzleAiKind, type PuzzleAiOptions, type PuzzleAiResult } from './puzzle-ai-format.ts';
+
+export const PuzzleAiCreation = defineComponent({
+  name: 'PuzzleAiCreation',
+  props: {
+    kind: { type: String as PropType<PuzzleAiKind>, required: true },
+    destination: { type: String, required: true },
+  },
+  emits: { cancel: () => true, create: (_value: PuzzleAiResult) => true },
+  setup(props, { emit }) {
+    const label = computed(() => props.kind === 'word-search' ? 'Word Search' : 'Crossword');
+    const categories = ref<AiCardCategories | null>(null);
+    const scope = ref<AiCardScope | null>(null);
+    const preferences = ref<PuzzleAiOptions>(defaultPuzzleAiOptions(props.kind));
+    const configured = ref(false);
+    const entry = ref<'scope' | 'categories' | 'settings' | 'direct'>('scope');
+    const configurationProblem = ref('');
+    const json = ref('');
+    const problem = ref('');
+    const candidate = ref<PuzzleAiResult | null>(null);
+    const coverageAccepted = ref(false);
+    const backward = ref(false);
+    const prompt = computed(() => puzzleAiPrompt(props.kind, scope.value, preferences.value));
+    function updatePreferences(changes: Partial<PuzzleAiOptions>) {
+      preferences.value = { ...preferences.value, ...changes };
+      candidate.value = null;
+      problem.value = '';
+      configurationProblem.value = '';
+    }
+    function continueToPrompt(event: Event) {
+      event.preventDefault();
+      const { count, instructions } = preferences.value;
+      const bounds = puzzleAiLimits[props.kind];
+      if (!Number.isInteger(count) || count < bounds.min || count > bounds.max) {
+        configurationProblem.value = `Choose between ${bounds.min} and ${bounds.max} ${props.kind === 'word-search' ? 'words' : 'answers'}.`;
+        return;
+      }
+      if (props.kind === 'word-search') {
+        if (preferences.value.selectionMode === 'all' && count > MAX_LAYOUT_WORDS) {
+          configurationProblem.value = `Use Random selection to import more than ${MAX_LAYOUT_WORDS} words.`;
+          return;
+        }
+        if (preferences.value.selectionMode === 'random') {
+          const { layoutMin, layoutMax } = preferences.value;
+          if (!Number.isInteger(layoutMin) || !Number.isInteger(layoutMax) ||
+              layoutMin < MIN_WORDS || layoutMin > layoutMax ||
+              layoutMax > MAX_LAYOUT_WORDS || layoutMax > count) {
+            configurationProblem.value = `Choose a layout range of ${MIN_WORDS}–${Math.min(MAX_LAYOUT_WORDS, count)} words, minimum no greater than maximum.`;
+            return;
+          }
+        }
+      }
+      if (instructions.length > MAX_INSTRUCTIONS_LENGTH) {
+        configurationProblem.value = `Instructions must contain at most ${MAX_INSTRUCTIONS_LENGTH} characters.`;
+        return;
+      }
+      json.value = '';
+      candidate.value = null;
+      problem.value = '';
+      configurationProblem.value = '';
+      backward.value = false;
+      configured.value = true;
+    }
+    function validate() {
+      coverageAccepted.value = false;
+      candidate.value = null;
+      problem.value = '';
+      try {
+        candidate.value = parsePuzzleAiImport(json.value, props.kind, scope.value, preferences.value);
+        if (entry.value !== 'direct' && !candidate.value.coverage) throw new Error('Missing exhaustive subject coverage inventory. Ask the AI to add coverage with itemNumbers for every source topic.');
+      }
+      catch (error) { candidate.value = null; problem.value = error instanceof Error ? error.message : String(error); }
+    }
+    function choose(next: AiCardScope, list: AiCardCategories) {
+      scope.value = next;
+      entry.value = 'settings';
+      categories.value = list;
+      preferences.value = defaultPuzzleAiOptions(props.kind);
+      configured.value = false;
+      configurationProblem.value = '';
+      json.value = '';
+      candidate.value = null;
+      problem.value = '';
+      backward.value = false;
+    }
+    function preview() {
+      const result = candidate.value;
+      if (!result) return null;
+      const entries = result.kind === 'word-search'
+        ? result.puzzle.words.map(word => ({ key: word, answer: word, clue: result.puzzle.hints?.[word] ?? '' }))
+        : result.puzzle.entries.map(entry => ({ key: entry.answer, answer: entry.answer, clue: entry.clue }));
+      return h('div', [
+        h('h3', result.title),
+        h('p', { class: 'study-ai-muted' }, entries.length + ' ' + (result.kind === 'word-search'
+          ? result.puzzle.selection
+            ? `pool words · ${result.puzzle.selection.min}–${result.puzzle.selection.max} randomly selected per layout`
+            : 'words per layout'
+          : 'answers with clues') + ' · Ready to import'),
+        h('ol', { class: 'puzzle-ai-preview-list' }, entries.map(entry => h('li', { key: entry.key }, [
+          h('strong', entry.answer),
+          entry.clue ? h('span', entry.clue) : null,
+        ]))),
+        result.coverage ? h(AiCoverageAcceptance, { key: json.value, coverage: result.coverage,
+          items: entries.map(item => item.answer + (item.clue ? ' — ' + item.clue : '')),
+          onApproval: (value: boolean) => { coverageAccepted.value = value; },
+        }) : h('p', { class: 'study-ai-muted' }, 'Legacy import has no subject coverage inventory; completeness is unverified.'),
+        h('button', { type: 'button', class: 'card-primary-button', disabled: Boolean(result.coverage) && !coverageAccepted.value,
+          onClick: () => { if (candidate.value && (!result.coverage || coverageAccepted.value)) emit('create', candidate.value); },
+        }, 'Create ' + (result.kind === 'word-search' ? 'word search' : 'crossword')),
+      ]);
+    }
+    function settings() {
+      const wordSearch = props.kind === 'word-search';
+      const bounds = puzzleAiLimits[props.kind];
+      const current = preferences.value;
+      return h('section', { key: 'configure', class: 'study-ai-workspace puzzle-ai-workspace' }, [
+        h('header', { class: 'study-ai-header' }, [
+          h('div', [
+            h('p', { class: 'study-ai-muted' }, label.value + ' · Saved in ' + props.destination),
+            h('h2', 'Configure ' + (wordSearch ? 'word search' : 'crossword')),
+            h('p', 'Step 2 of 3 · Choose how you want your puzzle to work.'),
+            h('p', { class: 'study-ai-muted' }, scope.value?.category.title ?? 'Overall subject'),
+          ]),
+          h('div', { class: 'study-ai-actions' }, [
+            h('button', { type: 'button', class: 'quiet-button', onClick: () => {
+              backward.value = true; configured.value = false; entry.value = scope.value ? 'categories' : 'scope';
+            } }, 'Back to categories'),
+            h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel') }, 'Cancel'),
+          ]),
+        ]),
+        h('form', { class: 'puzzle-ai-setup', onSubmit: continueToPrompt }, [
+          h('div', { class: 'puzzle-ai-setup-grid' }, [
+            h('label', { class: 'puzzle-ai-setting' }, [
+              h('span', wordSearch ? 'Word pool target' : 'Target answers'),
+              h('input', {
+                type: 'number', required: true, min: bounds.min, max: bounds.max, step: 1,
+                value: current.count,
+                onInput: (event: Event) => updatePreferences({ count: Number(inputValue(event)) }),
+              }),
+              h('span', { class: 'study-ai-muted' },
+                wordSearch
+                  ? `Request ${bounds.min}–${bounds.max} unique terms from the selected category. ${current.selectionMode === 'random' ? 'The AI generates a pool larger than one board.' : 'All imported words must fit one board.'}`
+                  : `Choose ${bounds.min}–${bounds.max}. Use fewer when the category is small.`),
+            ]),
+            wordSearch ? h('label', { class: 'puzzle-ai-setting' }, [
+              h('span', 'Grid size'),
+              h('select', {
+                value: current.size,
+                onChange: (event: Event) =>
+                  updatePreferences({ size: Number(inputValue(event)) as GridSize }),
+              }, GRID_SIZES.map(size => h('option', { value: size }, `${size} × ${size}`))),
+              h('span', { class: 'study-ai-muted' },
+                'The AI must choose words short enough for this grid. Very dense word lists may not fit.'),
+            ]) : h('div', { class: 'puzzle-ai-setting' }, [
+              h('span', 'Grid size'),
+              h('strong', 'Automatic'),
+              h('span', { class: 'study-ai-muted' },
+                'Crossword determines the grid from the intersections of its answers.'),
+            ]),
+          ]),
+          wordSearch ? h('fieldset', { class: 'puzzle-ai-choice-group' }, [
+            h('legend', 'Words per layout'),
+            ...([
+              { value: 'all' as const, label: 'Use all words', description: `Every generated layout uses all imported words (max ${MAX_LAYOUT_WORDS}).` },
+              { value: 'random' as const, label: 'Random selection', description: 'Generate a large word pool, then sample different words for each new grid.' },
+            ]).map((choice) => h('label', {
+              key: choice.value,
+              class: ['puzzle-ai-choice', { 'is-selected': current.selectionMode === choice.value }],
+            }, [
+              h('input', { type: 'radio', name: 'puzzle-ai-selection-mode',
+                checked: current.selectionMode === choice.value,
+                onChange: () => updatePreferences({ selectionMode: choice.value }) }),
+              h('span', [h('strong', choice.label), h('span', { class: 'study-ai-muted' }, choice.description)]),
+            ])),
+          ]) : null,
+          wordSearch && current.selectionMode === 'random' ? h('div', { class: 'puzzle-ai-selection-range' }, [
+            ...([
+              { key: 'layoutMin' as const, label: 'Minimum words', value: current.layoutMin },
+              { key: 'layoutMax' as const, label: 'Maximum words', value: current.layoutMax },
+            ]).map((field) => h('label', { class: 'puzzle-ai-setting', key: field.key }, [
+              h('span', field.label),
+              h('input', { type: 'number', required: true, min: MIN_WORDS,
+                max: Math.min(MAX_LAYOUT_WORDS, current.count), step: 1,
+                value: field.value,
+                onInput: (event: Event) => {
+                  const value = Number(inputValue(event));
+                  updatePreferences(field.key === 'layoutMin'
+                    ? { layoutMin: value } : { layoutMax: value });
+                },
+              }),
+            ])),
+            h('p', { class: 'study-ai-muted' },
+              'The AI writes the entire word pool. Each new grid samples a number within this range. Set both numbers equal for a fixed count.'),
+          ]) : null,
+          h('fieldset', { class: 'puzzle-ai-choice-group' }, [
+            h('legend', wordSearch ? 'Difficulty' : 'Clue difficulty'),
+            ...DIFFICULTIES.map(choice => {
+              const selected = wordSearch
+                ? current.difficulty === choice.value : current.clueDifficulty === choice.value;
+              const description = wordSearch ? choice.description
+                : choice.value === 'easy' ? 'Clear, straightforward definitions.'
+                : choice.value === 'medium' ? 'Balanced clues that reward recall.'
+                : 'Indirect but fair and answerable clues.';
+              return h('label', {
+                key: choice.value, class: ['puzzle-ai-choice', { 'is-selected': selected }],
+              }, [
+                h('input', {
+                  type: 'radio',
+                  name: 'puzzle-ai-difficulty',
+                  value: choice.value,
+                  checked: selected,
+                  onChange: () => wordSearch
+                    ? updatePreferences({ difficulty: choice.value as Difficulty })
+                    : updatePreferences({ clueDifficulty: choice.value as Difficulty }),
+                }),
+                h('span', [
+                  h('strong', choice.label),
+                  h('span', { class: 'study-ai-muted' }, description),
+                ]),
+              ]);
+            }),
+          ]),
+          !wordSearch ? h('p', { class: 'study-ai-muted' },
+            'Clue difficulty influences AI wording only; Crossword generates the actual grid automatically.') : null,
+          wordSearch ? h('fieldset', { class: 'puzzle-ai-choice-group' }, [
+            h('legend', 'Study display'),
+            ...STUDY_MODES.map(choice => h('label', {
+              key: choice.value,
+              class: ['puzzle-ai-choice', { 'is-selected': current.studyMode === choice.value }],
+            }, [
+              h('input', {
+                type: 'radio', name: 'puzzle-ai-display', value: choice.value,
+                checked: current.studyMode === choice.value,
+                onChange: () => updatePreferences({ studyMode: choice.value as StudyMode }),
+              }),
+              h('span', [
+                h('strong', choice.label),
+                h('span', { class: 'study-ai-muted' }, choice.description),
+              ]),
+            ])),
+          ]) : null,
+          h('label', { class: 'puzzle-ai-setting' }, [
+            h('span', 'Instructions (optional)'),
+            h('textarea', {
+              rows: 3, maxlength: MAX_INSTRUCTIONS_LENGTH,
+              value: current.instructions,
+              placeholder: wordSearch ? 'e.g. Find the key vocabulary from this topic.'
+                : 'e.g. Complete this topic using the clues.',
+              onInput: (event: Event) => updatePreferences({ instructions: inputValue(event) }),
+            }),
+            h('span', { class: 'study-ai-muted' },
+              'These instructions are saved with the puzzle; they are not generated by AI.'),
+          ]),
+          configurationProblem.value ? h('p', { role: 'alert', class: 'ai-exchange-error' }, configurationProblem.value) : null,
+          h('div', { class: 'study-ai-actions' }, [
+            h('button', { type: 'submit', class: 'card-primary-button' }, 'Continue to AI →'),
+          ]),
+        ]),
+      ]);
+    }
+    return () => h('div', { class: ['ai-workflow', { 'is-backward': backward.value }] }, [
+      h(Transition, { name: 'ai-workflow-step', mode: 'out-in' }, { default: () => entry.value === 'scope' ? h('section', { key: 'scope', class: 'study-ai-workspace puzzle-ai-workspace' }, [
+          h('header', { class: 'study-ai-header' }, [
+            h('div', [h('p', { class: 'study-ai-muted' }, label.value + ' · Saved in ' + props.destination),
+              h('h2', 'Create ' + label.value + ' with AI'),
+              h('p', 'Choose the scope for your puzzle.')]),
+          ]),
+          h(AiScopeChoices, {
+            onOverall: () => { scope.value = null; configured.value = false; entry.value = 'settings'; },
+            onCategory: () => { entry.value = 'categories'; },
+          }),
+          h('div', { class: 'study-ai-actions ai-scope-actions' }, [
+            h('button', { type: 'button', class: 'quiet-button outline-button', style: { width: 'auto', flex: '0 0 auto' }, onClick: () => { scope.value = null; configured.value = false; entry.value = 'direct'; } }, 'Import an AI response'),
+            h('button', { type: 'button', class: 'quiet-button', style: { width: 'auto', flex: '0 0 auto' }, onClick: () => emit('cancel') }, 'Cancel'),
+          ]),
+        ]) : entry.value === 'direct' ? h('section', { key: 'direct', class: 'study-ai-workspace puzzle-ai-workspace', 'data-ai-scroll-region': '' }, [
+          h('header', { class: 'study-ai-header' }, [h('div', [h('h2', 'Import ' + label.value + ' content'), h('p', 'Paste an overall or category-based response.')]),
+            h('button', { type: 'button', class: 'quiet-button', onClick: () => { entry.value = 'scope'; } }, 'Back')]),
+          h(AiPromptExchange, { idPrefix: 'puzzle-direct-' + props.kind, label: label.value, prompt: '',
+            promptHelp: 'Import an existing puzzle response directly.', importHelp: 'Paste an existing AI response to preview your puzzle.',
+            startInImport: true, importOnly: true, json: json.value, problem: problem.value, maxLength: MAX_AI_IMPORT_LENGTH,
+            hasPreview: candidate.value !== null, validateLabel: 'Validate puzzle',
+            onUpdateJson: (value: string) => { json.value = value; candidate.value = null; coverageAccepted.value = false; problem.value = ''; }, onValidate: validate,
+          }, { preview }),
+        ]) : entry.value === 'settings'
+        ? !configured.value ? settings()
+        : h('section', { key: 'generate-' + (scope.value?.category.key ?? 'overall'), class: 'study-ai-workspace puzzle-ai-workspace', 'data-ai-scroll-region': '' }, [
+          h('header', { class: 'study-ai-header' }, [
+            h('div', [
+              h('p', { class: 'study-ai-muted' }, label.value + ' · Saved in ' + props.destination),
+              h('h2', scope.value?.category.title ?? 'Overall subject'),
+              h('p', 'Step 3 of 3 · Create one puzzle using your selected settings.'),
+              h('p', { class: 'study-ai-muted' }, scope.value?.category.description ?? 'Cover the overall subject.'),
+            ]),
+            h('div', { class: 'study-ai-actions' }, [
+              h('button', { type: 'button', class: 'quiet-button', onClick: () => {
+                backward.value = true; configured.value = false; json.value = ''; candidate.value = null;
+              } }, 'Edit settings'),
+              h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel') }, 'Cancel'),
+            ]),
+          ]),
+          h(AiPromptExchange, {
+            idPrefix: 'puzzle-' + props.kind,
+            label: label.value,
+            prompt: prompt.value,
+            json: json.value,
+            problem: problem.value,
+            maxLength: MAX_AI_IMPORT_LENGTH,
+            hasPreview: candidate.value !== null,
+            skipSource: Boolean(scope.value),
+            promptHelp: 'Create one puzzle for ' + (scope.value?.category.title ?? 'the overall subject') + '.',
+            importHelp: 'Paste the response from your AI chat to preview the puzzle.',
+            validateLabel: 'Validate puzzle',
+            onUpdateJson: (value: string) => { json.value = value; candidate.value = null; coverageAccepted.value = false; problem.value = ''; },
+            onValidate: validate,
+          }, {
+            guidance: () => h('p', { class: 'study-ai-muted' },
+              props.kind === 'word-search'
+                ? `${preferences.value.size} × ${preferences.value.size} · ${preferences.value.difficulty} · ${preferences.value.studyMode === 'hints' ? 'Hints' : 'Word list'} · Up to ${preferences.value.count} pool words · ${preferences.value.selectionMode === 'random' ? `${preferences.value.layoutMin}–${preferences.value.layoutMax} per layout` : 'All words per layout'}`
+                : `Automatic grid · ${preferences.value.clueDifficulty} clues · Up to ${preferences.value.count} answers`),
+            preview,
+          }),
+        ])
+        : h(AiCategoryPicker, {
+          key: 'categories',
+          label: label.value,
+          destination: props.destination,
+          totalSteps: 3,
+          initialCategories: categories.value,
+          onBack: () => { entry.value = 'scope'; },
+          onCancel: () => emit('cancel'),
+          onSelect: choose,
+        }),
+      }),
+    ]);
+  },
+});

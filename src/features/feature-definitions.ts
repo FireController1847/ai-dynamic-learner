@@ -2,11 +2,12 @@
 import type { PageMetadataOverrides } from '../core/metadata.ts';
 
 export type FeatureId = 'calculator' | 'notebook' | 'workbook' | 'todo-list' | 'index-cards' | 'word-search' | 'crossword' | 'guide' | 'knowledge-check';
-export type FeatureGroup = 'helpers' | 'applications' | 'mastery';
+export type FeatureGroup = 'tools' | 'work' | 'study' | 'master';
 export const featureGroups: readonly { id: FeatureGroup; label: string }[] = [
-  { id: 'helpers', label: 'Utilities' },
-  { id: 'applications', label: 'Applications' },
-  { id: 'mastery', label: 'Mastery' },
+  { id: 'tools', label: 'Tools' },
+  { id: 'work', label: 'Work' },
+  { id: 'study', label: 'Study' },
+  { id: 'master', label: 'Master' },
 ];
 
 export interface FeatureDefinition {
@@ -25,8 +26,8 @@ export interface FeatureDefinition {
 export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'calculator', label: 'Calculator', path: '/calculator/', icon: 'calculator',
-    group: 'helpers',
-    version: '1.9.1',
+    group: 'tools',
+    version: '1.9.4',
     image: 'assets/app-icons/calculator.png',
     description: 'A scientific calculator for expressions and functions.',
     metadata: {
@@ -34,30 +35,30 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
       socialImage: {
         path: 'assets/app-icons/calculator.png',
         type: 'image/png',
-        width: 1254,
-        height: 1254,
-        alt: 'Calculator — Glossy blue-and-white calculator with a 123 display and rounded number and arithmetic keys.',
+        width: 350,
+        height: 350,
+        alt: 'Calculator — Layered blue calculator with a pale display and cyan arithmetic keys.',
       },
     },
   },
   {
     id: 'notebook', label: 'Notebook', path: '/notebook/', icon: 'document',
-    group: 'helpers',
-    version: '1.5.0',
+    group: 'work',
+    version: '1.6.3',
     image: 'assets/app-icons/notebook.png',
     description: 'Organize notes into groups and keep your documents together in one notebook.',
   },
   {
     id: 'workbook', label: 'Workbook', path: '/workbook/', icon: 'workbook',
-    group: 'helpers',
+    group: 'work',
     version: '0.1.0',
     image: '',
     description: 'Organize data independently from how it is processed or presented.',
   },
   {
     id: 'todo-list', label: 'Todo List', path: '/todo-list/', icon: 'checklist',
-    group: 'helpers',
-    version: '1.6.0',
+    group: 'work',
+    version: '1.6.4',
     image: 'assets/app-icons/todo-list.png',
     description: 'Write, organize, and prioritize tasks in simple lists that archive automatically.',
     metadata: {
@@ -67,28 +68,28 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
         type: 'image/png',
         width: 1254,
         height: 1254,
-        alt: 'Todo List — Glossy blue-and-white clipboard with checkmarks and task lines.',
+        alt: 'Todo List — Pale blue checklist with cyan checkboxes and a layered blue folded corner.',
       },
     },
   },
   {
     id: 'index-cards', label: 'Index Cards', path: '/index-cards/', icon: 'cards',
-    group: 'applications',
-    version: '1.18.0',
+    group: 'study',
+    version: '1.24.1',
     image: 'assets/app-icons/index-cards.png',
     description: 'Create flash cards or fill-in-the-blanks sets, then review or view them at your own pace.',
   },
   {
     id: 'word-search', label: 'Word Search', path: '/word-search/', icon: 'word-search',
-    group: 'applications',
-    version: '1.7.1',
+    group: 'study',
+    version: '1.14.1',
     image: 'assets/app-icons/word-search.png',
     description: 'Create your own word searches, find every word, and pick up where you left off.'
   },
   {
     id: 'crossword', label: 'Crossword', path: '/crossword/', icon: 'crossword',
-    group: 'applications',
-    version: '1.3.0',
+    group: 'study',
+    version: '1.9.1',
     image: 'assets/app-icons/crossword.png',
     description: 'Create your own crosswords, solve the clues, and pick up where you left off.',
     metadata: {
@@ -96,16 +97,16 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
       socialImage: {
         path: 'assets/app-icons/crossword.png',
         type: 'image/png',
-        width: 1254,
-        height: 1254,
-        alt: 'Crossword — Glossy blue-and-white puzzle grid with letters, clue numbers, and blue blocked squares.',
+        width: 350,
+        height: 350,
+        alt: 'Crossword — An azure blue and icy-white crossword grid.',
       },
     },
   },
   {
     id: 'guide', label: 'Guide', path: '/guide/', icon: 'document',
-    group: 'mastery',
-    version: '1.7.0',
+    group: 'master',
+    version: '1.12.1',
     image: 'assets/app-icons/guide.png',
     description: 'Build simple bullet lists or connected topic maps, then study a map one stop at a time.',
     metadata: {
@@ -113,16 +114,16 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
       socialImage: {
         path: 'assets/app-icons/guide.png',
         type: 'image/png',
-        width: 1254,
-        height: 1254,
-        alt: 'Guide — Glossy blue-and-white open book with a ribbon bookmark, note lines, and a highlighted star.',
+        width: 350,
+        height: 350,
+        alt: 'Guide — A folded study map with connected waypoints and a destination flag.',
       },
     },
   },
   {
     id: 'knowledge-check', label: 'Review', path: '/knowledge-check/', icon: 'checklist',
-    group: 'mastery',
-    version: '1.12.0',
+    group: 'master',
+    version: '1.47.2',
     image: 'assets/app-icons/knowledge-check.png',
     description: 'Make knowledge sets to study, quiz yourself, or take a test.',
     metadata: {
@@ -130,9 +131,9 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
       socialImage: {
         path: 'assets/app-icons/knowledge-check.png',
         type: 'image/png',
-        width: 1254,
-        height: 1254,
-        alt: 'Review — Glossy blue-and-white quiz sheet with a question mark, answer choices, and a checkmark badge.',
+        width: 350,
+        height: 350,
+        alt: 'Review — A layered blue document with a folded corner and a cyan checkmark badge.',
       },
     },
   },

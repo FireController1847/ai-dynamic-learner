@@ -1,4 +1,4 @@
-export interface DirectoryTreeHandle { reveal(id: string): void; focusToggle(): void; focusNewSet(): void; beginRename(id: string): void; }
+export interface DirectoryTreeHandle { reveal(id: string): void; focusToggle(): void; focusNewSet(): void; focusAiImport(): void; beginRename(id: string): void; }
 import type { VNode } from 'vue';
 import type { LibraryItem, MovePosition } from './tree-model.ts';
 import { inputValue } from '../../core/dom.ts';
@@ -16,7 +16,7 @@ export const DirectoryTree = defineComponent({
     selectedId: { type: String as PropType<string | null>, default: null },
     collapsed: Boolean,
   },
-  emits: { 'select': (_id: string | null) => true, 'open-item': () => true, 'toggle-library': () => true, 'new-set': () => true },
+  emits: { 'select': (_id: string | null) => true, 'open-item': () => true, 'toggle-library': () => true, 'new-set': () => true, 'open-ai-import': () => true },
   setup(props, { emit, expose, slots }) {
     const expanded = ref(new Set<string>());
     const editingId = ref<string | null>(null);
@@ -27,6 +27,7 @@ export const DirectoryTree = defineComponent({
     const announcement = ref('');
     const pendingDelete = ref<LibraryItem | null>(null);
     const createGroupButton = ref<HTMLButtonElement | null>(null);
+    const aiButton = ref<HTMLButtonElement | null>(null);
     const newSetButton = ref<HTMLButtonElement | null>(null);
     const collapseButton = ref<HTMLButtonElement | null>(null);
     const labels = new Map<string | null, HTMLElement>();
@@ -149,6 +150,7 @@ export const DirectoryTree = defineComponent({
       reveal,
       focusToggle: () => collapseButton.value?.focus(),
       focusNewSet: () => newSetButton.value?.focus(),
+      focusAiImport: () => aiButton.value?.focus(),
       beginRename: (id: string) => {
         const found = findItem(props.items, id);
         if (found) rename(found.item);
@@ -283,6 +285,10 @@ export const DirectoryTree = defineComponent({
       h('div', { class: 'directory-toolbar' }, [
         h('h3', 'Library'),
         h('div', { class: 'directory-create-actions' }, [
+          h('button', {
+            ref: aiButton, type: 'button', class: 'icon-button', title: 'Create cards with AI',
+            'aria-label': 'Create cards with AI', onClick: () => emit('open-ai-import'),
+          }, [h(Icon, { name: 'ai' })]),
           h('button', {
             ref: createGroupButton,
             type: 'button', class: 'icon-button', title: 'New group',

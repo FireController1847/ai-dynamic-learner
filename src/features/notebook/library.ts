@@ -266,6 +266,14 @@ export const NotebookLibrary = defineComponent({
         h('h3', 'Library'),
         h('div', { class: 'directory-create-actions' }, [
           h('button', {
+            type: 'button', class: ['icon-button', { 'markdown-is-loading': uploading.value }],
+            disabled: uploading.value, title: 'Import document', 'aria-label': 'Import document',
+            onClick: () => {
+              uploadTarget = { selectedId: props.selectedId };
+              uploadInput.value?.click();
+            },
+          }, [h(Icon, { name: uploading.value ? 'loading' : 'upload' })]),
+          h('button', {
             type: 'button',
             class: 'icon-button',
             title: 'New group',
@@ -280,14 +288,6 @@ export const NotebookLibrary = defineComponent({
             'aria-label': 'New document',
             onClick: () => emit('new-document'),
           }, [h(Icon, { name: 'document' })]),
-          h('button', {
-            type: 'button', class: ['icon-button', { 'markdown-is-loading': uploading.value }],
-            disabled: uploading.value, title: 'Import document', 'aria-label': 'Import document',
-            onClick: () => {
-              uploadTarget = { selectedId: props.selectedId };
-              uploadInput.value?.click();
-            },
-          }, [h(Icon, { name: uploading.value ? 'loading' : 'upload' })]),
           h('button', {
             ref: collapseButton,
             type: 'button',

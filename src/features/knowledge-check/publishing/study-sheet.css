@@ -1,0 +1,155 @@
+/* Print typography is independent of the app's theme. */
+body {
+  --border-color: #bbb;
+  --control-border: #bbb;
+  --text-secondary: #333;
+  --surface-subtle: #f4f4f4;
+  --brand-text: #000;
+  --radius: 0;
+}
+.study-sheet-heading {
+  margin: 0 0 16pt; padding-bottom: 10pt;
+  break-inside: avoid; break-after: auto;
+}
+.study-sheet-heading h1 { break-after: auto; }
+.study-metadata-fields { display: flex; flex-wrap: wrap; gap: 8pt 18pt; margin-top: 10pt; }
+.study-metadata-field { display: flex; flex: 1 1 100pt; align-items: baseline; gap: 6pt; min-width: 0; }
+.study-metadata-field.is-name { flex: 2 1 180pt; }
+.study-metadata-field:only-child { max-width: 240pt; }
+.study-metadata-field > span:first-child { white-space: nowrap; }
+.study-metadata-line { display: inline-block; flex: 1; min-width: 0; border-bottom: 0.6pt solid #333; }
+.study-heading-comfortable { margin-bottom: 40pt; padding-bottom: 14pt; }
+/* A full-height editorial cover: black-and-white, ink-friendly, and independent
+   of the compact/comfortable question pages. Height is derived from the paper
+   size and margins to keep its page break reliable in portrait or landscape. */
+.study-sheet-cover {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: var(--publication-cover-height, 165mm);
+  padding: 6mm 1mm 4mm;
+  break-inside: avoid;
+  break-after: page;
+  overflow-wrap: anywhere;
+}
+.study-cover-masthead {
+  display: flex; justify-content: space-between; align-items: center; gap: 10pt;
+  padding-bottom: 13pt; border-bottom: 0.85pt solid #222;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 8pt; line-height: 1.5; letter-spacing: 0.12em;
+}
+.study-cover-brand { font-weight: 700; }
+.study-cover-edition { margin-left: auto; color: #555; text-align: right; }
+.study-cover-main {
+  margin: auto 0; padding: 22pt 0 34pt;
+  max-width: 95%;
+}
+.study-cover-accent { width: 46pt; height: 2.5pt; margin-bottom: 26pt; background: #252525; }
+.study-cover-kicker {
+  margin: 0 0 14pt; color: #555;
+  font-family: Arial, Helvetica, sans-serif; font-size: 8pt;
+  font-weight: 600; letter-spacing: 0.18em;
+}
+.study-cover-title {
+  margin: 0; font-size: 2.25em; font-weight: 700; line-height: 1.16;
+  letter-spacing: -0.02em; overflow-wrap: anywhere;
+}
+.study-cover-subtitle {
+  margin: 18pt 0 0; color: #555; font-size: 0.95em; line-height: 1.4;
+}
+.study-cover-bottom { flex: 0 0 auto; }
+.study-cover-fields {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(100pt, 1fr));
+  gap: 24pt; margin: 0 0 30pt;
+}
+.study-cover-field { display: flex; flex-direction: column; gap: 10pt; min-width: 0; }
+.study-cover-field-label {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 8pt; font-weight: 600; color: #444; letter-spacing: 0.04em;
+}
+.study-cover-field-line { display: block; height: 12pt; border-bottom: 0.75pt solid #777; }
+.study-cover-footer {
+  display: flex; justify-content: space-between; gap: 12pt;
+  padding-top: 12pt; border-top: 0.75pt solid #bbb; color: #555;
+  font-family: Arial, Helvetica, sans-serif; font-size: 7.5pt;
+  line-height: 1.4; letter-spacing: 0.1em;
+}
+.study-question-grid { width: 100%; table-layout: fixed; border-collapse: collapse; font: inherit; }
+/* Both column strategies share the same question spacing: Compact is deliberately
+   tight, while Comfortable provides an obvious additional gap between questions. */
+.study-question-grid.study-comfortable > tbody > tr > td { padding-bottom: 20pt; }
+.study-question-grid.study-section-start { margin-top: 12pt; }
+.study-question-grid > tbody > tr { break-inside: avoid; }
+.study-question-grid > tbody > tr > td { box-sizing: border-box; width: 50%; padding: 0 0 6pt; vertical-align: top; }
+.study-question-grid > tbody > tr > td:first-child { padding-right: 12pt; }
+.study-question-grid > tbody > tr > td:last-child { padding-left: 12pt; }
+.study-question { overflow-wrap: anywhere; }
+.study-question-prompt { display: flex; gap: 6pt; margin: 0 0 6pt; white-space: pre-wrap; }
+.study-question-number { flex: 0 0 auto; }
+.study-choices { margin: 8pt 0 0; padding-left: 25pt; list-style-type: upper-alpha; }
+.study-choices > li { padding-left: 4pt; margin: 0 0 4pt; white-space: pre-wrap; }
+.study-responses { margin: 6pt 0 0 18pt; }
+.study-responses p { margin: 4pt 0 0; }
+.study-response-line { display: inline-block; min-width: 50pt; border-bottom: 0.5pt solid #555; }
+.study-instruction { margin: 6pt 0 8pt 18pt; font-style: italic; }
+.study-question .markdown-content { margin: 10pt 0 12pt 18pt; font-size: 1em; line-height: inherit; }
+.study-question .markdown-content :is(h1, h2, h3, h4, h5, h6) { margin: 12pt 0 8pt; }
+.study-question .markdown-content :is(p, ul, ol, pre, blockquote) { margin-bottom: 4pt; }
+.study-question .markdown-content pre { padding: 4pt; overflow: visible; }
+.study-question .markdown-content table { display: table; width: 100%; overflow: visible; }
+.study-question .markdown-content :is(td, th) { padding: 2pt; overflow-wrap: anywhere; }
+.study-question .katex-display { margin: 4pt 0; overflow-wrap: normal; }
+
+/* No top padding on flow items: it survives fragmentation at the beginning of a
+   new column and pushes that column's first question down the page. */
+.study-question-flow { width: 100%; }
+.study-flow-two-columns { column-count: 2; column-gap: 24pt; }
+.study-flow-item { margin-bottom: 6pt; break-inside: avoid; }
+.study-flow-item.study-comfortable { margin-bottom: 20pt; }
+.study-flow-item.study-section-end { margin-bottom: 18pt; }
+.study-flow-item.study-comfortable.study-section-end { margin-bottom: 32pt; }
+/* Indent A/B/C choices under the prompt for a clearer paper-reading hierarchy. */
+.study-choices { padding-left: 30pt; }
+.study-choices > li { padding-left: 6pt; }
+.study-question-flow:not(.study-flow-two-columns) .study-choices { padding-left: 40pt; }
+.study-question-style-bold { font-weight: 700; }
+.study-question-style-italic { font-style: italic; }
+.study-question-style-bold-italic { font-weight: 700; font-style: italic; }
+.study-question-style-underline { text-decoration: underline; text-underline-offset: 2pt; }
+
+/* Distinct printable answer key, starting on a fresh sheet when appended.
+   The first sheet starts normally for Answer Key Only (even with Cover selected). */
+.study-answer-key { break-inside: auto; }
+.study-answer-key-appended { break-before: page; page-break-before: always; }
+.study-answer-key-heading { margin: 0 0 20pt; padding-bottom: 14pt; border-bottom: 0.75pt solid #aaa; break-inside: avoid; }
+/* Opening-page mastheads occupy the page margin, independently of body text.
+   Insets scale with the selected margins and leave room inside the paper edge. */
+.study-document-heading { position: relative; display: flow-root; }
+.study-document-heading h1 {
+  font-size: 1.6em; font-weight: 700; line-height: 1.2; letter-spacing: -0.02em;
+  margin: 6pt 0; overflow-wrap: anywhere;
+}
+.study-document-eyebrow {
+  position: absolute; top: calc(-1 * var(--publication-header-rise, 8mm));
+  left: calc(-1 * var(--publication-header-outset, 4mm));
+  right: calc(-1 * var(--publication-header-outset, 4mm));
+  display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 4pt 12pt;
+  margin: 0; color: #555; font: 700 8pt/1.4 Arial, Helvetica, sans-serif;
+  letter-spacing: .12em; text-transform: uppercase;
+}
+.study-document-edition { margin-left: auto; text-align: right; }
+.study-answer-key-note { color: #555; margin: 8pt 0 0; font-size: .8em; }
+.study-answer-key-entries { width: 100%; }
+.study-answer-key-two-columns { column-count: 2; column-gap: 24pt; }
+.study-answer-key-entry {
+  display: flex; align-items: flex-start; gap: 9pt;
+  margin: 0 0 12pt; break-inside: avoid; overflow-wrap: anywhere;
+}
+.study-answer-key-number { flex: 0 0 22pt; font-weight: 700; }
+.study-answer-key-lines { flex: 1; min-width: 0; }
+.study-answer-key-lines p { margin: 0 0 3pt; line-height: 1.4; white-space: pre-wrap; }
+.study-answer-key-lines p:last-child { margin-bottom: 0; }
+
+/* Identification fields already carry rules; avoid a second underline. */
+.study-document-heading.study-heading-has-fields { border-bottom: 0; }

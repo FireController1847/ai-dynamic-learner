@@ -1,10 +1,12 @@
 import type { AnswerStrictness } from '../../../packages/@dynamic-learner/answer-matching/src/index.ts';
 import type { CheckModeId } from './check-types.ts';
-import { defaultSetOptions, type QuestionOrder, type SetOptions } from './set-options.ts';
+import { defaultSetOptions, type QuestionOrder, type QuestionPresentation, type SetOptions } from './set-options.ts';
 import { cloneQuestion, type Question } from './question-model.ts';
 
 export interface SessionSettings {
   order: QuestionOrder;
+  presentation: QuestionPresentation;
+  allowBack: boolean;
   questionLimit: number | null;
   shuffleChoices: boolean;
   shortAnswerStrictness: AnswerStrictness;
@@ -31,9 +33,11 @@ export function settingsForMode(options: SetOptions | undefined, mode: CheckMode
   const saved = { ...defaultSetOptions(), ...options };
   if (mode === 'study') {
     return {
-      order: 'forward',
-      questionLimit: null,
-      shuffleChoices: false,
+      order: saved.assessmentOrder,
+      presentation: 'scroll',
+      allowBack: true,
+      questionLimit: saved.quizQuestionLimit,
+      shuffleChoices: saved.shuffleChoices,
       shortAnswerStrictness: saved.shortAnswerStrictness,
       fillBlankAnswerStrictness: saved.fillBlankAnswerStrictness,
       quizAttempts: saved.quizAttempts,
@@ -43,7 +47,9 @@ export function settingsForMode(options: SetOptions | undefined, mode: CheckMode
   }
   return {
     order: saved.assessmentOrder,
-    questionLimit: saved.assessmentQuestionLimit,
+    presentation: mode === 'quiz' ? saved.quizPresentation : saved.testPresentation,
+    allowBack: mode === 'quiz' ? saved.quizAllowBack : saved.testAllowBack,
+    questionLimit: mode === 'test' ? saved.testQuestionLimit : saved.quizQuestionLimit,
     shuffleChoices: saved.shuffleChoices,
     shortAnswerStrictness: saved.shortAnswerStrictness,
     fillBlankAnswerStrictness: saved.fillBlankAnswerStrictness,
@@ -62,13 +68,40 @@ function shuffled<T>(values: readonly T[]): T[] {
   return result;
 }
 
-export function prepareSessionQuestions(source: readonly Question[], settings: SessionSettings): Question[] {
-  let questions = [...source];
+/**
+ * Select one question from each contiguous slice of the authored order.
+ * For 60 questions and a cap of 25, this samples across 25 sections of
+ * roughly 2–3 questions each without duplicates or front-loading the set.
+ */
+export function sampleStudyQuestions<T>(source: readonly T[], limit: number): T[] {
+  if (limit >= source.length) return [...source];
+  const chosen: T[] = [];
+  for (let section = 0; section < limit; section += 1) {
+    const start = Math.floor(section * source.length / limit);
+    const end = Math.floor((section + 1) * source.length / limit);
+    chosen.push(source[start + Math.floor(Math.random() * (end - start))]!);
+  }
+  return chosen;
+}
+
+export function prepareSessionQuestions(
+  source: readonly Question[],
+  settings: SessionSettings,
+  evenlySampledStudy = false,
+): Question[] {
+  // Study samples the authored order before changing its display order so
+  // Reverse and Shuffle still cover the whole source instead of one end.
+  let questions = evenlySampledStudy && settings.questionLimit !== null && source.length > settings.questionLimit
+    ? sampleStudyQuestions(source, settings.questionLimit)
+    : [...source];
   if (settings.order === 'backward') questions.reverse();
   else if (settings.order === 'shuffle') questions = shuffled(questions);
   if (settings.questionLimit !== null) questions = questions.slice(0, settings.questionLimit);
+  // Dropdown options are randomized once by sessionVariant using the saved
+  // session seed. Do not pre-shuffle them here or the order cannot be
+  // reconstructed independently from the authored question.
   if (settings.shuffleChoices) {
-    questions = questions.map((question) => question.type === 'multiple-choice' || question.type === 'dropdown'
+    questions = questions.map((question) => question.type === 'multiple-choice'
       ? { ...cloneQuestion(question), choices: shuffled(question.choices) }
       : question);
   }

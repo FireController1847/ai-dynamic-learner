@@ -11,11 +11,11 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/FireController1847/ai-dynamic-learner/stargazers">
-    <img alt="GitHub stars" src="https://img.shields.io/github/stars/FireController1847/ai-dynamic-learner?style=for-the-badge">
+  <a href="https://github.com/FireController1847/ai-dynamic-learner/commits/main">
+    <img alt="Commits this month" src="https://img.shields.io/github/commit-activity/m/FireController1847/ai-dynamic-learner?style=for-the-badge">
   </a>
-  <a href="https://github.com/FireController1847/ai-dynamic-learner/network/members">
-    <img alt="GitHub forks" src="https://img.shields.io/github/forks/FireController1847/ai-dynamic-learner?style=for-the-badge">
+  <a href="https://github.com/FireController1847/ai-dynamic-learner/actions/workflows/verify-build.yml">
+    <img alt="Verify Build status" src="https://img.shields.io/github/actions/workflow/status/FireController1847/ai-dynamic-learner/verify-build.yml?branch=main&amp;style=for-the-badge">
   </a>
   <a href="https://github.com/FireController1847/ai-dynamic-learner/commits/main">
     <img alt="Last commit" src="https://img.shields.io/github/last-commit/FireController1847/ai-dynamic-learner?style=for-the-badge">
@@ -43,7 +43,7 @@ That distinction matters when reading the codebase:
 
 Dynamic Learner is a lightweight study workspace that runs in the browser. It is designed around small, focused tools that share one workspace instead of trying to turn studying into one giant all-purpose editor.
 
-On Home, tools are grouped into Utilities, Applications, and Mastery. Search app names and descriptions to find a tool.
+On Home, apps are grouped into Tools, Work, Study, and Master. Search app names and descriptions to find what you need.
 
 The current application includes:
 

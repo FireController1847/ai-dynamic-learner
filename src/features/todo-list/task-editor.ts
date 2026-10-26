@@ -1,6 +1,6 @@
 import { computed, defineComponent, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, onUpdated, reactive, ref, type PropType } from 'vue';
 import { todoDisplayStyles, type TodoDisplay } from './display-options.ts';
-import { DeleteConfirmation } from '../../components/delete-confirmation.ts';
+import { Icon } from '../../components/icon.ts';
 import { inputValue } from '../../core/dom.ts';
 import { useStatistics } from '../../components/statistics-context.ts';
 import { EntryStatistics } from '../../components/entry-statistics.ts';
@@ -50,7 +50,6 @@ export const TodoTaskEditor = defineComponent({
     const names = new Map<string, HTMLInputElement>();
     const drafts = reactive(new Map<string, TodoTask>());
     const editingName = ref<string | null>(null);
-    const pendingSection = ref<TodoSection | null>(null);
     const undo = ref<{ section: TodoSection; index: number; task: TodoTask } | null>(null);
     const message = ref('');
     function isSectionComplete(section: TodoSection) {
@@ -116,7 +115,7 @@ export const TodoTaskEditor = defineComponent({
       celebratingTasks.clear(); celebratingSections.clear(); stopListCelebration();
     }
     onDeactivated(() => {
-      pendingSection.value = null; editingName.value = null; clearCelebrations();
+      editingName.value = null; clearCelebrations();
     });
     function draftFor(section: TodoSection) {
       let draft = drafts.get(section.id);
@@ -225,9 +224,18 @@ export const TodoTaskEditor = defineComponent({
       props.item.sectionSort = mode;
       message.value = mode === 'custom' ? 'Using custom section order.' : `Sections sorted by ${mode}.`;
     }
-    async function cancelSectionDelete() {
-      const section = pendingSection.value; pendingSection.value = null;
-      if (section) await focusTask((orderedTasks(section)[0] ?? draftFor(section)).id);
+    async function deleteSection(section: TodoSection) {
+      const index = sections.value.indexOf(section);
+      if (index < 0) return;
+      for (const task of section.tasks) stopTaskCelebration(task.id);
+      stopSectionCelebration(section.id); completedSections.delete(section.id); drafts.delete(section.id);
+      sections.value.splice(index, 1);
+      if (!sections.value.length) sections.value.push(newSection());
+      if (undo.value?.section === section) undo.value = null;
+      syncListCompletion(false);
+      message.value = 'Section removed.';
+      const nextSection = sections.value[Math.max(0, index - 1)] ?? sections.value[0];
+      if (nextSection) await focusTask((orderedTasks(nextSection)[0] ?? draftFor(nextSection)).id);
     }
     async function toggleSkipped(section: TodoSection, task: TodoTask, trigger: EventTarget | null) {
       task.skipped = !task.skipped;
@@ -339,23 +347,29 @@ export const TodoTaskEditor = defineComponent({
             },
           }),
         ]),
-        !draft || first ? h('details', { class: 'todo-row-tools' }, [
-          h('summary', { 'aria-label': first ? 'Task and section options' : 'Task options', title: 'Options' }, '⋯'),
-          h('div', { class: 'todo-row-menu', onClick: (event: MouseEvent) => {
-            if (event.target instanceof Element) event.target.closest('details')?.removeAttribute('open');
-          } }, [
-            !draft ? [
-              h('button', { type: 'button', disabled: !canMove(-1), onClick: () => moveTask(section, index, -1) }, 'Move up'),
-              h('button', { type: 'button', disabled: !canMove(1), onClick: () => moveTask(section, index, 1) }, 'Move down'),
-              h('button', { type: 'button', class: 'delete-button', onClick: () => deleteTask(section, index) }, 'Remove task'),
-            ] : null,
-            first ? [
-              sortMode.value === 'custom' ? [
-                h('button', { type: 'button', disabled: sections.value.indexOf(section) <= 0, onClick: () => moveSection(section, -1) }, 'Move section up'),
-                h('button', { type: 'button', disabled: sections.value.indexOf(section) >= sections.value.length - 1, onClick: () => moveSection(section, 1) }, 'Move section down'),
+        !draft || first ? h('div', { class: 'todo-row-actions' }, [
+          !draft ? h('button', {
+            type: 'button', class: 'todo-row-remove', title: 'Remove task',
+            'aria-label': `Remove task: ${task.text || 'Untitled task'}`,
+            onClick: () => { void deleteTask(section, index); },
+          }, [h(Icon, { name: 'trash' })]) : null,
+          h('details', { class: 'todo-row-tools' }, [
+            h('summary', { 'aria-label': first ? 'Task and section options' : 'Task options', title: 'Options' }, '⋯'),
+            h('div', { class: 'todo-row-menu', onClick: (event: MouseEvent) => {
+              if (event.target instanceof Element) event.target.closest('details')?.removeAttribute('open');
+            } }, [
+              !draft ? [
+                h('button', { type: 'button', disabled: !canMove(-1), onClick: () => moveTask(section, index, -1) }, 'Move up'),
+                h('button', { type: 'button', disabled: !canMove(1), onClick: () => moveTask(section, index, 1) }, 'Move down'),
               ] : null,
-              h('button', { type: 'button', class: 'delete-button', onClick: () => { pendingSection.value = section; } }, 'Remove section'),
-            ] : null,
+              first ? [
+                sortMode.value === 'custom' ? [
+                  h('button', { type: 'button', disabled: sections.value.indexOf(section) <= 0, onClick: () => moveSection(section, -1) }, 'Move section up'),
+                  h('button', { type: 'button', disabled: sections.value.indexOf(section) >= sections.value.length - 1, onClick: () => moveSection(section, 1) }, 'Move section down'),
+                ] : null,
+                h('button', { type: 'button', class: 'delete-button', onClick: () => { void deleteSection(section); } }, 'Remove section'),
+              ] : null,
+            ]),
           ]),
         ]) : null,
       ]);
@@ -420,18 +434,6 @@ export const TodoTaskEditor = defineComponent({
       ]),
       h('p', { class: 'todo-editor-hint' }, 'Click a section name to rename it. Enter adds a task; Enter on an empty task starts a section. Shift+Enter adds a line. × skips or restores a task. Priority applies to the section.'),
       h('p', { class: 'visually-hidden', role: 'status' }, message.value),
-      pendingSection.value ? h(DeleteConfirmation, { itemName: pendingSection.value.title || 'Untitled section', itemLabel: 'section', detail: 'All tasks in this section will be removed.', confirmLabel: 'Delete section',
-        onCancel: cancelSectionDelete, onConfirm: async () => {
-          const deleting = pendingSection.value;
-          const index = sections.value.findIndex(section => section.id === deleting?.id);
-          if (index >= 0) sections.value.splice(index, 1);
-          if (deleting) { completedSections.delete(deleting.id); stopSectionCelebration(deleting.id); }
-          if (!sections.value.length) sections.value.push(newSection());
-          undo.value = null; pendingSection.value = null; message.value = 'Section deleted.';
-          const section = sections.value[Math.max(0, index - 1)]!;
-          await focusTask((orderedTasks(section)[0] ?? draftFor(section)).id);
-        },
-      }) : null,
     ]);
   },
 });
