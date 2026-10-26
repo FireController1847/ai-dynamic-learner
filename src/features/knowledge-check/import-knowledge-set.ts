@@ -20,7 +20,7 @@ import {
   type IndexCardImportMapping,
 } from './import-index-cards.ts';
 import type { Question } from './question-model.ts';
-import { computed, defineComponent, h, ref, type PropType } from 'vue';
+import { computed, defineComponent, h, ref, Transition, type PropType } from 'vue';
 
 interface ImportPlanItem {
   id: string;
@@ -30,10 +30,9 @@ interface ImportPlanItem {
   blanklessActions: BlanklessFillCardActions;
 }
 
-type ImportTab = 'sources' | 'options';
+type ImportStep = 'sources' | 'options' | 'review';
+type ResolutionAction = 'advance' | 'create' | null;
 type ImportMixMode = 'grouped' | 'intermixed';
-
-const applicationSources = featureDefinitions.filter((feature) => feature.group === 'study' && !feature.hidden);
 
 export const ImportKnowledgeSet = defineComponent({
   name: 'ImportKnowledgeSet',
@@ -47,7 +46,9 @@ export const ImportKnowledgeSet = defineComponent({
   },
   setup(props, { emit }) {
     const name = ref('Imported knowledge set');
-    const tab = ref<ImportTab>('sources');
+    const step = ref<ImportStep>('sources');
+    const goingBack = ref(false);
+    const stepRegion = ref<HTMLElement | null>(null);
     const items = ref<ImportPlanItem[]>([]);
     const mixMode = ref<ImportMixMode>('grouped');
     const shuffle = ref(false);
@@ -55,7 +56,7 @@ export const ImportKnowledgeSet = defineComponent({
     const dropIndex = ref<number | null>(null);
     const pickerItemId = ref<string | null | undefined>(undefined);
     const resolutionItemId = ref<string | null>(null);
-    const resumeCreateAfterResolution = ref(false);
+    const afterResolution = ref<ResolutionAction>(null);
     const message = ref('');
 
     function sourceReady(item: ImportPlanItem): boolean {
@@ -93,6 +94,9 @@ export const ImportKnowledgeSet = defineComponent({
       ) : count;
     }, 0));
     const limitProblem = computed(() => unresolvedCount.value ? '' : importQuestionLimitProblem(questionCount.value));
+    const potentialLimitProblem = computed(() => importQuestionLimitProblem(potentialCount.value));
+    const canContinue = computed(() => items.value.length > 0 && items.value.every(sourceReady) &&
+      potentialCount.value > 0 && !potentialLimitProblem.value);
     const canCreate = computed(() => Boolean(name.value.trim()) && items.value.length > 0 &&
       items.value.every(sourceReady) && potentialCount.value > 0 && !limitProblem.value);
     const resolutionItem = computed(() =>
@@ -101,12 +105,14 @@ export const ImportKnowledgeSet = defineComponent({
     function addSource(sourceFeatureId: FeatureId) {
       if (sourceFeatureId !== 'index-cards') return;
       pickerItemId.value = null;
+      goingBack.value = false;
       message.value = '';
     }
 
     function changeSource(item: ImportPlanItem) {
       if (item.sourceFeatureId !== 'index-cards') return;
       pickerItemId.value = item.id;
+      goingBack.value = false;
       message.value = '';
     }
 
@@ -131,6 +137,7 @@ export const ImportKnowledgeSet = defineComponent({
         });
       }
       pickerItemId.value = undefined;
+      goingBack.value = true;
     }
 
     function removeSource(id: string) {
@@ -156,16 +163,48 @@ export const ImportKnowledgeSet = defineComponent({
       items.value.splice(toIndex, 0, item);
     }
 
-    function openResolution(item: ImportPlanItem, resumeCreate = false) {
+    function setStep(next: ImportStep, backward = false) {
+      goingBack.value = backward;
+      step.value = next;
+      message.value = '';
+    }
+
+    function openResolution(item: ImportPlanItem, action: ResolutionAction = null) {
       resolutionItemId.value = item.id;
-      resumeCreateAfterResolution.value = resumeCreate;
+      afterResolution.value = action;
+    }
+
+    function continueSources() {
+      if (!items.value.length) {
+        message.value = 'Add at least one Index Cards set to continue.';
+        return;
+      }
+      if (!items.value.every(sourceReady)) {
+        message.value = 'A selected set is no longer available. Choose another set or remove it.';
+        return;
+      }
+      const unresolved = items.value.find((item) => unresolvedBlanklessCount(item) > 0);
+      if (unresolved) {
+        openResolution(unresolved, 'advance');
+        return;
+      }
+      if (!questionCount.value) {
+        message.value = 'None of the selected cards can become questions. Choose another set or keep a card as a Statement.';
+        return;
+      }
+      const problem = importQuestionLimitProblem(questionCount.value);
+      if (problem) {
+        message.value = problem;
+        return;
+      }
+      setStep('options');
     }
 
     function createImportedSet() {
       if (!name.value.trim() || !items.value.length || !items.value.every(sourceReady)) return;
       const unresolved = items.value.find((item) => unresolvedBlanklessCount(item) > 0);
       if (unresolved) {
-        openResolution(unresolved, true);
+        openResolution(unresolved, 'create');
         return;
       }
       if (!questionCount.value) {
@@ -239,37 +278,34 @@ export const ImportKnowledgeSet = defineComponent({
           h('div', [
             h('strong', set?.name ?? feature.label),
             h('span', set
-              ? `Index Cards · ${(set.mode ?? 'flash-cards') === 'fill-in-the-blanks' ? 'Fill in the Blanks' : 'Flash Cards'} · ${set.cards.length} saved · ${importedCount} ready${unresolvedBlankless ? ` · ${unresolvedBlankless} need decisions` : ''}`
-              : 'Choose a library set to import.'),
+              ? `${(set.mode ?? 'flash-cards') === 'fill-in-the-blanks' ? 'Fill in the Blanks' : 'Flash Cards'} · ${set.cards.length} cards`
+              : 'Select another source'),
           ]),
+          h('span', { class: 'knowledge-import-item-count' }, `${importedCount} ready`),
         ]),
         h('div', { class: 'knowledge-import-item-options' }, [
-          h('div', { class: 'knowledge-import-source-choice' }, [
-            h('span', 'Source'),
-            h('button', {
-              type: 'button',
-              class: 'quiet-button',
-              onClick: () => changeSource(item),
-            }, set ? 'Change set' : 'Choose set'),
-          ]),
-          h('label', [
-            h('span', 'Import as'),
+          h('button', {
+            type: 'button', class: 'quiet-button knowledge-import-change-source',
+            onClick: () => changeSource(item),
+          }, 'Change set'),
+          mappings.length > 1 ? h('label', { class: 'knowledge-import-direction' }, [
+            h('span', 'Question direction'),
             h('select', {
               value: mapping.id,
               disabled: !set,
+              title: mapping.description,
               onChange: (event: Event) => { item.mappingId = inputValue(event); },
             }, mappings.map((entry) => h('option', { value: entry.id }, entry.label))),
-          ]),
-          h('p', set ? mapping.description : 'Choose a library set first.'),
-          blankless.length ? h('div', { class: 'knowledge-import-blankless-summary' }, [
-            h('span', unresolvedBlankless
-              ? `${blankless.length} ${blankless.length === 1 ? 'card' : 'cards'} without blanks · ${unresolvedBlankless} need decisions`
-              : `${blankless.length} ${blankless.length === 1 ? 'card' : 'cards'} without blanks · ${statementCount} Statements · ${discardCount} discarded`),
-            h('button', {
-              type: 'button',
-              class: 'quiet-button',
-              onClick: () => openResolution(item),
-            }, unresolvedBlankless ? 'Resolve cards' : 'Review decisions'),
+          ]) : null,
+          blankless.length ? h('button', {
+            type: 'button',
+            class: ['quiet-button', 'knowledge-import-decisions', { 'is-pending': unresolvedBlankless > 0 }],
+            onClick: () => openResolution(item),
+          }, [
+            h(Icon, { name: unresolvedBlankless ? 'lightbulb' : 'check' }),
+            unresolvedBlankless
+              ? `Resolve ${unresolvedBlankless} ${unresolvedBlankless === 1 ? 'card' : 'cards'}`
+              : `${statementCount} Statements · ${discardCount} skipped`,
           ]) : null,
         ]),
         h('div', { class: 'knowledge-import-item-actions' }, [
@@ -291,154 +327,200 @@ export const ImportKnowledgeSet = defineComponent({
       ]);
     }
 
+
     function renderSources() {
-      return h('div', { class: 'knowledge-import-sources-page' }, [
-        h('section', { class: 'knowledge-import-plan', 'aria-labelledby': 'knowledge-import-plan-title' }, [
-          h('div', { class: 'knowledge-import-section-heading' }, [
-            h('div', [
-              h('h3', { id: 'knowledge-import-plan-title' }, 'Sources'),
-              h('p', 'Each row imports one selected library set. Add the same set more than once if you want different mappings or repeated questions.'),
-            ]),
-            h('span', { class: 'knowledge-info-pill' }, unresolvedCount.value
-              ? `${questionCount.value} ready · ${unresolvedCount.value} ${unresolvedCount.value === 1 ? 'decision' : 'decisions'}`
-              : `${questionCount.value} ${questionCount.value === 1 ? 'question' : 'questions'}`),
-          ]),
-          items.value.length
-            ? h('ol', { class: 'knowledge-import-list' }, items.value.map(renderPlanItem))
-            : h('div', { class: 'knowledge-import-empty' }, [
-              h(Icon, { name: 'upload' }),
-              h('strong', 'No import sources yet'),
-              h('p', 'Add an application below, then choose the specific library set to import.'),
-            ]),
+      return h('section', { class: 'knowledge-import-step-content', 'aria-label': 'Select sources' }, [
+        h('header', { class: 'knowledge-import-step-heading' }, [
+          h('h3', 'Choose your sources'),
+          h('p', 'Pick one or more saved Index Cards sets.'),
         ]),
-        h('section', { class: 'knowledge-import-sources', 'aria-labelledby': 'knowledge-import-source-title' }, [
-          h('div', { class: 'knowledge-import-section-heading' }, [
-            h('div', [
-              h('h3', { id: 'knowledge-import-source-title' }, 'Add from an application'),
-              h('p', 'Supported applications expose their saved library here. More import adapters can be added without changing the ordered-plan workflow.'),
-            ]),
+        items.value.length ? h('div', { class: 'knowledge-import-source-summary' }, [
+          h('strong', `${items.value.length} ${items.value.length === 1 ? 'set' : 'sets'} selected`),
+          h('span', `${questionCount.value} questions${unresolvedCount.value ? ` · ${unresolvedCount.value} decisions needed` : ''}`),
+        ]) : null,
+        items.value.length
+          ? h('ol', { class: 'knowledge-import-list', 'aria-label': 'Selected sets' },
+            items.value.map(renderPlanItem))
+          : h('div', { class: 'knowledge-import-start-empty' }, [
+            h(Icon, { name: 'cards' }),
+            h('strong', 'Start with an Index Cards set'),
+            h('p', 'Flash Cards and Fill in the Blanks can become Review questions.'),
           ]),
-          h('div', { class: 'knowledge-import-source-list' }, applicationSources.map((feature) => {
-            const available = feature.id === 'index-cards';
-            return h('button', {
-              key: feature.id,
-              type: 'button',
-              class: ['knowledge-import-source-card', { 'is-coming-soon': !available }],
-              disabled: !available,
-              onClick: () => addSource(feature.id),
-            }, [
-              h(Icon, { name: feature.icon }),
-              h('span', { class: 'knowledge-import-source-copy' }, [
-                h('strong', feature.label),
-                h('span', available ? 'Choose a saved Flash Cards or Fill in the Blanks set.' : feature.description),
-              ]),
-              available
-                ? h('span', { class: 'knowledge-import-source-add' }, [h(Icon, { name: 'plus' }), 'Add source'])
-                : h('span', { class: 'knowledge-import-coming-soon' }, 'Coming soon'),
-            ]);
-          })),
-        ]),
+        items.value.length && !potentialCount.value
+          ? h('p', { class: 'knowledge-message', role: 'status' },
+            'These sets have no importable questions yet. Try another set or change the question direction.') : null,
+        h('button', {
+          type: 'button', class: 'quiet-button knowledge-import-add-source',
+          onClick: () => addSource('index-cards'),
+        }, [h(Icon, { name: 'plus' }), items.value.length ? 'Add another set' : 'Choose an Index Cards set']),
       ]);
     }
 
     function renderOptions() {
-      return h('section', { class: 'knowledge-options knowledge-import-options', 'aria-label': 'Import options' }, [
-        h('h3', 'Import options'),
-        h('p', { class: 'knowledge-muted' }, 'These options affect how the new knowledge set is constructed. They do not control how a later Study, Quiz, or Test session presents it.'),
-        h('fieldset', { class: 'knowledge-import-option-group' }, [
-          h('legend', 'Combine sources'),
-          h('label', { class: 'knowledge-import-radio-option' }, [
-            h('input', { type: 'radio', name: 'import-mix-mode', value: 'grouped', checked: mixMode.value === 'grouped',
-              onChange: () => { mixMode.value = 'grouped'; } }),
-            h('span', [
-              h('strong', 'Keep source blocks together'),
-              h('span', 'Questions from each selected library set stay together, following the Sources order.'),
-            ]),
-          ]),
-          h('label', { class: 'knowledge-import-radio-option' }, [
-            h('input', { type: 'radio', name: 'import-mix-mode', value: 'intermixed', checked: mixMode.value === 'intermixed',
-              onChange: () => { mixMode.value = 'intermixed'; } }),
-            h('span', [
-              h('strong', 'Intermix sources'),
-              h('span', 'Round-robin questions from the selected library sets while preserving each set’s internal order.'),
-            ]),
-          ]),
+      return h('section', { class: 'knowledge-import-step-content', 'aria-label': 'Arrange imported questions' }, [
+        h('header', { class: 'knowledge-import-step-heading' }, [
+          h('h3', 'Arrange your questions'),
+          h('p', 'Choose how the imported questions will be ordered.'),
         ]),
-        h('label', { class: 'knowledge-option-toggle knowledge-import-shuffle-option' }, [
+        items.value.length > 1 ? h('fieldset', { class: 'knowledge-import-combine-options' }, [
+          h('legend', 'When combining sets'),
+          h('div', { class: 'knowledge-import-combine-grid' }, [
+            h('label', { class: 'knowledge-import-radio-option' }, [
+              h('input', { type: 'radio', name: 'import-mix-mode', value: 'grouped',
+                checked: mixMode.value === 'grouped',
+                onChange: () => { mixMode.value = 'grouped'; } }),
+              h('span', [
+                h('strong', 'Keep sets together'),
+                h('span', 'Finish one set before the next.'),
+              ]),
+            ]),
+            h('label', { class: 'knowledge-import-radio-option' }, [
+              h('input', { type: 'radio', name: 'import-mix-mode', value: 'intermixed',
+                checked: mixMode.value === 'intermixed',
+                onChange: () => { mixMode.value = 'intermixed'; } }),
+              h('span', [
+                h('strong', 'Alternate between sets'),
+                h('span', 'Take turns drawing from each set.'),
+              ]),
+            ]),
+          ]),
+        ]) : null,
+        h('label', { class: 'knowledge-import-shuffle-choice' }, [
           h('input', {
             type: 'checkbox', checked: shuffle.value,
             onChange: (event: Event) => { shuffle.value = event.target instanceof HTMLInputElement && event.target.checked; },
           }),
-          'Shuffle questions while importing',
+          h('span', [
+            h('strong', 'Shuffle imported questions'),
+            h('span', 'Randomize the saved order.'),
+          ]),
         ]),
-        h('p', { class: 'knowledge-muted' }, 'This randomizes the saved question order itself. Study, Quiz, and Test can still apply their own ordering behavior later, so this is optional.'),
       ]);
     }
 
-    return () => h('section', { class: 'knowledge-set-builder knowledge-import-builder', 'aria-label': 'Import knowledge set' }, [
-      h('header', { class: 'knowledge-builder-header' }, [
+    function renderReview() {
+      return h('section', { class: 'knowledge-import-step-content', 'aria-label': 'Review import' }, [
+        h('header', { class: 'knowledge-import-step-heading' }, [
+          h('h3', 'Ready to import'),
+          h('p', 'Give your knowledge set a name and check the details.'),
+        ]),
+        h('label', { class: 'knowledge-field knowledge-import-name' }, [
+          'Knowledge set name',
+          h('input', {
+            value: name.value, maxlength: MAX_NAME_LENGTH,
+            onInput: (event: Event) => { name.value = inputValue(event); },
+          }),
+        ]),
+        h('dl', { class: 'knowledge-import-recap' }, [
+          h('div', [h('dt', 'Destination'), h('dd', props.destination)]),
+          h('div', [h('dt', 'Sources'), h('dd', `${items.value.length} Index Cards ${items.value.length === 1 ? 'set' : 'sets'}`)]),
+          h('div', [h('dt', 'Questions'), h('dd', String(questionCount.value))]),
+          h('div', [h('dt', 'Order'), h('dd', shuffle.value ? 'Shuffled'
+            : items.value.length > 1 && mixMode.value === 'intermixed' ? 'Alternating sets' : 'Original set order')]),
+        ]),
+        h('p', { class: 'knowledge-import-copy-note' }, [
+          h(Icon, { name: 'duplicate' }),
+          'This creates a separate copy. Changes to the original cards won’t sync.',
+        ]),
+      ]);
+    }
+
+    function renderProgress() {
+      const steps: { id: ImportStep; label: string }[] = [
+        { id: 'sources', label: 'Sources' },
+        { id: 'options', label: 'Arrange' },
+        { id: 'review', label: 'Review' },
+      ];
+      const current = steps.findIndex((entry) => entry.id === step.value);
+      return h('ol', { class: 'knowledge-import-progress', 'aria-label': 'Import progress' },
+        steps.map((entry, index) => h('li', {
+          key: entry.id, class: { 'is-current': index === current, 'is-complete': index < current },
+          'aria-current': index === current ? 'step' : undefined,
+        }, [
+          h('span', { class: 'knowledge-import-progress-mark', 'aria-hidden': 'true' },
+            index < current ? [h(Icon, { name: 'check' })] : String(index + 1)),
+          h('span', entry.label),
+        ])));
+    }
+
+    return () => h('section', {
+      class: ['knowledge-set-builder', 'knowledge-import-builder', { 'is-backward': goingBack.value }],
+      'aria-label': 'Import knowledge set',
+    }, [
+      h('header', { class: 'knowledge-import-flow-header' }, [
         h('div', [
+          h('span', { class: 'knowledge-import-kicker' }, 'REVIEW / IMPORT'),
           h('h2', 'Import knowledge set'),
-          h('p', 'Combine selected library sets from other applications into a new Review knowledge set.'),
         ]),
-        h('div', { class: 'knowledge-actions' }, [
-          h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('back') }, 'Cancel'),
-          h('button', { type: 'button', class: 'card-primary-button', disabled: !canCreate.value,
-            onClick: createImportedSet }, 'Create knowledge set'),
-        ]),
+        h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('back') }, 'Cancel'),
       ]),
-      h('p', { class: 'knowledge-muted' }, `Saved in ${props.destination}.`),
-      h('aside', { class: 'knowledge-import-sync-note', role: 'note' }, [
-        h(Icon, { name: 'duplicate' }),
-        h('div', [
-          h('strong', 'Importing is not synchronization.'),
-          h('p', 'Review creates an independent copy. Later edits in Index Cards will not update this knowledge set, and edits here will not update the cards. Import the source again when you want a fresh copy.'),
-        ]),
-      ]),
-      h('label', { class: 'knowledge-field' }, [
-        'Set name',
-        h('input', { value: name.value, maxlength: MAX_NAME_LENGTH,
-          onInput: (event: Event) => { name.value = inputValue(event); } }),
-      ]),
-      pickerItemId.value !== undefined
-        ? h(IndexCardsImportPicker, {
-          items: props.indexCards.items,
-          selectedId: pickerItemId.value
-            ? items.value.find((entry) => entry.id === pickerItemId.value)?.sourceItemId ?? null
-            : null,
-          onSelect: selectIndexCardSource,
-          onCancel: () => { pickerItemId.value = undefined; },
-        })
-        : [
-          h('div', { class: 'knowledge-builder-tabs', role: 'group', 'aria-label': 'Import builder pages' }, [
-            h('button', { type: 'button', class: 'quiet-button', 'aria-pressed': tab.value === 'sources',
-              onClick: () => { tab.value = 'sources'; } }, 'Sources'),
-            h('button', { type: 'button', class: 'quiet-button', 'aria-pressed': tab.value === 'options',
-              onClick: () => { tab.value = 'options'; } }, 'Import options'),
+      renderProgress(),
+      h(Transition, {
+        name: 'knowledge-import-stage', mode: 'out-in',
+        onAfterEnter: () => { stepRegion.value?.focus({ preventScroll: true }); },
+      }, {
+        default: () => h('div', {
+          key: pickerItemId.value !== undefined ? 'picker' : step.value,
+          ref: stepRegion, tabindex: -1, role: 'region',
+          'aria-label': pickerItemId.value !== undefined ? 'Choose an Index Cards set' :
+            step.value === 'sources' ? 'Choose sources' : step.value === 'options' ? 'Arrange questions' : 'Review import',
+          class: 'knowledge-import-stage',
+        }, pickerItemId.value !== undefined
+          ? [h(IndexCardsImportPicker, {
+            items: props.indexCards.items,
+            selectedId: pickerItemId.value
+              ? items.value.find((entry) => entry.id === pickerItemId.value)?.sourceItemId ?? null
+              : null,
+            onSelect: selectIndexCardSource,
+            onCancel: () => { goingBack.value = true; pickerItemId.value = undefined; },
+          })]
+          : [step.value === 'sources' ? renderSources()
+            : step.value === 'options' ? renderOptions() : renderReview()]),
+      }),
+      pickerItemId.value === undefined ? [
+        potentialLimitProblem.value && step.value === 'sources'
+          ? h('p', { class: 'knowledge-message', role: 'alert' }, potentialLimitProblem.value) : null,
+        message.value ? h('p', { class: 'knowledge-message', role: 'alert' }, message.value) : null,
+        h('footer', { class: 'knowledge-import-flow-footer' }, [
+          h('span', { class: 'knowledge-import-footer-count' }, items.value.length
+            ? `${questionCount.value} ${questionCount.value === 1 ? 'question' : 'questions'}`
+            : 'No sources selected'),
+          h('div', { class: 'knowledge-import-footer-actions' }, [
+            step.value !== 'sources' ? h('button', {
+              type: 'button', class: 'quiet-button',
+              onClick: () => setStep(step.value === 'review' ? 'options' : 'sources', true),
+            }, 'Back') : null,
+            step.value === 'sources' ? h('button', {
+              type: 'button', class: 'card-primary-button', disabled: !canContinue.value,
+              onClick: continueSources,
+            }, ['Continue', h(Icon, { name: 'chevron' })])
+              : step.value === 'options' ? h('button', {
+                type: 'button', class: 'card-primary-button', onClick: () => setStep('review'),
+              }, ['Review import', h(Icon, { name: 'chevron' })])
+                : h('button', {
+                  type: 'button', class: 'card-primary-button', disabled: !canCreate.value,
+                  onClick: createImportedSet,
+                }, 'Create knowledge set'),
           ]),
-          limitProblem.value ? h('p', { class: 'knowledge-message', role: 'alert' }, limitProblem.value) : null,
-          message.value ? h('p', { class: 'knowledge-message', role: 'alert' }, message.value) : null,
-          tab.value === 'options' ? renderOptions() : renderSources(),
-        ],
-      items.value.length && !potentialCount.value
-        ? h('p', { class: 'knowledge-muted knowledge-import-future-note' }, 'The selected sources do not currently contain any complete cards that can become Review questions.')
-        : null,
+        ]),
+      ] : null,
       resolutionItem.value ? h(FillBlankImportResolution, {
         entries: blanklessCardsFor(resolutionItem.value),
         initial: resolutionItem.value.blanklessActions,
         onCancel: () => {
           resolutionItemId.value = null;
-          resumeCreateAfterResolution.value = false;
+          afterResolution.value = null;
         },
         onApply: (actions: BlanklessFillCardActions) => {
           const item = resolutionItem.value;
           if (!item) return;
           item.blanklessActions = { ...actions };
-          message.value = '';
-          const resume = resumeCreateAfterResolution.value;
+          const action = afterResolution.value;
           resolutionItemId.value = null;
-          resumeCreateAfterResolution.value = false;
-          if (resume) createImportedSet();
+          afterResolution.value = null;
+          message.value = '';
+          if (action === 'advance') continueSources();
+          else if (action === 'create') createImportedSet();
         },
       }) : null,
     ]);
