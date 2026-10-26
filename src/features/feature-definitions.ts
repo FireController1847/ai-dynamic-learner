@@ -1,7 +1,7 @@
 // Shared by the browser registry and webpack build; keep this data browser-neutral.
 import type { PageMetadataOverrides } from '../core/metadata.ts';
 
-export type FeatureId = 'calculator' | 'notebook' | 'todo-list' | 'index-cards' | 'word-search' | 'crossword' | 'guide' | 'knowledge-check';
+export type FeatureId = 'calculator' | 'notebook' | 'workbook' | 'todo-list' | 'index-cards' | 'word-search' | 'crossword' | 'guide' | 'knowledge-check';
 export type FeatureGroup = 'tools' | 'work' | 'study' | 'master';
 export const featureGroups: readonly { id: FeatureGroup; label: string }[] = [
   { id: 'tools', label: 'Tools' },
@@ -47,6 +47,13 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
     version: '1.6.3',
     image: 'assets/app-icons/notebook.png',
     description: 'Organize notes into groups and keep your documents together in one notebook.',
+  },
+  {
+    id: 'workbook', label: 'Workbook', path: '/workbook/', icon: 'workbook',
+    group: 'work',
+    version: '0.1.0',
+    image: '',
+    description: 'Organize data independently from how it is processed or presented.',
   },
   {
     id: 'todo-list', label: 'Todo List', path: '/todo-list/', icon: 'checklist',
