@@ -270,17 +270,21 @@ const App = defineComponent({
         h('main', {
           ref: main,
           class: ['app-content', {
+            'app-content--ready': workspace.ready.value,
             'app-content--home': currentPath.value === '/',
             'app-content--workspace': ['notebook', 'todo-list', 'index-cards', 'word-search', 'crossword', 'guide', 'knowledge-check'].includes(activeFeature.value?.id ?? ''),
           }],
           tabindex: -1,
+          'aria-busy': !workspace.ready.value && !workspace.storageProblem.value,
         }, [
           !workspace.ready.value
-            ? h('section', { class: 'workspace-loading', role: 'status' }, [
-              h('h2', 'Workspace unavailable'),
-              h('p', workspace.storageProblem.value || 'Opening and checking your saved workspace…'),
-              h('p', 'Editing is disabled until the saved data has been loaded safely.'),
-            ])
+            ? workspace.storageProblem.value
+              ? h('section', { class: 'workspace-loading', role: 'alert' }, [
+                h('h2', 'Workspace unavailable'),
+                h('p', workspace.storageProblem.value),
+                h('p', 'Editing is disabled until the saved data has been loaded safely.'),
+              ])
+              : h('span', { class: 'visually-hidden', role: 'status' }, 'Opening your workspace…')
             : [
               currentPath.value === '/' ? h(HomePage, { onNavigate: navigate }) : null,
               h(KeepAlive, { key: workspace.revision.value }, {
