@@ -270,7 +270,6 @@ const App = defineComponent({
         h('main', {
           ref: main,
           class: ['app-content', {
-            'app-content--ready': workspace.ready.value,
             'app-content--home': currentPath.value === '/',
             'app-content--workspace': ['notebook', 'todo-list', 'index-cards', 'word-search', 'crossword', 'guide', 'knowledge-check'].includes(activeFeature.value?.id ?? ''),
           }],
