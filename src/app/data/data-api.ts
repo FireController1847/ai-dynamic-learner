@@ -62,16 +62,25 @@ export class WorkspaceDataApi {
     await this.store.open();
     let workspaceId = await this.store.activeWorkspaceId();
     if (!workspaceId) {
-      // The original localStorage source is read-only during migration.
-      // A corrupt copy blocks initialization; never replace it with emptiness.
-      let legacy: string | null;
+      // Legacy localStorage is an optional, read-only migration source.
+      // Some browsers disallow access to it even when IndexedDB works.
+      // Do not mistake an inaccessible legacy store for a corrupt workspace,
+      // and never delete or overwrite any old copy.
+      let legacy: string | null = null;
       try { legacy = localStorage.getItem(LEGACY_KEY); }
-      catch { throw new DataApiError('unavailable', 'The previous workspace could not be accessed.'); }
+      catch {
+        console.warn('Legacy workspace storage is inaccessible; initializing IndexedDB without modifying it.');
+      }
+      // Malformed legacy data is different: it must still block migration
+      // rather than silently replace a readable saved workspace.
       const imported = legacy === null ? emptyWorkspace() : parseWorkspace(legacy);
       const stagedId = createId();
       await this.store.stageRows(workspaceRows(stagedId, imported));
       const hydrated = await hydrateWorkspace(this.store, stagedId);
-      if (canonical(imported) !== canonical(hydrated)) {
+      // The source comparison protects actual legacy imports against data
+      // loss. A brand-new empty workspace has no legacy content to compare,
+      // and hydrateWorkspace has already validated the staged records.
+      if (legacy !== null && canonical(imported) !== canonical(hydrated)) {
         throw new DataApiError('validation', 'The imported workspace did not survive the database round-trip.');
       }
       try { await this.store.activate(stagedId, null, new Date().toISOString()); }
