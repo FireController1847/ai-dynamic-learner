@@ -1,8 +1,7 @@
 # Review publishing
 
 Publish is a browser-local, transient workspace mode like Build. Large choice
-buttons offer Study, Gap, and Bubble. Study and Bubble are available; Gap is
-Gap is available alongside Study and Bubble.
+buttons offer Study, Gap, and Bubble. All three layouts are available: Study, Gap and Bubble.
 
 - **Bubble:** Only Multiple Choice (including multi-select), True/False,
   Dropdown/matching, and informational Statements. Short Answer, Fill in the
@@ -33,11 +32,15 @@ Gap is available alongside Study and Bubble.
 
 - **Gap:** for handwriting-oriented **Short Answer**, informational **Statement**,
   and generated **Parameterized** written responses. Printed questions span the
-  usable page width and have generous, individually ruled writing spaces
-  (roughly two or three items per portrait page, depending on prompt height).
-  Statement items have a Notes / reflection area; they have no fixed correct
-  response. Parameterized items keep their generated prompts, context and answer
-  labels, with space to show work. Multiple Choice, True/False, Dropdown and Fill
+  usable page width and leave a generous **completely blank** handwriting gap
+  (55mm portrait or 34mm landscape) below each prompt and optional context,
+  without ruled lines, response labels or separate answer-part boxes. The gap
+  stays with the question wherever pagination can keep it together, generally
+  allowing roughly two or three questions per page depending on prompt height.
+  Statements are suitable for reflections but have no fixed correct response.
+  Parameterized items keep their generated prompts and context without printing
+  answer labels or solutions; their correct answers still appear in the optional
+  answer key. Multiple Choice, True/False, Dropdown and Fill
   in the Blanks are excluded after the same explicit, grouped warning/Continue
   screen as Bubble. Excluded items do not appear in question pages or the key;
   included items retain their authored numbers. No unsupported uploaded
@@ -285,8 +288,9 @@ white sheets, gaps, and shadows visible on screen while excluding them from prin
   Comfortable/Compact should start with their title, Name line and questions,
   without a blank page. Only Cover page should put the questions on page two.
   Check title/question spacing and the Version panel's input, wrapping, Done, and themes.
-- Check Gap with a Short Answer/Statement/Parameterized bank: generous ruled
-  space under each prompt, sanitized Markdown/math context, original numbering,
+- Check Gap with a Short Answer/Statement/Parameterized bank: generous, completely
+  unmarked white space beneath each prompt (no ruled lines, response/notes labels,
+  or multipart answer boxes), sanitized Markdown/math context, original numbering,
   and natural page breaks without losing writing space. Check portrait/landscape,
   Letter/A4, both margins and font sizes, with long questions that may exceed
   a typical three-question page. Verify Statement notes/reflection has no fixed
