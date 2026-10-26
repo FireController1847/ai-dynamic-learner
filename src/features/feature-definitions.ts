@@ -44,7 +44,7 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'notebook', label: 'Notebook', path: '/notebook/', icon: 'document',
     group: 'work',
-    version: '1.6.2',
+    version: '1.6.3',
     image: 'assets/app-icons/notebook.png',
     description: 'Organize notes into groups and keep your documents together in one notebook.',
   },
@@ -116,7 +116,7 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'knowledge-check', label: 'Review', path: '/knowledge-check/', icon: 'checklist',
     group: 'master',
-    version: '1.47.1',
+    version: '1.47.2',
     image: 'assets/app-icons/knowledge-check.png',
     description: 'Make knowledge sets to study, quiz yourself, or take a test.',
     metadata: {

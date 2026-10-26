@@ -342,6 +342,11 @@ export const KnowledgeCheckLibrary = defineComponent({
             'aria-label': 'Create knowledge set with AI', onClick: () => emit('ai-check', setupTarget()),
           }, [h(Icon, { name: 'ai' })]),
           h('button', {
+            ref: importKnowledgeCheckButton,
+            type: 'button', class: 'icon-button', title: 'Import knowledge set',
+            'aria-label': 'Import knowledge set', onClick: requestKnowledgeCheckImport,
+          }, [h(Icon, { name: 'upload' })]),
+          h('button', {
             ref: createGroupButton,
             type: 'button', class: 'icon-button', title: 'New group',
             'aria-label': 'New group', onClick: createGroupRelativeToSelection,
@@ -351,11 +356,6 @@ export const KnowledgeCheckLibrary = defineComponent({
             type: 'button', class: 'icon-button', title: 'New knowledge set',
             'aria-label': 'New knowledge set', onClick: requestKnowledgeCheckSetup,
           }, [h(Icon, { name: 'checklist' })]),
-          h('button', {
-            ref: importKnowledgeCheckButton,
-            type: 'button', class: 'icon-button', title: 'Import knowledge set',
-            'aria-label': 'Import knowledge set', onClick: requestKnowledgeCheckImport,
-          }, [h(Icon, { name: 'upload' })]),
           h('button', {
             ref: collapseButton,
             type: 'button', class: 'icon-button', title: 'Minimize library',
