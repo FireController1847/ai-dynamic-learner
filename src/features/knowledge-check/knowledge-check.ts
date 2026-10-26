@@ -419,13 +419,11 @@ export const KnowledgeCheck = defineComponent({
         inert: libraryOverlay.value && !libraryCollapsed.value,
         'aria-label': 'Selected knowledge set',
       }, [
-        h('header', { class: 'knowledge-check-item-heading' }, [
-          h('h2', { ref: workspaceHeading, tabindex: -1 }, item.name),
-          h('p', 'Knowledge set'),
-        ]),
         h(KnowledgeSet, { key: item.id, item, initialBuilder: item.id === tutorialBuilderId.value,
           statisticsEnabled: item.id !== tutorialSetId.value,
-          initialMode: item.id === tutorialSetId.value ? item.mode ?? null : null }),
+          initialMode: item.id === tutorialSetId.value ? item.mode ?? null : null }, {
+          heading: () => h('h2', { ref: workspaceHeading, tabindex: -1 }, item.name),
+        }),
         organizationControls(item),
         h('p', { class: 'visually-hidden', role: 'status' }, message.value),
       ]);

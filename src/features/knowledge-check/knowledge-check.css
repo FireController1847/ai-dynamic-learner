@@ -897,3 +897,12 @@
   .knowledge-import-section-heading > button { min-height: 44px; }
   .knowledge-import-source-copy { min-width: 0; overflow-wrap: anywhere; }
 }
+
+.knowledge-choice-screen-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.knowledge-choice-screen-header > .knowledge-check-builder-intro { min-width: 0; overflow-wrap: anywhere; }
+.knowledge-choice-screen-header > button { flex: 0 0 auto; }
+.knowledge-check-type-card:disabled {
+  cursor: default; opacity: .65; transform: none; box-shadow: none;
+  border-color: var(--border-color); background: var(--page-background);
+}
+.knowledge-choice-note { font-weight: 600; }

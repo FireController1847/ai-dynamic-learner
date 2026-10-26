@@ -1,16 +1,7 @@
 /* Compact black-and-white optical sheet, independent of the question columns. */
 .bubble-response-sheet { break-before: page; page-break-before: always; break-inside: auto; }
 .bubble-sheet-heading { margin: 0 0 10pt; padding-bottom: 7pt; border-bottom: .6pt solid #999; break-inside: avoid; }
-.bubble-sheet-kicker {
-  margin: 0 0 3pt; font: 700 7pt/1.3 Arial, Helvetica, sans-serif;
-  letter-spacing: .1em; color: #555;
-}
-.bubble-sheet-heading h1 { margin: 0; font-size: 1.25em; line-height: 1.2; }
-.bubble-sheet-title { margin: 3pt 0 0; font-size: .85em; overflow-wrap: anywhere; }
 .bubble-sheet-note { margin: 5pt 0 0; font-size: .7em; color: #444; }
-.bubble-sheet-identification { display: grid; grid-template-columns: 1.6fr 1fr; gap: 12pt; margin: 9pt 0 0; }
-.bubble-sheet-identification p { display: flex; align-items: end; gap: 5pt; margin: 0; font-size: .8em; }
-.bubble-sheet-id-line { flex: 1; min-width: 0; height: 10pt; border-bottom: .65pt solid #555; }
 .bubble-response-rows { width: 100%; column-count: 3; column-gap: 9pt; }
 .bubble-response-row {
   display: flex; align-items: center; gap: 3pt; box-sizing: border-box; min-width: 0;

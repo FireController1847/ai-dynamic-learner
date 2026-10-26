@@ -3,7 +3,8 @@ import { MarkdownContent } from '../../../components/markdown-content.ts';
 import markdownStyles from '../../../styles/markdown-content.css?publication';
 import katexStyles from 'katex/dist/katex.min.css?publication';
 import studyStyles from './study-sheet.css?publication';
-import type { PublicationQuestion, PublicationView } from './publication-model.ts';
+import { publicationHasCover, type PublicationQuestion, type PublicationView } from './publication-model.ts';
+import { documentHeading, publicationFields } from './publication-heading.ts';
 import type { PublicationRenderer } from './paged-runtime.ts';
 
 function questionContent(question: PublicationQuestion, style: PublicationView['settings']['questionStyle'],
@@ -67,43 +68,31 @@ export function studyQuestions(view: PublicationView, includeResponseLines = tru
  */
 export function studyHeading(view: PublicationView, edition = 'STUDY SHEET'): VNodeChild {
   if (view.settings.titleLayout !== 'cover') {
-    return h('header', { class: ['study-sheet-heading', `study-heading-${view.settings.titleLayout}`] }, [
-      h('h1', view.title),
-      h('p', { class: 'study-name-field' }, [
-        h('span', 'Name:'),
-        h('span', { class: 'study-name-line', 'aria-label': 'Write your name' }, '\u00a0'),
-      ]),
-    ]);
+    return documentHeading(edition === 'BUBBLE SHEET' ? 'Bubble sheet' : 'Study sheet', view.title,
+      view.settings.questionMetadata, ['study-sheet-heading', `study-heading-${view.settings.titleLayout}`]);
   }
 
+  if (!publicationHasCover(view.settings)) return null;
+  const metadata = view.settings.questionMetadata;
   const questionCount = view.questions.length;
   return h('section', { class: 'study-sheet-cover', 'aria-label': 'Study sheet cover' }, [
-    h('div', { class: 'study-cover-masthead' }, [
-      h('span', { class: 'study-cover-brand' }, 'DYNAMIC LEARNER'),
-      h('span', { class: 'study-cover-edition' }, `REVIEW / ${edition}`),
-    ]),
+    metadata.headerLeft || metadata.headerRight ? h('div', { class: 'study-cover-masthead' }, [
+      metadata.headerLeft ? h('span', { class: 'study-cover-brand' }, 'DYNAMIC LEARNER') : null,
+      metadata.headerRight ? h('span', { class: 'study-cover-edition' }, `REVIEW / ${edition}`) : null,
+    ]) : null,
     h('div', { class: 'study-cover-main' }, [
-      h('div', { class: 'study-cover-accent', 'aria-hidden': 'true' }),
-      h('p', { class: 'study-cover-kicker' }, 'STUDY MATERIAL'),
-      h('h1', { class: 'study-cover-title' }, view.title),
-      h('p', { class: 'study-cover-subtitle' },
-        `${questionCount} practice ${questionCount === 1 ? 'question' : 'questions'}`),
+      metadata.title ? h('div', { class: 'study-cover-accent', 'aria-hidden': 'true' }) : null,
+      metadata.notes ? h('p', { class: 'study-cover-kicker' }, 'STUDY MATERIAL') : null,
+      metadata.title ? h('h1', { class: 'study-cover-title' }, view.title) : null,
+      metadata.questionCount ? h('p', { class: 'study-cover-subtitle' },
+        `${questionCount} practice ${questionCount === 1 ? 'question' : 'questions'}`) : null,
     ]),
     h('div', { class: 'study-cover-bottom' }, [
-      h('div', { class: 'study-cover-fields' }, [
-        h('div', { class: 'study-cover-field' }, [
-          h('span', { class: 'study-cover-field-label' }, 'Name'),
-          h('span', { class: 'study-cover-field-line', 'aria-label': 'Write your name' }, '\u00a0'),
-        ]),
-        h('div', { class: 'study-cover-field' }, [
-          h('span', { class: 'study-cover-field-label' }, 'Date'),
-          h('span', { class: 'study-cover-field-line', 'aria-label': 'Write the date' }, '\u00a0'),
-        ]),
-      ]),
-      h('div', { class: 'study-cover-footer' }, [
-        h('span', edition === 'BUBBLE SHEET' ? 'BUBBLE / PRACTICE' : 'STUDY / PRACTICE'),
-        h('span', `${questionCount} ${questionCount === 1 ? 'QUESTION' : 'QUESTIONS'}`),
-      ]),
+      publicationFields(metadata, true),
+      metadata.headerRight || metadata.questionCount ? h('div', { class: 'study-cover-footer' }, [
+        metadata.headerRight ? h('span', edition === 'BUBBLE SHEET' ? 'BUBBLE / PRACTICE' : 'STUDY / PRACTICE') : null,
+        metadata.questionCount ? h('span', `${questionCount} ${questionCount === 1 ? 'QUESTION' : 'QUESTIONS'}`) : null,
+      ]) : null,
     ]),
   ]);
 }
@@ -113,12 +102,8 @@ export function studyAnswerKey(view: PublicationView): VNodeChild {
   return h('section', { class: ['study-answer-key', {
     'study-answer-key-appended': view.settings.content === 'both',
   }], 'aria-label': 'Answer key' }, [
-    h('header', { class: 'study-answer-key-heading' }, [
-      h('p', { class: 'study-answer-key-eyebrow' }, 'DYNAMIC LEARNER / REVIEW'),
-      h('h1', 'Answer key'),
-      h('p', { class: 'study-answer-key-title' }, view.title),
-      h('p', { class: 'study-answer-key-note' }, 'Answers correspond to the numbered questions in this version.'),
-    ]),
+    documentHeading('Answer key', view.title, view.settings.keyMetadata, ['study-answer-key-heading'],
+      h('p', { class: 'study-answer-key-note' }, 'Answers correspond to the numbered questions in this version.')),
     h('div', { class: ['study-answer-key-entries', {
       'study-answer-key-two-columns': view.settings.columns === 2,
     }] }, view.answerKey.map(entry =>

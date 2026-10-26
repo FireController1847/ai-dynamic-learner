@@ -8,13 +8,17 @@ body {
   --radius: 0;
 }
 .study-sheet-heading {
-  display: flex; flex-wrap: wrap; align-items: baseline; gap: 6pt 16pt;
-  margin: 0 0 16pt; break-inside: avoid; break-after: auto;
+  margin: 0 0 16pt; padding-bottom: 10pt;
+  break-inside: avoid; break-after: auto;
 }
-.study-sheet-heading h1 { flex: 1 1 180pt; margin: 0; font-size: 1.25em; line-height: 1.2; break-after: auto; }
-.study-name-field { display: flex; flex: 0 0 180pt; align-items: baseline; gap: 6pt; margin: 0; white-space: nowrap; }
-.study-name-line { display: inline-block; flex: 1; min-width: 100pt; border-bottom: 0.6pt solid #333; }
-.study-heading-comfortable { margin-bottom: 40pt; }
+.study-sheet-heading h1 { break-after: auto; }
+.study-metadata-fields { display: flex; flex-wrap: wrap; gap: 8pt 18pt; margin-top: 10pt; }
+.study-metadata-field { display: flex; flex: 1 1 100pt; align-items: baseline; gap: 6pt; min-width: 0; }
+.study-metadata-field.is-name { flex: 2 1 180pt; }
+.study-metadata-field:only-child { max-width: 240pt; }
+.study-metadata-field > span:first-child { white-space: nowrap; }
+.study-metadata-line { display: inline-block; flex: 1; min-width: 0; border-bottom: 0.6pt solid #333; }
+.study-heading-comfortable { margin-bottom: 40pt; padding-bottom: 14pt; }
 /* A full-height editorial cover: black-and-white, ink-friendly, and independent
    of the compact/comfortable question pages. Height is derived from the paper
    size and margins to keep its page break reliable in portrait or landscape. */
@@ -36,7 +40,7 @@ body {
   font-size: 8pt; line-height: 1.5; letter-spacing: 0.12em;
 }
 .study-cover-brand { font-weight: 700; }
-.study-cover-edition { color: #555; text-align: right; }
+.study-cover-edition { margin-left: auto; color: #555; text-align: right; }
 .study-cover-main {
   margin: auto 0; padding: 22pt 0 34pt;
   max-width: 95%;
@@ -56,7 +60,7 @@ body {
 }
 .study-cover-bottom { flex: 0 0 auto; }
 .study-cover-fields {
-  display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(100pt, 1fr));
   gap: 24pt; margin: 0 0 30pt;
 }
 .study-cover-field { display: flex; flex-direction: column; gap: 10pt; min-width: 0; }
@@ -119,12 +123,22 @@ body {
 .study-answer-key { break-inside: auto; }
 .study-answer-key-appended { break-before: page; page-break-before: always; }
 .study-answer-key-heading { margin: 0 0 20pt; padding-bottom: 14pt; border-bottom: 0.75pt solid #aaa; break-inside: avoid; }
-.study-answer-key-heading h1 { font-size: 1.6em; line-height: 1.2; margin: 6pt 0; }
-.study-answer-key-eyebrow {
-  margin: 0; color: #555; font: 700 8pt/1.4 Arial, Helvetica, sans-serif;
-  letter-spacing: .12em;
+/* Opening-page mastheads occupy the page margin, independently of body text.
+   Insets scale with the selected margins and leave room inside the paper edge. */
+.study-document-heading { position: relative; display: flow-root; }
+.study-document-heading h1 {
+  font-size: 1.6em; font-weight: 700; line-height: 1.2; letter-spacing: -0.02em;
+  margin: 6pt 0; overflow-wrap: anywhere;
 }
-.study-answer-key-title { margin: 0; font-size: 1em; overflow-wrap: anywhere; }
+.study-document-eyebrow {
+  position: absolute; top: calc(-1 * var(--publication-header-rise, 8mm));
+  left: calc(-1 * var(--publication-header-outset, 4mm));
+  right: calc(-1 * var(--publication-header-outset, 4mm));
+  display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 4pt 12pt;
+  margin: 0; color: #555; font: 700 8pt/1.4 Arial, Helvetica, sans-serif;
+  letter-spacing: .12em; text-transform: uppercase;
+}
+.study-document-edition { margin-left: auto; text-align: right; }
 .study-answer-key-note { color: #555; margin: 8pt 0 0; font-size: .8em; }
 .study-answer-key-entries { width: 100%; }
 .study-answer-key-two-columns { column-count: 2; column-gap: 24pt; }
@@ -136,3 +150,6 @@ body {
 .study-answer-key-lines { flex: 1; min-width: 0; }
 .study-answer-key-lines p { margin: 0 0 3pt; line-height: 1.4; white-space: pre-wrap; }
 .study-answer-key-lines p:last-child { margin-bottom: 0; }
+
+/* Identification fields already carry rules; avoid a second underline. */
+.study-document-heading.study-heading-has-fields { border-bottom: 0; }

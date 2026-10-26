@@ -7,6 +7,7 @@ const paths: Record<string, string> = {
   check: 'm5 12 4 4L19 6',
   statistics: 'M3 21h18M5 21V12h3v9M11 21V7h3v14M17 21V3h3v18',
   checklist: 'M9 5h12M9 12h12M9 19h12M2 5l2 2 3-4M2 12l2 2 3-4M2 19l2 2 3-4',
+  tag: 'M3 3h8l10 10-8 8L3 11ZM7 7h.01',
   bookmark: 'M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1Z',
   flag: 'M5 22V3M5 4h13l-3 5 3 5H5',
   archive: 'M3 3h18v5H3ZM5 8v13h14V8M9 12h6',

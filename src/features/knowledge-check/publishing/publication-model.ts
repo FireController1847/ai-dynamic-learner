@@ -14,14 +14,34 @@ export type PublicationContent = 'questions' | 'both' | 'key';
 
 /** Document layouts are independent of delivery formats (print, PDF, HTML, etc.). */
 export const PUBLICATION_LAYOUTS = [
-  { id: 'bubble', label: 'Bubble', icon: 'checklist', available: true,
-    description: 'Choice-based questions with a compact bubble answer sheet.' },
-  { id: 'gap', label: 'Gap', icon: 'pencil', available: false,
-    description: 'Two or three questions per page with generous space for written answers.' },
   { id: 'study', label: 'Study', icon: 'document', available: true,
     description: 'A printable one- or two-column sheet with lettered choices to circle.' },
+  { id: 'gap', label: 'Gap', icon: 'pencil', available: false,
+    description: 'Two or three questions per page with generous space for written answers.' },
+  { id: 'bubble', label: 'Bubble', icon: 'checklist', available: true,
+    description: 'Choice-based questions with a compact bubble answer sheet.' },
 ] as const;
 export type PublicationLayout = typeof PUBLICATION_LAYOUTS[number]['id'];
+export const PUBLICATION_METADATA_FIELDS = [
+  { id: 'headerLeft', label: 'Header left (Dynamic Learner / Review)' },
+  { id: 'headerRight', label: 'Header right (sheet type)' },
+  { id: 'title', label: 'Knowledge-set title' },
+  { id: 'name', label: 'Name field' },
+  { id: 'date', label: 'Date field' },
+  { id: 'class', label: 'Class field' },
+  { id: 'notes', label: 'Header notes / instructions' },
+  { id: 'questionCount', label: 'Question count on cover' },
+] as const;
+export type PublicationMetadata = Record<typeof PUBLICATION_METADATA_FIELDS[number]['id'], boolean>;
+export function defaultPublicationMetadata(answerKey = false): PublicationMetadata {
+  return { headerLeft: true, headerRight: true, title: true, name: !answerKey,
+    date: false, class: false, notes: true, questionCount: !answerKey };
+}
+function validMetadata(value: unknown): value is PublicationMetadata {
+  return isRecord(value) && Object.keys(value).length === PUBLICATION_METADATA_FIELDS.length &&
+    PUBLICATION_METADATA_FIELDS.every(field => typeof value[field.id] === 'boolean');
+}
+
 export interface PublicationSettings {
   layout: PublicationLayout;
   paper: 'letter' | 'a4';
@@ -29,6 +49,8 @@ export interface PublicationSettings {
   margin: 'standard' | 'compact';
   columns: 1 | 2;
   alignColumns: boolean;
+  questionMetadata: PublicationMetadata;
+  keyMetadata: PublicationMetadata;
   questionStyle: PublicationQuestionStyle;
   content: PublicationContent;
   titleLayout: 'cover' | 'comfortable' | 'compact';
@@ -40,13 +62,13 @@ export interface PublicationSettings {
 
 export function validatePublicationSettings(value: unknown): asserts value is PublicationSettings {
   if (!isRecord(value) || Object.keys(value).some(key =>
-    !['layout', 'paper', 'orientation', 'margin', 'columns', 'alignColumns', 'questionStyle', 'content', 'titleLayout', 'font', 'fontSize', 'seed'].includes(key)) ||
+    !['layout', 'paper', 'orientation', 'margin', 'columns', 'alignColumns', 'questionStyle', 'content', 'titleLayout', 'font', 'fontSize', 'seed', 'questionMetadata', 'keyMetadata'].includes(key)) ||
     !PUBLICATION_LAYOUTS.some(layout => layout.id === value.layout) ||
     (value.paper !== 'letter' && value.paper !== 'a4') ||
     (value.orientation !== 'portrait' && value.orientation !== 'landscape') ||
     (value.margin !== 'standard' && value.margin !== 'compact') ||
     (value.columns !== 1 && value.columns !== 2) ||
-    typeof value.alignColumns !== 'boolean' ||
+    typeof value.alignColumns !== 'boolean' || !validMetadata(value.questionMetadata) || !validMetadata(value.keyMetadata) ||
     !['regular', 'bold', 'italic', 'bold-italic', 'underline'].includes(value.questionStyle as string) ||
     (value.content !== 'questions' && value.content !== 'both' && value.content !== 'key') ||
     (value.titleLayout !== 'cover' && value.titleLayout !== 'comfortable' && value.titleLayout !== 'compact') ||
@@ -56,6 +78,16 @@ export function validatePublicationSettings(value: unknown): asserts value is Pu
     typeof value.seed !== 'string' || !value.seed.trim() || value.seed.length > 128) {
     throw new Error('Choose valid publication settings and a seed of 1–128 characters.');
   }
+}
+
+/** Detach nested transient settings before asynchronous preparation or view projection. */
+export function copyPublicationSettings(settings: PublicationSettings): PublicationSettings {
+  return { ...settings, questionMetadata: { ...settings.questionMetadata }, keyMetadata: { ...settings.keyMetadata } };
+}
+export function publicationHasCover(settings: PublicationSettings): boolean {
+  const metadata = settings.questionMetadata;
+  return settings.content !== 'key' && settings.titleLayout === 'cover' &&
+    Object.values(metadata).some(Boolean);
 }
 
 /** Explicit millimetre dimensions avoid Paged.js's case-sensitive paper-name lookup. */
@@ -130,7 +162,7 @@ export function publicationView(source: PreparedPublication, settings: Publicati
   validatePublicationSettings(settings);
   if (source.seed !== settings.seed) throw new Error('Prepare content again after changing the seed.');
   return {
-    title: source.title, description: source.description, settings: { ...settings },
+    title: source.title, description: source.description, settings: copyPublicationSettings(settings),
     questions: source.questions.map(question => ({
       ...question,
       choices: [...question.choices], responseLabels: [...question.responseLabels],

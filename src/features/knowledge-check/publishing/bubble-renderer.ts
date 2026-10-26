@@ -2,6 +2,7 @@ import { Fragment, h, render, type VNodeChild } from 'vue';
 import type { PublicationQuestion, PublicationView } from './publication-model.ts';
 import type { PublicationRenderer } from './paged-runtime.ts';
 import { studyAnswerKey, studyHeading, studyQuestions, studyRenderer } from './study-renderer.ts';
+import { documentHeading } from './publication-heading.ts';
 import bubbleStyles from './bubble-sheet.css?publication';
 
 const letter = (i: number) => String.fromCharCode(65 + i);
@@ -22,23 +23,15 @@ function bubbleRows(question: PublicationQuestion): VNodeChild[] {
   ];
   if (question.kind === 'matching') return question.responseLabels.map((_label, i) =>
     bubbleRow(`${question.number}.${i + 1}`, question.choices.length, false));
-  // Other scored kinds are rejected in preparation; Statements have no answers.
+  // Unsupported kinds are excluded in preparation; Statements have no answers.
   return [];
 }
 
 function responseSheet(view: PublicationView): VNodeChild {
   return h('section', { class: 'bubble-response-sheet', 'aria-label': 'Bubble answer sheet' }, [
-    h('header', { class: 'bubble-sheet-heading' }, [
-      h('p', { class: 'bubble-sheet-kicker' }, 'DYNAMIC LEARNER / REVIEW'),
-      h('h1', 'Answer sheet'),
-      h('p', { class: 'bubble-sheet-title' }, view.title),
+    documentHeading('Answer sheet', view.title, view.settings.questionMetadata, ['bubble-sheet-heading'],
       h('p', { class: 'bubble-sheet-note' },
-        'Darken the circle for your answer. For questions marked *, select all that apply.'),
-      h('div', { class: 'bubble-sheet-identification' }, [
-        h('p', ['Name', h('span', { class: 'bubble-sheet-id-line', 'aria-hidden': 'true' })]),
-        h('p', ['Date', h('span', { class: 'bubble-sheet-id-line', 'aria-hidden': 'true' })]),
-      ]),
-    ]),
+        'Darken the circle for your answer. For questions marked *, select all that apply.')),
     h('div', { class: 'bubble-response-rows' }, view.questions.flatMap(bubbleRows)),
   ]);
 }

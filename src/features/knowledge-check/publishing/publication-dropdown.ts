@@ -100,7 +100,7 @@ export const PublicationDropdown = defineComponent({
             } else if (event.key === 'Escape') close();
           },
         }, [h(Icon, { name: selected?.icon ?? props.icon }),
-          h('span', { class: 'publication-tool-value', style: { fontFamily: selected?.fontFamily } }, selected?.label ?? props.value),
+          h('span', { class: 'publication-tool-value' }, selected?.label ?? props.value),
           h(Icon, { name: 'chevron-down', class: 'publication-tool-chevron' })]),
         h(Teleport, { to: 'body' }, [h(Transition, { name: 'publication-menu', onBeforeLeave: (element: Element) => {
           if (element instanceof HTMLElement) element.inert = true;

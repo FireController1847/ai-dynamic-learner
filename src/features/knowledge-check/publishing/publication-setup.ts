@@ -4,9 +4,11 @@ import { inputValue } from '../../../core/dom.ts';
 import { newVariantSeed } from '../../../core/parameterized/random.ts';
 import type { CheckItem } from '../library-model.ts';
 import { preparePublicationJob, type PublicationJob } from './publication-job.ts';
-import { bubblePublicationProblem } from './prepare-publication.ts';
-import { PUBLICATION_FONTS, PUBLICATION_LAYOUTS, publicationPaperDimensions, type PublicationSettings } from './publication-model.ts';
+import { bubblePublicationExclusions } from './prepare-publication.ts';
+import { PUBLICATION_FONTS, PUBLICATION_LAYOUTS, defaultPublicationMetadata, publicationPaperDimensions, type PublicationSettings } from './publication-model.ts';
+import { PublicationSettingsDialog } from './publication-settings-dialog.ts';
 import { PublicationDropdown, type PublicationOption } from './publication-dropdown.ts';
+import { reviewChoiceScreen } from '../choice-screen.ts';
 import { leaveReviewPanel, restoreReviewPanel } from '../review-motion.ts';
 import type { PaginatedPublication } from './paged-runtime.ts';
 import type { PublicationZoom } from './publication-viewport.ts';
@@ -20,20 +22,22 @@ const ZOOM_OPTIONS: readonly { value: PublicationZoom; label: string }[] = [
 export const PublicationSetup = defineComponent({
   name: 'ReviewPublicationSetup',
   props: { item: { type: Object as PropType<CheckItem>, required: true } },
-  emits: { close: () => true },
+  emits: { close: () => true, previewNavigation: (_back: (() => void) | null) => true },
   setup(props, { emit }) {
     const settings = ref<PublicationSettings>({
       layout: 'study', paper: 'letter', orientation: 'portrait', margin: 'standard',
-      titleLayout: 'comfortable', columns: 1, alignColumns: false, questionStyle: 'regular', content: 'questions', font: 'times', fontSize: 12, seed: newVariantSeed(),
+      titleLayout: 'comfortable', columns: 1, alignColumns: false,
+      questionMetadata: defaultPublicationMetadata(), keyMetadata: defaultPublicationMetadata(true), questionStyle: 'regular', content: 'questions', font: 'times', fontSize: 12, seed: newVariantSeed(),
     });
-    const modeSelected = ref(false);
-    const studyHeading = ref<HTMLElement | null>(null);
-    const firstModeButton = ref<HTMLButtonElement | null>(null);
+    const screen = ref<'selection' | 'warning' | 'document'>('selection');
+    let acceptedExclusions = '';
+    const documentFocus = ref<HTMLElement | null>(null);
     const prepared = shallowRef<PublicationJob | null>(null);
     const preview = shallowRef<PaginatedPublication | null>(null);
     const previewHost = ref<HTMLElement | null>(null);
     const zoom = ref<PublicationZoom>('fit');
     const showVersion = ref(false);
+    const showSettings = ref(false);
     const versionButton = ref<HTMLButtonElement | null>(null);
     const busy = ref(false);
     const dirty = ref(true);
@@ -54,15 +58,22 @@ export const PublicationSetup = defineComponent({
     }
     function schedulePreview() {
       cancelPending(); dirty.value = true; message.value = '';
-      if (!modeSelected.value) return;
+      if (screen.value !== 'document') return;
+      if (settings.value.layout === 'bubble' && exclusionSignature() !== acceptedExclusions) {
+        screen.value = 'warning'; return;
+      }
       busy.value = true;
       regenerateTimer = window.setTimeout(() => { regenerateTimer = null; void prepare(); }, 300);
     }
     watch(() => [props.item.id, props.item.name, props.item.questions, props.item.options?.description, settings.value],
       schedulePreview, { deep: true, flush: 'sync' });
     watch(zoom, value => preview.value?.setZoom(value));
-    onBeforeUnmount(invalidate);
-    onDeactivated(() => { invalidate(); modeSelected.value = false; });
+    function backToSelection() {
+      cancelPending(); showVersion.value = false; showSettings.value = false; screen.value = 'selection';
+    }
+    watch(screen, value => emit('previewNavigation', value === 'document' ? backToSelection : null), { flush: 'sync' });
+    onBeforeUnmount(() => { invalidate(); emit('previewNavigation', null); });
+    onDeactivated(() => { invalidate(); showSettings.value = false; screen.value = 'selection'; });
 
     async function prepare() {
       cancelPending(); dirty.value = true; message.value = '';
@@ -85,6 +96,7 @@ export const PublicationSetup = defineComponent({
           pages.setZoom(zoom.value);
           pages.frame.contentWindow?.scrollTo(scrollX, scrollY);
           await pages.reveal();
+          if (controller.signal.aborted) { pages.dispose(); return; }
           prepared.value = job; preview.value = pages; dirty.value = false;
           previous?.dispose();
         }
@@ -116,33 +128,74 @@ export const PublicationSetup = defineComponent({
       } });
     }
 
-    function modePicker() {
-      const bubbleIssue = bubblePublicationProblem(props.item.questions);
-      return h('div', { class: 'review-publication-mode-picker' }, [
-        h('p', 'Choose how to publish this knowledge set.'),
-        h('div', { class: 'knowledge-check-type-grid', 'aria-label': 'Publishing modes' },
-          PUBLICATION_LAYOUTS.map(mode => h('button', {
-            type: 'button', class: 'knowledge-check-type-card',
-            disabled: !mode.available || (mode.id === 'bubble' && Boolean(bubbleIssue)),
-            ref: mode.id === (bubbleIssue ? 'study' : 'bubble') ? firstModeButton : undefined,
-            onClick: () => {
-              if (mode.available && (mode.id !== 'bubble' || !bubbleIssue)) {
-                settings.value.layout = mode.id; modeSelected.value = true;
-              }
-            },
-          }, [
-            h(Icon, { name: mode.icon, class: 'knowledge-check-type-icon' }),
-            h('span', { class: 'knowledge-check-type-copy' }, [h('strong', mode.label), h('span', mode.description),
-              !mode.available ? h('span', { class: 'review-publication-coming-soon' }, 'Coming soon') :
-                mode.id === 'bubble' && bubbleIssue
-                  ? h('span', { class: 'review-publication-compatibility', role: 'note' }, bubbleIssue) : null]),
-          ]))),
+    function exclusionSignature() {
+      return JSON.stringify(bubblePublicationExclusions(props.item.questions).map(exclusion =>
+        ({ ...exclusion, id: props.item.questions[exclusion.number - 1]?.id })));
+    }
+
+    function openDocument() {
+      acceptedExclusions = exclusionSignature();
+      screen.value = 'document';
+    }
+
+    function selectionHeader(title: string, back: () => void) {
+      return h('header', { class: 'knowledge-builder-header review-publication-header' }, [
+        h('div', { class: 'knowledge-check-builder-intro' }, [
+          h('h2', { ref: documentFocus, 'data-review-focus': '', tabindex: -1 }, title),
+          h('p', { class: 'knowledge-muted' }, props.item.name),
+        ]),
+        h('button', { type: 'button', class: 'quiet-button', onClick: back }, 'Back'),
       ]);
+    }
+
+    function bubbleWarning() {
+      const exclusions = bubblePublicationExclusions(props.item.questions);
+      const included = props.item.questions.length - exclusions.length;
+      const groups = new Map<string, number[]>();
+      for (const { number, reason } of exclusions) groups.set(reason, [...(groups.get(reason) ?? []), number]);
+      return h('div', { key: 'warning', class: 'knowledge-check-builder' }, [
+        selectionHeader('Some questions cannot use bubbles', backToSelection),
+        h('div', { class: 'review-publication-warning' }, [
+          h('p', `${exclusions.length} ${exclusions.length === 1 ? 'question will' : 'questions will'} be left out of the question sheet, bubble sheet, and answer key.`),
+          h('ul', [...groups].map(([reason, numbers]) => h('li', [
+            h('strong', reason), h('p', `Questions: ${numbers.join(', ')}`),
+          ]))),
+          h('p', included ? 'Included questions keep their original numbers. Study supports all question types.' :
+            'No supported questions remain. Use Study to publish this set, or go back and choose another layout.'),
+        ]),
+        h('div', { class: 'knowledge-actions review-publication-warning-actions' }, [
+          h('button', { type: 'button', class: 'quiet-button', onClick: () => {
+            settings.value.layout = 'study'; openDocument();
+          } }, 'Use Study'),
+          h('button', { type: 'button', class: 'card-primary-button', disabled: !included, onClick: openDocument },
+            `Continue with ${included} supported ${included === 1 ? 'item' : 'items'}`),
+        ]),
+      ]);
+    }
+
+    function modePicker() {
+      return reviewChoiceScreen({
+        key: 'selection', eyebrow: 'Publish', title: 'Choose a sheet layout',
+        description: 'Create printable question sheets with an optional answer key.',
+        choices: PUBLICATION_LAYOUTS.map(mode => ({
+          id: mode.id, label: mode.label, description: mode.description, icon: mode.icon,
+          disabled: !mode.available,
+          detail: !mode.available ? h('span', { class: 'knowledge-choice-note' }, 'Coming soon') : null,
+        })),
+        onChoose: id => {
+          settings.value.layout = id;
+          if (id === 'bubble' && bubblePublicationExclusions(props.item.questions).length) screen.value = 'warning';
+          else openDocument();
+        },
+        onBack: () => emit('close'),
+      });
     }
 
     function documentWorkspace() {
       const paper = publicationPaperDimensions(settings.value);
-      return h('div', { key: 'document', class: 'review-publication-study', onVnodeMounted: schedulePreview }, [
+      return h('div', { key: 'document', ref: documentFocus, class: 'review-publication-study',
+        role: 'region', 'aria-label': `${settings.value.layout === 'bubble' ? 'Bubble' : 'Study'} sheet publishing settings`,
+        tabindex: -1, 'data-review-focus': '' }, [
         h('div', { class: 'review-publication-toolbar-scroll', role: 'region',
           'aria-label': 'Document settings, scroll horizontally for more options', tabindex: 0 }, [
           h('div', { class: 'review-publication-toolbar', role: 'group', 'aria-label': 'Document settings' }, [
@@ -156,7 +209,7 @@ export const PublicationSetup = defineComponent({
           h('div', { class: 'publication-toolbar-group', role: 'group', 'aria-label': 'Typography' }, [
             choice('font', 'Font', 'text-font', PUBLICATION_FONTS.map(font => ({ id: font.id, label: font.label, fontFamily: font.css }))),
             h('label', { class: 'publication-font-size', title: 'Font size' }, [h(Icon, { name: 'text-size' }),
-              h('input', { type: 'number', min: 8, max: 32, step: 0.5, value: settings.value.fontSize,
+              h('input', { type: 'number', inputmode: 'decimal', min: 8, max: 32, step: 0.5, value: settings.value.fontSize,
                 'aria-label': 'Font size in points', onChange: (event: Event) => {
                   const size = Number(inputValue(event));
                   if (Number.isFinite(size) && size >= 8 && size <= 32 && Number.isInteger(size * 2)) settings.value.fontSize = size;
@@ -174,13 +227,6 @@ export const PublicationSetup = defineComponent({
               options: [{ id: '1', label: '1 column' }, { id: '2', label: '2 columns' }],
               onSelect: (id: string) => { if (id === '1' || id === '2') settings.value.columns = id === '1' ? 1 : 2; },
             }),
-            h('label', { class: 'publication-align-toggle', title: 'Align left and right questions in pairs' }, [
-              h('input', {
-                type: 'checkbox', disabled: settings.value.columns === 1, checked: settings.value.alignColumns,
-                onChange: (event: Event) => { settings.value.alignColumns = (event.target as HTMLInputElement).checked; },
-              }),
-              h('span', 'Align questions'),
-            ]),
             choice('questionStyle', 'Question text', 'text-font', [
               { id: 'regular', label: 'Regular' },
               { id: 'bold', label: 'Bold' },
@@ -194,10 +240,31 @@ export const PublicationSetup = defineComponent({
           ]),
           ]),
         ]),
-        h('div', { class: 'review-publication-toolbar-actions', role: 'group', 'aria-label': 'Document actions' }, [
+        h('div', { ref: previewHost, class: 'review-publication-preview', 'aria-label': 'Publication pages', 'aria-busy': busy.value }, [
+          !preview.value ? h('div', { class: 'review-publication-placeholder' }, [
+            h('div', { class: 'review-publication-empty-page', style: {
+              aspectRatio: `${paper.width} / ${paper.height}`,
+            } }, [!busy.value ? h('p', message.value ? 'Preview unavailable' : 'Choose Refresh to preview this sheet.') : null]),
+          ]) : null,
+          h(Transition, { name: 'publication-loading' }, { default: () => busy.value ? h('div', { class: 'review-publication-loading', 'aria-hidden': 'true' }, [
+            h(Icon, { name: 'loading' }), h('span', preview.value ? 'Updating pages…' : 'Preparing pages…'),
+          ]) : null }),
+        ]),
+        h('footer', { class: 'review-publication-toolbar-actions', 'aria-label': 'Document actions and preview status' }, [
+            h('button', { type: 'button', class: 'quiet-button', 'aria-haspopup': 'dialog',
+              onClick: () => { showSettings.value = true; } }, [h(Icon, { name: 'settings' }), 'Settings']),
             h('button', { ref: versionButton, type: 'button', class: 'quiet-button', 'aria-expanded': showVersion.value,
               'aria-controls': 'review-publication-version', onClick: () => { showVersion.value = !showVersion.value; } },
-              [h(Icon, { name: 'settings' }), 'Version']),
+              [h(Icon, { name: 'tag' }), 'Version']),
+            h('div', { class: 'review-publication-status' }, [
+              h('span', { role: message.value ? 'alert' : 'status', 'aria-live': 'polite' }, message.value || (busy.value
+                ? 'Updating preview…' : prepared.value ? `${prepared.value.view.questions.length} items · ${preview.value?.pageCount ?? 0} pages` : 'Preview not ready')),
+              h('span', { class: 'knowledge-muted' }, 'Read-only'),
+              busy.value ? h('button', { type: 'button', class: 'quiet-button', onClick: () => {
+                cancelPending(); message.value = 'Preview update cancelled.' + (preview.value ? ' Showing the previous preview.' : '');
+              } }, 'Cancel') : null,
+            ]),
+            zoomControls(),
             h('div', { class: 'review-publication-run-actions' }, [
               h('button', { type: 'button', class: 'quiet-button', disabled: busy.value, onClick: prepare,
                 title: 'Refresh the preview' }, [h(Icon, { name: 'refresh-cw' }), 'Refresh']),
@@ -218,25 +285,6 @@ export const PublicationSetup = defineComponent({
           } }, 'Done'),
         ])]),
         ]) : null }),
-        h('div', { ref: previewHost, class: 'review-publication-preview', 'aria-label': 'Publication pages', 'aria-busy': busy.value }, [
-          !preview.value ? h('div', { class: 'review-publication-placeholder' }, [
-            h('div', { class: 'review-publication-empty-page', style: {
-              aspectRatio: `${paper.width} / ${paper.height}`,
-            } }, [!busy.value ? h('p', message.value ? 'Preview unavailable' : 'Choose Refresh to preview this sheet.') : null]),
-          ]) : null,
-          h(Transition, { name: 'publication-loading' }, { default: () => busy.value ? h('div', { class: 'review-publication-loading', 'aria-hidden': 'true' }, [
-            h(Icon, { name: 'loading' }), h('span', preview.value ? 'Updating pages…' : 'Preparing pages…'),
-          ]) : null }),
-        ]),
-        h('footer', { class: 'review-publication-status' }, [
-          h('span', { role: message.value ? 'alert' : 'status', 'aria-live': 'polite' }, message.value || (busy.value
-            ? 'Updating preview…' : prepared.value ? `${prepared.value.view.questions.length} items · ${preview.value?.pageCount ?? 0} pages` : 'Preview not ready')),
-          h('span', { class: 'knowledge-muted' }, 'Read-only'),
-          busy.value ? h('button', { type: 'button', class: 'quiet-button', onClick: () => {
-            cancelPending(); message.value = 'Preview update cancelled.' + (preview.value ? ' Showing the previous preview.' : '');
-          } }, 'Cancel') : null,
-          zoomControls(),
-        ]),
       ]);
     }
 
@@ -261,31 +309,21 @@ export const PublicationSetup = defineComponent({
       ]);
     }
 
-    return () => h('section', {
-      class: ['review-publication', modeSelected.value ? 'is-document' : 'knowledge-set-builder'],
-      'aria-labelledby': 'review-publication-title',
-    }, [
-      h('header', { class: 'knowledge-builder-header review-publication-header' }, [
-        h('div', [h('h2', { id: 'review-publication-title', ref: modeSelected.value ? studyHeading : undefined,
-          'data-review-focus': '', tabindex: -1 }, modeSelected.value
-            ? PUBLICATION_LAYOUTS.find(layout => layout.id === settings.value.layout)?.label ?? 'Publish' : 'Publish'),
-        h('p', { class: 'knowledge-muted' }, props.item.name)]),
-        h('div', { class: 'knowledge-actions' }, [
-          modeSelected.value ? h('button', { type: 'button', class: 'quiet-button', onClick: () => {
-            cancelPending(); modeSelected.value = false;
-          } }, 'Change mode') : null,
-          h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('close') }, 'Back'),
-        ]),
-      ]),
-      h(Transition, { name: 'publication-screen', mode: 'out-in',
+    return () => h('section', { class: 'review-publication', 'aria-label': 'Publish knowledge set' }, [
+      h(Transition, { name: 'knowledge-view', mode: 'out-in',
         onBeforeLeave: leaveReviewPanel, onLeaveCancelled: restoreReviewPanel,
         onAfterLeave: (element: Element) => { if (element.classList.contains('review-publication-study')) invalidate(); },
         onAfterEnter: (element: Element) => {
           restoreReviewPanel(element);
-          const target = modeSelected.value ? studyHeading.value : firstModeButton.value;
-          target?.focus();
+          const target = screen.value === 'selection'
+            ? element.querySelector<HTMLButtonElement>(`[data-review-choice="${settings.value.layout}"]`) : documentFocus.value;
+          target?.focus({ preventScroll: true });
+          if (screen.value === 'document') schedulePreview();
         },
-      }, { default: () => modeSelected.value ? documentWorkspace() : modePicker() }),
+      }, { default: () => screen.value === 'document' ? documentWorkspace() :
+        screen.value === 'warning' ? bubbleWarning() : modePicker() }),
+      showSettings.value && screen.value === 'document' ? h(PublicationSettingsDialog, { settings: settings.value,
+        onClose: () => { showSettings.value = false; }, onUpdate: (value: PublicationSettings) => { settings.value = value; } }) : null,
     ]);
   },
 });

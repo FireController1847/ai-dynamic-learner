@@ -53,8 +53,8 @@ export const KnowledgeSession = defineComponent({
 
     function resetResultsScroll(element: Element) {
       if (!(element instanceof HTMLElement) || !element.classList.contains('knowledge-session-results')) return;
-      // The detail has its own scroll region. Reset before the entrance animation, not after it.
-      element.closest<HTMLElement>('.knowledge-check-detail')?.scrollTo({ top: 0, behavior: 'instant' });
+      // The workspace scrolls above the fixed organization footer. Reset before the entrance animation.
+      element.closest<HTMLElement>('.knowledge-set-workspace')?.scrollTo({ top: 0, behavior: 'instant' });
     }
 
     function onSessionViewEntered(element: Element) {
@@ -113,7 +113,7 @@ export const KnowledgeSession = defineComponent({
     async function reviewStudySession(event: MouseEvent) {
       if (props.mode !== 'study' || !started.value || reviewingStudy.value ||
           state.generating.value || state.submitting.value) return;
-      const scroller = (event.currentTarget as HTMLElement).closest<HTMLElement>('.knowledge-check-detail');
+      const scroller = (event.currentTarget as HTMLElement).closest<HTMLElement>('.knowledge-set-workspace');
       if (options.value.presentation === 'scroll') state.completeStudyScrollPass();
       else state.finishStudyPass();
       state.saveStudyReview();
@@ -125,7 +125,7 @@ export const KnowledgeSession = defineComponent({
     async function keepStudying(event: MouseEvent) {
       if (props.mode !== 'study' || !reviewingStudy.value || !started.value ||
           restartingStudy.value || state.generating.value || state.submitting.value) return;
-      const scroller = (event.currentTarget as HTMLElement).closest<HTMLElement>('.knowledge-check-detail');
+      const scroller = (event.currentTarget as HTMLElement).closest<HTMLElement>('.knowledge-set-workspace');
       restartingStudy.value = true;
       try {
         // start() chooses fresh questions and clears all old round responses.
@@ -140,7 +140,7 @@ export const KnowledgeSession = defineComponent({
     }
 
     async function returnToStudyQuestions(event: MouseEvent) {
-      const scroller = (event.currentTarget as HTMLElement).closest<HTMLElement>('.knowledge-check-detail');
+      const scroller = (event.currentTarget as HTMLElement).closest<HTMLElement>('.knowledge-set-workspace');
       reviewingStudy.value = false;
       await nextTick();
       scrollStudyToTop(scroller);

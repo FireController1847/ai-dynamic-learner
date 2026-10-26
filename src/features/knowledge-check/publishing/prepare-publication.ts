@@ -38,17 +38,23 @@ function normalizeQuestion(question: Question, number: number, sourceType: Quest
   }
 }
 
-/** Optical Bubble publishing must never omit a question silently. */
-export function bubblePublicationProblem(questions: readonly Pick<Question, 'type' | 'choices'>[]): string {
-  const incompatible = questions.flatMap((q, i) =>
-    ['multiple-choice','true-false','dropdown','statement'].includes(q.type) ? [] : [i + 1]);
-  if (incompatible.length) return `Bubble supports only Multiple Choice, True/False, and Dropdown. ` +
-    `Question${incompatible.length === 1 ? '' : 's'} ${incompatible.slice(0,5).join(', ')}` +
-    `${incompatible.length > 5 ? ', …' : ''} require typed answers. Choose Study or replace them.`;
-  const wide = questions.findIndex(q => ['multiple-choice','dropdown'].includes(q.type) && q.choices.length > 8);
-  if (wide >= 0) return `Question ${wide + 1} has more than eight choices. Bubble supports up to A–H; use Study or reduce the choices.`;
-  if (!questions.some(q => q.type !== 'statement')) return 'Bubble requires a question with selectable answers.';
-  return '';
+/** A single policy drives both visible warnings and publication filtering. */
+function bubbleExclusion(question: Pick<Question, 'type' | 'choices'>): string {
+  switch (question.type) {
+    case 'short-answer': return 'Short Answer requires typed answers';
+    case 'fill-in-the-blanks': return 'Fill in the Blanks requires written answers';
+    case 'parameterized': return 'Parameterized questions are not supported in Bubble yet';
+    case 'multiple-choice':
+    case 'dropdown': return question.choices.length > 8 ? 'more than eight choices (A–H)' : '';
+    default: return '';
+  }
+}
+
+export function bubblePublicationExclusions(questions: readonly Pick<Question, 'type' | 'choices'>[]) {
+  return questions.flatMap((question, index) => {
+    const reason = bubbleExclusion(question);
+    return reason ? [{ number: index + 1, reason }] : [];
+  });
 }
 
 /**
@@ -69,18 +75,17 @@ export async function preparePublication(
   const snapshot: unknown = JSON.parse(JSON.stringify(item.questions));
   validateQuestions(snapshot);
   if (!snapshot.length) throw new Error('Add questions before preparing a publication.');
-  if (snapshot.some(question => !questionReady(question))) throw new Error('Complete every question before publishing.');
-  if (settings.layout === 'bubble') {
-    const issue = bubblePublicationProblem(snapshot);
-    if (issue) throw new Error(issue);
-  }
+  const included = snapshot.map((question, index) => ({ question, number: index + 1 }))
+    .filter(({ question }) => settings.layout !== 'bubble' || !bubbleExclusion(question));
+  if (!included.length) throw new Error('No supported questions remain for Bubble. Add a choice-based question or choose Study.');
+  if (included.some(({ question }) => !questionReady(question))) throw new Error('Complete every included question before publishing.');
   const questions: PublicationQuestion[] = [];
-  for (const [index, original] of snapshot.entries()) {
+  for (const { question: original, number } of included) {
     signal?.throwIfAborted();
     const questionSeed = `${seed}:${original.id}`;
     const concrete = await materializeQuestionAsync(original, questionSeed, signal);
     const question = materializeChoicePool(concrete, questionSeed);
-    questions.push(normalizeQuestion(question, index + 1, original.type));
+    questions.push(normalizeQuestion(question, number, original.type));
   }
   signal?.throwIfAborted();
   return { version: 1, sourceId, title, description, seed, questions };

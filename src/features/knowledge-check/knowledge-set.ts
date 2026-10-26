@@ -1,10 +1,9 @@
 import type { CheckItem } from './library-model.ts';
 import { MAX_NAME_LENGTH } from './library-model.ts';
-import { CHECK_MODES, isCheckMode, type CheckModeId } from './check-types.ts';
+import type { CheckModeId } from './check-types.ts';
 import { requestLeave } from '../../core/leave-guards.ts';
 import { validateSetOptions, type SetOptions } from './set-options.ts';
 import { validateQuestions, questionsForSave, type Question } from './question-model.ts';
-import { inputValue } from '../../core/dom.ts';
 import { CheckBuilder } from './check-builder.ts';
 import { ReviewAttemptHistory } from './attempt-history-view.ts';
 import type { ReviewAttempt } from './attempt-history.ts';
@@ -24,7 +23,7 @@ export const KnowledgeSet = defineComponent({
   props: { item: { type: Object as PropType<CheckItem>, required: true }, initialBuilder: Boolean,
     statisticsEnabled: { type: Boolean, default: true },
     initialMode: { type: String as PropType<CheckModeId | null>, default: null } },
-  setup(props) {
+  setup(props, { slots }) {
     const mode = ref<CheckModeId | null>(props.initialMode);
     const building = ref(props.initialBuilder);
     const initialPause = props.statisticsEnabled && props.initialMode !== 'test' && props.initialMode !== null
@@ -36,6 +35,7 @@ export const KnowledgeSet = defineComponent({
     const message = ref('');
     const historyOpen = ref(false);
     const publishing = ref(false);
+    const publicationBack = ref<(() => void) | null>(null);
     const viewedAttempt = ref<ReviewAttempt | null>(null);
     function openHistory() {
       if (!requestLeave()) return;
@@ -75,6 +75,7 @@ export const KnowledgeSet = defineComponent({
     function renderWorkspaceView() {
       if (publishing.value) return h(PublicationSetup, {
         key: 'publication-setup', item: props.item, onClose: () => { publishing.value = false; },
+        onPreviewNavigation: (back: (() => void) | null) => { publicationBack.value = back; },
       });
       if (viewedAttempt.value) {
         const attempt = viewedAttempt.value;
@@ -130,14 +131,12 @@ export const KnowledgeSet = defineComponent({
       });
     }
 
-    return () => h('div', { class: ['knowledge-set-workspace', { 'is-publishing': publishing.value }] }, [
-      h('header', { class: 'knowledge-set-toolbar' }, [
-        h('label', { class: 'knowledge-mode-control' }, ['Mode', h('select', {
-          value: mode.value ?? '', disabled: building.value || publishing.value,
-          onChange: (event: Event) => { const value = inputValue(event); if (isCheckMode(value)) chooseMode(value);
-            if (event.target instanceof HTMLSelectElement) event.target.value = mode.value ?? ''; },
-        }, [h('option', { value: '', disabled: true }, 'Choose a mode'), ...CHECK_MODES.map((entry) => h('option', { value: entry.id }, entry.label))])]),
-        h('span', { class: 'knowledge-muted' }, `${props.item.questions.length} ${props.item.questions.length === 1 ? 'question' : 'questions'}`),
+    return () => h('div', { class: ['knowledge-set-panel', { 'is-publishing': publishing.value }] }, [
+      h('header', { class: 'knowledge-set-toolbar knowledge-check-item-heading' }, [
+        h('div', { class: 'knowledge-set-title' }, [
+          slots.heading?.(),
+          h('span', { class: 'knowledge-muted' }, `${props.item.questions.length} ${props.item.questions.length === 1 ? 'question' : 'questions'}`),
+        ]),
         h('div', { class: 'knowledge-set-toolbar-actions' }, [
           h('button', { type: 'button', class: 'quiet-button', disabled: building.value || publishing.value,
             onClick: openHistory }, [h(Icon, { name: 'clock' }), `History (${props.item.history?.length ?? 0})`]),
@@ -145,16 +144,20 @@ export const KnowledgeSet = defineComponent({
             onClick: openPublishing }, [h(Icon, { name: 'printer' }), 'Publish']),
           h('button', { type: 'button', class: 'quiet-button', disabled: building.value || publishing.value,
             onClick: openBuilder }, [h(Icon, { name: 'pencil' }), 'Build']),
+          publishing.value && publicationBack.value ? h('button', { type: 'button', class: 'quiet-button',
+            onClick: () => publicationBack.value?.() }, [h(Icon, { name: 'chevron', style: { transform: 'rotate(180deg)' } }), 'Back']) : null,
         ]),
       ]),
-      h(Transition, {
-        name: 'knowledge-workspace-view',
-        mode: 'out-in',
-        onBeforeLeave: leaveReviewPanel,
-        onLeaveCancelled: restoreReviewPanel,
-        onAfterEnter: enterReviewPanel,
-      }, { default: renderWorkspaceView }),
-      message.value ? h('p', { class: 'knowledge-message', role: 'alert' }, message.value) : null,
+      h('div', { class: ['knowledge-set-workspace', { 'is-publishing': publishing.value }] }, [
+        h(Transition, {
+          name: 'knowledge-workspace-view',
+          mode: 'out-in',
+          onBeforeLeave: leaveReviewPanel,
+          onLeaveCancelled: restoreReviewPanel,
+          onAfterEnter: enterReviewPanel,
+        }, { default: renderWorkspaceView }),
+        message.value ? h('p', { class: 'knowledge-message', role: 'alert' }, message.value) : null,
+      ]),
     ]);
   },
 });

@@ -172,6 +172,8 @@ The Review knowledge-set toolbar and the matching History, Publish, Build action
 beneath the mode choices retain their existing desktop buttons. When the local
 Review pane is 640px wide or narrower, they become a three-column row of compact,
 evenly sized action tiles with icons above labels, readable counts, and 72px
-minimum height. The Mode selector and question count remain above them. The
-layout responds to the pane/container width, not just the device viewport, and
+minimum height. The knowledge-set title and question count share the left side
+of the unified header; History, Publish, and Build occupy the right, and wrap
+beneath the title in narrow panes. Mode selection uses the Study/Quiz/Test cards.
+The layout responds to the pane/container width, not just the device viewport, and
 keeps native button focus, disabled states, and semantics.

@@ -1,4 +1,4 @@
-import { PUBLICATION_FONTS, publicationPaperDimensions, validatePublicationSettings, type PublicationSettings, type PublicationView } from './publication-model.ts';
+import { PUBLICATION_FONTS, publicationPaperDimensions, publicationHasCover, validatePublicationSettings, type PublicationSettings, type PublicationView } from './publication-model.ts';
 import { attachPublicationViewport, type PublicationZoom } from './publication-viewport.ts';
 
 interface PagedFlow { total: number }
@@ -33,7 +33,7 @@ export function publicationPageStyles(settings: PublicationSettings): string {
   const margin = `${marginMm}mm`;
   // Leave a few millimetres of safety room for Paged.js rounding/fragmentation.
   const coverHeight = paper.height - 2 * marginMm - 4;
-  const coverPageNumber = settings.content !== 'key' && settings.titleLayout === 'cover'
+  const coverPageNumber = publicationHasCover(settings)
     ? '@page :first { @bottom-center { content: none; } }'
     : '';
   return `@page {
@@ -43,7 +43,9 @@ export function publicationPageStyles(settings: PublicationSettings): string {
   ${coverPageNumber}
   html { color-scheme: light; }
   body { margin: 0; color: #000; background: #fff; font: ${settings.fontSize}pt/1.4 ${font.css};
-    --publication-cover-height: ${coverHeight}mm; }
+    --publication-cover-height: ${coverHeight}mm;
+    --publication-header-rise: ${marginMm / 2}mm;
+    --publication-header-outset: ${marginMm / 3}mm; }
   img, table { max-width: 100%; }
   img { height: auto; }
   pre { white-space: pre-wrap; overflow-wrap: anywhere; }

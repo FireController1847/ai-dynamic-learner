@@ -2,6 +2,7 @@ import { CHECK_MODES, type CheckModeId } from './check-types.ts';
 import { Icon } from '../../components/icon.ts';
 import { EntryStatistics } from '../../components/entry-statistics.ts';
 import { defineComponent, h } from 'vue';
+import { reviewChoiceScreen } from './choice-screen.ts';
 
 export const ModePicker = defineComponent({
   name: 'KnowledgeModePicker',
@@ -17,21 +18,22 @@ export const ModePicker = defineComponent({
     history: () => true, publish: () => true,
   },
   setup(props, { emit }) {
-    return () => h('section', { class: 'knowledge-check-builder', 'aria-label': 'Choose how to use this knowledge set' }, [
-      h('header', { class: 'knowledge-check-builder-intro' }, [h('p', { class: 'knowledge-check-builder-eyebrow' }, 'One knowledge set'),
-        h('h2', props.setName), h('p', 'Pick a way to use your questions. You can change it later.')]),
-      h('div', { class: 'knowledge-check-type-grid' }, CHECK_MODES.map((mode) => h('button', {
-        key: mode.id, type: 'button', class: 'knowledge-check-type-card', onClick: () => emit('choose', mode.id),
-      }, [h(Icon, { name: mode.icon, class: 'knowledge-check-type-icon' }), h('span', { class: 'knowledge-check-type-copy' },
-        [h('strong', (mode.id === 'study' && props.pausedStudy) ? 'Resume Study' :
-          (mode.id === 'quiz' && props.pausedQuiz) ? 'Resume Quiz' : mode.label),
-        h('span', (mode.id === 'study' && props.pausedStudy) || (mode.id === 'quiz' && props.pausedQuiz)
-          ? 'Continue your saved session where you left off.' : mode.description),
-        h(EntryStatistics, {
+    return () => reviewChoiceScreen({
+      eyebrow: 'One knowledge set', title: props.setName,
+      description: 'Pick a way to use your questions. You can change it later.',
+      choices: CHECK_MODES.map(mode => ({
+        id: mode.id, icon: mode.icon,
+        label: mode.id === 'study' && props.pausedStudy ? 'Resume Study' :
+          mode.id === 'quiz' && props.pausedQuiz ? 'Resume Quiz' : mode.label,
+        description: (mode.id === 'study' && props.pausedStudy) || (mode.id === 'quiz' && props.pausedQuiz)
+          ? 'Continue your saved session where you left off.' : mode.description,
+        detail: h(EntryStatistics, {
           app: 'knowledge-check', id: props.statisticsId,
           metric: mode.id === 'study' ? 'studyPasses' : mode.id === 'quiz' ? 'quizzes' : 'tests',
-        })])]))),
-      h('div', { class: 'knowledge-check-builder-actions knowledge-history-actions' }, [
+        }),
+      })),
+      onChoose: mode => emit('choose', mode),
+      footer: h('div', { class: 'knowledge-check-builder-actions knowledge-history-actions' }, [
         h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('history') },
           [h(Icon, { name: 'clock' }), 'History (' + props.historyCount + ')']),
         h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('publish') },
@@ -39,6 +41,6 @@ export const ModePicker = defineComponent({
         h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('build') },
           [h(Icon, { name: 'pencil' }), 'Build']),
       ]),
-    ]);
+    });
   },
 });
