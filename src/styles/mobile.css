@@ -7,7 +7,7 @@
     padding-right: env(safe-area-inset-right);
     padding-bottom: env(safe-area-inset-bottom);
   }
-  .app-header { padding-top: max(2px, env(safe-area-inset-top)); }
+  .app-header { padding-top: env(safe-area-inset-top); }
   .drawer-panel {
     width: min(320px, calc(100% - 44px));
     padding-top: env(safe-area-inset-top);

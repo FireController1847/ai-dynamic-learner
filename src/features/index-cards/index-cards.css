@@ -58,7 +58,7 @@
 .library-resizing .library-resizer::after { background: var(--brand); }
 .library-floating-toggle, .card-list-floating-toggle {
   position: absolute;
-  top: 8px;
+  top: 6px;
   z-index: 3;
   border-color: var(--control-border);
   background: var(--page-background);
@@ -74,8 +74,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  min-height: calc(var(--control-height) + 16px);
-  padding: 8px 8px 8px 16px;
+  min-height: calc(var(--control-height) + 12px);
+  padding: 6px 8px 6px 16px;
   border-bottom: 1px solid var(--border-color);
 }
 .directory-toolbar h3, .card-list-toolbar h3 { font-size: 14px; line-height: 20px; }
@@ -134,8 +134,8 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 4px 16px;
-  min-height: calc(var(--control-height) + 16px);
-  padding: 8px 20px;
+  min-height: calc(var(--control-height) + 12px);
+  padding: 6px 20px;
   border-bottom: 1px solid var(--border-color);
   background: var(--page-background);
 }
