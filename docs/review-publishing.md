@@ -19,11 +19,17 @@ disabled and marked Coming soon.
   validated, and excluded parameterized questions do not run their solvers.
   The bubble sheet has three densely packed columns with 10.5pt circular bubbles and minimal vertical gaps, regardless
   of the question-page columns. No written-answer lines. Dropdown matches are
-  shown as 2.1, 2.2, 2.3 etc. on the questions and response grid; the key gives
-  each sub-answer's letter. Multi-select rows have an * indicator, and Statements
-  have no bubbles. Questions Only includes a blank bubble sheet, Questions and
-  Answer Key places the key after the bubble sheet, Answer Key Only prints just
-  the key.
+  shown as 2.1, 2.2, 2.3 etc. on the questions and response grid.
+  The Bubble answer key is the same three-column optical sheet, with the correct
+  circles filled in—not a textual answer list. It preserves the response sheet's
+  bubble dimensions and numbering, including every correct multi-select choice
+  and each Dropdown sub-answer. Correct positions come from the detached,
+  version-seeded question choices; neither the blank question pages nor blank
+  response sheet contains correct-answer data. The optional Answer key header
+  follows its independent metadata configuration. Multi-select rows have an *
+  indicator, and Statements have no bubbles. Questions Only includes a blank
+  bubble sheet; Questions and Answer Key appends the filled bubble key on a new
+  page after it; Answer Key Only starts directly with the filled bubble key.
 
 - **Gap (planned):** two or three questions vertically per page with large spaces
   for written responses.

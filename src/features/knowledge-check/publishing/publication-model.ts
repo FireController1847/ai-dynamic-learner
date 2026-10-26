@@ -126,14 +126,21 @@ export interface PublicationKeyEntry {
   readonly number: number;
   readonly lines: readonly PublicationKeyLine[];
 }
+/** Correct circle indexes for each Bubble question/Dropdown sub-question. */
+export interface PublicationBubbleKeyEntry {
+  readonly number: number;
+  readonly rows: readonly (readonly number[])[];
+}
 export interface PublicationView {
   readonly title: string;
   readonly description: string;
   readonly settings: Readonly<PublicationSettings>;
   /** Question pages are always answer-free, even if a separate key was requested. */
   readonly questions: readonly PublicationQuestion[];
-  /** Only projected when explicitly requested; never included in Questions Only. */
+  /** Text-only Study key; empty for Bubble and Questions Only. */
   readonly answerKey: readonly PublicationKeyEntry[];
+  /** Optical Bubble key; absent for Study and Questions Only. */
+  readonly bubbleKey: readonly PublicationBubbleKeyEntry[];
 }
 
 /** Convert concrete, already randomized choice answers to the printed choice letters. */
@@ -157,6 +164,22 @@ function keyEntry(question: PublicationQuestion, layout: PublicationLayout): Pub
   return { number: question.number, lines };
 }
 
+/** Resolve the positions of correct choices after version-seeded materialization. */
+function bubbleKeyEntry(question: PublicationQuestion): PublicationBubbleKeyEntry | null {
+  if (question.kind !== 'choice' && question.kind !== 'matching') return null;
+  const choiceIndex = (answer: PublicationAnswer): number => {
+    const index = question.choices.indexOf(answer.text);
+    if (index < 0) throw new Error(`Question ${question.number} has a correct answer missing from its printed choices.`);
+    return index;
+  };
+  return {
+    number: question.number,
+    rows: question.kind === 'choice'
+      ? [question.answers.map(choiceIndex)]
+      : question.answers.map(answer => [choiceIndex(answer)]),
+  };
+}
+
 /** Project detached sources according to the explicit print-content choice. */
 export function publicationView(source: PreparedPublication, settings: PublicationSettings): PublicationView {
   validatePublicationSettings(settings);
@@ -169,6 +192,12 @@ export function publicationView(source: PreparedPublication, settings: Publicati
       answers: [],
       explanation: '',
     })),
-    answerKey: settings.content === 'questions' ? [] : source.questions.map(q => keyEntry(q, settings.layout)),
+    answerKey: settings.layout !== 'study' || settings.content === 'questions'
+      ? [] : source.questions.map(q => keyEntry(q, settings.layout)),
+    bubbleKey: settings.layout !== 'bubble' || settings.content === 'questions' ? []
+      : source.questions.flatMap(question => {
+        const entry = bubbleKeyEntry(question);
+        return entry ? [entry] : [];
+      }),
   };
 }

@@ -1,38 +1,52 @@
 import { Fragment, h, render, type VNodeChild } from 'vue';
-import type { PublicationQuestion, PublicationView } from './publication-model.ts';
+import type { PublicationBubbleKeyEntry, PublicationQuestion, PublicationView } from './publication-model.ts';
 import type { PublicationRenderer } from './paged-runtime.ts';
-import { studyAnswerKey, studyHeading, studyQuestions, studyRenderer } from './study-renderer.ts';
+import { studyHeading, studyQuestions, studyRenderer } from './study-renderer.ts';
 import { documentHeading } from './publication-heading.ts';
 import bubbleStyles from './bubble-sheet.css?publication';
 
 const letter = (i: number) => String.fromCharCode(65 + i);
 
 /** Choice-only optical rows: one per question, or one per matching sub-question. */
-function bubbleRow(number: string, count: number, multiple: boolean): VNodeChild {
+function bubbleRow(number: string, count: number, multiple: boolean,
+  correctIndices: readonly number[] = []): VNodeChild {
   return h('div', { key: number, class: 'bubble-response-row' }, [
     h('strong', { class: 'bubble-response-number' }, number),
     h('div', { class: 'bubble-response-marks', 'aria-label': `Bubbles for question ${number}` },
-      Array.from({ length: count }, (_, i) => h('span', { class: 'bubble-response-mark' }, letter(i)))),
+      Array.from({ length: count }, (_, i) => h('span', {
+        class: ['bubble-response-mark', { 'bubble-response-mark-filled': correctIndices.includes(i) }],
+      }, letter(i)))),
     multiple ? h('span', { class: 'bubble-response-multiple', title: 'Select all that apply' }, '*') : null,
   ]);
 }
 
-function bubbleRows(question: PublicationQuestion): VNodeChild[] {
+function bubbleRows(question: PublicationQuestion, key?: PublicationBubbleKeyEntry): VNodeChild[] {
   if (question.kind === 'choice') return [
-    bubbleRow(`${question.number}.`, question.choices.length, question.selection === 'multiple'),
+    bubbleRow(`${question.number}.`, question.choices.length, question.selection === 'multiple',
+      key?.rows[0]),
   ];
   if (question.kind === 'matching') return question.responseLabels.map((_label, i) =>
-    bubbleRow(`${question.number}.${i + 1}`, question.choices.length, false));
+    bubbleRow(`${question.number}.${i + 1}`, question.choices.length, false, key?.rows[i]));
   // Unsupported kinds are excluded in preparation; Statements have no answers.
   return [];
 }
 
-function responseSheet(view: PublicationView): VNodeChild {
-  return h('section', { class: 'bubble-response-sheet', 'aria-label': 'Bubble answer sheet' }, [
-    documentHeading('Answer sheet', view.title, view.settings.questionMetadata, ['bubble-sheet-heading'],
-      h('p', { class: 'bubble-sheet-note' },
-        'Darken the circle for your answer. For questions marked *, select all that apply.')),
-    h('div', { class: 'bubble-response-rows' }, view.questions.flatMap(bubbleRows)),
+/** The blank answer sheet and its answer key share exactly the same optical grid. */
+function responseSheet(view: PublicationView, filled = false): VNodeChild {
+  const keys = filled
+    ? new Map<number, PublicationBubbleKeyEntry>(view.bubbleKey.map(entry => [entry.number, entry]))
+    : null;
+  return h('section', {
+    class: ['bubble-response-sheet', { 'bubble-response-sheet-appended': !filled || view.settings.content === 'both' }],
+    'aria-label': filled ? 'Bubble answer key' : 'Bubble answer sheet',
+  }, [
+    documentHeading(filled ? 'Answer key' : 'Answer sheet', view.title,
+      filled ? view.settings.keyMetadata : view.settings.questionMetadata, ['bubble-sheet-heading'],
+      h('p', { class: 'bubble-sheet-note' }, filled
+        ? 'Filled circles indicate the correct answers.'
+        : 'Darken the circle for your answer. For questions marked *, select all that apply.')),
+    h('div', { class: 'bubble-response-rows' },
+      view.questions.flatMap(question => bubbleRows(question, keys?.get(question.number)))),
   ]);
 }
 
@@ -47,7 +61,7 @@ function bubbleContent(view: PublicationView, document: Document): DocumentFragm
         ...studyQuestions(view, false, true),
         responseSheet(view),
       ]),
-      ...(view.settings.content === 'questions' ? [] : [studyAnswerKey(view)]),
+      ...(view.settings.content === 'questions' ? [] : [responseSheet(view, true)]),
     ]), mount);
     const fragment = document.createDocumentFragment();
     for (const child of mount.childNodes) fragment.append(document.importNode(child, true));
