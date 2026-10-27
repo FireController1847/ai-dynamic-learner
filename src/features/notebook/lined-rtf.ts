@@ -6,13 +6,14 @@ type PageRanges = { text: TextPage[]; marginText: TextPage[] };
 
 // RTF control characters and Unicode must be encoded rather than inserted as raw text.
 function escapeRtf(text: string): string {
-  return text.replace(/\r\n?/g, '\n').replace(/[^\x20-\x7e]/g, (character) => {
+  return text.replace(/\r\n?/g, '\n').replace(/[\\{}]|[^\x20-\x7e]/g, (character) => {
+    if (character === '\\' || character === '{' || character === '}') return '\\' + character;
     if (character === '\n') return '\\line ';
     if (character === '\t') return '\\tab ';
     const codeUnit = character.charCodeAt(0);
     const signed = codeUnit > 32767 ? codeUnit - 65536 : codeUnit;
     return '\\u' + signed + '?';
-  }).replace(/[\\{}]/g, '\\$&');
+  });
 }
 
 function usablePages(text: string, pages: TextPage[]): TextPage[] {
