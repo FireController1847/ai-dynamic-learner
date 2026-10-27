@@ -113,7 +113,7 @@ export const TaskSetBuilder = defineComponent({
           h('div', { class: 'sig-intro-symbol', 'aria-hidden': true }, [h(Icon, { name: 'grid' })]),
           h('h2', { id: 'sig-intro-title', ref: heading, tabindex: -1 }, 'One thing at a time.'),
           h('p', 'First, we need to figure out what needs to get done. Add whatever comes to mind, as much or as little as you like. It doesn’t have to be perfect.'),
-          h('p', 'The lists might look like a lot, but you won’t have to tackle everything at once. When you’re ready, the grid will show one item from each list and guide you through them step by step.'),
+          h('p', 'When you’re ready, the grid will help you focus on one item at a time.'),
           h('div', { class: 'sig-intro-actions' }, [
             h('button', { type: 'button', class: 'card-primary-button', onClick: () => { void beginLists(); } }, [
               'Let’s begin', h(Icon, { name: 'arrow-right' }),
