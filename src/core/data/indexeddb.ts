@@ -6,7 +6,7 @@
  * update. BroadcastChannel messages only announce committed changes.
  */
 export const DATABASE_NAME = 'dynamic-learner-data';
-export const DATABASE_VERSION = 2;
+export const DATABASE_VERSION = 3;
 export const CHANNEL_NAME = 'dynamic-learner.data.v1';
 
 const definitions = {
@@ -19,6 +19,8 @@ const definitions = {
   todoLists: { key: ['workspaceId', 'id'], indexes: { ordered: ['workspaceId', 'position'] } },
   todoSections: { key: ['workspaceId', 'listId', 'id'], indexes: { ordered: ['workspaceId', 'listId', 'position'] } },
   todoTasks: { key: ['workspaceId', 'listId', 'sectionId', 'id'], indexes: { ordered: ['workspaceId', 'listId', 'sectionId', 'position'] } },
+  solveItTaskSets: { key: ['workspaceId', 'id'] },
+  solveItTasks: { key: ['workspaceId', 'setId', 'id'], indexes: { ordered: ['workspaceId', 'setId', 'category', 'position'] } },
   indexCardSets: { key: ['workspaceId', 'id'] },
   indexCards: { key: ['workspaceId', 'setId', 'id'], indexes: { ordered: ['workspaceId', 'setId', 'position'] } },
   wordSearches: { key: ['workspaceId', 'id'] },

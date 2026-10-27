@@ -1,7 +1,8 @@
 import { defineComponent, h, ref, type PropType } from 'vue';
 import { inputValue } from '../../core/dom.ts';
 import { useDialog } from '../../components/use-dialog.ts';
-import { defaultLibrarySettings, expirySetting, type LibrarySettings } from './library-model.ts';
+import type { LibrarySettings } from '../../core/dated-library.ts';
+import { DatedLibrarySettingsFields } from '../../components/dated-library-settings-fields.ts';
 import { DISPLAY_FIELDS, defaultTodoDisplay, todoDisplayStyles, validateTodoDisplay, type TodoDisplay } from './display-options.ts';
 
 const TABS = ['library', 'display'] as const;
@@ -72,41 +73,7 @@ export const TodoLibrarySettings = defineComponent({
         onClick: () => { tab.value = name; }, onKeydown: (event: KeyboardEvent) => selectTab(event, index),
       }, name === 'library' ? 'Library' : 'Display'))),
       h('section', { role: 'tabpanel', id: 'todo-settings-panel-library', 'aria-labelledby': 'todo-settings-tab-library', hidden: tab.value !== 'library', tabindex: 0 }, [
-        h('p', { class: 'display-settings-description' }, 'Lists are organized by when you created them. Changes save automatically.'),
-        h('div', { class: 'display-settings-fields' }, [
-          h('div', { class: 'display-setting' }, [
-            h('label', { for: 'todo-library-order' }, 'Date order'),
-            h('select', { id: 'todo-library-order', value: props.settings.order, onChange: (event: Event) => {
-              const order = inputValue(event); if (order === 'newest' || order === 'oldest') emit('update', { ...props.settings, order });
-            } }, [h('option', { value: 'newest' }, 'Newest first'), h('option', { value: 'oldest' }, 'Oldest first')]),
-          ]),
-          h('div', { class: 'display-setting' }, [
-            h('label', { for: 'todo-library-dates' }, 'Date labels'),
-            h('select', { id: 'todo-library-dates', value: props.settings.dates, onChange: (event: Event) => {
-              const dates = inputValue(event); if (dates === 'long' || dates === 'short') emit('update', { ...props.settings, dates });
-            } }, [h('option', { value: 'long' }, 'Full dates'), h('option', { value: 'short' }, 'Short dates')]),
-          ]),
-        ]),
-        h('div', { class: 'display-setting todo-expiry-setting' }, [
-          h('label', { for: 'todo-expiry-unit' }, 'Archive after'),
-          h('div', { class: 'todo-expiry-controls' }, [
-            expirySetting(props.settings) ? h('input', { type: 'number', min: 1, max: 365, step: 1,
-              value: expirySetting(props.settings)?.amount, 'aria-label': 'Expiry duration',
-              onChange: (event: Event) => {
-                const amount = Number(inputValue(event)); const expiry = expirySetting(props.settings);
-                if (expiry && Number.isInteger(amount) && amount >= 1 && amount <= 365) emit('update', { ...props.settings, expiry: { ...expiry, amount } });
-                else if (event.target instanceof HTMLInputElement) event.target.value = String(expiry?.amount ?? 1);
-              },
-            }) : null,
-            h('select', { id: 'todo-expiry-unit', value: expirySetting(props.settings)?.unit ?? 'never', onChange: (event: Event) => {
-              const unit = inputValue(event);
-              if (unit === 'never') emit('update', { ...props.settings, expiry: null });
-              else if (unit === 'days' || unit === 'weeks' || unit === 'months') emit('update', { ...props.settings, expiry: { amount: expirySetting(props.settings)?.amount ?? 1, unit } });
-            } }, [h('option', { value: 'days' }, 'Days'), h('option', { value: 'weeks' }, 'Weeks'), h('option', { value: 'months' }, 'Calendar months'), h('option', { value: 'never' }, 'Never')]),
-          ]),
-        ]),
-        h('p', 'Lists gradually turn gray and move to Archive after this duration from creation. Changes apply to all existing lists immediately, including archived lists. Editing a list does not reset its age. Archived lists stay saved and are included in backups.'),
-        h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('update', defaultLibrarySettings()) }, 'Reset library defaults'),
+        h(DatedLibrarySettingsFields, { settings: props.settings, idPrefix: 'todo', pluralLabel: 'lists', onUpdate: value => emit('update', value) }),
       ]),
       h('section', { role: 'tabpanel', id: 'todo-settings-panel-display', 'aria-labelledby': 'todo-settings-tab-display', hidden: tab.value !== 'display', tabindex: 0 }, [
         h('p', { class: 'display-settings-description' }, 'Applies to all todo lists. Changes save automatically and travel with backups.'),

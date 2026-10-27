@@ -8,6 +8,7 @@ export const LibraryEmptyState = defineComponent({
     title: { type: String, required: true },
     description: { type: String, required: true },
     actionLabel: { type: String, required: true },
+    actionDisabled: Boolean,
     secondaryActionLabel: { type: String, default: '' },
   },
   emits: { create: () => true, secondary: () => true },
@@ -20,6 +21,7 @@ export const LibraryEmptyState = defineComponent({
         h('button', {
           type: 'button',
           class: 'card-primary-button',
+          disabled: props.actionDisabled,
           onClick: () => emit('create'),
         }, props.actionLabel),
         props.secondaryActionLabel ? h('button', {

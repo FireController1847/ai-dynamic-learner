@@ -19,6 +19,7 @@ Use this as a starting-file index, not a feature specification. Follow imports o
 | Answer strictness control | `src/components/answer-strictness-field.ts` |
 | Delete confirmation | `src/components/delete-confirmation.ts`, `src/styles/delete-confirmation.css` |
 | Shared tree behavior | `src/core/tree.ts` plus the calling feature model |
+| Shared date-based libraries / fading / archive settings | `src/core/dated-library.ts`, `src/components/dated-library.ts`, `dated-library-settings-fields.ts`, `src/styles/dated-library.css` |
 | IDs | `src/core/ids.ts` |
 | Answer matching / morphology / semantics | `packages/@dynamic-learner/answer-matching/`; `src/core/answer-matching.ts` is the legacy-behavior adapter |
 | Fill-in-the-blanks parsing | `src/core/fill-blank.ts` |
@@ -36,6 +37,8 @@ Use this as a starting-file index, not a feature specification. Follow imports o
 | Notebook display settings | `display-options.ts`, `display-settings.ts`, `display-settings.css` |
 | Todo library/model/settings | `src/features/todo-list/todo-list.ts`, `library.ts`, `library-model.ts`, `library-settings.ts` |
 | Todo task behavior | `task-editor.ts`, `task-model.ts`, `todo-list.css` |
+| Solve-It Grid dated task-set library | `src/features/solve-it-grid/solve-it-grid.ts`, `library-model.ts`, `solve-it-grid.css`, plus the shared dated library |
+| Solve-It Grid guided setup / task lists / rounds | `src/features/solve-it-grid/task-set-builder.ts`, `task-model.ts`, `task-grid.ts`, `task-set-builder.css`, `task-grid.css`; see `docs/solve-it-grid.md` |
 | Index Cards composition/library | `src/features/index-cards/index-cards.ts`, `directory-tree.ts`, `tree-model.ts` |
 | Flash Cards | `card-set.ts`, `card-paper.ts`, `card-model.ts` |
 | Fill in the Blanks | `fill-blank-set.ts`, `fill-blank-paper.ts`, `fill-blank-editor.ts`, `fill-blank-model.ts` |

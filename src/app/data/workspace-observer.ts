@@ -2,6 +2,7 @@ import { nextTick, toRaw, watch, watchEffect, type Ref, type WatchStopHandle } f
 import type { Workspace } from '../workspace-format.ts';
 import { workspaceRows } from './workspace-mapping.ts';
 import { WorkspaceDataApi } from './data-api.ts';
+import { TASK_CATEGORIES } from '../../features/solve-it-grid/task-model.ts';
 import type { DataOperation, DataStoreName, IndexedRow } from '../../core/data/indexeddb.ts';
 
 type Plain = Record<string, unknown>;
@@ -207,16 +208,33 @@ export async function observeWorkspace(
       signature.push(app + ':' + parentKey + ':' + items.map(item => item.id).join(','));
       items.forEach((item, position) => {
         const id = String(item.id);
-        const kind = String(item.kind);
+        const kind = app === 'solve-it-grid' ? 'task-set' : String(item.kind);
         const nodeKey = [workspaceId, app, id];
         attach('libraryNodes', nodeKey, item,
-          () => [item.name, item.kind],
-          () => put('libraryNodes', nodeKey, { app, id, kind: item.kind, name: item.name, parentKey, position }), true, seen);
+          () => [item.name, item.kind, ...(app === 'solve-it-grid' ? [item.createdAt] : [])],
+          () => put('libraryNodes', nodeKey, { app, id, kind, name: item.name, parentKey, position,
+            ...(app === 'solve-it-grid' ? { createdAt: item.createdAt } : {}) }), true, seen);
         if (kind === 'group') {
           library(app, item.children as Plain[], id);
           return;
         }
-        if (app === 'notebook') {
+        if (app === 'solve-it-grid' && Object.hasOwn(item, 'lists')) {
+          signature.push('solve-it-grid:' + id + ':configured');
+          attach('solveItTaskSets', [workspaceId, id], item,
+            () => item.round,
+            () => put('solveItTaskSets', [workspaceId, id], { id, configured: true,
+              ...(Object.hasOwn(item, 'round') ? { round: item.round } : {}) }), true, seen);
+          const lists = asObject(item.lists);
+          for (const category of TASK_CATEGORIES) {
+            const tasks = lists[category.id] as Plain[];
+            signature.push('solve-it-grid:' + id + ':' + category.id + ':' + tasks.map(task => task.id).join(','));
+            tasks.forEach((task, index) => {
+              const taskId = String(task.id);
+              attach('solveItTasks', [workspaceId, id, taskId], task, () => task,
+                () => put('solveItTasks', [workspaceId, id, taskId], { setId: id, category: category.id, ...task, position: index }), true, seen);
+            });
+          }
+        } else if (app === 'notebook') {
           attach('notebookDocuments', [workspaceId, id], item,
             () => [item.type, item.data],
             () => put('notebookDocuments', [workspaceId, id],
@@ -285,7 +303,7 @@ export async function observeWorkspace(
         }
       });
     }
-    for (const app of ['notebook', 'index-cards', 'word-search', 'crossword', 'guide', 'knowledge-check']) {
+    for (const app of ['notebook', 'index-cards', 'word-search', 'crossword', 'guide', 'knowledge-check', 'solve-it-grid']) {
       library(app, features[app]!.items);
     }
 

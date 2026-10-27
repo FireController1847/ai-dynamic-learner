@@ -4,6 +4,7 @@
 @import './delete-confirmation.css';
 @import './popup-dialog.css';
 @import './library-empty-state.css';
+@import './dated-library.css';
 @import './ai-prompt-exchange.css';
 @import './statistics.css';
 @import 'katex/dist/katex.min.css';
@@ -38,6 +39,9 @@
 @import '../features/notebook/graph-editor.css';
 @import '../features/notebook/display-settings.css';
 @import '../features/todo-list/todo-list.css';
+@import '../features/solve-it-grid/solve-it-grid.css';
+@import '../features/solve-it-grid/task-set-builder.css';
+@import '../features/solve-it-grid/task-grid.css';
 @import '../features/index-cards/index-cards.css';
 @import '../features/index-cards/ai-import.css';
 @import '../features/index-cards/card-set.css';

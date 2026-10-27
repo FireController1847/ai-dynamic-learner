@@ -7,12 +7,13 @@ import type { WordSearch } from '../features/word-search/library-model.ts';
 import type { Crossword } from '../features/crossword/library-model.ts';
 import { validateTodoLists, type TodoLists } from '../features/todo-list/library-model.ts';
 import { emptyStatistics, validateStatistics, type StatisticsData } from '../core/statistics.ts';
+import { validateSolveItGrid, type SolveItGridModel } from '../features/solve-it-grid/library-model.ts';
 
 export interface Workspace {
   format: 'dynamic-learner';
   version: 1;
   statistics?: StatisticsData;
-  features: { notebook: Notebook; 'todo-list': TodoLists; 'index-cards': IndexCards; 'word-search': WordSearch; crossword: Crossword; 'guide': GuideModel; 'knowledge-check': KnowledgeCheck };
+  features: { notebook: Notebook; 'todo-list': TodoLists; 'solve-it-grid': SolveItGridModel; 'index-cards': IndexCards; 'word-search': WordSearch; crossword: Crossword; 'guide': GuideModel; 'knowledge-check': KnowledgeCheck };
 }
 
 import { validateNotebook } from '../features/notebook/library-model.ts';
@@ -31,6 +32,7 @@ export function emptyWorkspace(): Workspace {
     features: {
       notebook: { items: [] },
       'todo-list': { items: [] },
+      'solve-it-grid': { items: [] },
       'index-cards': { items: [] },
       'word-search': { items: [] },
       crossword: { items: [] },
@@ -53,7 +55,7 @@ export function validateWorkspaceValue(value: unknown): Workspace {
   if (!isRecord(value) || value.format !== 'dynamic-learner' || value.version !== 1 ||
       Object.keys(value).some((key) => !['format', 'version', 'features', 'statistics'].includes(key)) ||
       !isRecord(value.features) || !value.features['index-cards'] ||
-      Object.keys(value.features).some((key) => !['notebook', 'todo-list', 'index-cards', 'word-search', 'crossword', 'guide', 'study-guide', 'knowledge-check'].includes(key))) {
+      Object.keys(value.features).some((key) => !['notebook', 'todo-list', 'solve-it-grid', 'index-cards', 'word-search', 'crossword', 'guide', 'study-guide', 'knowledge-check'].includes(key))) {
     throw new Error('This is not a supported Dynamic Learner workspace backup (version 1).');
   }
   if (Object.hasOwn(value.features, 'guide') && Object.hasOwn(value.features, 'study-guide')) {
@@ -63,6 +65,7 @@ export function validateWorkspaceValue(value: unknown): Workspace {
   const indexCards = value.features['index-cards'];
   const wordSearch = value.features['word-search'] || { items: [] };
   const todoLists = Object.hasOwn(value.features, 'todo-list') ? value.features['todo-list'] : { items: [] };
+  const solveItGrid = Object.hasOwn(value.features, 'solve-it-grid') ? value.features['solve-it-grid'] : { items: [] };
   const crossword = value.features.crossword || { items: [] };
   const guide = Object.hasOwn(value.features, 'guide') ? value.features['guide']
     : Object.hasOwn(value.features, 'study-guide') ? value.features['study-guide'] : { items: [] };
@@ -73,11 +76,12 @@ export function validateWorkspaceValue(value: unknown): Workspace {
   validateIndexCards(indexCards);
   validateWordSearch(wordSearch);
   validateTodoLists(todoLists);
+  validateSolveItGrid(solveItGrid);
   validateCrossword(crossword);
   const statistics = Object.hasOwn(value, 'statistics') ? value.statistics : emptyStatistics();
   validateStatistics(statistics);
   return { format: 'dynamic-learner', version: 1,
     statistics,
-    features: { notebook, 'todo-list': todoLists, 'index-cards': indexCards, 'word-search': wordSearch, crossword, 'guide': guide, 'knowledge-check': knowledgeCheck } };
+    features: { notebook, 'todo-list': todoLists, 'solve-it-grid': solveItGrid, 'index-cards': indexCards, 'word-search': wordSearch, crossword, 'guide': guide, 'knowledge-check': knowledgeCheck } };
 
 }

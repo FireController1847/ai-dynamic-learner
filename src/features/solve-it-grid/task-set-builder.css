@@ -1,0 +1,48 @@
+.sig-builder { display: grid; align-content: start; gap: 24px; width: min(880px, 100%); margin: 0 auto; padding: clamp(20px, 4vw, 40px); }
+.sig-builder-header, .sig-builder-actions, .sig-list-bottom, .sig-balance-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.sig-builder-header { align-items: start; }
+.sig-builder-header h2 { font-size: 22px; line-height: 28px; }
+.sig-eyebrow { margin: 0 0 6px; color: var(--brand-text); font-size: 12px; font-weight: 600; }
+.sig-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.sig-step { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 12px; border: 1px solid var(--border-color); border-radius: var(--radius-dialog); background: var(--surface-subtle); text-align: left; }
+.sig-step > span:nth-child(2) { flex: 1; font-weight: 600; }
+.sig-step small { color: var(--text-secondary); }
+.sig-step.is-current { border-color: var(--brand); background: var(--brand-tint); color: var(--brand-text); }
+.sig-number { display: inline-grid; place-items: center; flex: 0 0 30px; width: 30px; height: 30px; border: 2px solid currentColor; border-radius: 50%; font-size: 15px; font-weight: 700; line-height: 1; }
+.sig-name-field { display: grid; gap: 8px; max-width: 480px; font-weight: 600; }
+.sig-name-field input, .sig-task-inputs textarea { width: 100%; min-width: 0; padding: 10px 12px; border: 1px solid var(--control-border); border-radius: var(--radius); background: var(--page-background); font-weight: 400; }
+.sig-list-step { display: grid; gap: 12px; animation: sig-step-enter 180ms var(--ease-out); }
+.sig-list-heading h3 { margin: 0; font-size: 24px; line-height: 30px; }
+.sig-list-heading { display: flex; align-items: center; justify-content: flex-start; flex-wrap: wrap; gap: 12px 24px; }
+.sig-examples { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.sig-examples li { display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 999px; background: var(--brand-tint); color: var(--brand-text); font-size: 12px; line-height: 18px; }
+.sig-examples li::before { content: ""; flex: 0 0 4px; width: 4px; height: 4px; border-radius: 50%; background: currentColor; opacity: 0.55; }
+.sig-step-description { margin: 0; color: var(--text-secondary); }
+.sig-task-inputs { display: grid; gap: 8px; margin: 8px 0 0; padding: 0; list-style: none; }
+.sig-task-inputs li { display: grid; grid-template-columns: 24px minmax(0, 1fr) var(--control-height); align-items: center; gap: 8px; }
+.sig-task-index { color: var(--text-secondary); text-align: center; }
+.sig-task-inputs textarea { resize: vertical; min-height: 60px; line-height: 20px; }
+.sig-list-bottom { flex-wrap: wrap; }
+.sig-muted { margin: 0; color: var(--text-secondary); font-size: 12px; line-height: 18px; }
+.sig-balance { display: grid; gap: 12px; padding: 16px; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); }
+.sig-balance-heading > span { color: var(--brand-text); font-variant-numeric: tabular-nums; }
+.sig-balance-bars { display: grid; gap: 8px; }
+.sig-balance-bars > div { display: grid; grid-template-columns: minmax(100px, 140px) minmax(0, 1fr) 24px; align-items: center; gap: 8px; }
+.sig-balance-bars span, .sig-balance-bars b { font-size: 12px; font-weight: 400; }
+.sig-balance-bars meter { width: 100%; height: 8px; accent-color: var(--brand); }
+.sig-balance p { margin: 0; color: var(--text-secondary); font-size: 12px; line-height: 18px; }
+.sig-error { margin: 0; color: var(--danger); }
+.sig-builder-actions { padding-top: 8px; }
+@keyframes sig-step-enter { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: none; } }
+@container solve-it-grid (max-width: 600px) {
+  .sig-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sig-step { padding: 10px; }
+  .sig-builder { gap: 20px; }
+  .sig-builder-actions { flex-wrap: wrap; }
+  .sig-builder-actions > .card-primary-button { margin-left: auto; }
+}
+@media (pointer: coarse) {
+  .sig-name-field input, .sig-task-inputs textarea { font-size: 16px; }
+  .sig-step { min-height: 60px; }
+}
+@media (prefers-reduced-motion: reduce) { .sig-list-step { animation: none; } }

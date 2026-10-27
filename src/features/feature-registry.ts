@@ -2,6 +2,7 @@ import { h, type VNode } from 'vue';
 import { Calculator } from './calculator/calculator.ts';
 import { Notebook } from './notebook/notebook.ts';
 import { TodoList } from './todo-list/todo-list.ts';
+import { SolveItGrid } from './solve-it-grid/solve-it-grid.ts';
 import { IndexCards } from './index-cards/index-cards.ts';
 import { WordSearch } from './word-search/word-search.ts';
 import { Crossword } from './crossword/crossword.ts';
@@ -15,12 +16,14 @@ import type { Crossword as CrosswordModel } from './crossword/library-model.ts';
 import type { KnowledgeCheck as KnowledgeCheckModel } from './knowledge-check/library-model.ts';
 import type { GuideModel } from './guide/library-model.ts';
 import type { TodoLists } from './todo-list/library-model.ts';
+import type { SolveItGridModel } from './solve-it-grid/library-model.ts';
 
 export interface FeatureModels {
   'guide': GuideModel;
   'knowledge-check': KnowledgeCheckModel;
   notebook: NotebookModel;
   'todo-list': TodoLists;
+  'solve-it-grid': SolveItGridModel;
   'index-cards': IndexCardsModel;
   'word-search': WordSearchModel;
   crossword: CrosswordModel;
@@ -31,6 +34,7 @@ const renderers: Record<FeatureId, (definition: FeatureDefinition, models: Featu
   calculator: (definition) => h(Calculator, { key: definition.id, title: definition.label }),
   notebook: (definition, models) => h(Notebook, { key: definition.id, title: definition.label, model: models.notebook }),
   'todo-list': (definition, models) => h(TodoList, { key: definition.id, title: definition.label, model: models['todo-list'] }),
+  'solve-it-grid': (definition, models) => h(SolveItGrid, { key: definition.id, title: definition.label, model: models['solve-it-grid'] }),
   'index-cards': (definition, models) => h(IndexCards, { key: definition.id, title: definition.label, model: models['index-cards'] }),
   'word-search': (definition, models) => h(WordSearch, { key: definition.id, title: definition.label, model: models['word-search'] }),
   crossword: (definition, models) => h(Crossword, { key: definition.id, title: definition.label, model: models.crossword }),

@@ -1,0 +1,38 @@
+# Solve-It Grid
+
+## Creation and editing
+
+Task sets use the shared creation-date library, fading, and archive settings from Todo List. New task sets are only saved after the fourth builder step; cancelling discards the draft after confirmation when it has changed. Existing empty task sets open the same setup. Editing retains the creation date and completion marks for unchanged tasks; changing a task's text makes it available again. Saving edits resets the displayed round.
+
+The guided lists, in order, are Fires, Passive Fun, Shoulds & Oughts, and Stimulated Fun. Each can be empty and has no item-count cap. New drafts default to an editable name using the local month and ordinal day, such as “Task set for October 27th”. Each task has a stable ID for later metadata such as priorities; priorities are not implemented yet. Text is limited to 10,000 characters per task.
+
+The advisory balance score uses item counts: `100 × (1 − sum(abs(count − total/4)) / (1.5 × total))`, bounded to 0–100. Equal counts score 100; one occupied list scores 0. Empty plans have no score. The score does not estimate effort/time and never blocks saving.
+
+## Grid and rounds
+
+| Number | List | Position |
+| --- | --- | --- |
+| 1 | Fires | Top left |
+| 2 | Passive Fun | Bottom right |
+| 3 | Shoulds & Oughts | Bottom left |
+| 4 | Stimulated Fun | Top right |
+
+Stimulation increases upward; fun increases to the right. Each new draw independently selects one random incomplete task from every nonempty remaining list. Empty quadrants do not block the route. Completing a quadrant saves its selected task's completion; it remains completed until undone, restarted, or an edit changes that task's text.
+
+The chart is an open, neutral surface divided by two axes, without quadrant cards, fills, or borders. Circled numbers sit around the intersection: 1 above-left, 4 above-right, 3 below-left, and 2 below-right. Each axis caption has a directional arrow icon to the left of its text; these arrows describe the axes, not the task route. Category titles and consistent category icons stay at each quadrant's top-left. Completed tasks use a check and struck text, without redundant completion labels. The play view shows no progress bar, round counter, or completed/total count. Keyboard focus is shown around the number rather than outlining the quadrant. The board flexes to the pane's available height; long task text scrolls within its quadrant.
+
+Completing a task immediately unlocks the next available quadrant; later quadrants remain locked. A fresh draw has a three-second safety pause indicated by a red lock. Task text, titles, numbers, and hints remain neutral. Available tasks show a small outlined check control, with a neutral hover/focus response. A single activation during the pause only gives blocked feedback; double-click, double-tap, or two quick keyboard activations can deliberately bypass it. Holding a key cannot repeatedly activate quadrants. The latest completed quadrant in the current draw can be selected to undo it; older completions must be undone in reverse route order. Undo also restores any earlier skipped quadrants belonging to that action. Before advancing to a fresh draw, a 2.5-second completion hold allows undo. Once the new tasks appear, undo is limited to that new draw. The last draw remains undoable after the final completion summary.
+
+Later quadrants show a red lock and are locked against a single activation. Double-click, double-tap, or two quick keyboard activations confirm skipping ahead directly, without a modal. This skips earlier ready quadrants for the current draw and completes the selected task. Skipped tasks remain incomplete and can be drawn later. A single activation only gives lock feedback and changes no task state.
+
+When no ready quadrants remain, the grid holds completion feedback, celebrates, turns, clears its task text briefly, and reveals the next draw in numbered order. Exhausted task sets finish with a summary and offer editing or an explicitly confirmed restart. Reduced motion keeps completion feedback and removes rotation, confetti, and staggered movement. Timers stop when the view is deactivated or unmounted. Saved task completion and current round survive app switching, reload, and backups; visual phases do not persist.
+
+## Ownership
+
+- `library-model.ts`: dated task-set model and feature validation.
+- `task-model.ts`: categories, tasks, balance, random draws, round state, validation.
+- `task-set-builder.ts` / `.css`: unsaved guided creation and editing.
+- `task-grid.ts` / `.css`: actionable quadrants, confirmations, feedback, round animation.
+- `solve-it-grid.ts`: dated library and feature composition.
+
+IndexedDB schema v3 stores task-set configuration/rounds in `solveItTaskSets`, individual tasks in `solveItTasks`, and list ordering in `collections`. Workspace v1 backup compatibility remains in the app mapping and feature validators.

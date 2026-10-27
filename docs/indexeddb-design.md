@@ -16,16 +16,18 @@ Use one same-origin IndexedDB database named `dynamic-learner-data`, currently a
 ### Logical layout
 
 ```text
-dynamic-learner-data (IDB schema v2)
+dynamic-learner-data (IDB schema v3)
   control                 (active workspace pointer; local-wide state)
   workspaceMeta           (workspace identity; revisions and cutover marker)
-  libraryNodes            (ordered groups/leaf metadata across library apps)
+  libraryNodes            (ordered groups/leaf metadata across library apps, including dated task-set metadata)
   collections             (parent/sibling order revisions across tabs)
   featureState            (saved feature-level display/settings/selection)
   notebookDocuments       (one document body/data per record)
   todoLists               (one list's metadata per record)
   todoSections            (one section per record)
   todoTasks               (one task per record)
+  solveItTaskSets         (four-list presence and saved quadrant round)
+  solveItTasks            (one categorized task and completion per record)
   indexCardSets           (mode/settings tied to each set)
   indexCards              (one card per record)
   wordSearches            (puzzle definition; saved rotation)
@@ -42,7 +44,7 @@ dynamic-learner-data (IDB schema v2)
   changeJournal           (small committed invalidation history)
 ```
 
-The division is intentional: Todo List is a **flat date-oriented library**, not the generic nested group hierarchy. `collections` also serializes same-parent list/reorder/delete/insert operations across tabs; ordinary document text updates do not touch those records. Calculator has no persistent content store; its activity goes into statistics.
+The division is intentional: Todo List and Solve-It Grid use **flat date-oriented libraries**, not the generic nested group hierarchy. `collections` also serializes same-parent list/reorder/delete/insert operations across tabs; ordinary document text updates do not touch those records. Calculator has no persistent content store; its activity goes into statistics.
 
 ## Exact keys, indexes and payload mapping
 
@@ -58,6 +60,8 @@ The division is intentional: Todo List is a **flat date-oriented library**, not 
 | `notebookDocuments` | `[workspaceId,id]` | `type` = Markdown/Lined/Graph, entire type-owned `data`, `revision`; no other documents' content | none |
 | `todoLists` | `[workspaceId,id]` | `name`, `createdAt`, optional `sectionSort`, `position`, `revision` | `[workspaceId,position]`; date index optional |
 | `todoSections` | `[workspaceId,listId,id]` | `title`, optional `priority`, `position`, `revision` | `[workspaceId,listId,position]` |
+| `solveItTaskSets` | `[workspaceId,id]` | `configured: true`, optional `round`; metadata stays in `libraryNodes` | none |
+| `solveItTasks` | `[workspaceId,setId,id]` | `category`, `text`, optional `completed: true`, `position`, `revision` | `[workspaceId,setId,category,position]` |
 | `todoTasks` | `[workspaceId,listId,sectionId,id]` | `text`, `done`, optional `skipped`/`priority`, `position`, `revision` | `[workspaceId,listId,sectionId,position]` |
 | `indexCardSets` | `[workspaceId,id]` | Optional `mode`, `revision`; ordered membership comes from cards | none |
 | `indexCards` | `[workspaceId,setId,id]` | Optional `title`/`backTitle`, `front`, `back`, `position`, `revision` | `[workspaceId,setId,position]` |
@@ -202,3 +206,4 @@ When a user first links an account, upload a validated local baseline (with expl
 References for browser semantics: [MDN IndexedDB transactions](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API/Basic_Terminology), [MDN version changes](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API/Using_IndexedDB), [MDN BroadcastChannel](https://developer.mozilla.org/en-US/docs/Web/API/BroadcastChannel), and [MDN transaction durability](https://developer.mozilla.org/en-US/docs/Web/API/IDBDatabase/transaction).
 
 **Approval criterion:** Agree on object-store boundaries, compound-key policy, revision/conflict rules and staged activation before any runtime persistence implementation PR.
+Solve-It Grid adds its two stores in schema v3 without rewriting existing records. Configured task sets have four `solve-it-grid:tasks` collections keyed by `setId/category`; old empty task sets need no body record. Completion writes target individual tasks, while round draws and skips update their task-set row. Hydration validates ownership, category keys, ordering, and saved round references before enabling editing.

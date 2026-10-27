@@ -1,0 +1,34 @@
+.solve-it-grid-page {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+.solve-it-grid-layout {
+  --library-width: 320px;
+  position: relative;
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  grid-template-columns: var(--library-width) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  overflow: hidden;
+  background: var(--surface-workspace);
+  transition: grid-template-columns var(--motion-normal) var(--ease-out);
+}
+.solve-it-grid-layout.library-resizing { transition: none; user-select: none; }
+.solve-it-grid-layout.library-collapsed { grid-template-columns: 0 minmax(0, 1fr); }
+.solve-it-grid-detail {
+  container: solve-it-grid / inline-size;
+  display: flex;
+  flex-direction: column;
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+}
+@media (max-width: 700px), (max-width: 1100px) and (pointer: coarse) {
+  .solve-it-grid-layout { grid-template-columns: 0 minmax(0, 1fr); }
+}

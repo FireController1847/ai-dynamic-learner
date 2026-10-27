@@ -14,6 +14,7 @@ interface Workspace {
   features: {
     notebook: Notebook;
     'todo-list': TodoLists;
+    'solve-it-grid': SolveItGridModel;
     'index-cards': IndexCards;
     'word-search': WordSearch;
     crossword: Crossword;
@@ -29,7 +30,7 @@ The legacy browser-local key `dynamic-learner.workspace.v1` is used only as a re
 
 Uploaded or persisted data is untrusted: parse as `unknown`, reject unsupported top-level fields/version/format, then delegate to feature validators before replacing live state. Invalid replacement never partially mutates the current workspace.
 
-For version-1 compatibility, missing Notebook, Todo List, Word Search, Crossword, Guide, or Review payloads normalize to empty models. Index Cards remains required because it existed in the original v1 contract. Unknown feature keys are rejected.
+For version-1 compatibility, missing Notebook, Todo List, Solve-It Grid, Word Search, Crossword, Guide, or Review payloads normalize to empty models. Index Cards remains required because it existed in the original v1 contract. Unknown feature keys are rejected.
 
 ## Feature ownership
 
@@ -37,6 +38,7 @@ Each feature owns its saved model and runtime validation:
 
 - Notebook: `src/features/notebook/library-model.ts` and document-type validators.
 - Todo List: `src/features/todo-list/library-model.ts` / task model.
+- Solve-It Grid: `src/features/solve-it-grid/library-model.ts` and `task-model.ts`. Each dated task set optionally has four named task arrays and a saved round; older empty sets remain valid and open guided setup. Tasks have stable IDs, text, and optional `completed: true`. The round stores a number, one task ID (or null) per category, and optional per-round skip markers. Completion belongs to the task; skips never complete tasks. The four category keys and referenced IDs are validated. There is no per-list item-count limit. Independent date/archive settings still use Todo List's shared rules. Metadata stays in `libraryNodes`; configured sets/rounds use `solveItTaskSets`, tasks use `solveItTasks`, and each list has a `collections` ordering record. These travel with v1 backups. Existing databases without task sets can omit the empty library root until a structural save; old backups initialize an empty library. Animation phases and unsaved builder drafts are transient.
 - Index Cards: `src/features/index-cards/tree-model.ts` / card and display models. The optional app-level `settings.answerStrictness` applies to every Fill-in-the-Blanks set. Older workspaces without it behave as level 4. Workspaces saved during the short-lived per-set strictness implementation are migrated on load: one consistent legacy value is promoted to the app setting; conflicting legacy values fall back to level 4, and the obsolete per-set fields are removed.
 - Word Search: `src/features/word-search/library-model.ts` plus puzzle/game/display models.
 - Crossword: `src/features/crossword/library-model.ts` plus puzzle/game/display models.

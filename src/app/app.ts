@@ -160,7 +160,9 @@ const App = defineComponent({
           h('rect', { x: 0, y: 12, width: 18, height: 2, rx: 1 }),
         ])]),
         activeFeature.value
-          ? h(AppIcon, { name: activeFeature.value.id, imageClass: 'app-logo app-header-logo' })
+          ? activeFeature.value.image
+            ? h(AppIcon, { name: activeFeature.value.id, imageClass: 'app-logo app-header-logo' })
+            : h(Icon, { name: activeFeature.value.icon, class: 'app-logo app-header-logo' })
           : currentPath.value === '/'
             ? h(AppIcon, { name: 'dynamic-learner', imageClass: 'app-logo app-header-logo' })
             : h(Icon, { name: 'document' }),
@@ -271,7 +273,7 @@ const App = defineComponent({
           ref: main,
           class: ['app-content', {
             'app-content--home': currentPath.value === '/',
-            'app-content--workspace': ['notebook', 'todo-list', 'index-cards', 'word-search', 'crossword', 'guide', 'knowledge-check'].includes(activeFeature.value?.id ?? ''),
+            'app-content--workspace': ['notebook', 'todo-list', 'solve-it-grid', 'index-cards', 'word-search', 'crossword', 'guide', 'knowledge-check'].includes(activeFeature.value?.id ?? ''),
           }],
           tabindex: -1,
           'aria-busy': !workspace.ready.value && !workspace.storageProblem.value,
@@ -293,7 +295,7 @@ const App = defineComponent({
         ]),
       ]),
       statisticsOpen.value ? h(GlobalStatistics, {
-        apps: features.map(feature => ({ id: feature.id, label: feature.label })), returnFocus: statisticsButton.value,
+        apps: features.flatMap(feature => feature.id === 'solve-it-grid' ? [] : [{ id: feature.id, label: feature.label }]), returnFocus: statisticsButton.value,
         onClose: () => { statisticsOpen.value = false; },
       }) : null,
       activeFeature.value ? h('span', {

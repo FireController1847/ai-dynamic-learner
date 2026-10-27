@@ -1,5 +1,6 @@
 import type { Workspace } from '../workspace-format.ts';
 import { validateWorkspaceValue } from '../workspace-format.ts';
+import { TASK_CATEGORIES } from '../../features/solve-it-grid/task-model.ts';
 import type { DataOperation, DataStoreName, IndexedRow, IndexedDataStore } from '../../core/data/indexeddb.ts';
 
 /**
@@ -8,7 +9,7 @@ import type { DataOperation, DataStoreName, IndexedRow, IndexedDataStore } from 
  * a separate row. This converter is used for initial migration and backups.
  */
 export type DataRow = Extract<DataOperation, { type: 'put' }>;
-const LIBRARY_APPS = ['notebook', 'index-cards', 'word-search', 'crossword', 'guide', 'knowledge-check'] as const;
+const LIBRARY_APPS = ['notebook', 'index-cards', 'word-search', 'crossword', 'guide', 'knowledge-check', 'solve-it-grid'] as const;
 
 function copy<T>(value: T): T {
   // Imported/exported v1 data is JSON by contract. Avoid transferring Vue
@@ -36,16 +37,31 @@ export function workspaceRows(workspaceId: string, workspace: Workspace): DataRo
       app, parentId: parentKey, children: items.map(item => item.id),
     });
     items.forEach((item, position) => {
-      const { id, kind, name } = item;
+      const { id, name } = item;
+      const kind = app === 'solve-it-grid' ? 'task-set' : item.kind;
       if (typeof id !== 'string' || typeof kind !== 'string' || typeof name !== 'string') {
         throw new Error('Cannot store a library item without a valid ID, type and name.');
       }
-      scoped('libraryNodes', [workspaceId, app, id], { app, id, kind, name, parentKey, position });
+      scoped('libraryNodes', [workspaceId, app, id], { app, id, kind, name, parentKey, position,
+        ...(app === 'solve-it-grid' ? { createdAt: item.createdAt } : {}) });
       if (kind === 'group') {
         library(app, item.children as Record<string, unknown>[], id);
         return;
       }
-      if (app === 'notebook') {
+      if (app === 'solve-it-grid' && Object.hasOwn(item, 'lists')) {
+        scoped('solveItTaskSets', [workspaceId, id], { id, configured: true,
+          ...(Object.hasOwn(item, 'round') ? { round: copy(item.round) } : {}) });
+        const lists = item.lists as Record<string, Record<string, unknown>[]>;
+        for (const category of TASK_CATEGORIES) {
+          const tasks = lists[category.id]!;
+          scoped('collections', [workspaceId, 'solve-it-grid:tasks', id + '/' + category.id], {
+            app: 'solve-it-grid:tasks', parentId: id + '/' + category.id, children: tasks.map(task => task.id),
+          });
+          tasks.forEach((task, taskPosition) => scoped('solveItTasks', [workspaceId, id, String(task.id)], {
+            setId: id, category: category.id, ...copy(task), position: taskPosition,
+          }));
+        }
+      } else if (app === 'notebook') {
         scoped('notebookDocuments', [workspaceId, id], {
           id, type: item.type, data: copy(item.data),
         });
@@ -164,7 +180,7 @@ const ordering = (a: Stored, b: Stored) => (a.position ?? 0) - (b.position ?? 0)
 export const WORKSPACE_RECORD_STORES: readonly DataStoreName[] = [
     'featureState', 'libraryNodes', 'collections', 'notebookDocuments', 'indexCardSets', 'indexCards',
     'wordSearches', 'wordSearchGames', 'crosswords', 'crosswordGames', 'guides', 'guideSessions',
-    'reviewSets', 'reviewQuestions', 'todoLists', 'todoSections', 'todoTasks',
+    'reviewSets', 'reviewQuestions', 'todoLists', 'todoSections', 'todoTasks', 'solveItTaskSets', 'solveItTasks',
     'statisticsMeta', 'statisticsApps', 'statisticsEntries',
 ];
 
@@ -185,6 +201,7 @@ export async function hydrateWorkspace(store: Pick<IndexedDataStore, 'all'> & Pa
   const crosswords = byId('crosswords'), crosswordGames = byId('crosswordGames');
   const guides = byId('guides'), guideSessions = byId('guideSessions');
   const reviewSets = byId('reviewSets');
+  const solveItSets = byId('solveItTaskSets');
 
   const unwrap = (row: Stored, exclusions: readonly string[]): Item => Object.fromEntries(
     Object.entries(row).filter(([key]) => !['workspaceId', 'revision', ...exclusions].includes(key))
@@ -200,7 +217,19 @@ export async function hydrateWorkspace(store: Pick<IndexedDataStore, 'all'> & Pa
     for (const row of nodes) {
       const id = row.id!;
       let item: Item = { id, kind: row.kind, name: row.name };
-      if (row.kind === 'group') item = { ...item, children: [] };
+      if (app === 'solve-it-grid') {
+        if (row.kind !== 'task-set' || row.parentKey !== '@root') throw new Error('A saved task set is invalid.');
+        item = { id, name: row.name, createdAt: row.createdAt };
+        const body = value<Stored>(solveItSets, id);
+        if (body) {
+          if (body.configured !== true) throw new Error('A saved task set configuration is invalid.');
+          item.lists = Object.fromEntries(TASK_CATEGORIES.map(category => [category.id,
+            getRows('solveItTasks').filter(task => task.setId === id && task.category === category.id)
+              .sort(ordering).map(task => unwrap(task, ['setId', 'category', 'position'])),
+          ]));
+          if (own(body, 'round')) item.round = body.round;
+        }
+      } else if (row.kind === 'group') item = { ...item, children: [] };
       else if (app === 'notebook') {
         const body = value<Stored>(documents, id);
         if (!body) throw new Error('The Notebook document body is missing.');
@@ -290,6 +319,17 @@ export async function hydrateWorkspace(store: Pick<IndexedDataStore, 'all'> & Pa
   verifyContents('guides', 'guide', true);
   verifyContents('guideSessions', 'guide', false);
   verifyContents('reviewSets', 'knowledge-check', true);
+  verifyContents('solveItTaskSets', 'solve-it-grid', false);
+
+  const solveItTaskIds = new Set<string>();
+  for (const task of getRows('solveItTasks')) {
+    const key = JSON.stringify([task.setId, task.id]);
+    if (typeof task.setId !== 'string' || !solveItSets.has(task.setId) || typeof task.id !== 'string' ||
+        !TASK_CATEGORIES.some(category => category.id === task.category) || solveItTaskIds.has(key)) {
+      throw new Error('Saved Solve-It Grid tasks contain an orphan, duplicate, or unsupported category.');
+    }
+    solveItTaskIds.add(key);
+  }
 
   for (const [app, store] of [['index-cards', 'indexCards'],
     ['knowledge-check', 'reviewQuestions']] as const) {
@@ -315,6 +355,10 @@ export async function hydrateWorkspace(store: Pick<IndexedDataStore, 'all'> & Pa
   }
   for (const app of LIBRARY_APPS) {
     const nodes = groups.filter(row => row.app === app);
+    // Existing databases predate this app. An absent, empty root has no order
+    // to recover; the normal observer creates it with the first structural save.
+    if (app === 'solve-it-grid' && nodes.length === 0 && !getRows('collections')
+      .some(row => row.app === app && row.parentId === '@root')) continue;
     const parents = new Set([ '@root',
       ...nodes.filter(row => row.kind === 'group').map(row => row.id!) ]);
     for (const parent of parents) {
@@ -329,6 +373,10 @@ export async function hydrateWorkspace(store: Pick<IndexedDataStore, 'all'> & Pa
   for (const row of getRows('reviewSets')) {
     recordOrder('knowledge-check:questions', row.id!,
       getRows('reviewQuestions').filter(q => q.setId === row.id).sort(ordering).map(q => q.id!));
+  }
+  for (const row of getRows('solveItTaskSets')) {
+    for (const category of TASK_CATEGORIES) recordOrder('solve-it-grid:tasks', row.id! + '/' + category.id,
+      getRows('solveItTasks').filter(task => task.setId === row.id && task.category === category.id).sort(ordering).map(task => task.id!));
   }
   const todoRows = getRows('todoLists');
   recordOrder('todo-list', '@root', todoRows.sort(ordering).map(list => list.id!));

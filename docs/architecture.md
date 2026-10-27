@@ -43,6 +43,7 @@ When adding a feature:
 Important shared modules include:
 
 - `src/core/tree.ts`: generic grouped-tree lookup, movement, deletion, counting, and options.
+- `src/core/dated-library.ts`: creation-date ordering, age/fading progress, UTC archive cutoffs, and validated archive settings shared by Todo List and Solve-It Grid. `src/components/dated-library.ts`, `dated-library-settings-fields.ts`, and `src/styles/dated-library.css` own their shared library UI; feature adapters own their content and saved models.
 - `src/core/ids.ts`: IDs and validation.
 - `packages/@dynamic-learner/answer-matching/`: reusable strict-to-semantic answer equivalency; `src/core/answer-matching.ts` is a compatibility adapter that preserves the existing level-3 behavior for remaining legacy callers.
 - `src/core/fill-blank.ts`: shared blank parsing/masking/restoration/matching.
@@ -77,6 +78,8 @@ Bubble and Gap remain planned modes. See
 Webpack emits hashed JS/CSS bundles and copies `src/assets/` recursively to `dist/assets/` with stable asset paths. Full-resolution per-app PNGs live directly under `src/assets/app-icons/`; lightweight visible variants live in `app-icons/webp`, `app-icons/png`, and `app-icons/gif`.
 
 `build/site-config.mts` and `build/page-metadata.mts` create route HTML and metadata. GitHub Pages uses the same production build; see `github-pages.md`.
+
+Solve-It Grid shares the dated library with Todo List. Its feature-owned four-list builder and round controller live under `features/solve-it-grid/`. Stable task IDs carry completion independently from each round's randomly selected references. IndexedDB stores tasks individually; round selection is saved separately from animation state. See `solve-it-grid.md`.
 
 
 ## Review session configuration

@@ -1,7 +1,7 @@
 // Shared by the browser registry and webpack build; keep this data browser-neutral.
 import type { PageMetadataOverrides } from '../core/metadata.ts';
 
-export type FeatureId = 'calculator' | 'notebook' | 'todo-list' | 'index-cards' | 'word-search' | 'crossword' | 'guide' | 'knowledge-check';
+export type FeatureId = 'calculator' | 'notebook' | 'todo-list' | 'solve-it-grid' | 'index-cards' | 'word-search' | 'crossword' | 'guide' | 'knowledge-check';
 export type FeatureGroup = 'tools' | 'work' | 'study' | 'master';
 export const featureGroups: readonly { id: FeatureGroup; label: string }[] = [
   { id: 'tools', label: 'Tools' },
@@ -62,6 +62,23 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
         width: 1254,
         height: 1254,
         alt: 'Todo List — Pale blue checklist with cyan checkboxes and a layered blue folded corner.',
+      },
+    },
+  },
+  {
+    id: 'solve-it-grid', label: 'Solve-It Grid', path: '/solve-it-grid/', icon: 'grid',
+    group: 'work',
+    version: '0.5.7',
+    image: 'assets/app-icons/solve-it-grid.png',
+    description: 'Build four task lists, then follow a lively grid that turns them into one task at a time.',
+    metadata: {
+      keywords: ['solve-it grid', 'four-section chart', 'behavior reflection'],
+      socialImage: {
+        path: 'assets/app-icons/solve-it-grid.png',
+        type: 'image/png',
+        width: 1254,
+        height: 1254,
+        alt: 'Solve-It Grid — A layered blue four-section chart with a cyan checkmark.',
       },
     },
   },
