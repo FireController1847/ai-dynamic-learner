@@ -181,11 +181,14 @@ export const MarkdownEditor = defineComponent({
               onClick: () => { mode.value = value; },
             }, label)),
             h('button', {
-              type: 'button', class: ['icon-button', { 'markdown-is-loading': downloading.value }],
+              type: 'button', class: ['quiet-button', 'outline-button', { 'markdown-is-loading': downloading.value }],
               disabled: downloading.value, 'aria-busy': downloading.value,
               title: downloading.value ? 'Preparing download…' : 'Download Markdown',
               'aria-label': downloading.value ? 'Preparing download' : 'Download Markdown', onClick: download,
-            }, [h(Icon, { name: downloading.value ? 'loading' : 'download' })]),
+            }, [
+              h(Icon, { name: downloading.value ? 'loading' : 'download' }),
+              downloading.value ? 'Preparing…' : 'Download',
+            ]),
           ]),
           h('button', {
             type: 'button',
