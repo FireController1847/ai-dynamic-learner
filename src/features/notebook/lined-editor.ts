@@ -2,8 +2,8 @@ import { defineComponent, h, nextTick, onActivated, onBeforeUnmount, onMounted, 
 import { inputValue } from '../../core/dom.ts';
 import { Icon } from '../../components/icon.ts';
 import { downloadText } from '../../core/file-download.ts';
-import { linedRtfFilename } from './document-files.ts';
-import { linedPaperRtf } from './lined-rtf.ts';
+import { linedTxtFilename } from './document-files.ts';
+import { linedPaperText } from './lined-txt.ts';
 import type { NotebookDocument } from './document-types.ts';
 import { defaultLinedDisplay, type LinedDisplay } from './display-options.ts';
 import { extendToPage, paginateText, type TextPage } from './lined-pagination.ts';
@@ -34,13 +34,13 @@ export const LinedEditor = defineComponent({
     async function download() {
       if (downloading.value) return;
       downloading.value = true;
-      downloadMessage.value = 'Preparing RTF download…';
+      downloadMessage.value = 'Preparing text download…';
       try {
-        const rtf = linedPaperRtf(props.document.data, ranges.value, props.options);
-        await downloadText(linedRtfFilename(props.document.name), rtf, 'application/rtf');
-        downloadMessage.value = 'RTF download handed to your browser.';
+        const text = linedPaperText(props.document.data, ranges.value);
+        await downloadText(linedTxtFilename(props.document.name), text, 'text/plain;charset=utf-8');
+        downloadMessage.value = 'Text download handed to your browser.';
       } catch {
-        downloadMessage.value = 'The RTF download could not be prepared. Please try again.';
+        downloadMessage.value = 'The text download could not be prepared. Please try again.';
       } finally {
         downloading.value = false;
       }
@@ -170,8 +170,8 @@ export const LinedEditor = defineComponent({
           class: ['quiet-button', 'outline-button', { 'lined-download-loading': downloading.value }],
           disabled: downloading.value,
           'aria-busy': downloading.value,
-          title: downloading.value ? 'Preparing RTF download…' : 'Download RTF',
-          'aria-label': downloading.value ? 'Preparing RTF download' : 'Download RTF',
+          title: downloading.value ? 'Preparing text download…' : 'Download text',
+          'aria-label': downloading.value ? 'Preparing text download' : 'Download text',
           onClick: () => { void download(); },
         }, [
           h(Icon, { name: downloading.value ? 'loading' : 'download' }),
