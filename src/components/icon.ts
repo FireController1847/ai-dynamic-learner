@@ -6,6 +6,7 @@ const paths: Record<string, string> = {
   folder: 'M3 5h6l2 2h10v13H3Z',
   check: 'm5 12 4 4L19 6',
   lock: 'M5 10h14v12H5ZM8 10V6a4 4 0 0 1 8 0v4M12 15v3',
+  'help-circle': 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20ZM9.1 9a3 3 0 1 1 5.1 2.2c-.9.8-2.2 1.3-2.2 3.1M12 18h.01',
   'arrow-left': 'M20 12H4m7-7-7 7 7 7',
   'arrow-right': 'M4 12h16m-7-7 7 7-7 7',
   'arrow-up': 'M12 20V4m-7 7 7-7 7 7',
@@ -33,6 +34,8 @@ const paths: Record<string, string> = {
   // Two opposing curved arrows read as Refresh, unlike a circle with one outward arrow.
   'refresh-cw': 'M20 11a8.1 8.1 0 0 0-15.5-2M4 4v5h5M4 13a8.1 8.1 0 0 0 15.5 2M20 20v-5h-5',
   shuffle: 'M3 6h3c5 0 7 12 12 12h3m-4-4 4 4-4 4M3 18h3c2 0 4-3 5-6m2-3c2-2 3-3 5-3h3m-4-4 4 4-4 4',
+  repeat: 'm17 2 4 4-4 4M3 11V9a3 3 0 0 1 3-3h15m-14 16-4-4 4-4m14-3v2a3 3 0 0 1-3 3H3',
+  'repeat-1': 'm17 2 4 4-4 4M3 11V9a3 3 0 0 1 3-3h15m-14 16-4-4 4-4m14-3v2a3 3 0 0 1-3 3H3M11 10h1v4',
   chevron: 'm9 5 7 7-7 7',
   'chevron-up': 'm5 15 7-7 7 7',
   'chevron-down': 'm5 9 7 7 7-7',

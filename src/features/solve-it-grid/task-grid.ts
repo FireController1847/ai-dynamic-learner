@@ -295,10 +295,10 @@ export const TaskGrid = defineComponent({
             state === 'skipped' ? h('span', { class: 'sig-later-label' }, 'Later') : null,
           ]);
           }),
-          phase.value === 'constructing' ? h(GridConstruction, { onFinished: showNewItems }) : null,
         ]),
         phase.value === 'celebrating' ? h('div', { class: 'sig-round-burst', 'aria-hidden': true }, Array.from({ length: 16 }, (_, index) => h('i', { style: { '--particle': index } }))) : null,
       ]),
+      phase.value === 'constructing' ? h(GridConstruction, { onFinished: showNewItems }) : null,
       history.value.length ? h('nav', { class: 'sig-round-navigation', 'aria-label': 'Grid navigation' }, [
          h('button', { type: 'button', class: 'quiet-button', disabled: viewing.value === 0,
            onClick: previousRound, title: 'Previous' }, [h(Icon, { name: 'arrow-left' }), 'Previous']),

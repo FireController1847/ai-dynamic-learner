@@ -20,6 +20,7 @@
 .solve-it-grid-layout.library-resizing { transition: none; user-select: none; }
 .solve-it-grid-layout.library-collapsed { grid-template-columns: 0 minmax(0, 1fr); }
 .solve-it-grid-detail {
+  position: relative;
   container: solve-it-grid / inline-size;
   display: flex;
   flex-direction: column;

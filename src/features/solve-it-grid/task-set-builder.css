@@ -45,6 +45,22 @@
 .sig-list-step { display: grid; gap: 12px; animation: sig-step-enter 180ms var(--ease-out); }
 .sig-list-heading h3 { margin: 0; font-size: 24px; line-height: 30px; }
 .sig-list-heading { display: flex; align-items: center; justify-content: flex-start; flex-wrap: wrap; gap: 12px 24px; }
+.sig-builder-create .sig-list-heading { gap: 8px; }
+.sig-category-help-anchor { position: relative; display: inline-flex; align-items: center; }
+.sig-category-help-trigger { display: inline-grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--text-secondary); cursor: pointer; }
+.sig-category-help-trigger .ui-icon { width: 21px; height: 21px; }
+.sig-category-help-trigger:hover, .sig-category-help-trigger[aria-expanded="true"] { background: var(--brand-tint); color: var(--brand-text); }
+.sig-category-help-trigger:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.sig-category-help-tip { position: absolute; z-index: 5; left: 0; top: calc(100% + 6px); display: grid; gap: 8px; width: min(310px, calc(100vw - 60px)); padding: 14px; border: 1px solid var(--control-border); border-radius: var(--radius-dialog); background: var(--page-background); color: var(--text-color); font-size: 13px; line-height: 1.5; box-shadow: 0 8px 24px rgb(0 0 0 / .15); }
+.sig-category-help-tip strong { font-size: 14px; }
+.sig-category-help-tip p { margin: 0; color: var(--text-secondary); }
+.sig-category-help-more { justify-self: start; min-height: 36px; padding-inline: 10px; }
+.sig-category-info { display: grid; gap: 12px; line-height: 1.6; }
+.sig-category-info p, .sig-category-info h3, .sig-category-info ul { margin: 0; }
+.sig-category-info h3 { font-size: 15px; font-weight: 600; }
+.sig-category-info ul { padding-left: 22px; }
+.sig-category-info li + li { margin-top: 6px; }
+
 .sig-examples { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
 .sig-examples li { display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 999px; background: var(--brand-tint); color: var(--brand-text); font-size: 12px; line-height: 18px; }
 .sig-examples li::before { content: ""; flex: 0 0 4px; width: 4px; height: 4px; border-radius: 50%; background: currentColor; opacity: 0.55; }
@@ -64,7 +80,8 @@
 .sig-item-gear .ui-icon, .sig-repeat-square .ui-icon { width: 18px; height: 18px; }
 .sig-repeat-square { width: 36px; height: 36px; justify-self: center; border-color: var(--control-border); border-radius: 7px; background: var(--page-background); }
 .sig-repeat-square.is-repeating { color: var(--brand-text); border-color: var(--brand); background: var(--brand-tint); }
-.sig-repeat-square.is-repeating .ui-icon { width: 20px; height: 20px; stroke-width: 2.6; }
+.sig-repeat-square .ui-icon { width: 21px; height: 21px; stroke-width: 1.9; }
+.sig-repeat-square.is-repeating .ui-icon { stroke-width: 2.25; }
 .sig-repeat-square.is-repeating:hover { background: var(--brand-tint); }
 .sig-mini-tooltip { position: absolute; z-index: 5; left: 50%; bottom: calc(100% + 8px); width: max-content; max-width: 150px; padding: 5px 8px; border: 1px solid var(--control-border); border-radius: 6px; background: var(--page-background); color: var(--text-color); box-shadow: 0 3px 10px rgb(0 0 0 / .12); font-size: 12px; line-height: 17px; font-weight: 400; white-space: nowrap; opacity: 0; visibility: hidden; pointer-events: none; transform: translate(-50%, 3px); transition: opacity 120ms ease, transform 120ms ease, visibility 0s linear 120ms; }
 .sig-repeat-square:is(:hover, :focus) .sig-mini-tooltip { opacity: 1; visibility: visible; transform: translate(-50%, 0); transition: opacity 120ms ease, transform 120ms ease, visibility 0s; }

@@ -1,10 +1,44 @@
 import { computed, defineComponent, h, nextTick, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref, type PropType } from 'vue';
 import { Icon } from '../../components/icon.ts';
+import { PopupDialog } from '../../components/popup-dialog.ts';
 import { inputValue } from '../../core/dom.ts';
 import { createId } from '../../core/ids.ts';
 import { registerLeaveGuard } from '../../core/leave-guards.ts';
 import { MAX_NAME_LENGTH, type TaskSet } from './library-model.ts';
 import { balanceScore, categoryValues, listCounts, MAX_TASK_TEXT_LENGTH, REPEAT_OPTIONS, TASK_CATEGORIES, type GridTask, type TaskCategory, type TaskLists } from './task-model.ts';
+
+interface CategoryExplanation {
+  question: string;
+  summary: string;
+  description: string;
+  signs: readonly string[];
+}
+const CATEGORY_EXPLANATIONS: Record<TaskCategory, CategoryExplanation> = {
+  fires: {
+    question: 'What is a fire?',
+    summary: 'Something time-sensitive that needs your attention soon.',
+    description: 'Fires are responsibilities with a real deadline or a clear reason to handle them promptly.',
+    signs: ['Is it due today or already overdue?', 'Would delaying it create a specific problem?', 'Does it need attention before less urgent activities?'],
+  },
+  'passive-fun': {
+    question: 'What is passive fun?',
+    summary: 'A way to enjoy some downtime without much active effort.',
+    description: 'Passive fun is usually relaxing or easy to dip into, like watching a show or listening to something you enjoy.',
+    signs: ['Am I mostly taking something in?', 'Does it ask relatively little planning or effort?', 'Is it a way to unwind?'],
+  },
+  'shoulds-oughts': {
+    question: 'What are Shoulds & Oughts?',
+    summary: 'Useful things you have been meaning to get done.',
+    description: 'These are tasks you want to take care of, even if they are not urgent today. They are possibilities to work on, not a judgment about what you should have done already.',
+    signs: ['Have I been meaning to do it?', 'Would finishing it make daily life easier?', 'Is it useful, but not an immediate fire?'],
+  },
+  'stimulated-fun': {
+    question: 'What is stimulated fun?',
+    summary: 'Something enjoyable that actively engages your attention.',
+    description: 'Stimulated fun might involve making, exploring, playing, solving, or working on a hobby because the activity itself interests you.',
+    signs: ['Does it invite me to participate actively?', 'Is it interesting or creatively engaging?', 'Would I choose it for enjoyment?'],
+  },
+};
 
 export interface TaskSetDraft { name: string; lists: TaskLists }
 export interface TaskSetBuilderHandle { canLeave(): boolean }
@@ -28,6 +62,9 @@ export const TaskSetBuilder = defineComponent({
     const introduction = ref(!props.item);
     const naming = ref(!props.item);
     const expandedOptions = ref<Set<string>>(new Set());
+    const helpOpen = ref<TaskCategory | null>(null);
+    const infoOpen = ref<TaskCategory | null>(null);
+    const helpTrigger = ref<HTMLButtonElement | null>(null);
     const current = computed(() => TASK_CATEGORIES[step.value]!);
     const counts = computed(() => listCounts(lists.value));
     const score = computed(() => balanceScore(counts.value));
@@ -39,18 +76,29 @@ export const TaskSetBuilder = defineComponent({
       element.style.height = `${Math.min(element.scrollHeight, 240)}px`;
     }
     let active = true;
+    function dismissHelp(event: PointerEvent) {
+      if (event.target instanceof Node && !helpTrigger.value?.parentElement?.contains(event.target)) {
+        helpOpen.value = null;
+      }
+    }
     function canLeave() { return !dirty.value || window.confirm('Discard the unsaved task-set setup?'); }
     expose({ canLeave });
     const unregister = registerLeaveGuard(() => !active || canLeave());
     function beforeUnload(event: BeforeUnloadEvent) { if (active && dirty.value) { event.preventDefault(); event.returnValue = ''; } }
     onMounted(() => {
       window.addEventListener('beforeunload', beforeUnload);
+      document.addEventListener('pointerdown', dismissHelp);
       if (introduction.value || props.item) heading.value?.focus();
       else { nameInput.value?.focus(); nameInput.value?.select(); }
     });
     onActivated(() => { active = true; });
-    onDeactivated(() => { active = false; });
-    onBeforeUnmount(() => { unregister(); window.removeEventListener('beforeunload', beforeUnload); });
+    onDeactivated(() => {
+      active = false; helpOpen.value = null; infoOpen.value = null;
+    });
+    onBeforeUnmount(() => {
+      unregister(); window.removeEventListener('beforeunload', beforeUnload);
+      document.removeEventListener('pointerdown', dismissHelp);
+    });
     async function beginLists() {
       introduction.value = false;
       naming.value = true; problem.value = '';
@@ -68,10 +116,12 @@ export const TaskSetBuilder = defineComponent({
         nameInput.value?.focus(); return;
       }
       naming.value = false; step.value = 0; problem.value = '';
+      helpOpen.value = null; infoOpen.value = null;
       await nextTick(); heading.value?.focus();
     }
     async function backToName() {
       naming.value = true; problem.value = '';
+      helpOpen.value = null; infoOpen.value = null;
       await nextTick(); nameInput.value?.focus();
     }
     function toggleOptions(id: string) {
@@ -82,6 +132,7 @@ export const TaskSetBuilder = defineComponent({
     async function go(index: number) {
       if (!name.value.trim()) { problem.value = 'Give this task set a name before continuing.'; return; }
       step.value = index; problem.value = '';
+      helpOpen.value = null; infoOpen.value = null;
       await nextTick(); heading.value?.focus();
     }
     async function add(category: TaskCategory, after?: number) {
@@ -189,6 +240,36 @@ export const TaskSetBuilder = defineComponent({
           h('p', { class: 'sig-eyebrow' }, `Step ${step.value + 1} of 4`),
           h('div', { class: 'sig-list-heading' }, [
             h('h3', { id: `sig-step-${category.id}`, ref: heading, tabindex: -1 }, category.label),
+            !props.item ? h('div', { class: 'sig-category-help-anchor' }, [
+              h('button', {
+                ref: helpTrigger, type: 'button', class: 'sig-category-help-trigger',
+                title: CATEGORY_EXPLANATIONS[category.id].question,
+                'aria-label': CATEGORY_EXPLANATIONS[category.id].question,
+                'aria-expanded': helpOpen.value === category.id,
+                'aria-controls': `sig-category-help-${category.id}`,
+                onClick: () => { helpOpen.value = helpOpen.value === category.id ? null : category.id; },
+                onKeydown: (event: KeyboardEvent) => {
+                  if (event.key === 'Escape') helpOpen.value = null;
+                },
+              }, [h(Icon, { name: 'help-circle' })]),
+              helpOpen.value === category.id ? h('div', {
+                id: `sig-category-help-${category.id}`,
+                class: 'sig-category-help-tip', role: 'region',
+                'aria-label': CATEGORY_EXPLANATIONS[category.id].question,
+                onKeydown: (event: KeyboardEvent) => {
+                  if (event.key === 'Escape') {
+                    helpOpen.value = null; helpTrigger.value?.focus();
+                  }
+                },
+              }, [
+                h('strong', CATEGORY_EXPLANATIONS[category.id].question),
+                h('p', CATEGORY_EXPLANATIONS[category.id].summary),
+                h('button', {
+                  type: 'button', class: 'quiet-button sig-category-help-more',
+                  onClick: () => { helpOpen.value = null; infoOpen.value = category.id; },
+                }, 'More information'),
+              ]) : null,
+            ]) : null,
             props.item ? h('ul', { class: 'sig-examples', 'aria-label': `${category.label} examples` }, category.examples.map(example =>
               h('li', { key: example }, example))) : null,
           ]),
@@ -220,13 +301,13 @@ export const TaskSetBuilder = defineComponent({
               ]),
               h('button', {
                 type: 'button', class: ['sig-repeat-square', { 'is-repeating': task.repeat !== undefined }],
-                'aria-label': task.repeat !== undefined ? 'Repeating enabled. Click to turn off.' : 'Repeating disabled. Click to turn on.',
+                'aria-label': task.repeat !== undefined ? 'Repeating item. Click to make one-time.' : 'One-time item. Click to enable repeating.',
                 'aria-pressed': task.repeat !== undefined,
                 onClick: () => setRepeating(category.id, index, task.repeat === undefined),
               }, [
-                task.repeat !== undefined ? h(Icon, { name: 'check' }) : null,
+                h(Icon, { name: task.repeat !== undefined ? 'repeat' : 'repeat-1' }),
                 h('span', { class: 'sig-mini-tooltip', 'aria-hidden': true },
-                  task.repeat !== undefined ? 'Repeating on' : 'Repeating off'),
+                  task.repeat !== undefined ? 'Repeating item' : 'One-time item'),
               ]),
               h('button', {
                 type: 'button', class: ['sig-item-gear', { 'is-expanded': expandedOptions.value.has(task.id) }],
@@ -280,6 +361,20 @@ export const TaskSetBuilder = defineComponent({
           h('button', { type: 'button', class: 'card-primary-button', onClick: () => { if (step.value < 3) void go(step.value + 1); else finish(); } },
             step.value < 3 ? props.item ? `Next: ${TASK_CATEGORIES[step.value + 1]!.label}` : 'Continue' : props.item ? 'Save task set' : 'Create task set'),
         ]),
+        !props.item && infoOpen.value ? h(PopupDialog, {
+          title: CATEGORY_EXPLANATIONS[infoOpen.value].question,
+          headingId: 'sig-category-info-title', width: 520,
+          returnFocus: helpTrigger.value,
+          onClose: () => { infoOpen.value = null; },
+        }, { default: () => {
+          const info = CATEGORY_EXPLANATIONS[infoOpen.value!];
+          return h('div', { class: 'sig-category-info' }, [
+            h('p', info.description),
+            h('h3', 'How to recognize it'),
+            h('ul', info.signs.map(sign => h('li', sign))),
+            h('p', { class: 'sig-muted' }, 'There is no single right way to categorize an activity. Choose where it makes the most sense to you.'),
+          ]);
+        } }) : null,
       ]);
     };
   },

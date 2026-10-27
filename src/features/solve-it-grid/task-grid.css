@@ -22,7 +22,7 @@
 .sig-quadrant:disabled { opacity: 1; }
 .sig-quadrant:focus-visible { outline: none; }
 .sig-quadrant:focus-visible .sig-quadrant-number { outline: 2px solid var(--brand); outline-offset: 4px; }
-.sig-quadrant-heading { display: flex; align-items: flex-start; gap: 8px; min-width: 0; color: var(--text-secondary); font-size: 16px; line-height: 22px; font-weight: 600; }
+.sig-quadrant-heading { display: flex; align-items: flex-start; gap: 8px; min-width: 0; color: var(--text-secondary); font-size: 18px; line-height: 24px; font-weight: 600; }
 .sig-quadrant-heading > .ui-icon { flex-shrink: 0; width: 18px; height: 18px; margin-top: 1px; }
 .sig-quadrant-heading > span { min-width: 0; overflow-wrap: anywhere; }
 .sig-quadrant-number { position: absolute; width: var(--sig-number-size); height: var(--sig-number-size); border-width: 1.5px; color: var(--text-secondary); font-size: 15px; transition: color 180ms, background-color 180ms, border-color 180ms; }
@@ -69,7 +69,10 @@
 .sig-chart.is-turning .sig-grid-board { animation: sig-grid-turn 380ms cubic-bezier(.65, 0, .35, 1) both; }
 .sig-chart.is-constructing .sig-grid-board { animation: sig-grid-enter 260ms var(--ease-out) both; }
 .sig-chart.is-constructing .sig-quadrant { visibility: hidden; }
-.sig-construction-grid { position: absolute; inset: 0; z-index: 2; display: block; width: 100%; height: 100%; color: var(--brand); pointer-events: none; }
+/* During construction, cover the entire app workspace in white, not just
+   the quadrant chart. The square inside is sized to its available viewport. */
+.sig-construction-stage { position: absolute; z-index: 12; inset: 0; display: grid; place-items: center; overflow: hidden; background: #fff; pointer-events: none; }
+.sig-construction-grid { display: block; flex: none; max-width: 100%; max-height: 100%; background: transparent; pointer-events: none; }
 .sig-chart.is-revealing .sig-quadrant { animation: sig-task-reveal 280ms var(--ease-out) var(--reveal-delay) both; }
 .sig-round-burst { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
 .sig-round-burst i { --angle: calc(var(--particle) * 22.5deg); position: absolute; top: 50%; left: 50%; width: 6px; height: 10px; border-radius: 2px; background: var(--text-color); animation: sig-confetti 600ms var(--ease-out) both; }
@@ -95,7 +98,7 @@
   .sig-axis > .ui-icon { width: 12px; height: 12px; }
   .sig-axis-left, .sig-axis-right { width: 44px; }
   .sig-quadrant { padding: 4px 2px; gap: 4px; }
-  .sig-quadrant-heading { font-size: 14px; line-height: 19px; gap: 5px; }
+  .sig-quadrant-heading { justify-content: center; align-items: center; width: 100%; font-size: 14px; line-height: 19px; gap: 5px; text-align: center; }
   .sig-quadrant-heading > .ui-icon { width: 16px; height: 16px; }
   .sig-task-text { font-size: 16px; }
   .sig-quadrant-number { font-size: 14px; }

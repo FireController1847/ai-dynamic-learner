@@ -1,7 +1,8 @@
 import { defineComponent, h, onBeforeUnmount, onMounted, ref } from 'vue';
 
 /** A temporary, canvas-rendered mosaic for a new draw. No cells enter saved state. */
-const CELL = 10;
+// Four times the former 8px cell / 10px pitch, with transparent interiors.
+const CELL_PITCH = 40;
 const LEAD_MS = 130;
 const WAVE_MS = 860;
 const POP_MS = 240;
@@ -12,75 +13,99 @@ export const GridConstruction = defineComponent({
   name: 'GridConstruction',
   emits: { finished: () => true },
   setup(_, { emit }) {
+    const stage = ref<HTMLElement | null>(null);
     const surface = ref<HTMLCanvasElement | null>(null);
     let frame = 0;
     let holdTimer: number | undefined;
+    let observer: ResizeObserver | undefined;
     let stopped = false;
 
     onMounted(() => {
       const canvas = surface.value;
+      const host = stage.value;
       const context = canvas?.getContext('2d');
-      if (!canvas || !context) { emit('finished'); return; }
-      const color = getComputedStyle(canvas).color;
+      if (!canvas || !host || !context) { emit('finished'); return; }
       const ratio = Math.min(window.devicePixelRatio || 1, 2);
       let started = 0;
+
+      // Fit a *square* to whichever dimension has more room: in wide layouts
+      // it uses up to 2/3 of the width; in tall/mobile layouts, 2/3 of the height.
+      // The other dimension can be used in full when necessary.
+      function resize() {
+        const width = host.clientWidth;
+        const height = host.clientHeight;
+        const size = Math.max(0, Math.floor(width >= height
+          ? Math.min(width * (2 / 3), height)
+          : Math.min(width, height * (2 / 3))));
+        canvas.style.width = `${size}px`;
+        canvas.style.height = `${size}px`;
+        const bitmap = Math.ceil(size * ratio);
+        if (canvas.width !== bitmap || canvas.height !== bitmap) {
+          canvas.width = bitmap;
+          canvas.height = bitmap;
+        }
+        return size;
+      }
+
+      function draw(elapsed: number) {
+        const size = resize();
+        if (!size) return;
+        const cells = Math.max(1, Math.round(size / CELL_PITCH));
+        const pitch = size / cells;
+        const baseSize = pitch * 0.8;
+        const line = Math.max(1, Math.min(2, pitch * 0.05));
+        const diagonalMax = Math.max(1, 2 * cells - 2);
+
+        context!.setTransform(ratio, 0, 0, ratio, 0, 0);
+        context!.clearRect(0, 0, size, size);
+        context!.strokeStyle = '#000';
+        context!.lineWidth = line;
+
+        // Each transparent square scales past its final size, then settles;
+        // all cells share the same pitch and use a diagonal stagger.
+        for (let row = 0; row < cells; row++) {
+          for (let column = 0; column < cells; column++) {
+            const delay = LEAD_MS + ((row + column) / diagonalMax) * WAVE_MS;
+            const progress = Math.max(0, Math.min(1, (elapsed - delay) / POP_MS));
+            if (!progress) continue;
+            const scale = progress < 0.6
+              ? 1.17 * (1 - Math.pow(1 - progress / 0.6, 3))
+              : 1 + 0.17 * Math.pow(1 - (progress - 0.6) / 0.4, 2);
+            const cellSize = baseSize * scale;
+            const x = (column + 0.5) * pitch - cellSize / 2;
+            const y = (row + 0.5) * pitch - cellSize / 2;
+            context!.strokeRect(x + line / 2, y + line / 2,
+              Math.max(0, cellSize - line), Math.max(0, cellSize - line));
+          }
+        }
+      }
+
       function render(now: number) {
-        if (stopped || !canvas || !context) return;
+        if (stopped) return;
         if (!started) started = now;
         const elapsed = now - started;
-        // The fully drawn grid is a static canvas during its hold; avoid
-        // repainting thousands of cells while nothing is changing.
-
-        const width = canvas.clientWidth;
-        const height = canvas.clientHeight;
-        if (width && height) {
-          const bitmapWidth = Math.ceil(width * ratio);
-          const bitmapHeight = Math.ceil(height * ratio);
-          if (canvas.width !== bitmapWidth || canvas.height !== bitmapHeight) {
-            canvas.width = bitmapWidth;
-            canvas.height = bitmapHeight;
-          }
-          context.setTransform(ratio, 0, 0, ratio, 0, 0);
-          context.clearRect(0, 0, width, height);
-          context.fillStyle = color;
-          const columns = Math.ceil(width / CELL);
-          const rows = Math.ceil(height / CELL);
-          const diagonalMax = Math.max(1, columns + rows - 2);
-
-          // Diagonal, staggered starts: every 8px square pops in place, briefly
-          // overshoots, and settles. Only the temporary canvas is repainted.
-          for (let row = 0; row < rows; row++) {
-            for (let column = 0; column < columns; column++) {
-              const delay = LEAD_MS + ((row + column) / diagonalMax) * WAVE_MS;
-              const progress = Math.max(0, Math.min(1, (elapsed - delay) / POP_MS));
-              if (!progress) continue;
-              const scale = progress < 0.6
-                ? 1.17 * (1 - Math.pow(1 - progress / 0.6, 3))
-                : 1 + 0.17 * Math.pow(1 - (progress - 0.6) / 0.4, 2);
-              const size = 8 * scale;
-              const x = column * CELL + CELL / 2 - size / 2;
-              const y = row * CELL + CELL / 2 - size / 2;
-              context.globalAlpha = 0.32;
-              context.fillRect(x, y, size, size);
-            }
-          }
-          context.globalAlpha = 1;
-        }
+        draw(Math.min(elapsed, DRAW_MS));
+        // Hold the completed canvas without redrawing every frame.
         if (elapsed >= DRAW_MS) {
           holdTimer = window.setTimeout(() => { if (!stopped) emit('finished'); }, HOLD_MS);
         } else {
           frame = window.requestAnimationFrame(render);
         }
       }
+      observer = new ResizeObserver(() => {
+        if (!stopped && started) draw(Math.min(performance.now() - started, DRAW_MS));
+      });
+      observer.observe(host);
       frame = window.requestAnimationFrame(render);
     });
     onBeforeUnmount(() => {
       stopped = true;
       if (frame) window.cancelAnimationFrame(frame);
       if (holdTimer !== undefined) window.clearTimeout(holdTimer);
+      observer?.disconnect();
     });
-    return () => h('canvas', {
-      ref: surface, class: 'sig-construction-grid', 'aria-hidden': 'true',
-    });
+    return () => h('div', { ref: stage, class: 'sig-construction-stage', 'aria-hidden': 'true' }, [
+      h('canvas', { ref: surface, class: 'sig-construction-grid' }),
+    ]);
   },
 });
