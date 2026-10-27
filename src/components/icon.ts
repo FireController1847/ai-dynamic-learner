@@ -34,8 +34,9 @@ const paths: Record<string, string> = {
   // Two opposing curved arrows read as Refresh, unlike a circle with one outward arrow.
   'refresh-cw': 'M20 11a8.1 8.1 0 0 0-15.5-2M4 4v5h5M4 13a8.1 8.1 0 0 0 15.5 2M20 20v-5h-5',
   shuffle: 'M3 6h3c5 0 7 12 12 12h3m-4-4 4 4-4 4M3 18h3c2 0 4-3 5-6m2-3c2-2 3-3 5-3h3m-4-4 4 4-4 4',
-  repeat: 'M3 10V9a3 3 0 0 1 3-3h15M17 2l4 4-4 4M21 14v1a3 3 0 0 1-3 3H3M7 14l-4 4 4 4',
-  'repeat-1': 'M3 10V9a3 3 0 0 1 3-3h15M17 2l4 4-4 4M21 14v1a3 3 0 0 1-3 3H3M7 14l-4 4 4 4M11 11.25l1.25-1v4.25',
+  // Matching playlist-repeat glyphs; the numeral is drawn separately below.
+  repeat: 'M3.5 9.5V9a3 3 0 0 1 3-3H20M16.5 2.5 20 6l-3.5 3.5M20.5 14.5V15a3 3 0 0 1-3 3h-14M7 14.5 3.5 18 7 21.5',
+  'repeat-1': 'M3.5 9.5V9a3 3 0 0 1 3-3H20M16.5 2.5 20 6l-3.5 3.5M20.5 14.5V15a3 3 0 0 1-3 3h-14M7 14.5 3.5 18 7 21.5',
   chevron: 'm9 5 7 7-7 7',
   'chevron-up': 'm5 15 7-7 7 7',
   'chevron-down': 'm5 9 7 7 7-7',
@@ -110,6 +111,13 @@ export const Icon = defineComponent({
           fill: 'currentColor', stroke: 'none', 'text-anchor': 'middle',
           'font-family': 'monospace', 'font-size': 5.5, 'font-weight': 700,
         }, letter))),
+    ] : props.name === 'repeat-1' ? [
+      h('path', { d: paths['repeat-1'] }),
+      h('text', {
+        x: 12, y: 15.6, fill: 'currentColor', stroke: 'none',
+        'text-anchor': 'middle', 'font-family': 'system-ui, sans-serif',
+        'font-size': 10, 'font-weight': 700,
+      }, '1'),
     ] : [h('path', { d: paths[props.name] })]);
   },
 });

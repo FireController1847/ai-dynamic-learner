@@ -92,7 +92,7 @@
 .sig-item-gear, .sig-repeat-square, .sig-item-delete { display: inline-grid; place-items: center; position: relative; flex: 0 0 36px; width: 36px; height: 36px; padding: 0; border: 1px solid var(--control-border); border-radius: 8px; background: var(--page-background); color: var(--text-secondary); cursor: pointer; transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease; }
 .sig-item-gear:hover, .sig-repeat-square:hover, .sig-item-gear.is-expanded { background: var(--surface-hover); color: var(--text-color); }
 .sig-item-gear:focus-visible, .sig-repeat-square:focus-visible, .sig-item-delete:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
-.sig-item-gear .ui-icon, .sig-repeat-square .ui-icon { width: 22px; height: 22px; stroke-width: 1.8; }
+.sig-item-gear .ui-icon, .sig-repeat-square .ui-icon { width: 20px; height: 20px; stroke-width: 1.8; }
 .sig-repeat-square.is-repeating { color: var(--brand-text); border-color: var(--brand); background: var(--brand-tint); }
 .sig-repeat-square.is-repeating:hover { background: var(--brand-tint); }
 .sig-item-delete { border-color: transparent; background: transparent; color: var(--danger); }
