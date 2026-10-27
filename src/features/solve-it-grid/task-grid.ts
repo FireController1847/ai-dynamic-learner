@@ -90,7 +90,7 @@ export const TaskGrid = defineComponent({
         void focusCurrent();
       } else {
         phase.value = 'constructing';
-        announcement.value = 'Preparing the next round.';
+        announcement.value = 'Preparing the next set of items.';
       }
     }
     function cycle() {
@@ -154,14 +154,14 @@ export const TaskGrid = defineComponent({
       clearTimer(); clearCheck(); clearFlash();
       phase.value = 'ready';
       viewing.value = viewing.value === null ? history.value.length - 1 : viewing.value - 1;
-      announcement.value = `Viewing round ${shownRound.value.number}. Use Next round to return, or Undo from this round to change earlier progress.`;
+      announcement.value = 'Viewing an earlier point. Use Next to move forward, or Return to this point to restore it.';
     }
     function nextRound() {
       if (viewing.value === null) return;
       const next = viewing.value + 1;
       viewing.value = next < history.value.length ? next : null;
       if (viewing.value === null) { resume(); void focusCurrent(); }
-      else announcement.value = `Viewing round ${shownRound.value.number}.`;
+      else announcement.value = 'Viewing an earlier point.';
     }
     function rewind() {
       const index = viewing.value;
@@ -266,7 +266,7 @@ export const TaskGrid = defineComponent({
             style: { '--reveal-delay': `${(category.number - 1) * 65}ms` },
             disabled: viewing.value !== null || state === 'empty' || state === 'skipped' ||
               phase.value === 'turning' || phase.value === 'constructing',
-            'aria-label': `${category.number}. ${category.label}. ${task?.text ?? 'Empty'}. ${viewing.value !== null ? 'Earlier round, read-only. Use Undo from this round to change progress.' : state === 'ready' ? locked ? 'Activate twice quickly to skip ahead; earlier tasks remain available.' : 'Next task. Complete.' : state === 'done' ? canUndo ? 'Completed. Activate to undo.' : 'Completed. Undo the later quadrant first.' : state === 'skipped' ? 'Skipped for now.' : 'Empty'}`,
+            'aria-label': `${category.number}. ${category.label}. ${task?.text ?? 'Empty'}. ${viewing.value !== null ? 'Earlier point, read-only. Use Return to this point to change progress.' : state === 'ready' ? locked ? 'Activate twice quickly to skip ahead; earlier tasks remain available.' : 'Next task. Complete.' : state === 'done' ? canUndo ? 'Completed. Activate to undo.' : 'Completed. Undo the later quadrant first.' : state === 'skipped' ? 'Skipped for now.' : 'Empty'}`,
             onClick: (event: MouseEvent) => activate(category.id, event),
             onKeydown: (event: KeyboardEvent) => { if (event.repeat && (event.key === 'Enter' || event.key === ' ')) event.preventDefault(); },
           }, [
@@ -299,14 +299,13 @@ export const TaskGrid = defineComponent({
         ]),
         phase.value === 'celebrating' ? h('div', { class: 'sig-round-burst', 'aria-hidden': true }, Array.from({ length: 16 }, (_, index) => h('i', { style: { '--particle': index } }))) : null,
       ]),
-      history.value.length ? h('nav', { class: 'sig-round-navigation', 'aria-label': 'Round navigation' }, [
+      history.value.length ? h('nav', { class: 'sig-round-navigation', 'aria-label': 'Grid navigation' }, [
          h('button', { type: 'button', class: 'quiet-button', disabled: viewing.value === 0,
-           onClick: previousRound, title: 'View previous round' }, [h(Icon, { name: 'arrow-left' }), 'Previous']),
-         h('span', { class: 'sig-round-number' }, `Round ${shownRound.value.number}`),
-         h('button', { type: 'button', class: 'quiet-button', disabled: viewing.value === null,
-           onClick: nextRound, title: 'View next round' }, ['Next', h(Icon, { name: 'arrow-right' })]),
+           onClick: previousRound, title: 'Previous' }, [h(Icon, { name: 'arrow-left' }), 'Previous']),
+         viewing.value !== null ? h('button', { type: 'button', class: 'quiet-button',
+           onClick: nextRound, title: 'Next' }, ['Next', h(Icon, { name: 'arrow-right' })]) : null,
          viewing.value !== null ? h('button', { type: 'button', class: 'quiet-button sig-round-rewind',
-           onClick: () => { rewindOpen.value = true; } }, 'Undo from this round') : null,
+           onClick: () => { rewindOpen.value = true; } }, 'Return to this point') : null,
        ]) : null,
        phase.value === 'complete' ? h('section', { class: 'sig-completion' }, [
         h('h3', { ref: finishHeading, tabindex: -1 }, total.value ? 'Clear for now.' : 'Your lists are empty.'),
@@ -319,13 +318,13 @@ export const TaskGrid = defineComponent({
       ]) : null,
       h('p', { class: 'visually-hidden', role: 'status', 'aria-live': 'polite' }, announcement.value),
       rewindOpen.value && viewing.value !== null ? h(PopupDialog, {
-        title: `Undo from round ${shownRound.value.number}?`, headingId: 'sig-rewind-title',
+        title: 'Return to this point?', headingId: 'sig-rewind-title',
         onClose: () => { rewindOpen.value = false; },
       }, { default: () => [
-        h('p', 'This returns to the selected round, unchecks its latest completed task, and clears completions in later rounds. Your lists are unchanged.'),
+        h('p', 'Anything completed after this point will become available again. The latest check here will also be undone. Your items and lists will stay saved.'),
         h('div', { class: 'sig-dialog-actions' }, [
           h('button', { type: 'button', class: 'quiet-button', onClick: () => { rewindOpen.value = false; } }, 'Cancel'),
-          h('button', { type: 'button', class: 'card-primary-button', onClick: rewind }, 'Undo and return'),
+          h('button', { type: 'button', class: 'card-primary-button', onClick: rewind }, 'Return to this point'),
         ]),
       ] }) : null,
       resetOpen.value ? h(PopupDialog, { title: 'Start this task set again?', headingId: 'sig-reset-title', onClose: () => { resetOpen.value = false; } }, { default: () => [

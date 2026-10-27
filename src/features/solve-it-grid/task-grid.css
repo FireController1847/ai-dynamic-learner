@@ -4,7 +4,6 @@
 .sig-round-navigation .quiet-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; }
 .sig-round-navigation .quiet-button:disabled { opacity: .4; cursor: default; }
 .sig-round-navigation .ui-icon { width: 16px; height: 16px; }
-.sig-round-number { min-width: 72px; color: var(--text-secondary); font-size: 12px; font-variant-numeric: tabular-nums; text-align: center; }
 .sig-round-navigation .sig-round-rewind { margin-inline-start: 4px; }
 .sig-chart { --sig-origin-gap: 72px; --sig-number-size: 32px; --sig-number-outset: 30px; position: relative; display: flex; flex: 1; min-height: 240px; margin: 0; padding: 28px 68px; isolation: isolate; }
 .sig-grid-board { position: relative; display: grid; flex: 1; min-width: 0; min-height: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: var(--sig-origin-gap); }
@@ -102,7 +101,6 @@
   .sig-quadrant-number { font-size: 14px; }
   .sig-round-navigation { gap: 4px; }
   .sig-round-navigation .quiet-button { min-height: 44px; padding-inline: 8px; }
-  .sig-round-number { min-width: 56px; }
   .sig-completed-check { inset-block-start: 40px; }
 }
 @media (prefers-reduced-motion: reduce) {

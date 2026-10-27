@@ -64,6 +64,7 @@
 .sig-item-gear .ui-icon, .sig-repeat-square .ui-icon { width: 18px; height: 18px; }
 .sig-repeat-square { width: 36px; height: 36px; justify-self: center; border-color: var(--control-border); border-radius: 7px; background: var(--page-background); }
 .sig-repeat-square.is-repeating { color: var(--brand-text); border-color: var(--brand); background: var(--brand-tint); }
+.sig-repeat-square.is-repeating .ui-icon { width: 20px; height: 20px; stroke-width: 2.6; }
 .sig-repeat-square.is-repeating:hover { background: var(--brand-tint); }
 .sig-mini-tooltip { position: absolute; z-index: 5; left: 50%; bottom: calc(100% + 8px); width: max-content; max-width: 150px; padding: 5px 8px; border: 1px solid var(--control-border); border-radius: 6px; background: var(--page-background); color: var(--text-color); box-shadow: 0 3px 10px rgb(0 0 0 / .12); font-size: 12px; line-height: 17px; font-weight: 400; white-space: nowrap; opacity: 0; visibility: hidden; pointer-events: none; transform: translate(-50%, 3px); transition: opacity 120ms ease, transform 120ms ease, visibility 0s linear 120ms; }
 .sig-repeat-square:is(:hover, :focus) .sig-mini-tooltip { opacity: 1; visibility: visible; transform: translate(-50%, 0); transition: opacity 120ms ease, transform 120ms ease, visibility 0s; }

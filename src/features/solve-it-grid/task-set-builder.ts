@@ -224,7 +224,7 @@ export const TaskSetBuilder = defineComponent({
                 'aria-pressed': task.repeat !== undefined,
                 onClick: () => setRepeating(category.id, index, task.repeat === undefined),
               }, [
-                h(Icon, { name: 'repeat' }),
+                task.repeat !== undefined ? h(Icon, { name: 'check' }) : null,
                 h('span', { class: 'sig-mini-tooltip', 'aria-hidden': true },
                   task.repeat !== undefined ? 'Repeating on' : 'Repeating off'),
               ]),
