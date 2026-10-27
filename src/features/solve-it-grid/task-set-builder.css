@@ -3,6 +3,11 @@
 .sig-builder-intro { min-height: 100%; grid-template-rows: auto 1fr; gap: 20px; }
 .sig-intro-top { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
 .sig-intro-top .sig-eyebrow { margin: 0; }
+.sig-intro-credentials { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; max-width: 100%; padding: 7px 11px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--surface-subtle); color: var(--text-secondary); font-size: 12px; line-height: 18px; }
+.sig-intro-credential-verified { display: inline-flex; align-items: center; gap: 5px; color: var(--text-color); font-weight: 500; }
+.sig-intro-credential-verified .ui-icon { flex: none; width: 15px; height: 15px; }
+.sig-builder-intro .sig-intro-top { flex-wrap: wrap; }
+.sig-builder-intro .sig-intro-top > .quiet-button { margin-left: auto; }
 .sig-intro-content { display: grid; justify-items: start; align-content: center; gap: 16px; width: min(560px, 100%); margin: auto; padding-block: clamp(16px, 5vh, 60px); animation: sig-intro-appear 240ms var(--ease-out); }
 .sig-intro-symbol { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 16px; background: var(--brand-tint); color: var(--brand-text); }
 .sig-intro-symbol .ui-icon { width: 28px; height: 28px; }

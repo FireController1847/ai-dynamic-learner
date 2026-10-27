@@ -6,7 +6,7 @@ const CELL_PITCH = 40;
 const LEAD_MS = 30;
 const WAVE_MS = 360;
 const POP_MS = 160;
-const HOLD_MS = 1350;
+const HOLD_MS = 1850;
 const DRAW_MS = LEAD_MS + WAVE_MS + POP_MS;
 
 export const GridConstruction = defineComponent({

@@ -186,7 +186,13 @@ export const TaskSetBuilder = defineComponent({
     return () => {
       if (introduction.value) return h('div', { class: 'sig-builder sig-builder-intro' }, [
         h('header', { class: 'sig-intro-top' }, [
-          h('span', { class: 'sig-eyebrow' }, 'New task set'),
+          h('div', { class: 'sig-intro-credentials' }, [
+            h('span', 'Designed for those with ADHD'),
+            h('span', { class: 'sig-intro-credential-verified' }, [
+              h(Icon, { name: 'verified' }),
+              h('span', 'Verified by a Licensed Therapist'),
+            ]),
+          ]),
           h('button', { type: 'button', class: 'quiet-button', onClick: () => { if (canLeave()) emit('cancel'); } }, 'Cancel'),
         ]),
         h('section', { class: 'sig-intro-content', 'aria-labelledby': 'sig-intro-title' }, [
