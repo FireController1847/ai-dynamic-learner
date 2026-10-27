@@ -2,10 +2,18 @@ import { MAX_NAME_LENGTH } from './library-model.ts';
 
 export const MAX_MARKDOWN_FILE_BYTES = 8 * 1024 * 1024;
 
-export function markdownFilename(name: string): string {
-  const base = name.replace(/\.md$/i, '').replace(/[<>:"/\\|?*\u0000-\u001f]/g, '_')
+function downloadFilename(name: string, extension: 'md' | 'rtf'): string {
+  const base = name.replace(/\.(?:md|rtf)$/i, '').replace(/[<>:"/\\|?*\u0000-\u001f]/g, '_')
     .replace(/[. ]+$/g, '').trim() || 'document';
-  return `${/^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(base) ? '_' : ''}${base}.md`;
+  return `${/^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(base) ? '_' : ''}${base}.${extension}`;
+}
+
+export function markdownFilename(name: string): string {
+  return downloadFilename(name, 'md');
+}
+
+export function linedRtfFilename(name: string): string {
+  return downloadFilename(name, 'rtf');
 }
 
 export async function readMarkdownFile(file: File): Promise<{ name: string; markdown: string }> {
