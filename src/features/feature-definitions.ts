@@ -44,7 +44,7 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'notebook', label: 'Notebook', path: '/notebook/', icon: 'document',
     group: 'work',
-    version: '1.6.3',
+    version: '1.7.0',
     image: 'assets/app-icons/notebook.png',
     description: 'Organize notes into groups and keep your documents together in one notebook.',
   },
