@@ -4,7 +4,7 @@ import { inputValue } from '../../core/dom.ts';
 import { createId } from '../../core/ids.ts';
 import { registerLeaveGuard } from '../../core/leave-guards.ts';
 import { MAX_NAME_LENGTH, type TaskSet } from './library-model.ts';
-import { balanceScore, categoryValues, listCounts, MAX_TASK_TEXT_LENGTH, TASK_CATEGORIES, type TaskCategory, type TaskLists } from './task-model.ts';
+import { balanceScore, categoryValues, listCounts, MAX_TASK_TEXT_LENGTH, REPEAT_OPTIONS, TASK_CATEGORIES, type GridTask, type TaskCategory, type TaskLists } from './task-model.ts';
 
 export interface TaskSetDraft { name: string; lists: TaskLists }
 export interface TaskSetBuilderHandle { canLeave(): boolean }
@@ -59,12 +59,32 @@ export const TaskSetBuilder = defineComponent({
       if (!tasks.length) tasks.push({ id: createId(), text: '' });
       await nextTick(); inputs.get(tasks[Math.min(index, tasks.length - 1)]!.id)?.focus();
     }
+    function preserveProgress(category: TaskCategory, task: GridTask) {
+      const previous = props.item?.lists?.[category].find(item => item.id === task.id);
+      if (previous && previous.text.trim() === task.text.trim() && previous.repeat === task.repeat) {
+        if (previous.completed) task.completed = true; else delete task.completed;
+        if (previous.timesCompleted !== undefined) task.timesCompleted = previous.timesCompleted;
+        else delete task.timesCompleted;
+      } else {
+        delete task.completed;
+        delete task.timesCompleted;
+      }
+    }
     function update(category: TaskCategory, index: number, event: Event) {
       const task = lists.value[category][index]!;
       task.text = inputValue(event);
-      const previous = props.item?.lists?.[category].find(item => item.id === task.id);
-      if (previous?.completed && previous.text.trim() === task.text.trim()) task.completed = true;
-      else delete task.completed;
+      preserveProgress(category, task);
+    }
+    function setRepeating(category: TaskCategory, index: number, enabled: boolean) {
+      const task = lists.value[category][index]!;
+      if (enabled) task.repeat = -1; else delete task.repeat;
+      preserveProgress(category, task);
+    }
+    function setRepeatLimit(category: TaskCategory, index: number, value: number) {
+      if (!REPEAT_OPTIONS.some(option => option === value)) return;
+      const task = lists.value[category][index]!;
+      task.repeat = value;
+      preserveProgress(category, task);
     }
     function finish() {
       if (!name.value.trim()) { problem.value = 'Give this task set a name.'; return; }
@@ -93,16 +113,39 @@ export const TaskSetBuilder = defineComponent({
               h('li', { key: example }, example))),
           ]),
           h('p', { class: 'sig-step-description' }, category.description),
-          h('ol', { class: 'sig-task-inputs' }, lists.value[category.id].map((task, index) => h('li', { key: task.id }, [
+          h('ol', { class: 'sig-task-inputs' }, lists.value[category.id].map((task, index) => h('li', { key: task.id, class: 'sig-item-card' }, [
             h('span', { class: 'sig-task-index', 'aria-hidden': true }, index + 1),
-            h('textarea', {
-              ref: element => { if (element instanceof HTMLTextAreaElement) inputs.set(task.id, element); else inputs.delete(task.id); },
-              rows: 2, value: task.text, maxlength: MAX_TASK_TEXT_LENGTH, placeholder: index === 0 ? category.example : 'Add a task…',
-              'aria-label': `${category.label} task ${index + 1}`,
-              onInput: (event: Event) => update(category.id, index, event),
-              onKeydown: (event: KeyboardEvent) => { if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); void add(category.id, index); } },
-            }),
-            h('button', { type: 'button', class: 'icon-button delete-button', title: 'Remove task', 'aria-label': `Remove ${category.label} task ${index + 1}`, onClick: () => { void remove(category.id, index); } }, [h(Icon, { name: 'trash' })]),
+            h('div', { class: 'sig-item-body' }, [
+              h('textarea', {
+                ref: element => { if (element instanceof HTMLTextAreaElement) inputs.set(task.id, element); else inputs.delete(task.id); },
+                rows: 2, value: task.text, maxlength: MAX_TASK_TEXT_LENGTH, placeholder: index === 0 ? category.example : 'Add an item…',
+                'aria-label': `${category.label} item ${index + 1}`,
+                onInput: (event: Event) => update(category.id, index, event),
+                onKeydown: (event: KeyboardEvent) => { if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); void add(category.id, index); } },
+              }),
+              h('div', { class: 'sig-item-options' }, [
+                h('label', { class: 'sig-repeat-toggle' }, [
+                  h('input', {
+                    type: 'checkbox', checked: task.repeat !== undefined,
+                    onChange: (event: Event) => setRepeating(category.id, index, (event.target as HTMLInputElement).checked),
+                  }),
+                  h(Icon, { name: 'repeat' }), h('span', 'Repeating'),
+                ]),
+                task.repeat !== undefined ? h('label', { class: 'sig-repeat-limit' }, [
+                  h('span', 'Repeat'),
+                  h('select', {
+                    value: String(task.repeat), 'aria-label': `Number of repeats for ${category.label} item ${index + 1}`,
+                    onChange: (event: Event) => setRepeatLimit(category.id, index, Number(inputValue(event))),
+                  }, REPEAT_OPTIONS.map(value => h('option', { value: String(value) },
+                    value === -1 ? 'Forever (∞)' : `${value} ${value === 1 ? 'extra time' : 'extra times'}`))),
+                ]) : null,
+                task.repeat !== undefined && (task.timesCompleted ?? 0) > 0
+                  ? h('span', { class: 'sig-repeat-progress' },
+                    `${task.timesCompleted} completed${task.repeat === -1 ? '' : ` · ${Math.max(0, task.repeat + 1 - (task.timesCompleted ?? 0))} left`}`)
+                  : null,
+              ]),
+            ]),
+            h('button', { type: 'button', class: 'icon-button delete-button sig-item-remove', title: 'Remove item', 'aria-label': `Remove ${category.label} item ${index + 1}`, onClick: () => { void remove(category.id, index); } }, [h(Icon, { name: 'trash' })]),
           ]))),
           h('div', { class: 'sig-list-bottom' }, [
             h('button', { type: 'button', class: 'quiet-button', onClick: () => { void add(category.id); } }, [h(Icon, { name: 'plus' }), 'Add item']),

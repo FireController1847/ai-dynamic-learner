@@ -19,9 +19,20 @@
 .sig-examples li::before { content: ""; flex: 0 0 4px; width: 4px; height: 4px; border-radius: 50%; background: currentColor; opacity: 0.55; }
 .sig-step-description { margin: 0; color: var(--text-secondary); }
 .sig-task-inputs { display: grid; gap: 8px; margin: 8px 0 0; padding: 0; list-style: none; }
-.sig-task-inputs li { display: grid; grid-template-columns: 24px minmax(0, 1fr) var(--control-height); align-items: center; gap: 8px; }
-.sig-task-index { color: var(--text-secondary); text-align: center; }
+.sig-task-inputs .sig-item-card { display: grid; grid-template-columns: 24px minmax(0, 1fr) var(--control-height); align-items: start; gap: 10px; padding: 12px; border: 1px solid var(--border-color); border-radius: var(--radius-dialog); background: var(--surface-subtle); transition: border-color 160ms ease, background-color 160ms ease; }
+.sig-task-inputs .sig-item-card:focus-within { border-color: var(--brand); }
+.sig-task-index { display: inline-grid; place-items: center; min-height: var(--control-height); color: var(--text-secondary); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.sig-item-body { display: grid; gap: 10px; min-width: 0; }
 .sig-task-inputs textarea { resize: vertical; min-height: 60px; line-height: 20px; }
+.sig-item-remove { margin-top: 1px; }
+.sig-item-options { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 18px; padding: 2px 0 0; min-height: 28px; }
+.sig-repeat-toggle { display: inline-flex; align-items: center; gap: 7px; cursor: pointer; color: var(--text-secondary); font-size: 13px; font-weight: 500; }
+.sig-repeat-toggle:has(input:checked) { color: var(--text-color); }
+.sig-repeat-toggle input { width: 16px; height: 16px; margin: 0; accent-color: var(--brand); cursor: pointer; }
+.sig-repeat-toggle .ui-icon { width: 15px; height: 15px; }
+.sig-repeat-limit { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 8px; color: var(--text-secondary); font-size: 12px; }
+.sig-repeat-limit select { max-width: 190px; min-height: 32px; padding: 4px 26px 4px 10px; border: 1px solid var(--control-border); border-radius: var(--radius); background: var(--page-background); color: var(--text-color); font: inherit; font-size: 13px; }
+.sig-repeat-progress { color: var(--text-secondary); font-size: 12px; font-variant-numeric: tabular-nums; }
 .sig-list-bottom { flex-wrap: wrap; }
 .sig-muted { margin: 0; color: var(--text-secondary); font-size: 12px; line-height: 18px; }
 .sig-balance { display: grid; gap: 12px; padding: 16px; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); }
@@ -35,6 +46,8 @@
 .sig-builder-actions { padding-top: 8px; }
 @keyframes sig-step-enter { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: none; } }
 @container solve-it-grid (max-width: 600px) {
+  .sig-task-inputs .sig-item-card { grid-template-columns: 18px minmax(0, 1fr) 36px; gap: 6px; padding: 9px 7px; }
+  .sig-item-options { gap: 8px 12px; }
   .sig-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .sig-step { padding: 10px; }
   .sig-builder { gap: 20px; }
@@ -42,7 +55,7 @@
   .sig-builder-actions > .card-primary-button { margin-left: auto; }
 }
 @media (pointer: coarse) {
-  .sig-name-field input, .sig-task-inputs textarea { font-size: 16px; }
+  .sig-name-field input, .sig-task-inputs textarea, .sig-repeat-limit select { font-size: 16px; }
   .sig-step { min-height: 60px; }
 }
 @media (prefers-reduced-motion: reduce) { .sig-list-step { animation: none; } }

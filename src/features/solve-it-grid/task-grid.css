@@ -41,8 +41,16 @@
 .sig-task-text { flex: 0 0 auto; max-width: 100%; margin-block: auto; font-size: clamp(16px, 2.2cqw, 22px); line-height: 1.4; font-weight: 500; text-align: left; white-space: pre-wrap; overflow-wrap: anywhere; transition: color 180ms, opacity 180ms; }
 .sig-quadrant:not(:disabled):hover .sig-task-text { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; }
 .sig-quadrant.is-done .sig-task-text { opacity: .3; text-decoration: line-through; }
-.sig-completed-check { position: absolute; inset: 36px 0 0; display: grid; place-items: center; color: var(--text-secondary); pointer-events: none; }
-.sig-completed-check .ui-icon { width: 38px; height: 38px; stroke-width: 2.5; animation: sig-check-arrive 300ms var(--ease-out); }
+/* The check, expanding ring, and little orbiting sparks stay scoped to the completed quadrant. */
+.sig-completed-check { position: absolute; inset: 36px 0 0; display: grid; place-items: center; color: var(--text-secondary); pointer-events: none; isolation: isolate; }
+.sig-completed-check .ui-icon { position: relative; z-index: 2; width: 38px; height: 38px; stroke-width: 2.5; animation: sig-check-arrive 400ms cubic-bezier(.2, 1.6, .3, 1) both; }
+.sig-quadrant.is-popping .sig-completed-check { color: var(--brand); }
+.sig-quadrant.is-popping .sig-completed-check::before { content: ''; position: absolute; width: 76px; height: 76px; border: 2px solid var(--brand); border-radius: 50%; animation: sig-check-ring 620ms var(--ease-out) both; }
+.sig-quadrant.is-popping .sig-task-text { animation: sig-check-text 420ms var(--ease-out); }
+.sig-check-sparkles { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; }
+.sig-check-sparkles i { position: absolute; width: 6px; height: 12px; border-radius: 999px; background: var(--brand); animation: sig-check-spark 660ms cubic-bezier(.18, .8, .3, 1) both; }
+.sig-check-sparkles i:nth-child(2n) { width: 4px; height: 7px; background: var(--text-secondary); }
+.sig-check-sparkles i:nth-child(3n) { border-radius: 50%; width: 7px; height: 7px; }
 .sig-quadrant.can-undo { cursor: pointer; }
 .sig-quadrant.can-undo:hover .sig-completed-check { color: var(--text-color); }
 .sig-quadrant.is-empty .sig-task-text { font-size: 14px; font-weight: 400; color: var(--text-secondary); }
@@ -69,7 +77,10 @@
 .sig-completion { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; flex-shrink: 0; gap: 12px; padding-top: 8px; border-top: 1px solid var(--border-color); }
 .sig-completion h3 { font-size: 16px; line-height: 22px; }
 .sig-dialog-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
-@keyframes sig-check-arrive { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: none; } }
+@keyframes sig-check-arrive { 0% { opacity: 0; transform: scale(.15) rotate(-24deg); } 48% { opacity: 1; transform: scale(1.35) rotate(8deg); } 75% { transform: scale(.91) rotate(-4deg); } 100% { transform: scale(1) rotate(0); } }
+@keyframes sig-check-ring { 0% { opacity: .75; transform: scale(.35); } 70% { opacity: .35; } 100% { opacity: 0; transform: scale(1.65); } }
+@keyframes sig-check-spark { 0% { opacity: 0; transform: rotate(var(--spark-angle)) translateY(-9px) scale(.2); } 18% { opacity: 1; } 65% { opacity: 1; } 100% { opacity: 0; transform: rotate(var(--spark-angle)) translateY(-62px) scale(.45); } }
+@keyframes sig-check-text { 0% { transform: scale(1); } 45% { transform: scale(.97); } 100% { transform: scale(1); } }
 @keyframes sig-blocked { 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
 @keyframes sig-round-pulse { 0%, 100% { transform: scale(1); } 35% { transform: scale(1.025); } 65% { transform: scale(.99); } }
 @keyframes sig-grid-turn { 0% { opacity: 1; transform: rotate(0) scale(1); } 100% { opacity: 0; transform: rotate(180deg) scale(.8); } }
