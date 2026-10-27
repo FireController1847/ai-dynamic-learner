@@ -45,6 +45,8 @@ export function validateSolveItGrid(value: unknown): asserts value is SolveItGri
           !Array.isArray(item.history) || item.history.length > MAX_ROUND_HISTORY) {
         throw new Error('The saved Solve-It Grid history is invalid.');
       }
+      validateTaskLists(item.lists);
+      validateRound(item.round, item.lists);
       let lastNumber = 0;
       for (const previous of item.history) {
         validateRound(previous, item.lists);
