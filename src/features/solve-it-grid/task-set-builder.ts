@@ -105,7 +105,7 @@ export const TaskSetBuilder = defineComponent({
             h('button', { type: 'button', class: 'icon-button delete-button', title: 'Remove task', 'aria-label': `Remove ${category.label} task ${index + 1}`, onClick: () => { void remove(category.id, index); } }, [h(Icon, { name: 'trash' })]),
           ]))),
           h('div', { class: 'sig-list-bottom' }, [
-            h('button', { type: 'button', class: 'quiet-button', onClick: () => { void add(category.id); } }, [h(Icon, { name: 'plus' }), 'Add task']),
+            h('button', { type: 'button', class: 'quiet-button', onClick: () => { void add(category.id); } }, [h(Icon, { name: 'plus' }), 'Add item']),
             h('span', { class: 'sig-muted' }, `${counts.value[category.id]} ${counts.value[category.id] === 1 ? 'item' : 'items'}`),
           ]),
           h('p', { class: 'sig-muted' }, 'Nothing for this list? Leave it empty. Its quadrant will be marked empty.'),
