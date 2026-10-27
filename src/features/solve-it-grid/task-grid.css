@@ -1,5 +1,11 @@
 .sig-play { display: flex; flex-direction: column; flex: 1; min-height: 0; width: min(1040px, 100%); margin: 0 auto; gap: 8px; padding: 12px 20px; }
 .sig-play-actions { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px; }
+.sig-round-navigation { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; flex-shrink: 0; gap: 8px; padding: 4px 0; }
+.sig-round-navigation .quiet-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; }
+.sig-round-navigation .quiet-button:disabled { opacity: .4; cursor: default; }
+.sig-round-navigation .ui-icon { width: 16px; height: 16px; }
+.sig-round-number { min-width: 72px; color: var(--text-secondary); font-size: 12px; font-variant-numeric: tabular-nums; text-align: center; }
+.sig-round-navigation .sig-round-rewind { margin-inline-start: 4px; }
 .sig-chart { --sig-origin-gap: 72px; --sig-number-size: 32px; --sig-number-outset: 30px; position: relative; display: flex; flex: 1; min-height: 240px; margin: 0; padding: 28px 68px; isolation: isolate; }
 .sig-grid-board { position: relative; display: grid; flex: 1; min-width: 0; min-height: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: var(--sig-origin-gap); }
 .sig-grid-board::before, .sig-grid-board::after { content: ''; position: absolute; z-index: -1; background: var(--text-secondary); opacity: .55; pointer-events: none; }
@@ -49,16 +55,15 @@
 .sig-lock-tooltip { position: absolute; z-index: 2; right: 10px; bottom: 42px; display: grid; gap: 2px; max-width: calc(100% - 20px); padding: 6px 8px; border: 1px solid var(--control-border); border-radius: 6px; background: var(--page-background); color: var(--text-color); font-size: 12px; line-height: 16px; font-weight: 400; box-shadow: 0 2px 8px rgb(0 0 0 / .12); opacity: 0; visibility: hidden; pointer-events: none; }
 .sig-lock-tooltip > span + span { color: var(--text-secondary); }
 .sig-lock-tooltip::after { content: ''; position: absolute; right: 9px; bottom: -5px; width: 8px; height: 8px; border-right: 1px solid var(--control-border); border-bottom: 1px solid var(--control-border); background: var(--page-background); transform: rotate(45deg); }
-.sig-lock-tooltip { transition: opacity 1000ms ease-out, visibility 0s linear 1000ms; }
+.sig-lock-tooltip { transition: opacity 120ms ease-out, visibility 0s linear 120ms; }
 .sig-quadrant:not(:disabled).is-blocked .sig-lock-tooltip { opacity: 1; visibility: visible; transition: opacity 120ms ease-out, visibility 0s; }
 .sig-quadrant.is-blocked .sig-task-content { animation: sig-blocked 220ms var(--ease-out); }
-.sig-play-help { flex-shrink: 0; min-height: 18px; margin: 0; color: var(--text-secondary); font-size: 12px; line-height: 18px; text-align: center; }
 .sig-chart.is-celebrating .sig-grid-board { animation: sig-round-pulse 750ms var(--ease-out); }
-.sig-chart.is-turning .sig-grid-board { animation: sig-grid-turn 680ms cubic-bezier(.65, 0, .35, 1) both; }
-.sig-chart.is-blank .sig-task-content, .sig-chart.is-blank .sig-completed-check { visibility: hidden; }
-.sig-chart.is-revealing .sig-task-content { animation: sig-task-reveal 330ms var(--ease-out) var(--reveal-delay) both; }
+.sig-chart.is-turning .sig-grid-board { animation: sig-grid-turn 380ms cubic-bezier(.65, 0, .35, 1) both; }
+.sig-chart.is-revealing .sig-grid-board { animation: sig-grid-enter 260ms var(--ease-out) both; }
+.sig-chart.is-revealing .sig-task-content { animation: sig-task-reveal 240ms var(--ease-out) var(--reveal-delay) both; }
 .sig-round-burst { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
-.sig-round-burst i { --angle: calc(var(--particle) * 22.5deg); position: absolute; top: 50%; left: 50%; width: 6px; height: 10px; border-radius: 2px; background: var(--text-color); animation: sig-confetti 850ms var(--ease-out) both; }
+.sig-round-burst i { --angle: calc(var(--particle) * 22.5deg); position: absolute; top: 50%; left: 50%; width: 6px; height: 10px; border-radius: 2px; background: var(--text-color); animation: sig-confetti 600ms var(--ease-out) both; }
 .sig-round-burst i:nth-child(3n) { background: var(--text-secondary); }
 .sig-round-burst i:nth-child(3n + 1) { background: var(--text-disabled); }
 .sig-completion { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; flex-shrink: 0; gap: 12px; padding-top: 8px; border-top: 1px solid var(--border-color); }
@@ -68,6 +73,7 @@
 @keyframes sig-blocked { 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
 @keyframes sig-round-pulse { 0%, 100% { transform: scale(1); } 35% { transform: scale(1.025); } 65% { transform: scale(.99); } }
 @keyframes sig-grid-turn { 0% { opacity: 1; transform: rotate(0) scale(1); } 100% { opacity: 0; transform: rotate(180deg) scale(.8); } }
+@keyframes sig-grid-enter { from { opacity: 0; transform: scale(.98); } to { opacity: 1; transform: none; } }
 @keyframes sig-task-reveal { from { opacity: 0; transform: translateY(12px) scale(.96); } to { opacity: 1; transform: none; } }
 @keyframes sig-confetti { from { opacity: 1; transform: rotate(var(--angle)) translateY(0) rotate(0); } to { opacity: 0; transform: rotate(var(--angle)) translateY(-240px) rotate(200deg); } }
 @container solve-it-grid (max-width: 600px) {
@@ -81,7 +87,9 @@
   .sig-quadrant-heading > .ui-icon { width: 16px; height: 16px; }
   .sig-task-text { font-size: 16px; }
   .sig-quadrant-number { font-size: 14px; }
-  .sig-play-help { min-height: 36px; font-size: 11px; }
+  .sig-round-navigation { gap: 4px; }
+  .sig-round-navigation .quiet-button { min-height: 44px; padding-inline: 8px; }
+  .sig-round-number { min-width: 56px; }
   .sig-completed-check { inset-block-start: 40px; }
 }
 @media (prefers-reduced-motion: reduce) {

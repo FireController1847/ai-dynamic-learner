@@ -114,7 +114,7 @@ export const SolveItGrid = defineComponent({
           ? createTaskSet(props.model.items, draft.name, draft.lists, Date.now()) : selected.value;
         if (!item) throw new Error('This task set no longer exists.');
         if (builderMode.value === 'edit') {
-          item.name = draft.name; item.lists = draft.lists; delete item.round;
+          item.name = draft.name; item.lists = draft.lists; delete item.round; delete item.history;
         }
         refreshClock();
         archiveOpen.value = isArchived(item, now.value, settings.value);

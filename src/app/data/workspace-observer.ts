@@ -223,7 +223,8 @@ export async function observeWorkspace(
           attach('solveItTaskSets', [workspaceId, id], item,
             () => item.round,
             () => put('solveItTaskSets', [workspaceId, id], { id, configured: true,
-              ...(Object.hasOwn(item, 'round') ? { round: item.round } : {}) }), true, seen);
+              ...(Object.hasOwn(item, 'round') ? { round: item.round } : {}),
+               ...(Object.hasOwn(item, 'history') ? { history: item.history } : {}) }), true, seen);
           const lists = asObject(item.lists);
           for (const category of TASK_CATEGORIES) {
             const tasks = lists[category.id] as Plain[];
