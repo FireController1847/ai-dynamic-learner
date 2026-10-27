@@ -1,5 +1,9 @@
 import { defineComponent, h, nextTick, onActivated, onBeforeUnmount, onMounted, ref, watch, type PropType } from 'vue';
 import { inputValue } from '../../core/dom.ts';
+import { Icon } from '../../components/icon.ts';
+import { downloadText } from '../../core/file-download.ts';
+import { linedRtfFilename } from './document-files.ts';
+import { linedPaperRtf } from './lined-rtf.ts';
 import type { NotebookDocument } from './document-types.ts';
 import { defaultLinedDisplay, type LinedDisplay } from './display-options.ts';
 import { extendToPage, paginateText, type TextPage } from './lined-pagination.ts';
@@ -16,6 +20,8 @@ export const LinedEditor = defineComponent({
   },
   setup(props) {
     const frame = ref<HTMLElement | null>(null);
+    const downloading = ref(false);
+    const downloadMessage = ref('');
     const ranges = ref<Record<Area, TextPage[]>>({ text: [{ start: 0, end: props.document.data.text.length }],
       marginText: [{ start: 0, end: (props.document.data.marginText ?? '').length }] });
     let observer: ResizeObserver | null = null;
@@ -25,6 +31,20 @@ export const LinedEditor = defineComponent({
     const source = (area: Area) => props.document.data[area] ?? '';
     const editorAt = (area: Area, page: number) => frame.value?.querySelector<HTMLTextAreaElement>(`textarea[data-area="${area}"][data-page="${page}"]`) ?? null;
     const rangeAt = (area: Area, page: number): TextPage => ranges.value[area][page] ?? { start: source(area).length, end: source(area).length };
+    async function download() {
+      if (downloading.value) return;
+      downloading.value = true;
+      downloadMessage.value = 'Preparing RTF download…';
+      try {
+        const rtf = linedPaperRtf(props.document.data, ranges.value, props.options);
+        await downloadText(linedRtfFilename(props.document.name), rtf, 'application/rtf');
+        downloadMessage.value = 'RTF download handed to your browser.';
+      } catch {
+        downloadMessage.value = 'The RTF download could not be prepared. Please try again.';
+      } finally {
+        downloading.value = false;
+      }
+    }
     function setPageTitle(page: number, event: Event) {
       const title = inputValue(event);
       if (page === 0) { props.document.data.title = title; return; }
@@ -142,8 +162,23 @@ export const LinedEditor = defineComponent({
       });
     }
     return () => h('section', { class: 'lined-editor', 'aria-label': 'Lined Paper editor' }, [
-      h('p', { class: 'lined-paper-description' },
-        `${props.options.ruling === 'college' ? 'College' : 'Wide'} ruled · ${props.options.size === 'letter' ? 'US Letter' : 'A4'}. Pages are added as you write.`),
+      h('div', { class: 'lined-paper-toolbar' }, [
+        h('p', { class: 'lined-paper-description' },
+          `${props.options.ruling === 'college' ? 'College' : 'Wide'} ruled · ${props.options.size === 'letter' ? 'US Letter' : 'A4'}. Pages are added as you write.`),
+        h('button', {
+          type: 'button',
+          class: ['quiet-button', 'outline-button', { 'lined-download-loading': downloading.value }],
+          disabled: downloading.value,
+          'aria-busy': downloading.value,
+          title: downloading.value ? 'Preparing RTF download…' : 'Download RTF',
+          'aria-label': downloading.value ? 'Preparing RTF download' : 'Download RTF',
+          onClick: () => { void download(); },
+        }, [
+          h(Icon, { name: downloading.value ? 'loading' : 'download' }),
+          downloading.value ? 'Preparing…' : 'Download',
+        ]),
+      ]),
+      downloadMessage.value ? h('p', { class: 'lined-paper-download-status', role: 'status' }, downloadMessage.value) : null,
       h('div', { ref: frame, class: 'lined-paper-frame' },
         Array.from({ length: Math.max(ranges.value.text.length, ranges.value.marginText.length,
           1 + (props.document.data.additionalTitles?.length ?? 0)) }, (_, page) =>
