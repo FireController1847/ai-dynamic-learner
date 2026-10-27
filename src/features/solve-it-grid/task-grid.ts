@@ -1,10 +1,11 @@
 import { computed, defineComponent, h, nextTick, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref, watch, type PropType } from 'vue';
 import { Icon } from '../../components/icon.ts';
 import { PopupDialog } from '../../components/popup-dialog.ts';
+import { GridConstruction } from './grid-construction.ts';
 import { MAX_ROUND_HISTORY, type TaskSet } from './library-model.ts';
 import { createRound, markCompleted, nextCategory, remainingCount, roundTask, slotState, TASK_CATEGORIES, taskAvailable, taskCount, undoCompleted, categoryValues, type TaskCategory, type GridRound } from './task-model.ts';
 
-type Phase = 'ready' | 'celebrating' | 'turning' | 'revealing' | 'complete';
+type Phase = 'ready' | 'celebrating' | 'turning' | 'constructing' | 'revealing' | 'complete';
 const ROUND_HOLD_MS = 650;
 const ROUND_TURN_MS = 380;
 const ROUND_REVEAL_MS = 450;
@@ -72,14 +73,25 @@ export const TaskGrid = defineComponent({
     function snapshot(value: GridRound): GridRound {
       return { number: value.number, slots: categoryValues(category => ({ ...value.slots[category.id] })) };
     }
+    function showNewItems() {
+      if (!active || phase.value !== 'constructing') return;
+      phase.value = 'revealing';
+      announceCurrent();
+      later(() => { phase.value = 'ready'; void focusCurrent(); }, ROUND_REVEAL_MS);
+    }
     function revealNext() {
       clearCheck();
       const previous = snapshot(round.value);
       props.item.history = [...history.value, previous].slice(-MAX_ROUND_HISTORY);
       props.item.round = createRound(lists.value, Math.min(Number.MAX_SAFE_INTEGER, previous.number + 1));
-      phase.value = 'revealing';
-      announceCurrent();
-      later(() => { phase.value = 'ready'; void focusCurrent(); }, reduced.matches ? 0 : ROUND_REVEAL_MS);
+      if (reduced.matches) {
+        phase.value = 'ready';
+        announceCurrent();
+        void focusCurrent();
+      } else {
+        phase.value = 'constructing';
+        announcement.value = 'Preparing the next round.';
+      }
     }
     function cycle() {
       if (!active || viewing.value !== null || phase.value !== 'ready' || current.value) return;
@@ -240,7 +252,8 @@ export const TaskGrid = defineComponent({
         h('span', { class: 'sig-axis sig-axis-bottom', 'aria-hidden': true }, [h(Icon, { name: 'arrow-down' }), h('span', 'No stimulation')]),
         h('span', { class: 'sig-axis sig-axis-left', 'aria-hidden': true }, [h(Icon, { name: 'arrow-left' }), h('span', 'No fun')]),
         h('span', { class: 'sig-axis sig-axis-right', 'aria-hidden': true }, [h(Icon, { name: 'arrow-right' }), h('span', 'Fun')]),
-        h('div', { class: 'sig-grid-board', 'aria-busy': ['turning', 'revealing'].includes(phase.value) }, TASK_CATEGORIES.map(category => {
+        h('div', { class: 'sig-grid-board', 'aria-busy': ['turning', 'constructing', 'revealing'].includes(phase.value) }, [
+          ...TASK_CATEGORIES.map(category => {
           const task = roundTask(lists.value, shownRound.value, category.id);
           const state = slotState(lists.value, shownRound.value, category.id);
           const next = category.id === shownCurrent.value;
@@ -251,7 +264,8 @@ export const TaskGrid = defineComponent({
             ref: element => { if (element instanceof HTMLButtonElement) buttons.set(category.id, element); else buttons.delete(category.id); },
             class: ['sig-quadrant', `sig-${category.id}`, `is-${state}`, { 'is-current': next, 'is-locked': locked, 'is-blocked': blocked.value === category.id, 'is-popping': justCompleted.value === category.id && viewing.value === null, 'can-undo': canUndo }],
             style: { '--reveal-delay': `${(category.number - 1) * 65}ms` },
-            disabled: viewing.value !== null || state === 'empty' || state === 'skipped' || phase.value === 'turning',
+            disabled: viewing.value !== null || state === 'empty' || state === 'skipped' ||
+              phase.value === 'turning' || phase.value === 'constructing',
             'aria-label': `${category.number}. ${category.label}. ${task?.text ?? 'Empty'}. ${viewing.value !== null ? 'Earlier round, read-only. Use Undo from this round to change progress.' : state === 'ready' ? locked ? 'Activate twice quickly to skip ahead; earlier tasks remain available.' : 'Next task. Complete.' : state === 'done' ? canUndo ? 'Completed. Activate to undo.' : 'Completed. Undo the later quadrant first.' : state === 'skipped' ? 'Skipped for now.' : 'Empty'}`,
             onClick: (event: MouseEvent) => activate(category.id, event),
             onKeydown: (event: KeyboardEvent) => { if (event.repeat && (event.key === 'Enter' || event.key === ' ')) event.preventDefault(); },
@@ -275,12 +289,14 @@ export const TaskGrid = defineComponent({
             // Keep the tooltip mounted while ready, so unblocking can use its
             // intentional one-second fade instead of abruptly removing the element.
             state === 'ready' ? h('span', { class: 'sig-lock-tooltip', 'aria-hidden': true }, [
-              h('span', next ? 'Double-click to complete' : 'Double-click to skip ahead'),
+              h('span', next ? 'Select to complete' : 'Double-click to skip ahead'),
               !next ? h('span', 'Earlier tasks stay available') : null,
             ]) : null,
             state === 'skipped' ? h('span', { class: 'sig-later-label' }, 'Later') : null,
           ]);
-        })),
+          }),
+          phase.value === 'constructing' ? h(GridConstruction, { onFinished: showNewItems }) : null,
+        ]),
         phase.value === 'celebrating' ? h('div', { class: 'sig-round-burst', 'aria-hidden': true }, Array.from({ length: 16 }, (_, index) => h('i', { style: { '--particle': index } }))) : null,
       ]),
       history.value.length ? h('nav', { class: 'sig-round-navigation', 'aria-label': 'Round navigation' }, [

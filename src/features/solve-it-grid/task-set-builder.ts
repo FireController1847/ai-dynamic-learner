@@ -34,6 +34,10 @@ export const TaskSetBuilder = defineComponent({
     const heading = ref<HTMLElement | null>(null);
     const nameInput = ref<HTMLInputElement | null>(null);
     const inputs = new Map<string, HTMLTextAreaElement>();
+    function fitInput(element: HTMLTextAreaElement) {
+      element.style.height = 'auto';
+      element.style.height = `${Math.min(element.scrollHeight, 240)}px`;
+    }
     let active = true;
     function canLeave() { return !dirty.value || window.confirm('Discard the unsaved task-set setup?'); }
     expose({ canLeave });
@@ -109,6 +113,7 @@ export const TaskSetBuilder = defineComponent({
     function update(category: TaskCategory, index: number, event: Event) {
       const task = lists.value[category][index]!;
       task.text = inputValue(event);
+      if (event.target instanceof HTMLTextAreaElement) fitInput(event.target);
       preserveProgress(category, task);
     }
     function setRepeating(category: TaskCategory, index: number, enabled: boolean) {
@@ -194,47 +199,62 @@ export const TaskSetBuilder = defineComponent({
               h('li', { key: example }, example))),
           ]) : null,
           h('ol', { class: 'sig-task-inputs' }, lists.value[category.id].map((task, index) => h('li', { key: task.id, class: 'sig-item-card' }, [
-            h('span', { class: 'sig-task-index', 'aria-hidden': true }, index + 1),
-            h('div', { class: 'sig-item-body' }, [
-              h('textarea', {
-                ref: element => { if (element instanceof HTMLTextAreaElement) inputs.set(task.id, element); else inputs.delete(task.id); },
-                rows: 2, value: task.text, maxlength: MAX_TASK_TEXT_LENGTH, placeholder: index === 0 ? category.example : 'Add an item…',
-                'aria-label': `${category.label} item ${index + 1}`,
-                onInput: (event: Event) => update(category.id, index, event),
-                onKeydown: (event: KeyboardEvent) => { if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); void add(category.id, index); } },
-              }),
-              !props.item ? h('button', {
-                type: 'button', class: 'sig-options-toggle',
-                'aria-expanded': expandedOptions.value.has(task.id),
-                onClick: () => toggleOptions(task.id),
+            h('div', { class: 'sig-item-line' }, [
+              h('span', { class: 'sig-task-index', 'aria-hidden': true }, index + 1),
+              h('div', { class: 'sig-item-entry' }, [
+                h('textarea', {
+                  ref: element => {
+                    if (element instanceof HTMLTextAreaElement) { inputs.set(task.id, element); fitInput(element); }
+                    else inputs.delete(task.id);
+                  },
+                  rows: 1, value: task.text, maxlength: MAX_TASK_TEXT_LENGTH,
+                  placeholder: index === 0 ? category.example : 'Add an item…',
+                  'aria-label': `${category.label} item ${index + 1}`,
+                  onInput: (event: Event) => update(category.id, index, event),
+                  onKeydown: (event: KeyboardEvent) => {
+                    if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
+                      event.preventDefault(); void add(category.id, index);
+                    }
+                  },
+                }),
+              ]),
+              h('button', {
+                type: 'button', class: ['sig-repeat-square', { 'is-repeating': task.repeat !== undefined }],
+                'aria-label': task.repeat !== undefined ? 'Repeating enabled. Click to turn off.' : 'Repeating disabled. Click to turn on.',
+                'aria-pressed': task.repeat !== undefined,
+                onClick: () => setRepeating(category.id, index, task.repeat === undefined),
               }, [
-                h(Icon, { name: 'settings' }),
-                task.repeat !== undefined ? 'Repeating · Options' : 'Options',
-                h(Icon, { name: expandedOptions.value.has(task.id) ? 'chevron-up' : 'chevron-down' }),
-              ]) : null,
-              props.item || expandedOptions.value.has(task.id) ? h('div', { class: 'sig-item-options' }, [
-                h('label', { class: 'sig-repeat-toggle' }, [
-                  h('input', {
-                    type: 'checkbox', checked: task.repeat !== undefined,
-                    onChange: (event: Event) => setRepeating(category.id, index, (event.target as HTMLInputElement).checked),
-                  }),
-                  h(Icon, { name: 'repeat' }), h('span', 'Repeating'),
-                ]),
-                task.repeat !== undefined ? h('label', { class: 'sig-repeat-limit' }, [
-                  h('span', 'Repeat'),
-                  h('select', {
-                    value: String(task.repeat), 'aria-label': `Number of repeats for ${category.label} item ${index + 1}`,
-                    onChange: (event: Event) => setRepeatLimit(category.id, index, Number(inputValue(event))),
-                  }, REPEAT_OPTIONS.map(value => h('option', { value: String(value) },
-                    value === -1 ? 'Forever (∞)' : `${value} ${value === 1 ? 'extra time' : 'extra times'}`))),
-                ]) : null,
-                task.repeat !== undefined && (task.timesCompleted ?? 0) > 0
-                  ? h('span', { class: 'sig-repeat-progress' },
-                    `${task.timesCompleted} completed${task.repeat === -1 ? '' : ` · ${Math.max(0, task.repeat + 1 - (task.timesCompleted ?? 0))} left`}`)
-                  : null,
-              ]) : null,
+                h(Icon, { name: 'repeat' }),
+                h('span', { class: 'sig-mini-tooltip', 'aria-hidden': true },
+                  task.repeat !== undefined ? 'Repeating on' : 'Repeating off'),
+              ]),
+              h('button', {
+                type: 'button', class: ['sig-item-gear', { 'is-expanded': expandedOptions.value.has(task.id) }],
+                'aria-expanded': expandedOptions.value.has(task.id),
+                'aria-controls': `sig-item-options-${task.id}`,
+                'aria-label': `Configure ${category.label} item ${index + 1}`,
+                onClick: () => toggleOptions(task.id),
+              }, [h(Icon, { name: 'settings' })]),
             ]),
-            h('button', { type: 'button', class: 'icon-button delete-button sig-item-remove', title: 'Remove item', 'aria-label': `Remove ${category.label} item ${index + 1}`, onClick: () => { void remove(category.id, index); } }, [h(Icon, { name: 'trash' })]),
+            expandedOptions.value.has(task.id) ? h('div', {
+              class: 'sig-item-options', id: `sig-item-options-${task.id}`,
+            }, [
+              task.repeat !== undefined ? h('label', { class: 'sig-repeat-limit' }, [
+                h('span', 'Repeat'),
+                h('select', {
+                  value: String(task.repeat), 'aria-label': `Number of repeats for ${category.label} item ${index + 1}`,
+                  onChange: (event: Event) => setRepeatLimit(category.id, index, Number(inputValue(event))),
+                }, REPEAT_OPTIONS.map(value => h('option', { value: String(value) },
+                  value === -1 ? 'Forever (∞)' : `${value} ${value === 1 ? 'extra time' : 'extra times'}`))),
+              ]) : h('span', { class: 'sig-item-option-hint' }, 'Turn on repeating to set a repeat limit.'),
+              task.repeat !== undefined && (task.timesCompleted ?? 0) > 0
+                ? h('span', { class: 'sig-repeat-progress' },
+                  `${task.timesCompleted} completed${task.repeat === -1 ? '' : ` · ${Math.max(0, task.repeat + 1 - (task.timesCompleted ?? 0))} left`}`)
+                : null,
+              h('button', { type: 'button', class: 'sig-item-remove', onClick: () => { void remove(category.id, index); } }, [
+                h(Icon, { name: 'trash' }), 'Remove item',
+              ]),
+            ]) : null,
           ]))),
           h('div', { class: 'sig-list-bottom' }, [
             h('button', { type: 'button', class: 'quiet-button', onClick: () => { void add(category.id); } }, [h(Icon, { name: 'plus' }), 'Add item']),
