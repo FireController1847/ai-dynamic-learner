@@ -12,6 +12,29 @@
 .sig-intro-actions .card-primary-button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 44px; }
 .sig-intro-actions .ui-icon { width: 16px; height: 16px; }
 @keyframes sig-intro-appear { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+/* First-time creation uses progressive disclosure; edit mode keeps the full overview. */
+.sig-builder-create { width: min(660px, 100%); gap: 20px; }
+.sig-builder-create .sig-intro-top > .sig-eyebrow { min-width: 0; overflow-wrap: anywhere; }
+.sig-builder-name { min-height: 100%; grid-template-rows: auto 1fr; }
+.sig-name-content { display: grid; gap: 20px; align-content: center; width: min(480px, 100%); margin-block: auto; padding-block: clamp(20px, 5vh, 64px); animation: sig-intro-appear 240ms var(--ease-out); }
+.sig-name-content h2 { margin: 0; font-size: clamp(22px, 3vw, 28px); line-height: 1.25; }
+.sig-name-content .sig-name-field { width: 100%; }
+.sig-name-content .sig-builder-actions { padding-top: 8px; }
+.sig-builder-create .sig-list-step { gap: 14px; }
+.sig-builder-create .sig-list-step .sig-list-heading h3 { font-size: 25px; }
+.sig-builder-create .sig-task-inputs { margin-top: 4px; }
+.sig-builder-create .sig-task-inputs .sig-item-card { background: var(--page-background); }
+.sig-builder-create .sig-builder-actions { padding-top: 12px; }
+.sig-example-disclosure { color: var(--text-secondary); font-size: 13px; }
+.sig-example-disclosure summary { width: fit-content; cursor: pointer; padding: 4px 0; }
+.sig-example-disclosure summary:hover { color: var(--text-color); }
+.sig-example-disclosure summary:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; border-radius: 2px; }
+.sig-example-disclosure .sig-examples { margin-top: 8px; }
+.sig-options-toggle { display: inline-flex; align-items: center; justify-self: start; gap: 6px; width: auto; min-height: 30px; padding: 2px 4px; border: 0; border-radius: var(--radius); background: transparent; color: var(--text-secondary); font-size: 12px; cursor: pointer; }
+.sig-options-toggle:hover { color: var(--text-color); background: var(--surface-hover); }
+.sig-options-toggle:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.sig-options-toggle .ui-icon { width: 14px; height: 14px; }
+.sig-builder-create .sig-item-options { padding: 10px 0 4px; border-top: 1px solid var(--border-color); }
 .sig-builder-header, .sig-builder-actions, .sig-list-bottom, .sig-balance-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .sig-builder-header { align-items: start; }
 .sig-builder-header h2 { font-size: 22px; line-height: 28px; }
@@ -71,4 +94,4 @@
   .sig-name-field input, .sig-task-inputs textarea, .sig-repeat-limit select { font-size: 16px; }
   .sig-step { min-height: 60px; }
 }
-@media (prefers-reduced-motion: reduce) { .sig-list-step, .sig-intro-content { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .sig-list-step, .sig-intro-content, .sig-name-content { animation: none; } }
