@@ -169,7 +169,15 @@ export const TaskSetBuilder = defineComponent({
     }
     function setRepeating(category: TaskCategory, index: number, enabled: boolean) {
       const task = lists.value[category][index]!;
-      if (enabled) task.repeat = -1; else delete task.repeat;
+      if (enabled) task.repeat = -1;
+      else {
+        delete task.repeat;
+        // No configurable options remain when repeat is turned off.
+        if (expandedOptions.value.has(task.id)) {
+          const next = new Set(expandedOptions.value);
+          next.delete(task.id); expandedOptions.value = next;
+        }
+      }
       preserveProgress(category, task);
     }
     function setRepeatLimit(category: TaskCategory, index: number, value: number) {
@@ -187,10 +195,10 @@ export const TaskSetBuilder = defineComponent({
       if (introduction.value) return h('div', { class: 'sig-builder sig-builder-intro' }, [
         h('header', { class: 'sig-intro-top' }, [
           h('div', { class: 'sig-intro-credentials' }, [
-            h('span', 'Designed for those with ADHD'),
+            h('span', 'Designed for those with ADHD.'),
             h('span', { class: 'sig-intro-credential-verified' }, [
-              h(Icon, { name: 'verified' }),
               h('span', 'Verified by a Licensed Therapist'),
+              h(Icon, { name: 'verified' }),
             ]),
           ]),
           h('button', { type: 'button', class: 'quiet-button', onClick: () => { if (canLeave()) emit('cancel'); } }, 'Cancel'),
@@ -319,35 +327,37 @@ export const TaskSetBuilder = defineComponent({
                 h('span', { class: 'sig-mini-tooltip', 'aria-hidden': true },
                   task.repeat !== undefined ? 'Repeat: return to this later' : 'One time'),
               ]),
-              h('button', {
+              task.repeat !== undefined ? h('button', {
                 type: 'button', class: ['sig-item-gear', { 'is-expanded': expandedOptions.value.has(task.id) }],
                 'aria-expanded': expandedOptions.value.has(task.id),
                 'aria-controls': `sig-item-options-${task.id}`,
-                'aria-label': `Configure ${category.label} item ${index + 1}`,
+                'aria-label': `Configure repeating for ${category.label} item ${index + 1}`,
                 onClick: () => toggleOptions(task.id),
-              }, [h(Icon, { name: 'settings' })]),
+              }, [h(Icon, { name: 'settings' })]) : null,
+              h('button', {
+                type: 'button', class: 'sig-item-delete',
+                title: 'Remove item', 'aria-label': `Remove ${category.label} item ${index + 1}`,
+                onClick: () => { void remove(category.id, index); },
+              }, [h(Icon, { name: 'trash' })]),
             ]),
-            expandedOptions.value.has(task.id) ? h('div', {
+            task.repeat !== undefined && expandedOptions.value.has(task.id) ? h('div', {
               class: 'sig-item-options', id: `sig-item-options-${task.id}`,
             }, [
-              task.repeat !== undefined ? h('label', { class: 'sig-repeat-limit' }, [
+              h('label', { class: 'sig-repeat-limit' }, [
                 h('span', 'Repeat'),
                 h('select', {
                   value: String(task.repeat), 'aria-label': `Number of repeats for ${category.label} item ${index + 1}`,
                   onChange: (event: Event) => setRepeatLimit(category.id, index, Number(inputValue(event))),
                 }, REPEAT_OPTIONS.map(value => h('option', { value: String(value) },
                   value === -1 ? 'Forever (∞)' : `${value} ${value === 1 ? 'extra time' : 'extra times'}`))),
-              ]) : h('span', { class: 'sig-item-option-hint' }, 'Turn on repeating to set a repeat limit.'),
-              task.repeat !== undefined ? h('span', { class: 'sig-item-option-hint' },
-                'Work on this now, then revisit it when you’re ready.') : null,
+              ]),
+              h('span', { class: 'sig-item-option-hint' },
+                'Work on this now, then revisit it when you’re ready.'),
               task.repeat !== undefined && (task.timesCompleted ?? 0) > 0
                 ? h('span', { class: 'sig-repeat-progress' },
                   `${task.timesCompleted} completed${task.repeat === -1 ? '' : ` · ${Math.max(0, task.repeat + 1 - (task.timesCompleted ?? 0))} left`}`)
                 : null,
-              h('button', { type: 'button', class: 'sig-item-remove', onClick: () => { void remove(category.id, index); } }, [
-                h(Icon, { name: 'trash' }), 'Remove item',
-              ]),
-            ]) : null,
+             ]) : null,
           ]))),
           h('div', { class: 'sig-list-bottom' }, [
             h('button', { type: 'button', class: 'quiet-button', onClick: () => { void add(category.id); } }, [h(Icon, { name: 'plus' }), 'Add item']),
