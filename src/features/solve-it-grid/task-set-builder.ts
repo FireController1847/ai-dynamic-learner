@@ -1,4 +1,4 @@
-import { computed, defineComponent, h, nextTick, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref, type PropType } from 'vue';
+import { computed, defineComponent, h, nextTick, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref, Transition, type PropType } from 'vue';
 import { Icon } from '../../components/icon.ts';
 import { PopupDialog } from '../../components/popup-dialog.ts';
 import { inputValue } from '../../core/dom.ts';
@@ -193,7 +193,7 @@ export const TaskSetBuilder = defineComponent({
           h('div', { class: 'sig-intro-symbol', 'aria-hidden': true }, [h(Icon, { name: 'grid' })]),
           h('h2', { id: 'sig-intro-title', ref: heading, tabindex: -1 }, 'One thing at a time.'),
           h('p', 'First, we need to figure out what needs to get done. Add whatever comes to mind, as much or as little as you like. It doesn’t have to be perfect.'),
-          h('p', 'When you’re ready, the grid will help you focus on one item at a time.'),
+          h('p', 'When you’re ready, the grid will help you focus on one thing at a time. Work on it for a while, then check in with yourself and decide what deserves your time next.'),
           h('div', { class: 'sig-intro-actions' }, [
             h('button', { type: 'button', class: 'card-primary-button', onClick: () => { void beginLists(); } }, [
               'Let’s begin', h(Icon, { name: 'arrow-right' }),
@@ -232,12 +232,12 @@ export const TaskSetBuilder = defineComponent({
           h('span', { class: 'sig-eyebrow' }, name.value),
           h('button', { type: 'button', class: 'quiet-button', onClick: () => { if (canLeave()) emit('cancel'); } }, 'Cancel'),
         ]),
-        props.item ? h('nav', { class: 'sig-steps', 'aria-label': 'Task set creation steps' }, TASK_CATEGORIES.map((entry, index) => h('button', {
+        props.item ? h('nav', { class: 'sig-steps', 'aria-label': 'Task set categories' }, TASK_CATEGORIES.map((entry, index) => h('button', {
           type: 'button', class: ['sig-step', { 'is-current': index === step.value }], 'aria-current': index === step.value ? 'step' : undefined,
           onClick: () => { void go(index); },
         }, [h('span', { class: 'sig-number' }, entry.number), h('span', entry.label), h('small', String(counts.value[entry.id]))]))) : null,
         h('section', { key: category.id, class: 'sig-list-step', 'aria-labelledby': `sig-step-${category.id}` }, [
-          h('p', { class: 'sig-eyebrow' }, `Step ${step.value + 1} of 4`),
+          h('p', { class: 'sig-eyebrow' }, `List ${step.value + 1} of 4`),
           h('div', { class: 'sig-list-heading' }, [
             h('h3', { id: `sig-step-${category.id}`, ref: heading, tabindex: -1 }, category.label),
             !props.item ? h('div', { class: 'sig-category-help-anchor' }, [
@@ -252,28 +252,32 @@ export const TaskSetBuilder = defineComponent({
                   if (event.key === 'Escape') helpOpen.value = null;
                 },
               }, [h(Icon, { name: 'help-circle' })]),
-              helpOpen.value === category.id ? h('div', {
-                id: `sig-category-help-${category.id}`,
-                class: 'sig-category-help-tip', role: 'region',
-                'aria-label': CATEGORY_EXPLANATIONS[category.id].question,
-                onKeydown: (event: KeyboardEvent) => {
-                  if (event.key === 'Escape') {
-                    helpOpen.value = null; helpTrigger.value?.focus();
-                  }
-                },
-              }, [
-                h('strong', CATEGORY_EXPLANATIONS[category.id].question),
-                h('p', CATEGORY_EXPLANATIONS[category.id].summary),
-                h('button', {
-                  type: 'button', class: 'quiet-button sig-category-help-more',
-                  onClick: () => { helpOpen.value = null; infoOpen.value = category.id; },
-                }, 'More information'),
-              ]) : null,
+              h(Transition, { name: 'sig-category-pop' }, { default: () =>
+                helpOpen.value === category.id ? h('div', {
+                  id: `sig-category-help-${category.id}`,
+                  class: 'sig-category-help-tip', role: 'region',
+                  'aria-label': CATEGORY_EXPLANATIONS[category.id].question,
+                  onKeydown: (event: KeyboardEvent) => {
+                    if (event.key === 'Escape') {
+                      helpOpen.value = null; helpTrigger.value?.focus();
+                    }
+                  },
+                }, [
+                  h('strong', CATEGORY_EXPLANATIONS[category.id].question),
+                  h('p', CATEGORY_EXPLANATIONS[category.id].summary),
+                  h('button', {
+                    type: 'button', class: 'quiet-button sig-category-help-more',
+                    onClick: () => { helpOpen.value = null; infoOpen.value = category.id; },
+                  }, 'More information'),
+                ]) : null,
+              }),
             ]) : null,
             props.item ? h('ul', { class: 'sig-examples', 'aria-label': `${category.label} examples` }, category.examples.map(example =>
               h('li', { key: example }, example))) : null,
           ]),
           h('p', { class: 'sig-step-description' }, category.description),
+          !props.item && step.value === 0 ? h('p', { class: 'sig-manageable-tip' },
+            'Aim for something small and manageable—about an hour or two at most. Use Repeat to work on bigger things again after checking in with yourself.') : null,
           !props.item ? h('details', { class: 'sig-example-disclosure' }, [
             h('summary', 'Need an example?'),
             h('ul', { class: 'sig-examples', 'aria-label': `${category.label} examples` }, category.examples.map(example =>
@@ -301,13 +305,13 @@ export const TaskSetBuilder = defineComponent({
               ]),
               h('button', {
                 type: 'button', class: ['sig-repeat-square', { 'is-repeating': task.repeat !== undefined }],
-                'aria-label': task.repeat !== undefined ? 'Repeating item. Click to make one-time.' : 'One-time item. Click to enable repeating.',
+                'aria-label': task.repeat !== undefined ? 'Repeat this item later. Click to make one-time.' : 'One-time item. Click to enable repeating.',
                 'aria-pressed': task.repeat !== undefined,
                 onClick: () => setRepeating(category.id, index, task.repeat === undefined),
               }, [
                 h(Icon, { name: task.repeat !== undefined ? 'repeat' : 'repeat-1' }),
                 h('span', { class: 'sig-mini-tooltip', 'aria-hidden': true },
-                  task.repeat !== undefined ? 'Repeating item' : 'One-time item'),
+                  task.repeat !== undefined ? 'Repeat: return to this later' : 'One time'),
               ]),
               h('button', {
                 type: 'button', class: ['sig-item-gear', { 'is-expanded': expandedOptions.value.has(task.id) }],
@@ -328,6 +332,8 @@ export const TaskSetBuilder = defineComponent({
                 }, REPEAT_OPTIONS.map(value => h('option', { value: String(value) },
                   value === -1 ? 'Forever (∞)' : `${value} ${value === 1 ? 'extra time' : 'extra times'}`))),
               ]) : h('span', { class: 'sig-item-option-hint' }, 'Turn on repeating to set a repeat limit.'),
+              task.repeat !== undefined ? h('span', { class: 'sig-item-option-hint' },
+                'Work on this now, then revisit it when you’re ready.') : null,
               task.repeat !== undefined && (task.timesCompleted ?? 0) > 0
                 ? h('span', { class: 'sig-repeat-progress' },
                   `${task.timesCompleted} completed${task.repeat === -1 ? '' : ` · ${Math.max(0, task.repeat + 1 - (task.timesCompleted ?? 0))} left`}`)
@@ -361,20 +367,22 @@ export const TaskSetBuilder = defineComponent({
           h('button', { type: 'button', class: 'card-primary-button', onClick: () => { if (step.value < 3) void go(step.value + 1); else finish(); } },
             step.value < 3 ? props.item ? `Next: ${TASK_CATEGORIES[step.value + 1]!.label}` : 'Continue' : props.item ? 'Save task set' : 'Create task set'),
         ]),
-        !props.item && infoOpen.value ? h(PopupDialog, {
-          title: CATEGORY_EXPLANATIONS[infoOpen.value].question,
-          headingId: 'sig-category-info-title', width: 520,
-          returnFocus: helpTrigger.value,
-          onClose: () => { infoOpen.value = null; },
-        }, { default: () => {
-          const info = CATEGORY_EXPLANATIONS[infoOpen.value!];
-          return h('div', { class: 'sig-category-info' }, [
-            h('p', info.description),
-            h('h3', 'How to recognize it'),
-            h('ul', info.signs.map(sign => h('li', sign))),
-            h('p', { class: 'sig-muted' }, 'There is no single right way to categorize an activity. Choose where it makes the most sense to you.'),
-          ]);
-        } }) : null,
+        !props.item ? h(Transition, { name: 'sig-help-dialog' }, { default: () =>
+          infoOpen.value ? h(PopupDialog, {
+            title: CATEGORY_EXPLANATIONS[infoOpen.value].question,
+            headingId: 'sig-category-info-title', width: 520,
+            returnFocus: helpTrigger.value,
+            onClose: () => { infoOpen.value = null; },
+          }, { default: () => {
+            const info = CATEGORY_EXPLANATIONS[infoOpen.value!];
+            return h('div', { class: 'sig-category-info' }, [
+              h('p', info.description),
+              h('h3', 'How to recognize it'),
+              h('ul', info.signs.map(sign => h('li', sign))),
+              h('p', { class: 'sig-muted' }, 'There is no single right way to categorize an activity. Choose where it makes the most sense to you.'),
+            ]);
+          } }) : null,
+        }) : null,
       ]);
     };
   },

@@ -52,6 +52,9 @@
 .sig-category-help-trigger:hover, .sig-category-help-trigger[aria-expanded="true"] { background: var(--brand-tint); color: var(--brand-text); }
 .sig-category-help-trigger:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 .sig-category-help-tip { position: absolute; z-index: 5; left: 0; top: calc(100% + 6px); display: grid; gap: 8px; width: min(310px, calc(100vw - 60px)); padding: 14px; border: 1px solid var(--control-border); border-radius: var(--radius-dialog); background: var(--page-background); color: var(--text-color); font-size: 13px; line-height: 1.5; box-shadow: 0 8px 24px rgb(0 0 0 / .15); }
+/* The short category explanations animate without moving surrounding input fields. */
+.sig-category-pop-enter-active, .sig-category-pop-leave-active { transition: opacity 180ms ease, transform 180ms var(--ease-out); transform-origin: top left; }
+.sig-category-pop-enter-from, .sig-category-pop-leave-to { opacity: 0; transform: translateY(-6px) scale(.96); }
 .sig-category-help-tip strong { font-size: 14px; }
 .sig-category-help-tip p { margin: 0; color: var(--text-secondary); }
 .sig-category-help-more { justify-self: start; min-height: 36px; padding-inline: 10px; }
@@ -60,11 +63,18 @@
 .sig-category-info h3 { font-size: 15px; font-weight: 600; }
 .sig-category-info ul { padding-left: 22px; }
 .sig-category-info li + li { margin-top: 6px; }
+/* Use the existing shared modal; only the category explanation animates. */
+.sig-help-dialog-enter-active, .sig-help-dialog-leave-active { transition: opacity 200ms ease; }
+.sig-help-dialog-enter-from, .sig-help-dialog-leave-to { opacity: 0; }
+.sig-help-dialog-enter-active .popup-card, .sig-help-dialog-leave-active .popup-card { transition: transform 200ms var(--ease-out); }
+.sig-help-dialog-enter-from .popup-card { transform: translateY(12px) scale(.97); }
+.sig-help-dialog-leave-to .popup-card { transform: translateY(6px) scale(.99); }
 
 .sig-examples { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
 .sig-examples li { display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 999px; background: var(--brand-tint); color: var(--brand-text); font-size: 12px; line-height: 18px; }
 .sig-examples li::before { content: ""; flex: 0 0 4px; width: 4px; height: 4px; border-radius: 50%; background: currentColor; opacity: 0.55; }
 .sig-step-description { margin: 0; color: var(--text-secondary); }
+.sig-manageable-tip { max-width: 58ch; margin: 0; color: var(--text-secondary); font-size: 13px; line-height: 1.6; }
 .sig-task-inputs { display: grid; gap: 8px; margin: 8px 0 0; padding: 0; list-style: none; }
 .sig-task-inputs .sig-item-card { position: relative; display: grid; gap: 0; min-width: 0; padding: 8px 10px; border: 1px solid var(--border-color); border-radius: var(--radius-dialog); background: var(--surface-subtle); transition: border-color 160ms ease; }
 .sig-task-inputs .sig-item-card:focus-within { border-color: var(--control-border); }
@@ -122,4 +132,9 @@
   .sig-name-field input, .sig-task-inputs textarea, .sig-repeat-limit select { font-size: 16px; }
   .sig-step { min-height: 60px; }
 }
-@media (prefers-reduced-motion: reduce) { .sig-list-step, .sig-intro-content, .sig-name-content { animation: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .sig-list-step, .sig-intro-content, .sig-name-content { animation: none; }
+  .sig-category-pop-enter-active, .sig-category-pop-leave-active,
+  .sig-help-dialog-enter-active, .sig-help-dialog-leave-active,
+  .sig-help-dialog-enter-active .popup-card, .sig-help-dialog-leave-active .popup-card { transition: none; }
+}

@@ -1,11 +1,11 @@
 import { defineComponent, h, onBeforeUnmount, onMounted, ref } from 'vue';
 
 /** A temporary, canvas-rendered mosaic for a new draw. No cells enter saved state. */
-// Four times the former 8px cell / 10px pitch, with transparent interiors.
+// A square lattice with no gaps between transparent, black-outlined cells.
 const CELL_PITCH = 40;
-const LEAD_MS = 130;
-const WAVE_MS = 860;
-const POP_MS = 240;
+const LEAD_MS = 30;
+const WAVE_MS = 360;
+const POP_MS = 160;
 const HOLD_MS = 1350;
 const DRAW_MS = LEAD_MS + WAVE_MS + POP_MS;
 
@@ -33,15 +33,14 @@ export const GridConstruction = defineComponent({
       const ratio = Math.min(window.devicePixelRatio || 1, 2);
       let started = 0;
 
-      // Fit a *square* to whichever dimension has more room: in wide layouts
-      // it uses up to 2/3 of the width; in tall/mobile layouts, 2/3 of the height.
-      // The other dimension can be used in full when necessary.
+      // Keep a generous margin and center a true square: target 60% of
+      // the dominant dimension, with at least a little space on every side.
       function resize() {
         const width = drawingHost.clientWidth;
         const height = drawingHost.clientHeight;
         const size = Math.max(0, Math.floor(width >= height
-          ? Math.min(width * (2 / 3), height)
-          : Math.min(width, height * (2 / 3))));
+          ? Math.min(width * 0.6, height * 0.9)
+          : Math.min(width * 0.9, height * 0.6)));
         drawingCanvas.style.width = `${size}px`;
         drawingCanvas.style.height = `${size}px`;
         const bitmap = Math.ceil(size * ratio);
@@ -57,8 +56,8 @@ export const GridConstruction = defineComponent({
         if (!size) return;
         const cells = Math.max(1, Math.round(size / CELL_PITCH));
         const pitch = size / cells;
-        const baseSize = pitch * 0.8;
-        const line = Math.max(1, Math.min(2, pitch * 0.05));
+        const baseSize = pitch;
+        const line = 1.5;
         const diagonalMax = Math.max(1, 2 * cells - 2);
 
         drawingContext.setTransform(ratio, 0, 0, ratio, 0, 0);
@@ -79,8 +78,9 @@ export const GridConstruction = defineComponent({
             const cellSize = baseSize * scale;
             const x = (column + 0.5) * pitch - cellSize / 2;
             const y = (row + 0.5) * pitch - cellSize / 2;
-            drawingContext.strokeRect(x + line / 2, y + line / 2,
-              Math.max(0, cellSize - line), Math.max(0, cellSize - line));
+            // Draw borders on the shared cell boundaries. At rest, neighboring
+            // outlines meet with no white gutter between cells.
+            drawingContext.strokeRect(x, y, cellSize, cellSize);
           }
         }
       }
