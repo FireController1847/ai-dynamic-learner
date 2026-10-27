@@ -25,6 +25,7 @@ export const TaskSetBuilder = defineComponent({
     const original = JSON.stringify({ name: name.value, lists: lists.value });
     const dirty = computed(() => original !== JSON.stringify({ name: name.value, lists: lists.value }));
     const step = ref(0), problem = ref('');
+    const introduction = ref(!props.item);
     const current = computed(() => TASK_CATEGORIES[step.value]!);
     const counts = computed(() => listCounts(lists.value));
     const score = computed(() => balanceScore(counts.value));
@@ -38,11 +39,22 @@ export const TaskSetBuilder = defineComponent({
     function beforeUnload(event: BeforeUnloadEvent) { if (active && dirty.value) { event.preventDefault(); event.returnValue = ''; } }
     onMounted(() => {
       window.addEventListener('beforeunload', beforeUnload);
-      nameInput.value?.focus(); nameInput.value?.select();
+      if (introduction.value) heading.value?.focus();
+      else { nameInput.value?.focus(); nameInput.value?.select(); }
     });
     onActivated(() => { active = true; });
     onDeactivated(() => { active = false; });
     onBeforeUnmount(() => { unregister(); window.removeEventListener('beforeunload', beforeUnload); });
+    async function beginLists() {
+      introduction.value = false;
+      await nextTick();
+      nameInput.value?.focus();
+      nameInput.value?.select();
+    }
+    async function backToIntroduction() {
+      introduction.value = true; problem.value = '';
+      await nextTick(); heading.value?.focus();
+    }
     async function go(index: number) {
       if (!name.value.trim()) { problem.value = 'Give this task set a name before continuing.'; return; }
       step.value = index; problem.value = '';
@@ -92,6 +104,24 @@ export const TaskSetBuilder = defineComponent({
       emit('save', { name: name.value.trim(), lists: clean });
     }
     return () => {
+      if (introduction.value) return h('div', { class: 'sig-builder sig-builder-intro' }, [
+        h('header', { class: 'sig-intro-top' }, [
+          h('span', { class: 'sig-eyebrow' }, 'New task set'),
+          h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel') }, 'Cancel'),
+        ]),
+        h('section', { class: 'sig-intro-content', 'aria-labelledby': 'sig-intro-title' }, [
+          h('div', { class: 'sig-intro-symbol', 'aria-hidden': true }, [h(Icon, { name: 'grid' })]),
+          h('h2', { id: 'sig-intro-title', ref: heading, tabindex: -1 }, 'One thing at a time.'),
+          h('p', 'First, we’ll make four lists. Add whatever comes to mind, as much or as little as you like. They don’t have to be perfect.'),
+          h('p', 'The lists might look like a lot, but you won’t have to tackle everything at once. When you’re ready, the grid will show one item from each list and guide you through them step by step.'),
+          h('div', { class: 'sig-intro-actions' }, [
+            h('button', { type: 'button', class: 'card-primary-button', onClick: () => { void beginLists(); } }, [
+              'Let’s begin', h(Icon, { name: 'arrow-right' }),
+            ]),
+            h('span', { class: 'sig-muted' }, 'You can leave lists empty and change them later.'),
+          ]),
+        ]),
+      ]);
       const category = current.value;
       return h('div', { class: 'sig-builder' }, [
         h('header', { class: 'sig-builder-header' }, [
@@ -162,7 +192,12 @@ export const TaskSetBuilder = defineComponent({
         ]),
         problem.value || props.error ? h('p', { class: 'sig-error', role: 'alert' }, problem.value || props.error) : null,
         h('footer', { class: 'sig-builder-actions' }, [
-          step.value > 0 ? h('button', { type: 'button', class: 'quiet-button', onClick: () => { void go(step.value - 1); } }, 'Back') : h('span'),
+          step.value > 0 || !props.item
+            ? h('button', { type: 'button', class: 'quiet-button', onClick: () => {
+              if (step.value > 0) void go(step.value - 1);
+              else void backToIntroduction();
+            } }, 'Back')
+            : h('span'),
           h('button', { type: 'button', class: 'card-primary-button', onClick: () => { if (step.value < 3) void go(step.value + 1); else finish(); } },
             step.value < 3 ? `Next: ${TASK_CATEGORIES[step.value + 1]!.label}` : props.item ? 'Save task set' : 'Create task set'),
         ]),
