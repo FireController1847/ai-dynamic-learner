@@ -4,13 +4,35 @@
   padding: 16px clamp(12px, 3vw, 32px) 28px;
   background: var(--surface-workspace);
 }
+.lined-paper-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  width: min(100%, var(--lined-max-width, 816px));
+  margin: 0 auto 12px;
+}
+.lined-paper-toolbar .quiet-button { flex-shrink: 0; }
 .lined-paper-description {
-  max-width: var(--lined-max-width, 816px);
+  flex: 1;
+  min-width: 170px;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 18px;
+}
+.lined-paper-download-status {
+  width: min(100%, var(--lined-max-width, 816px));
   margin: 0 auto 12px;
   color: var(--text-secondary);
   font-size: 12px;
   line-height: 18px;
 }
+@media (prefers-reduced-motion: no-preference) {
+  .lined-download-loading .ui-icon { animation: lined-download-spin 800ms linear infinite; }
+}
+@keyframes lined-download-spin { to { transform: rotate(360deg); } }
 .lined-paper-frame {
   width: min(100%, var(--lined-max-width, 816px));
   margin: 0 auto;
