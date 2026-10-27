@@ -32,7 +32,7 @@ Use this as a starting-file index, not a feature specification. Follow imports o
 | Calculator | `src/features/calculator/` |
 | Notebook composition/library | `src/features/notebook/notebook.ts`, `library.ts`, `library-model.ts`, `document-types.ts` |
 | Notebook Markdown | `markdown-editor.ts`, `markdown-renderer.ts`, `markdown-outline.ts`, `document-files.ts` |
-| Notebook Lined Paper | `lined-editor.ts`, `lined-pagination.ts`, `lined-editor.css` |
+| Notebook Lined Paper | `lined-editor.ts` for writing and RTF download controls; `lined-pagination.ts` for on-screen page divisions; `lined-rtf.ts` for RTF text/title/margin-note serialization; `document-files.ts` for safe download filenames; `lined-editor.css` for paper and toolbar presentation |
 | Notebook Graph Paper | `graph-editor.ts`, `graph-paper.ts`, `graph-model.ts`, `graph-scene.ts`, `graph-interaction.ts`, `graph-gestures.ts`; see `graph-paper.md` |
 | Notebook display settings | `display-options.ts`, `display-settings.ts`, `display-settings.css` |
 | Todo library/model/settings | `src/features/todo-list/todo-list.ts`, `library.ts`, `library-model.ts`, `library-settings.ts` |
