@@ -55,7 +55,7 @@
 .sig-lock-tooltip { position: absolute; z-index: 2; right: 10px; bottom: 42px; display: grid; gap: 2px; max-width: calc(100% - 20px); padding: 6px 8px; border: 1px solid var(--control-border); border-radius: 6px; background: var(--page-background); color: var(--text-color); font-size: 12px; line-height: 16px; font-weight: 400; box-shadow: 0 2px 8px rgb(0 0 0 / .12); opacity: 0; visibility: hidden; pointer-events: none; }
 .sig-lock-tooltip > span + span { color: var(--text-secondary); }
 .sig-lock-tooltip::after { content: ''; position: absolute; right: 9px; bottom: -5px; width: 8px; height: 8px; border-right: 1px solid var(--control-border); border-bottom: 1px solid var(--control-border); background: var(--page-background); transform: rotate(45deg); }
-.sig-lock-tooltip { transition: opacity 120ms ease-out, visibility 0s linear 120ms; }
+.sig-lock-tooltip { transition: opacity 1000ms ease-out, visibility 0s linear 1000ms; }
 .sig-quadrant:not(:disabled).is-blocked .sig-lock-tooltip { opacity: 1; visibility: visible; transition: opacity 120ms ease-out, visibility 0s; }
 .sig-quadrant.is-blocked .sig-task-content { animation: sig-blocked 220ms var(--ease-out); }
 .sig-chart.is-celebrating .sig-grid-board { animation: sig-round-pulse 750ms var(--ease-out); }

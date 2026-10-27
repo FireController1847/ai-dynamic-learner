@@ -46,7 +46,8 @@ export function roundTask(lists: TaskLists, round: GridRound, category: TaskCate
 }
 export function slotState(lists: TaskLists, round: GridRound, category: TaskCategory): 'ready' | 'done' | 'skipped' | 'empty' {
   const task = roundTask(lists, round, category);
-  return !task ? 'empty' : task.completed ? 'done' : round.slots[category].skipped ? 'skipped' : 'ready';
+  // A skip describes this round, even if that same task was completed in a later draw.
+  return !task ? 'empty' : round.slots[category].skipped ? 'skipped' : task.completed ? 'done' : 'ready';
 }
 export function nextCategory(lists: TaskLists, round: GridRound): TaskCategory | null {
   return TASK_CATEGORIES.find(category => slotState(lists, round, category.id) === 'ready')?.id ?? null;

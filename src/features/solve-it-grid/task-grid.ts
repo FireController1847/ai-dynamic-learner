@@ -44,19 +44,22 @@ export const TaskGrid = defineComponent({
     let lastActivation: { category: TaskCategory; at: number } | null = null;
     let active = false;
     let firstDisplay = newRound;
+    let safetyExpiresAt = 0;
     function clearTimer() { if (timer !== undefined) window.clearTimeout(timer); timer = undefined; }
     function clearSafety() {
       if (safetyTimer !== undefined) window.clearTimeout(safetyTimer);
-      safetyTimer = undefined; safetyLocked.value = false; lastActivation = null;
+      safetyTimer = undefined; safetyLocked.value = false; lastActivation = null; safetyExpiresAt = 0;
     }
-    function startSafety() {
-      clearSafety(); safetyLocked.value = true;
+    function startSafety(duration = SAFETY_PAUSE_MS) {
+      clearSafety();
+      safetyExpiresAt = Date.now() + duration;
+      safetyLocked.value = true;
       safetyTimer = window.setTimeout(() => {
-        safetyTimer = undefined; safetyLocked.value = false; lastActivation = null;
+        safetyTimer = undefined; safetyLocked.value = false; lastActivation = null; safetyExpiresAt = 0;
         // A blocked click on the safety lock must not keep the red lock visible
         // once the pause ends. Later quadrants remain locked independently.
         if (blocked.value === current.value) clearFlash();
-      }, SAFETY_PAUSE_MS);
+      }, duration);
     }
     function clearFlash() {
       if (flashTimer !== undefined) window.clearTimeout(flashTimer);
@@ -114,6 +117,8 @@ export const TaskGrid = defineComponent({
         if (!current.value) cycle();
         else {
           if (firstDisplay) startSafety();
+          else if (safetyExpiresAt > Date.now()) startSafety(safetyExpiresAt - Date.now());
+          else safetyExpiresAt = 0;
           announceCurrent();
         }
       }
@@ -132,10 +137,21 @@ export const TaskGrid = defineComponent({
       if (active && viewing.value === null && phase.value === 'ready' && !current.value && !remaining.value) phase.value = 'complete';
       else if (active && viewing.value === null && phase.value === 'complete' && current.value) { phase.value = 'ready'; announceCurrent(); }
     });
+    watch(() => props.item.history?.length ?? 0, length => {
+      // Another tab may replace/remove history while an older round is open.
+      if (viewing.value !== null && viewing.value >= length) {
+        viewing.value = null; rewindOpen.value = false;
+        if (active) resume();
+      }
+    });
     onMounted(resume);
     onActivated(() => { if (!active) resume(); });
     function suspend() {
+      // Timers stop while deactivated, but an unfinished safety pause retains
+      // its original deadline rather than disappearing or restarting at 3 s.
+      const deadline = safetyExpiresAt;
       active = false; clearTimer(); clearSafety();
+      safetyExpiresAt = deadline;
       clearFlash();
       resetOpen.value = false; rewindOpen.value = false; viewing.value = null; phase.value = 'ready';
     }
@@ -143,7 +159,9 @@ export const TaskGrid = defineComponent({
     onBeforeUnmount(suspend);
     function previousRound() {
       if (!history.value.length || viewing.value === 0) return;
-      clearTimer(); clearSafety(); clearFlash();
+      // Cancel a pending turn, but let a new round's safety pause expire naturally
+      // while the user is browsing history.
+      clearTimer(); clearFlash();
       phase.value = 'ready';
       viewing.value = viewing.value === null ? history.value.length - 1 : viewing.value - 1;
       announcement.value = `Viewing round ${shownRound.value.number}. Use Next round to return, or Undo from this round to change earlier progress.`;
@@ -152,7 +170,7 @@ export const TaskGrid = defineComponent({
       if (viewing.value === null) return;
       const next = viewing.value + 1;
       viewing.value = next < history.value.length ? next : null;
-      if (viewing.value === null) resume();
+      if (viewing.value === null) { resume(); void focusCurrent(); }
       else announcement.value = `Viewing round ${shownRound.value.number}.`;
     }
     function rewind() {
@@ -266,10 +284,12 @@ export const TaskGrid = defineComponent({
               h('span', { class: 'sig-task-text' }, task?.text ?? 'Nothing here for now.'),
             ]),
             state === 'done' ? h('span', { class: 'sig-completed-check', 'aria-hidden': true }, [h(Icon, { name: 'check' })]) : null,
-            state === 'ready' || blocked.value === category.id ? h('span', {
+            state === 'ready' ? h('span', {
               class: ['sig-click-cue', { 'sig-safety-lock': locked || blocked.value === category.id }], 'aria-hidden': true,
             }, [h(Icon, { name: locked || blocked.value === category.id ? 'lock' : 'check' })]) : null,
-            locked ? h('span', { class: 'sig-lock-tooltip', 'aria-hidden': true }, [
+            // Keep the tooltip mounted while ready, so unblocking can use its
+            // intentional one-second fade instead of abruptly removing the element.
+            state === 'ready' ? h('span', { class: 'sig-lock-tooltip', 'aria-hidden': true }, [
               h('span', next ? 'Double-click to complete' : 'Double-click to skip ahead'),
               !next ? h('span', 'Earlier tasks stay available') : null,
             ]) : null,
