@@ -46,7 +46,6 @@ export const TaskGrid = defineComponent({
     const blocked = ref<TaskCategory | null>(null);
     const buttons = new Map<TaskCategory, HTMLButtonElement>();
     const finishHeading = ref<HTMLElement | null>(null);
-    const continueButton = ref<HTMLButtonElement | null>(null);
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
     let timer: number | undefined, checkTimer: number | undefined, flashTimer: number | undefined;
     let clockTimer: number | undefined;
@@ -87,7 +86,6 @@ export const TaskGrid = defineComponent({
       await nextTick();
       if (active && viewing.value === null && current.value) buttons.get(current.value)?.focus();
       else if (active && phase.value === 'complete') finishHeading.value?.focus();
-      else if (active && viewing.value === null && phase.value === 'ready' && !current.value) continueButton.value?.focus();
     }
     function snapshot(value: GridRound): GridRound {
       return { number: value.number, slots: categoryValues(category => ({ ...value.slots[category.id] })) };
@@ -206,7 +204,19 @@ export const TaskGrid = defineComponent({
       const last = [...TASK_CATEGORIES].reverse()
         .find(category => slotState(lists.value, selected, category.id) === 'done');
       if (last) undo(last.id);
-      else { announceCurrent(); if (!current.value) cycle(); else void focusCurrent(); }
+      else {
+        // Historical grids can contain only skipped items (e.g. when a user
+        // chose something else in each quadrant). Reopen the latest skipped
+        // item so returning here remains actionable instead of immediately
+        // rotating into a different grid.
+        if (!current.value) {
+          const skipped = [...TASK_CATEGORIES].reverse().find(category =>
+            selected.slots[category.id].skipped && roundTask(lists.value, selected, category.id));
+          if (skipped) delete selected.slots[skipped.id].skipped;
+        }
+        announceCurrent();
+        void focusCurrent();
+      }
     }
     function skippedBefore(category: TaskCategory) {
       const target = TASK_CATEGORIES.findIndex(entry => entry.id === category);
@@ -291,14 +301,8 @@ export const TaskGrid = defineComponent({
       for (const previous of skippedBefore(category)) round.value.slots[previous.id].skipped = true;
       round.value.slots[category].skipped = true;
       delete props.item.checkIn; working.value = null; clearFlash();
-      // Switching activities is not completing a quadrant. In particular,
-      // skipping the last available quadrant should not automatically start
-      // the celebration/rotation animation. Let the person decide when to
-      // request another draw with Continue.
-      announcement.value = current.value
-        ? `Leaving ${task?.text ?? 'this item'} available for later. Choose what to work on next.`
-        : `Leaving ${task?.text ?? 'this item'} available for later. Continue whenever you are ready.`;
-      void focusCurrent();
+      announcement.value = `Leaving ${task?.text ?? 'this item'} available for later.`;
+      if (current.value) void focusCurrent(); else cycle();
     }
     function finishWorking() {
       const category = working.value;
@@ -309,13 +313,6 @@ export const TaskGrid = defineComponent({
       working.value = null;
       announceCurrent();
       void focusCurrent();
-    }
-    function chooseMore() {
-      // A skipped item is not a success event. Only draw a fresh set when
-      // the person explicitly asks for more choices.
-      if (!active || viewing.value !== null || phase.value !== 'ready' ||
-          current.value || !remaining.value) return;
-      revealNext();
     }
     function reset() {
       delete props.item.checkIn; working.value = null;
@@ -410,7 +407,7 @@ export const TaskGrid = defineComponent({
           total.value ? h('button', { type: 'button', class: 'quiet-button', onClick: () => { resetOpen.value = true; } }, 'Start again') : null,
         ]),
       ]) : working.value === null && phase.value === 'ready' && viewing.value === null && !current.value && remaining.value ? h('div', { class: 'sig-play-actions' }, [
-        h('button', { ref: continueButton, type: 'button', class: 'quiet-button', onClick: chooseMore }, 'See more choices'),
+        h('button', { type: 'button', class: 'quiet-button', onClick: cycle }, 'Continue'),
       ]) : null,
       h('p', { class: 'visually-hidden', role: 'status', 'aria-live': 'polite' }, announcement.value),
       rewindOpen.value && viewing.value !== null ? h(PopupDialog, {
