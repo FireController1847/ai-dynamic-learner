@@ -68,6 +68,10 @@ export function validateSolveItGrid(value: unknown): asserts value is SolveItGri
       }
     }
     if (Object.hasOwn(item, 'checkIn')) {
+      // The round and lists have already been validated above. Keep their
+      // typed references here instead of indexing the unknown raw record.
+      const savedRound = item.round as GridRound | undefined;
+      const savedLists = item.lists as TaskLists | undefined;
       const focus = item.checkIn;
       if (!isRecord(focus) || Object.keys(focus).some(key => !['taskId', 'category', 'roundNumber', 'mode', 'minutes', 'startedAt', 'remindAt'].includes(key)) ||
           !TASK_CATEGORIES.some(category => category.id === focus.category) ||
@@ -76,10 +80,10 @@ export function validateSolveItGrid(value: unknown): asserts value is SolveItGri
           !CHECK_IN_MINUTES.some(minutes => minutes === focus.minutes) ||
           (typeof focus.startedAt !== 'number' || !Number.isSafeInteger(focus.startedAt)) || (typeof focus.remindAt !== 'number' || !Number.isSafeInteger(focus.remindAt)) ||
           (focus.startedAt as number) < 0 || (focus.remindAt as number) < (focus.startedAt as number) ||
-          !item.round || item.round.number !== focus.roundNumber ||
-          !item.lists || !TASK_CATEGORIES.some(category => category.id === focus.category &&
-            item.round?.slots[category.id].taskId === focus.taskId &&
-            item.lists?.[category.id].some(task => task.id === focus.taskId))) {
+          !savedRound || savedRound.number !== focus.roundNumber ||
+          !savedLists || !TASK_CATEGORIES.some(category => category.id === focus.category &&
+            savedRound.slots[category.id].taskId === focus.taskId &&
+            savedLists[category.id].some(task => task.id === focus.taskId))) {
         throw new Error('The saved check-in is invalid.');
       }
     }
