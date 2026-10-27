@@ -16,27 +16,27 @@ interface CategoryExplanation {
 const CATEGORY_EXPLANATIONS: Record<TaskCategory, CategoryExplanation> = {
   fires: {
     question: 'What is a fire?',
-    summary: 'Something time-sensitive that needs your attention soon.',
-    description: 'Fires are responsibilities with a real deadline or a clear reason to handle them promptly.',
-    signs: ['Is it due today or already overdue?', 'Would delaying it create a specific problem?', 'Does it need attention before less urgent activities?'],
+    summary: 'Something that needs attention soon to avoid serious consequences.',
+    description: 'Fires are time-sensitive responsibilities where waiting too long would have serious consequences. The urgency comes from what happens if they are delayed.',
+    signs: ['Does this need to happen soon?', 'Would delaying it have serious consequences?', 'Is there a real deadline or immediate responsibility?'],
   },
   'passive-fun': {
     question: 'What is passive fun?',
-    summary: 'A way to enjoy some downtime without much active effort.',
-    description: 'Passive fun is usually relaxing or easy to dip into, like watching a show or listening to something you enjoy.',
-    signs: ['Am I mostly taking something in?', 'Does it ask relatively little planning or effort?', 'Is it a way to unwind?'],
+    summary: 'Enjoyable, relaxing activities that are easy to pause.',
+    description: 'Passive fun usually takes little mental effort. You can enjoy it, then pause or switch away without much distress, like listening to music or watching a show.',
+    signs: ['Is this relaxing or enjoyable?', 'Does it take relatively little mental effort?', 'Could I pause it without much distress?'],
   },
   'shoulds-oughts': {
     question: 'What are Shoulds & Oughts?',
-    summary: 'Useful things you have been meaning to get done.',
-    description: 'These are tasks you want to take care of, even if they are not urgent today. They are possibilities to work on, not a judgment about what you should have done already.',
-    signs: ['Have I been meaning to do it?', 'Would finishing it make daily life easier?', 'Is it useful, but not an immediate fire?'],
+    summary: 'Things you need to do but are actively putting off.',
+    description: 'Shoulds & Oughts are responsibilities you know need attention but have been avoiding or postponing. They may matter even without an immediate deadline.',
+    signs: ['Do I know this needs to get done?', 'Have I been putting it off?', 'Is it important without being an urgent fire?'],
   },
   'stimulated-fun': {
-    question: 'What is stimulated fun?',
-    summary: 'Something enjoyable that actively engages your attention.',
-    description: 'Stimulated fun might involve making, exploring, playing, solving, or working on a hobby because the activity itself interests you.',
-    signs: ['Does it invite me to participate actively?', 'Is it interesting or creatively engaging?', 'Would I choose it for enjoyment?'],
+    question: 'What is stimulating fun?',
+    summary: 'Enjoyable activities that deeply engage your mind and can be hard to interrupt.',
+    description: 'Stimulating fun draws on complex attention, creativity, or strong engagement. Being interrupted midway might feel distressing, as with a date, concert, vacation, or absorbing hobby.',
+    signs: ['Is this enjoyable and mentally engaging?', 'Would stopping in the middle feel at least a little distressing?', 'Does it ask for sustained attention or involvement?'],
   },
 };
 

@@ -1,9 +1,20 @@
 import { archiveTime, validateLibrarySettings, type DatedLibraryRecord, type LibrarySettings } from '../../core/dated-library.ts';
 import { createId, isValidId } from '../../core/ids.ts';
 import { isRecord } from '../../core/validation.ts';
-import { validateRound, validateTaskLists, type GridRound, type TaskLists } from './task-model.ts';
+import { TASK_CATEGORIES, validateRound, validateTaskLists, type GridRound, type TaskLists, type TaskCategory } from './task-model.ts';
 
-export interface TaskSet extends DatedLibraryRecord { lists?: TaskLists; round?: GridRound; history?: GridRound[] }
+export type CheckInMode = 'time' | 'completion' | 'both';
+export const CHECK_IN_MINUTES = [15, 25, 45, 60, 90, 120] as const;
+export interface ActiveCheckIn {
+  taskId: string;
+  category: TaskCategory;
+  roundNumber: number;
+  mode: CheckInMode;
+  minutes: number;
+  startedAt: number;
+  remindAt: number;
+}
+export interface TaskSet extends DatedLibraryRecord { lists?: TaskLists; round?: GridRound; history?: GridRound[]; checkIn?: ActiveCheckIn }
 export interface SolveItGridModel {
   items: TaskSet[];
   settings?: LibrarySettings;
@@ -28,7 +39,7 @@ export function validateSolveItGrid(value: unknown): asserts value is SolveItGri
   if (Object.hasOwn(value, 'settings')) validateLibrarySettings(value.settings);
   const ids = new Set<string>();
   for (const item of value.items) {
-    if (!isRecord(item) || Object.keys(item).some(key => !['id', 'name', 'createdAt', 'lists', 'round', 'history'].includes(key)) ||
+    if (!isRecord(item) || Object.keys(item).some(key => !['id', 'name', 'createdAt', 'lists', 'round', 'history', 'checkIn'].includes(key)) ||
         !isValidId(item.id) || ids.has(item.id) || typeof item.name !== 'string' || !item.name.trim() ||
         item.name.length > MAX_NAME_LENGTH || typeof item.createdAt !== 'string' ||
         !Number.isFinite(Date.parse(item.createdAt)) || new Date(item.createdAt).toISOString() !== item.createdAt) {
@@ -54,6 +65,22 @@ export function validateSolveItGrid(value: unknown): asserts value is SolveItGri
           throw new Error('Saved Solve-It Grid rounds must be in chronological order.');
         }
         lastNumber = previous.number;
+      }
+    }
+    if (Object.hasOwn(item, 'checkIn')) {
+      const focus = item.checkIn;
+      if (!isRecord(focus) || Object.keys(focus).some(key => !['taskId', 'category', 'roundNumber', 'mode', 'minutes', 'startedAt', 'remindAt'].includes(key)) ||
+          !TASK_CATEGORIES.some(category => category.id === focus.category) ||
+          !isValidId(focus.taskId) || (typeof focus.roundNumber !== 'number' || !Number.isSafeInteger(focus.roundNumber)) || (focus.roundNumber as number) < 1 ||
+          !['time', 'completion', 'both'].includes(String(focus.mode)) ||
+          !CHECK_IN_MINUTES.some(minutes => minutes === focus.minutes) ||
+          (typeof focus.startedAt !== 'number' || !Number.isSafeInteger(focus.startedAt)) || (typeof focus.remindAt !== 'number' || !Number.isSafeInteger(focus.remindAt)) ||
+          (focus.startedAt as number) < 0 || (focus.remindAt as number) < (focus.startedAt as number) ||
+          !item.round || item.round.number !== focus.roundNumber ||
+          !item.lists || !TASK_CATEGORIES.some(category => category.id === focus.category &&
+            item.round?.slots[category.id].taskId === focus.taskId &&
+            item.lists?.[category.id].some(task => task.id === focus.taskId))) {
+        throw new Error('The saved check-in is invalid.');
       }
     }
     if (!Number.isFinite(archiveTime({ id: item.id, name: item.name, createdAt: item.createdAt },

@@ -2,10 +2,10 @@ import { isValidId } from '../../core/ids.ts';
 import { isRecord } from '../../core/validation.ts';
 
 export const TASK_CATEGORIES = [
-  { id: 'fires', number: 1, label: 'Fires', description: "Things which need to get done today.", examples: ["Due assignment", "Take exam", "Overdue bills", "Important priorities"], example: 'Work on today’s assignment for 30 minutes', position: 'top-left', icon: 'flame' },
-  { id: 'passive-fun', number: 2, label: 'Passive Fun', description: "Things which don't require constant attention, such as scrolling.", examples: ["Short-form media", "TV and shows", "Calling a friend"], example: 'Watch a show for 30 minutes', position: 'bottom-right', icon: 'coffee' },
-  { id: 'shoulds-oughts', number: 3, label: 'Shoulds & Oughts', description: "Things you've said you need to get done, but haven't.", examples: ["Clothes away", "Ahead in class", "Study for exam"], example: 'Spend 20 minutes putting clothes away', position: 'bottom-left', icon: 'checklist' },
-  { id: 'stimulated-fun', number: 4, label: 'Stimulated Fun', description: "Things you procrastinate with, procrastiwork with, or personally enjoy doing, e.g. hobbies.", examples: ["Video games", "Hobbies", "Side projects"], example: 'Work on a hobby for 30 minutes', position: 'top-right', icon: 'lightbulb' },
+  { id: 'fires', number: 1, label: 'Fires', description: "Urgent things that need attention soon because delaying them could have serious consequences.", examples: ["Deadline approaching", "Urgent bill", "Time-sensitive obligation", "Important commitment"], example: 'Work on today’s assignment for 30 minutes', position: 'top-left', icon: 'flame' },
+  { id: 'passive-fun', number: 2, label: 'Passive Fun', description: "Enjoyable, relaxing activities that take little mental effort and are usually easy to pause.", examples: ["Watch a show", "Listen to music", "Casual reading"], example: 'Watch a show for 30 minutes', position: 'bottom-right', icon: 'coffee' },
+  { id: 'shoulds-oughts', number: 3, label: 'Shoulds & Oughts', description: "Things you know need doing but have been actively putting off.", examples: ["Put clothes away", "Start studying", "Organize paperwork"], example: 'Spend 20 minutes putting clothes away', position: 'bottom-left', icon: 'checklist' },
+  { id: 'stimulated-fun', number: 4, label: 'Stimulating Fun', description: "Enjoyable activities that engage your mind deeply and may feel difficult to interrupt.", examples: ["Concerts", "A date", "Vacation", "Creative projects"], example: 'Work on a hobby for 30 minutes', position: 'top-right', icon: 'lightbulb' },
 ] as const;
 export type TaskCategory = typeof TASK_CATEGORIES[number]['id'];
 export type CategoryValues<T> = Record<TaskCategory, T>;

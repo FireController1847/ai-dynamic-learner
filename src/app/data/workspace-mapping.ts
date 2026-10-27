@@ -51,7 +51,8 @@ export function workspaceRows(workspaceId: string, workspace: Workspace): DataRo
       if (app === 'solve-it-grid' && Object.hasOwn(item, 'lists')) {
         scoped('solveItTaskSets', [workspaceId, id], { id, configured: true,
           ...(Object.hasOwn(item, 'round') ? { round: copy(item.round) } : {}),
-           ...(Object.hasOwn(item, 'history') ? { history: copy(item.history) } : {}) });
+           ...(Object.hasOwn(item, 'history') ? { history: copy(item.history) } : {}),
+           ...(Object.hasOwn(item, 'checkIn') ? { checkIn: copy(item.checkIn) } : {}) });
         const lists = item.lists as Record<string, Record<string, unknown>[]>;
         for (const category of TASK_CATEGORIES) {
           const tasks = lists[category.id]!;
@@ -230,6 +231,7 @@ export async function hydrateWorkspace(store: Pick<IndexedDataStore, 'all'> & Pa
           ]));
           if (own(body, 'round')) item.round = body.round;
            if (own(body, 'history')) item.history = body.history;
+           if (own(body, 'checkIn')) item.checkIn = body.checkIn;
         }
       } else if (row.kind === 'group') item = { ...item, children: [] };
       else if (app === 'notebook') {

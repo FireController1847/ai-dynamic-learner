@@ -2,7 +2,8 @@ import { computed, defineComponent, h, nextTick, onActivated, onBeforeUnmount, o
 import { Icon } from '../../components/icon.ts';
 import { PopupDialog } from '../../components/popup-dialog.ts';
 import { GridConstruction } from './grid-construction.ts';
-import { MAX_ROUND_HISTORY, type TaskSet } from './library-model.ts';
+import { TaskCheckIn } from './task-check-in.ts';
+import { MAX_ROUND_HISTORY, type TaskSet, type CheckInMode } from './library-model.ts';
 import { createRound, markCompleted, nextCategory, remainingCount, roundTask, slotState, TASK_CATEGORIES, taskAvailable, taskCount, undoCompleted, categoryValues, type TaskCategory, type GridRound } from './task-model.ts';
 
 type Phase = 'ready' | 'celebrating' | 'turning' | 'constructing' | 'revealing' | 'complete';
@@ -21,6 +22,13 @@ export const TaskGrid = defineComponent({
     const round = computed(() => props.item.round!);
     const history = computed(() => props.item.history ?? []);
     const viewing = ref<number | null>(null);
+    const working = ref<TaskCategory | null>(props.item.checkIn?.category ?? null);
+    const now = ref(Date.now());
+    const activeCheckIn = computed(() => {
+      const state = props.item.checkIn, category = working.value;
+      return category && state?.category === category && round.value.number === state.roundNumber &&
+        round.value.slots[category].taskId === state.taskId ? state : null;
+    });
     const shownRound = computed(() => viewing.value === null ? round.value : history.value[viewing.value] ?? round.value);
     const shownCurrent = computed(() => nextCategory(lists.value, shownRound.value));
     const shownLatestDone = computed(() => [...TASK_CATEGORIES].reverse()
@@ -40,6 +48,15 @@ export const TaskGrid = defineComponent({
     const finishHeading = ref<HTMLElement | null>(null);
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
     let timer: number | undefined, checkTimer: number | undefined, flashTimer: number | undefined;
+    let clockTimer: number | undefined;
+    function startClock() {
+      stopClock(); now.value = Date.now();
+      clockTimer = window.setInterval(() => { now.value = Date.now(); }, 1000);
+    }
+    function stopClock() {
+      if (clockTimer !== undefined) window.clearInterval(clockTimer);
+      clockTimer = undefined;
+    }
     let lastActivation: { category: TaskCategory; at: number } | null = null;
     let active = false;
     function clearTimer() { if (timer !== undefined) window.clearTimeout(timer); timer = undefined; }
@@ -80,6 +97,8 @@ export const TaskGrid = defineComponent({
       later(() => { phase.value = 'ready'; void focusCurrent(); }, ROUND_REVEAL_MS);
     }
     function revealNext() {
+      delete props.item.checkIn;
+      working.value = null;
       clearCheck();
       const previous = snapshot(round.value);
       props.item.history = [...history.value, previous].slice(-MAX_ROUND_HISTORY);
@@ -110,7 +129,9 @@ export const TaskGrid = defineComponent({
     }
     function resume() {
       active = true;
+      startClock();
       viewing.value = null;
+      working.value = props.item.checkIn?.category ?? null;
       if (!current.value && !remaining.value) phase.value = 'complete';
       else {
         phase.value = 'ready';
@@ -123,6 +144,7 @@ export const TaskGrid = defineComponent({
     watch(() => props.item.round, value => {
       if (!value && props.item.lists) {
         clearTimer(); clearCheck(); viewing.value = null;
+        working.value = null; delete props.item.checkIn;
         props.item.round = createRound(props.item.lists);
         phase.value = 'ready';
         if (active) announceCurrent();
@@ -143,8 +165,8 @@ export const TaskGrid = defineComponent({
     onMounted(resume);
     onActivated(() => { if (!active) resume(); });
     function suspend() {
-      active = false; clearTimer(); clearCheck();
-      clearFlash();
+      active = false; clearTimer(); clearCheck(); stopClock();
+      clearFlash(); working.value = null;
       resetOpen.value = false; rewindOpen.value = false; viewing.value = null; phase.value = 'ready';
     }
     onDeactivated(suspend);
@@ -152,7 +174,7 @@ export const TaskGrid = defineComponent({
     function previousRound() {
       if (!history.value.length || viewing.value === 0) return;
       clearTimer(); clearCheck(); clearFlash();
-      phase.value = 'ready';
+      phase.value = 'ready'; working.value = null;
       viewing.value = viewing.value === null ? history.value.length - 1 : viewing.value - 1;
       announcement.value = 'Viewing an earlier point. Use Next to move forward, or Return to this point to restore it.';
     }
@@ -168,7 +190,8 @@ export const TaskGrid = defineComponent({
       if (index === null || !history.value[index]) return;
       const selected = snapshot(history.value[index]);
       const discarded = [...history.value.slice(index + 1), round.value];
-      clearTimer(); clearCheck(); clearFlash();
+      clearTimer(); clearCheck(); clearFlash(); working.value = null;
+      delete props.item.checkIn;
       for (const laterRound of discarded.reverse()) {
         for (const category of TASK_CATEGORIES) {
           const task = roundTask(lists.value, laterRound, category.id);
@@ -193,7 +216,8 @@ export const TaskGrid = defineComponent({
       if (!task || !taskAvailable(task)) return;
       const previous = skippedBefore(category);
       for (const entry of previous) round.value.slots[entry.id].skipped = true;
-      clearFlash(); markCompleted(task, round.value.slots[category]); celebrateCheck(category);
+      clearFlash(); delete props.item.checkIn; working.value = null;
+      markCompleted(task, round.value.slots[category]); celebrateCheck(category);
       announcement.value = `Completed: ${task.text}. Select this quadrant again to undo.`;
       if (current.value) void focusCurrent(); else cycle();
     }
@@ -234,9 +258,52 @@ export const TaskGrid = defineComponent({
       }
       // The reveal animates visually, but never imposes a second unlock delay.
       if (phase.value === 'revealing') { clearTimer(); phase.value = 'ready'; }
-      lastActivation = null; complete(category);
+      lastActivation = null;
+      working.value = category;
+      announcement.value = `Work on: ${roundTask(lists.value, round.value, category)?.text ?? ''}`;
+    }
+    function startWorking(mode: CheckInMode, minutes: number) {
+      const category = working.value;
+      if (!category || viewing.value !== null || phase.value !== 'ready') return;
+      const task = roundTask(lists.value, round.value, category);
+      if (!task || slotState(lists.value, round.value, category) !== 'ready') return;
+      const time = Date.now(), duration = mode === 'completion' ? 60 : minutes;
+      props.item.checkIn = { category, taskId: task.id, roundNumber: round.value.number,
+        mode, minutes: duration, startedAt: time, remindAt: time + duration * 60000 };
+      now.value = time;
+      announcement.value = 'You can work on this and check back in later.';
+    }
+    function keepWorking() {
+      const state = activeCheckIn.value;
+      if (!state) return;
+      const time = Date.now();
+      props.item.checkIn = { ...state, remindAt: time + state.minutes * 60000 };
+      now.value = time;
+      announcement.value = 'We will check in with you again later.';
+    }
+    function moveOn() {
+      const category = working.value;
+      if (!category || viewing.value !== null || phase.value !== 'ready' ||
+        slotState(lists.value, round.value, category) !== 'ready') return;
+      const task = roundTask(lists.value, round.value, category);
+      for (const previous of skippedBefore(category)) round.value.slots[previous.id].skipped = true;
+      round.value.slots[category].skipped = true;
+      delete props.item.checkIn; working.value = null; clearFlash();
+      announcement.value = `Leaving ${task?.text ?? 'this item'} available for later.`;
+      if (current.value) void focusCurrent(); else cycle();
+    }
+    function finishWorking() {
+      const category = working.value;
+      if (!category) return;
+      complete(category);
+    }
+    function returnToGrid() {
+      working.value = null;
+      announceCurrent();
+      void focusCurrent();
     }
     function reset() {
+      delete props.item.checkIn; working.value = null;
       clearTimer(); clearCheck(); clearFlash();
       for (const category of TASK_CATEGORIES) for (const task of lists.value[category.id]) {
         delete task.completed; delete task.timesCompleted;
@@ -247,7 +314,15 @@ export const TaskGrid = defineComponent({
       phase.value = 'ready'; resetOpen.value = false; announceCurrent(); void focusCurrent();
     }
     return () => h('div', { class: 'sig-play' }, [
-      h('figure', { class: ['sig-chart', `is-${phase.value}`, { 'is-history': viewing.value !== null }], 'aria-label': 'Solve-It Grid: stimulation increases upward; fun increases to the right.' }, [
+      working.value !== null && viewing.value === null && phase.value === 'ready'
+        ? h(TaskCheckIn, {
+          key: `${round.value.number}-${working.value}`,
+          categoryLabel: TASK_CATEGORIES.find(category => category.id === working.value)?.label ?? '',
+          taskText: roundTask(lists.value, round.value, working.value)?.text ?? '',
+          focus: activeCheckIn.value, now: now.value,
+          onBack: returnToGrid, onStart: startWorking,
+          onContinue: keepWorking, onMoveOn: moveOn, onDone: finishWorking,
+        }) : h('figure', { class: ['sig-chart', `is-${phase.value}`, { 'is-history': viewing.value !== null }], 'aria-label': 'Solve-It Grid: stimulation increases upward; fun increases to the right.' }, [
         h('span', { class: 'sig-axis sig-axis-top', 'aria-hidden': true }, [h(Icon, { name: 'arrow-up' }), h('span', 'Stimulation')]),
         h('span', { class: 'sig-axis sig-axis-bottom', 'aria-hidden': true }, [h(Icon, { name: 'arrow-down' }), h('span', 'No stimulation')]),
         h('span', { class: 'sig-axis sig-axis-left', 'aria-hidden': true }, [h(Icon, { name: 'arrow-left' }), h('span', 'No fun')]),
@@ -266,7 +341,7 @@ export const TaskGrid = defineComponent({
             style: { '--reveal-delay': `${(category.number - 1) * 65}ms` },
             disabled: viewing.value !== null || state === 'empty' || state === 'skipped' ||
               phase.value === 'turning' || phase.value === 'constructing',
-            'aria-label': `${category.number}. ${category.label}. ${task?.text ?? 'Empty'}. ${viewing.value !== null ? 'Earlier point, read-only. Use Return to this point to change progress.' : state === 'ready' ? locked ? 'Activate twice quickly to skip ahead; earlier tasks remain available.' : 'Next task. Complete.' : state === 'done' ? canUndo ? 'Completed. Activate to undo.' : 'Completed. Undo the later quadrant first.' : state === 'skipped' ? 'Skipped for now.' : 'Empty'}`,
+            'aria-label': `${category.number}. ${category.label}. ${task?.text ?? 'Empty'}. ${viewing.value !== null ? 'Earlier point, read-only. Use Return to this point to change progress.' : state === 'ready' ? locked ? 'Activate twice quickly to skip ahead; earlier tasks remain available.' : 'Next item. Select to work on it.' : state === 'done' ? canUndo ? 'Completed. Activate to undo.' : 'Completed. Undo the later quadrant first.' : state === 'skipped' ? 'Skipped for now.' : 'Empty'}`,
             onClick: (event: MouseEvent) => activate(category.id, event),
             onKeydown: (event: KeyboardEvent) => { if (event.repeat && (event.key === 'Enter' || event.key === ' ')) event.preventDefault(); },
           }, [
@@ -289,7 +364,7 @@ export const TaskGrid = defineComponent({
             // Keep the tooltip mounted while ready, so unblocking can use its
             // intentional one-second fade instead of abruptly removing the element.
             state === 'ready' ? h('span', { class: 'sig-lock-tooltip', 'aria-hidden': true }, [
-              h('span', next ? 'Select to complete' : 'Double-click to skip ahead'),
+              h('span', next ? 'Select to work on this' : 'Double-click to skip ahead'),
               !next ? h('span', 'Earlier tasks stay available') : null,
             ]) : null,
             state === 'skipped' ? h('span', { class: 'sig-later-label' }, 'Later') : null,
@@ -298,8 +373,14 @@ export const TaskGrid = defineComponent({
         ]),
         phase.value === 'celebrating' ? h('div', { class: 'sig-round-burst', 'aria-hidden': true }, Array.from({ length: 16 }, (_, index) => h('i', { style: { '--particle': index } }))) : null,
       ]),
-      phase.value === 'constructing' ? h(GridConstruction, { onFinished: showNewItems }) : null,
-      history.value.length ? h('nav', { class: 'sig-round-navigation', 'aria-label': 'Grid navigation' }, [
+      working.value === null && phase.value === 'constructing' ? h(GridConstruction, { onFinished: showNewItems }) : null,
+      working.value === null && viewing.value === null && props.item.checkIn && phase.value === 'ready'
+        ? h('button', { type: 'button', class: 'quiet-button sig-checkin-return',
+          onClick: () => { working.value = props.item.checkIn?.category ?? null; } },
+          [h(Icon, { name: 'heart' }),
+            now.value >= props.item.checkIn.remindAt ? 'Time for a gentle check-in' : 'Return to what you were doing'])
+        : null,
+      working.value === null && history.value.length ? h('nav', { class: 'sig-round-navigation', 'aria-label': 'Grid navigation' }, [
          h('button', { type: 'button', class: 'quiet-button', disabled: viewing.value === 0,
            onClick: previousRound, title: 'Previous' }, [h(Icon, { name: 'arrow-left' }), 'Previous']),
          viewing.value !== null ? h('button', { type: 'button', class: 'quiet-button',
@@ -307,13 +388,13 @@ export const TaskGrid = defineComponent({
          viewing.value !== null ? h('button', { type: 'button', class: 'quiet-button sig-round-rewind',
            onClick: () => { rewindOpen.value = true; } }, 'Return to this point') : null,
        ]) : null,
-       phase.value === 'complete' ? h('section', { class: 'sig-completion' }, [
+       working.value === null && phase.value === 'complete' ? h('section', { class: 'sig-completion' }, [
         h('h3', { ref: finishHeading, tabindex: -1 }, total.value ? 'Clear for now.' : 'Your lists are empty.'),
         h('div', { class: 'sig-play-actions' }, [
           h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('edit') }, 'Edit lists'),
           total.value ? h('button', { type: 'button', class: 'quiet-button', onClick: () => { resetOpen.value = true; } }, 'Start again') : null,
         ]),
-      ]) : phase.value === 'ready' && viewing.value === null && !current.value && remaining.value ? h('div', { class: 'sig-play-actions' }, [
+      ]) : working.value === null && phase.value === 'ready' && viewing.value === null && !current.value && remaining.value ? h('div', { class: 'sig-play-actions' }, [
         h('button', { type: 'button', class: 'quiet-button', onClick: cycle }, 'Continue'),
       ]) : null,
       h('p', { class: 'visually-hidden', role: 'status', 'aria-live': 'polite' }, announcement.value),

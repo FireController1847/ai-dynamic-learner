@@ -6,6 +6,8 @@ const paths: Record<string, string> = {
   folder: 'M3 5h6l2 2h10v13H3Z',
   check: 'm5 12 4 4L19 6',
   lock: 'M5 10h14v12H5ZM8 10V6a4 4 0 0 1 8 0v4M12 15v3',
+  heart: 'M20.5 8.5c0 4-8.5 10.5-8.5 10.5S3.5 12.5 3.5 8.5A4.5 4.5 0 0 1 12 6.4a4.5 4.5 0 0 1 8.5 2.1Z',
+  play: 'm8 5 11 7-11 7Z',
   'help-circle': 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20ZM9.1 9a3 3 0 1 1 5.1 2.2c-.9.8-2.2 1.3-2.2 3.1M12 18h.01',
   'arrow-left': 'M20 12H4m7-7-7 7 7 7',
   'arrow-right': 'M4 12h16m-7-7 7 7-7 7',
