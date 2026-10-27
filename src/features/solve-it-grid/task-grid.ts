@@ -212,7 +212,7 @@ export const TaskGrid = defineComponent({
         if (!current.value) {
           const skipped = [...TASK_CATEGORIES].reverse().find(category =>
             selected.slots[category.id].skipped && roundTask(lists.value, selected, category.id));
-          if (skipped) delete selected.slots[skipped.id].skipped;
+          if (skipped) delete round.value.slots[skipped.id].skipped;
         }
         announceCurrent();
         void focusCurrent();

@@ -68,7 +68,7 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'solve-it-grid', label: 'Solve-It Grid', path: '/solve-it-grid/', icon: 'grid',
     group: 'work',
-    version: '0.13.3',
+    version: '0.13.4',
     image: 'assets/app-icons/solve-it-grid.png',
     description: 'Build four task lists, then follow a lively grid that turns them into one task at a time.',
     metadata: {
