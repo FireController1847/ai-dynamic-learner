@@ -3,7 +3,7 @@ import { MAX_NAME_LENGTH } from './library-model.ts';
 export const MAX_MARKDOWN_FILE_BYTES = 8 * 1024 * 1024;
 
 function downloadFilename(name: string, extension: 'md' | 'rtf'): string {
-  const base = name.replace(/\.(?:md|rtf)$/i, '').replace(/[<>:"/\\|?*\u0000-\u001f]/g, '_')
+  const base = XXX.replace(/[<>:"/\\|?*\u0000-\u001f]/g, '_')
     .replace(/[. ]+$/g, '').trim() || 'document';
   return `${/^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(base) ? '_' : ''}${base}.${extension}`;
 }
