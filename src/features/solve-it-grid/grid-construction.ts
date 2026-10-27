@@ -25,6 +25,11 @@ export const GridConstruction = defineComponent({
       const host = stage.value;
       const context = canvas?.getContext('2d');
       if (!canvas || !host || !context) { emit('finished'); return; }
+      // Preserve the null-checked elements as non-null local constants so the
+      // nested animation callbacks keep the same guarantee under strict TS.
+      const drawingCanvas: HTMLCanvasElement = canvas;
+      const drawingHost: HTMLElement = host;
+      const drawingContext: CanvasRenderingContext2D = context;
       const ratio = Math.min(window.devicePixelRatio || 1, 2);
       let started = 0;
 
@@ -32,17 +37,17 @@ export const GridConstruction = defineComponent({
       // it uses up to 2/3 of the width; in tall/mobile layouts, 2/3 of the height.
       // The other dimension can be used in full when necessary.
       function resize() {
-        const width = host.clientWidth;
-        const height = host.clientHeight;
+        const width = drawingHost.clientWidth;
+        const height = drawingHost.clientHeight;
         const size = Math.max(0, Math.floor(width >= height
           ? Math.min(width * (2 / 3), height)
           : Math.min(width, height * (2 / 3))));
-        canvas.style.width = `${size}px`;
-        canvas.style.height = `${size}px`;
+        drawingCanvas.style.width = `${size}px`;
+        drawingCanvas.style.height = `${size}px`;
         const bitmap = Math.ceil(size * ratio);
-        if (canvas.width !== bitmap || canvas.height !== bitmap) {
-          canvas.width = bitmap;
-          canvas.height = bitmap;
+        if (drawingCanvas.width !== bitmap || drawingCanvas.height !== bitmap) {
+          drawingCanvas.width = bitmap;
+          drawingCanvas.height = bitmap;
         }
         return size;
       }
@@ -56,10 +61,10 @@ export const GridConstruction = defineComponent({
         const line = Math.max(1, Math.min(2, pitch * 0.05));
         const diagonalMax = Math.max(1, 2 * cells - 2);
 
-        context!.setTransform(ratio, 0, 0, ratio, 0, 0);
-        context!.clearRect(0, 0, size, size);
-        context!.strokeStyle = '#000';
-        context!.lineWidth = line;
+        drawingContext.setTransform(ratio, 0, 0, ratio, 0, 0);
+        drawingContext.clearRect(0, 0, size, size);
+        drawingContext.strokeStyle = '#000';
+        drawingContext.lineWidth = line;
 
         // Each transparent square scales past its final size, then settles;
         // all cells share the same pitch and use a diagonal stagger.
@@ -74,7 +79,7 @@ export const GridConstruction = defineComponent({
             const cellSize = baseSize * scale;
             const x = (column + 0.5) * pitch - cellSize / 2;
             const y = (row + 0.5) * pitch - cellSize / 2;
-            context!.strokeRect(x + line / 2, y + line / 2,
+            drawingContext.strokeRect(x + line / 2, y + line / 2,
               Math.max(0, cellSize - line), Math.max(0, cellSize - line));
           }
         }
@@ -95,7 +100,7 @@ export const GridConstruction = defineComponent({
       observer = new ResizeObserver(() => {
         if (!stopped && started) draw(Math.min(performance.now() - started, DRAW_MS));
       });
-      observer.observe(host);
+      observer.observe(drawingHost);
       frame = window.requestAnimationFrame(render);
     });
     onBeforeUnmount(() => {
