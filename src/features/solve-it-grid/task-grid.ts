@@ -43,11 +43,18 @@ export const TaskGrid = defineComponent({
     const resetOpen = ref(false);
     const rewindOpen = ref(false);
     const justCompleted = ref<TaskCategory | null>(null);
+    const workFinishing = ref(false);
     const blocked = ref<TaskCategory | null>(null);
     const buttons = new Map<TaskCategory, HTMLButtonElement>();
     const finishHeading = ref<HTMLElement | null>(null);
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
     let timer: number | undefined, checkTimer: number | undefined, flashTimer: number | undefined;
+    let workFinishTimer: number | undefined;
+    function stopWorkFinish() {
+      if (workFinishTimer !== undefined) window.clearTimeout(workFinishTimer);
+      workFinishTimer = undefined;
+      workFinishing.value = false;
+    }
     let clockTimer: number | undefined;
     function startClock() {
       stopClock(); now.value = Date.now();
@@ -151,6 +158,8 @@ export const TaskGrid = defineComponent({
       }
     }, { flush: 'sync' });
     watch([current, remaining], () => {
+      // Hold the work-screen celebration before navigating to the grid.
+      if (workFinishing.value) return;
       // Remote completions do not independently draw and save another round.
       if (active && viewing.value === null && phase.value === 'ready' && !current.value && !remaining.value) phase.value = 'complete';
       else if (active && viewing.value === null && phase.value === 'complete' && current.value) { phase.value = 'ready'; announceCurrent(); }
@@ -165,7 +174,7 @@ export const TaskGrid = defineComponent({
     onMounted(resume);
     onActivated(() => { if (!active) resume(); });
     function suspend() {
-      active = false; clearTimer(); clearCheck(); stopClock();
+      active = false; stopWorkFinish(); clearTimer(); clearCheck(); stopClock();
       clearFlash(); working.value = null;
       resetOpen.value = false; rewindOpen.value = false; viewing.value = null; phase.value = 'ready';
     }
@@ -222,14 +231,21 @@ export const TaskGrid = defineComponent({
       const target = TASK_CATEGORIES.findIndex(entry => entry.id === category);
       return TASK_CATEGORIES.slice(0, target).filter(entry => slotState(lists.value, round.value, entry.id) === 'ready');
     }
-    function complete(category: TaskCategory) {
+    function complete(category: TaskCategory, celebrateInWork = false) {
       if (viewing.value !== null || phase.value !== 'ready' || slotState(lists.value, round.value, category) !== 'ready') return;
       const task = roundTask(lists.value, round.value, category);
       if (!task || !taskAvailable(task)) return;
       const previous = skippedBefore(category);
       for (const entry of previous) round.value.slots[entry.id].skipped = true;
-      clearFlash(); delete props.item.checkIn; working.value = null;
-      markCompleted(task, round.value.slots[category]); celebrateCheck(category);
+      clearFlash(); delete props.item.checkIn;
+      markCompleted(task, round.value.slots[category]);
+      if (celebrateInWork) {
+        // Save completion immediately, but hold the full-screen check celebration
+        // before returning to the grid. Reloading will retain this completion.
+        announcement.value = `Completed: ${task.text}.`;
+        return;
+      }
+      working.value = null; celebrateCheck(category);
       announcement.value = `Completed: ${task.text}. Select this quadrant again to undo.`;
       if (current.value) void focusCurrent(); else cycle();
     }
@@ -306,8 +322,21 @@ export const TaskGrid = defineComponent({
     }
     function finishWorking() {
       const category = working.value;
-      if (!category) return;
-      complete(category);
+      if (!category || workFinishing.value || viewing.value !== null ||
+          phase.value !== 'ready' || slotState(lists.value, round.value, category) !== 'ready') return;
+      const task = roundTask(lists.value, round.value, category);
+      if (!task || !taskAvailable(task)) return;
+      const finishedRound = round.value.number;
+      workFinishing.value = true;
+      complete(category, true);
+      workFinishTimer = window.setTimeout(() => {
+        workFinishTimer = undefined;
+        workFinishing.value = false;
+        working.value = null;
+        if (!active || round.value.number !== finishedRound || viewing.value !== null) return;
+        celebrateCheck(category);
+        if (current.value) void focusCurrent(); else cycle();
+      }, reduced.matches ? 350 : 1120);
     }
     function returnToGrid() {
       working.value = null;
@@ -315,7 +344,7 @@ export const TaskGrid = defineComponent({
       void focusCurrent();
     }
     function reset() {
-      delete props.item.checkIn; working.value = null;
+      stopWorkFinish(); delete props.item.checkIn; working.value = null;
       clearTimer(); clearCheck(); clearFlash();
       for (const category of TASK_CATEGORIES) for (const task of lists.value[category.id]) {
         delete task.completed; delete task.timesCompleted;
@@ -332,6 +361,7 @@ export const TaskGrid = defineComponent({
           categoryLabel: TASK_CATEGORIES.find(category => category.id === working.value)?.label ?? '',
           taskText: roundTask(lists.value, round.value, working.value)?.text ?? '',
           focus: activeCheckIn.value, now: now.value,
+          completed: workFinishing.value,
           onBack: returnToGrid, onStart: startWorking,
           onContinue: keepWorking, onMoveOn: moveOn, onDone: finishWorking,
         }) : h('figure', { class: ['sig-chart', `is-${phase.value}`, { 'is-history': viewing.value !== null }], 'aria-label': 'Solve-It Grid: stimulation increases upward; fun increases to the right.' }, [
@@ -372,11 +402,11 @@ export const TaskGrid = defineComponent({
             ]) : null,
             state === 'ready' ? h('span', {
               class: ['sig-click-cue', { 'sig-safety-lock': locked || blocked.value === category.id }], 'aria-hidden': true,
-            }, [h(Icon, { name: locked || blocked.value === category.id ? 'lock' : 'check' })]) : null,
+            }, [h(Icon, { name: locked || blocked.value === category.id ? 'lock' : 'arrow-right' })]) : null,
             // Keep the tooltip mounted while ready, so unblocking can use its
             // intentional one-second fade instead of abruptly removing the element.
             state === 'ready' ? h('span', { class: 'sig-lock-tooltip', 'aria-hidden': true }, [
-              h('span', next ? 'Select to work on this' : 'Double-click to skip ahead'),
+              h('span', next ? 'Open to work on this' : 'Double-click to skip ahead'),
               !next ? h('span', 'Earlier tasks stay available') : null,
             ]) : null,
             state === 'skipped' ? h('span', { class: 'sig-later-label' }, 'Later') : null,

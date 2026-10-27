@@ -9,6 +9,7 @@ export const TaskCheckIn = defineComponent({
     categoryLabel: { type: String, required: true },
     focus: { type: Object as PropType<ActiveCheckIn | null>, default: null },
     now: { type: Number, required: true },
+    completed: { type: Boolean, default: false },
   },
   emits: {
     back: () => true,
@@ -26,6 +27,20 @@ export const TaskCheckIn = defineComponent({
       { id: 'both', label: 'Both', detail: 'A gentle time reminder, or finish sooner.' },
     ];
     return () => {
+      if (props.completed) return h('section', {
+        class: 'sig-work sig-work-finished', 'aria-label': 'Item completed',
+      }, [
+        h('div', { class: 'sig-work-success', role: 'status' }, [
+          h('div', { class: 'sig-work-success-art', 'aria-hidden': true }, [
+            h('span', { class: 'sig-work-success-halo' }),
+            h('span', { class: 'sig-work-success-mark' }, [h(Icon, { name: 'check' })]),
+            h('span', { class: 'sig-work-success-sparks' }, Array.from({ length: 12 }, (_, index) =>
+              h('i', { style: { '--spark-angle': `${index * 30}deg` } }))),
+          ]),
+          h('h3', 'Nicely done!'),
+          h('p', props.taskText),
+        ]),
+      ]);
       const focus = props.focus;
       const due = !!focus && props.now >= focus.remindAt;
       return h('section', { class: 'sig-work', 'aria-label': 'Work on an item' }, [

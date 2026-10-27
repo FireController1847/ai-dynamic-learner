@@ -59,7 +59,9 @@
 .sig-quadrant.is-skipped .sig-task-text { opacity: .5; }
 .sig-later-label { position: absolute; right: 12px; bottom: 4px; color: var(--text-secondary); font-size: 11px; }
 .sig-click-cue { position: absolute; right: 10px; bottom: 6px; display: inline-grid; place-items: center; width: 28px; height: 28px; border: 1px solid var(--control-border); border-radius: 50%; background: var(--page-background); color: var(--text-secondary); pointer-events: none; transition: color 160ms, background-color 160ms, transform 160ms; }
-.sig-click-cue .ui-icon { width: 16px; height: 16px; }
+.sig-click-cue .ui-icon { width: 16px; height: 16px; transition: transform 160ms var(--ease-out); }
+.sig-quadrant.is-current .sig-click-cue:not(.sig-safety-lock) { color: var(--brand-text); border-color: var(--brand); background: var(--brand-tint); }
+.sig-quadrant.is-current:not(:disabled):is(:hover, :focus-visible) .sig-click-cue:not(.sig-safety-lock) .ui-icon { transform: translateX(2px); }
 .sig-quadrant:not(:disabled):is(:hover, :focus-visible) .sig-click-cue { color: var(--text-color); background: var(--surface-hover); transform: scale(1.08); }
 .sig-click-cue.sig-safety-lock, .sig-quadrant:not(:disabled):is(:hover, :focus-visible) .sig-safety-lock { color: var(--danger); }
 .sig-lock-tooltip { position: absolute; z-index: 2; right: 10px; bottom: 42px; display: grid; gap: 2px; max-width: calc(100% - 20px); padding: 6px 8px; border: 1px solid var(--control-border); border-radius: 6px; background: var(--page-background); color: var(--text-color); font-size: 12px; line-height: 16px; font-weight: 400; box-shadow: 0 2px 8px rgb(0 0 0 / .12); opacity: 0; visibility: hidden; pointer-events: none; }

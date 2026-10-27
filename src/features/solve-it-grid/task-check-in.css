@@ -35,6 +35,45 @@
 .sig-work-finish-toggle { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer; }
 .sig-work-finish-toggle input { width: 20px; height: 20px; accent-color: var(--brand); cursor: pointer; }
 .sig-work-footnote { font-size: 12px; }
+/* A completion is a moment of delight, not another message box.
+   The check is the focal point; text stays secondary and calm. */
+.sig-work-finished { justify-content: center; align-items: center; }
+.sig-work-success { display: grid; justify-items: center; align-content: center; gap: 14px; width: min(100%, 600px); margin: auto; padding: 24px 8px; text-align: center; }
+.sig-work-success-art { position: relative; display: grid; place-items: center; width: 156px; height: 156px; isolation: isolate; }
+.sig-work-success-halo { position: absolute; width: 118px; height: 118px; border: 3px solid var(--brand); border-radius: 50%; animation: sig-work-success-ring 820ms var(--ease-out) both; }
+.sig-work-success-mark { position: relative; z-index: 2; display: grid; place-items: center; width: 96px; height: 96px; border-radius: 50%; background: var(--brand-tint); color: var(--brand-text); animation: sig-work-success-pop 850ms cubic-bezier(.2, 1.4, .35, 1) both; }
+.sig-work-success-mark .ui-icon { width: 58px; height: 58px; stroke-width: 2.7; stroke-linecap: round; stroke-linejoin: round; animation: sig-work-success-tick 650ms cubic-bezier(.2, 1.3, .3, 1) 100ms both; }
+.sig-work-success-sparks { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; }
+.sig-work-success-sparks i { position: absolute; width: 6px; height: 14px; border-radius: 99px; background: var(--brand); animation: sig-work-success-spark 920ms cubic-bezier(.15, .75, .3, 1) 80ms both; }
+.sig-work-success-sparks i:nth-child(3n) { width: 7px; height: 7px; background: var(--text-secondary); border-radius: 50%; }
+.sig-work-success-sparks i:nth-child(4n) { width: 5px; height: 10px; }
+.sig-work-success h3 { margin: 0; font-size: clamp(28px, 4vw, 38px); line-height: 1.2; color: var(--text-color); animation: sig-work-success-caption 540ms var(--ease-out) 320ms both; }
+.sig-work-success p { max-width: 48ch; margin: 0; font-size: 15px; line-height: 1.5; color: var(--text-secondary); overflow-wrap: anywhere; white-space: pre-wrap; animation: sig-work-success-caption 540ms var(--ease-out) 420ms both; }
+@keyframes sig-work-success-pop {
+  0% { opacity: 0; transform: scale(.12) rotate(-19deg); }
+  47% { opacity: 1; transform: scale(1.18) rotate(4deg); }
+  73% { transform: scale(.94) rotate(-2deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0); }
+}
+@keyframes sig-work-success-ring {
+  0% { opacity: .8; transform: scale(.34); }
+  50% { opacity: .6; }
+  100% { opacity: 0; transform: scale(1.55); }
+}
+@keyframes sig-work-success-tick {
+  from { opacity: 0; transform: scale(.4) rotate(-14deg); }
+  to { opacity: 1; transform: scale(1) rotate(0); }
+}
+@keyframes sig-work-success-spark {
+  0% { opacity: 0; transform: rotate(var(--spark-angle)) translateY(-24px) scale(.3); }
+  22% { opacity: 1; }
+  65% { opacity: 1; }
+  100% { opacity: 0; transform: rotate(var(--spark-angle)) translateY(-106px) scale(.4); }
+}
+@keyframes sig-work-success-caption {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 @keyframes sig-work-appear { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: none; } }
 @container solve-it-grid (max-width: 560px) {
   .sig-work-modes { grid-template-columns: 1fr; }
@@ -45,5 +84,7 @@
   .sig-work-actions > * { width: 100%; justify-content: center; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .sig-work, .sig-work-checkin { animation: none; }
+  .sig-work, .sig-work-checkin, .sig-work-success *,
+  .sig-work-success-mark .ui-icon { animation: none !important; transition: none !important; }
+  .sig-work-success-halo, .sig-work-success-sparks { display: none; }
 }
