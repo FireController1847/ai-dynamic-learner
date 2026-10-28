@@ -13,8 +13,10 @@ deep skull bones and middle-ear ossicles require dedicated sectional or
 regional plates to represent their precise 3D positions and contours.
 The Muscular system also contains a curated introductory atlas of major
 superficial muscles in the anterior and posterior views, with individual
-selection, descriptions, and regional navigation. The remaining nine
-systems still show neutral, explicitly non-anatomical placeholders.
+selection, descriptions, and regional navigation. Nervous also contains an introductory atlas of the brain, spinal cord
+and major peripheral nerve pathways, with independently selectable
+structures and descriptions. The remaining eight systems still show
+neutral, non-anatomical placeholders.
 
 ## Source ownership
 
@@ -26,6 +28,10 @@ systems still show neutral, explicitly non-anatomical placeholders.
   anterior/posterior surface coverage.
 - `muscular-geometry.ts`: separately authored front/back muscle silhouettes
   with a completeness guard for all curated surface-view entries.
+- `nervous-structures.ts`: CNS/PNS/autonomic named structures, actions,
+  source attributions, and anterior/posterior availability.
+- `nervous-geometry.ts`: original selectable neural paths and a
+  completeness guard for all illustrated structure IDs.
 - `skeletal-bones.ts`: canonical count-checked adult bone inventory,
   side-specific bone IDs, and NCI/OpenStax anatomical categories.
 - `skeletal-geometry.ts`: individual 2D SVG hit shapes for each of the
@@ -83,6 +89,50 @@ including [head and neck](https://openstax.org/books/anatomy-and-physiology-2e/p
 [upper limb](https://openstax.org/books/anatomy-and-physiology-2e/pages/11-5-muscles-of-the-pectoral-girdle-and-upper-limbs),
 and [lower limb](https://openstax.org/books/anatomy-and-physiology-2e/pages/11-6-appendicular-muscles-of-the-pelvic-girdle-and-lower-limbs).
 No OpenStax images were copied; original SVG paths are bundled offline.
+
+## Nervous atlas
+
+Nervous adds **35 major nervous structures or named nerve groups**, with
+left/right counterparts where anatomically appropriate. The selection
+includes cerebral/cerebellar hemispheres, midbrain, pons, medulla, spinal
+cord, cauda equina, selected cranial nerves, cervical/brachial/lumbar/sacral
+plexuses and major thoracic, arm and leg nerve courses.
+
+- Front: cerebral hemispheres, CNS pathways, selected cranial nerves,
+  brachial and cervical plexuses, phrenic/intercostal nerves, median/ulnar
+  nerves, lumbar plexus and femoral/obturator/saphenous nerves.
+- Back: cerebellar hemispheres, brainstem, cord, accessory nerve,
+  posterior plexus pathways, radial, sciatic, tibial and sural nerves.
+- Both: anterior routes plus posterior-only pathways at lower opacity,
+  with shared structures drawn only once.
+- Regions: Whole body, Brain & head, Spinal cord, Chest nerves,
+  Abdomen, Pelvis, Arms & hands, and Legs & feet.
+
+The viewer's compact body silhouette is not a source anatomical plate.
+CNS structures use lavender, peripheral nerve routes amber. The
+spinal cord terminates near the upper lumbar vertebrae instead of
+extending down the entire lumbar canal; the *cauda equina* continues
+below it. Nerve curves are **schematic territory guides**, not precise
+clinical tracing of root levels, foramina or individual fascicles.
+The atlas is neither complete neuroanatomy nor medically validated.
+
+Naming and basic functions draw from [OpenStax CNS](https://openstax.org/books/anatomy-and-physiology-2e/pages/13-2-the-central-nervous-system)
+and [OpenStax PNS](https://openstax.org/books/anatomy-and-physiology-2e/pages/13-4-the-peripheral-nervous-system).
+No externally sourced diagrams are embedded; all SVG geometry is
+hand-authored and bundled offline.
+
+### Nervous manual verification
+
+- Confirm Front/Back/Both diagrams are nonempty and the Structures list
+  contains only illustrated nerve entries in the selected view.
+- In Front, select optic, trigeminal, brachial plexus and median nerves.
+  In Back, select cerebellum, accessory, radial, sciatic and tibial nerves.
+- Verify central vs peripheral colors, left/right labels and the floating
+  structure inspector with short descriptions.
+- Check Spinal cord, Brain & head, Arms & hands and Legs & feet crops;
+  verify selection remains stable when zooming and moving across regions.
+- Check wheel pan, Z scrub zoom, sidebars, mobile, dark mode and
+  keyboard selection; return to Skeletal and Muscular for regressions.
 
 ## Stable identifiers and anatomy coverage
 

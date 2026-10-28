@@ -3,6 +3,8 @@ import { skeletalStructures } from './skeletal-bones.ts';
 import { skeletalLayers, skeletalShapes } from './skeletal-geometry.ts';
 import { muscularStructures } from './muscular-structures.ts';
 import { muscularLayers, muscularShapes } from './muscular-geometry.ts';
+import { nervousStructures } from './nervous-structures.ts';
+import { nervousLayers, nervousShapes } from './nervous-geometry.ts';
 
 // These are navigational categories, not claims that their anatomical content
 // is complete. Structure data and diagram paths are added in separate, reviewed packs.
@@ -46,8 +48,11 @@ export const foundationAtlas: AtlasDataset = {
     { id: 'openstax-ap2e-muscles', title: 'Anatomy and Physiology 2e, Chapter 11',
       attribution: 'OpenStax / Rice University', license: 'CC BY 4.0',
       url: 'https://openstax.org/books/anatomy-and-physiology-2e/pages/11-introduction' },
+    { id: 'openstax-ap2e-nervous', title: 'Anatomy and Physiology 2e, Chapter 13',
+      attribution: 'OpenStax / Rice University', license: 'CC BY 4.0',
+      url: 'https://openstax.org/books/anatomy-and-physiology-2e/pages/13-introduction' },
   ],
-  structures: [...skeletalStructures, ...muscularStructures],
+  structures: [...skeletalStructures, ...muscularStructures, ...nervousStructures],
   views: atlasSystems.flatMap(system => orientations.map(orientation => ({
     id: system.id + '.whole-body.' + orientation.id,
     systemId: system.id,
@@ -57,8 +62,8 @@ export const foundationAtlas: AtlasDataset = {
     width: 320,
     // The skeletal artwork now extends through anatomically longer lower limbs.
     // Keep unillustrated system placeholders at their existing proportions.
-    height: system.id === 'skeletal' || system.id === 'muscular' ? 700 : 560,
+    height: ['skeletal', 'muscular', 'nervous'].includes(system.id) ? 700 : 560,
   }))),
-  layers: [...skeletalLayers, ...muscularLayers],
-  shapes: [...skeletalShapes, ...muscularShapes],
+  layers: [...skeletalLayers, ...muscularLayers, ...nervousLayers],
+  shapes: [...skeletalShapes, ...muscularShapes, ...nervousShapes],
 };

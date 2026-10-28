@@ -244,7 +244,7 @@
   --anatomy-muscle-body: #403733;
   --anatomy-muscle-body-outline: #72625b;
 }
-.anatomy-muscle-silhouette {
+.anatomy-body-silhouette {
   fill: var(--anatomy-muscle-body);
   stroke: var(--anatomy-muscle-body-outline);
   stroke-width: 1;
@@ -255,6 +255,49 @@
 .anatomy-viewer.is-muscular .anatomy-shape.is-selected { stroke-width: 1.4; }
 .anatomy-viewer.is-muscular .anatomy-shape.is-occluded:not(.is-selected) { opacity: 0.28; }
 .anatomy-viewer.is-muscular .anatomy-shape.is-occluded:hover { opacity: 0.8; }
+.anatomy-viewer.is-nervous {
+  --anatomy-bone: #f4ce72;
+  --anatomy-bone-outline: #ab802c;
+  --anatomy-bone-active: #ffe2a0;
+  --anatomy-bone-active-outline: #976418;
+  --anatomy-muscle-body: #ebe6df;
+  --anatomy-muscle-body-outline: #c8bfb4;
+  --anatomy-nerve-central: #b4a2d1;
+  --anatomy-nerve-central-outline: #66528d;
+}
+:root[data-theme='dark'] .anatomy-viewer.is-nervous {
+  --anatomy-bone: #d5aa4f;
+  --anatomy-bone-outline: #efc879;
+  --anatomy-bone-active: #fce0a5;
+  --anatomy-bone-active-outline: #986822;
+  --anatomy-muscle-body: #3b3732;
+  --anatomy-muscle-body-outline: #675e52;
+  --anatomy-nerve-central: #9482b9;
+  --anatomy-nerve-central-outline: #d4c3f3;
+}
+.anatomy-viewer.is-nervous .anatomy-shape.is-central {
+  fill: var(--anatomy-nerve-central);
+  stroke: var(--anatomy-nerve-central-outline);
+  stroke-width: 0.95;
+}
+.anatomy-viewer.is-nervous .anatomy-shape.is-stroke {
+  stroke-width: 1.45;
+}
+.anatomy-viewer.is-nervous .anatomy-shape.is-stroke.is-central {
+  fill: none;
+  stroke-width: 3;
+}
+.anatomy-viewer.is-nervous .anatomy-shape.is-selected,
+.anatomy-viewer.is-nervous .anatomy-shape:focus-visible {
+  fill: var(--anatomy-bone-active);
+  stroke: var(--anatomy-bone-active-outline);
+}
+.anatomy-viewer.is-nervous .anatomy-shape.is-selected.is-stroke { fill: none; stroke-width: 2.6; }
+.anatomy-viewer.is-nervous .anatomy-shape.is-central.is-selected.is-stroke { stroke-width: 4.2; }
+.anatomy-viewer.is-nervous .anatomy-shape.is-occluded:not(.is-selected) { opacity: 0.25; }
+.anatomy-viewer.is-nervous .anatomy-shape.is-occluded:hover { opacity: 0.8; }
+.anatomy-viewer.is-nervous .anatomy-stroke-hit { stroke-width: 3.4; }
+
 .anatomy-shape {
   fill: var(--anatomy-bone);
   stroke: var(--anatomy-bone-outline);

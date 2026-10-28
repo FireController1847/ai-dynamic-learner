@@ -5,8 +5,8 @@ import { readNumberPreference, writeNumberPreference } from '../../core/ui-prefe
 import { foundationAtlas } from './atlas-catalog.ts';
 import { buildAtlasIndex, searchStructures } from './atlas-index.ts';
 import type { AtlasOrientation, AtlasSystemId } from './atlas-model.ts';
-import { boneInRegion, boneVisibleFrom, muscleInRegion, muscularRegions, skeletalRegions,
-  type AnatomyFacing } from './anatomy-regions.ts';
+import { boneInRegion, boneVisibleFrom, muscleInRegion, muscularRegions,
+  nerveInRegion, nervousRegions, skeletalRegions, type AnatomyFacing } from './anatomy-regions.ts';
 import { AnatomyViewer } from './anatomy-viewer.ts';
 
 // Reference content is bundled locally, independent of workspace saves.
@@ -44,25 +44,31 @@ export const Anatomy = defineComponent({
     // Region selectors focus a whole-body dataset instead of seeking
     // nonexistent per-region view IDs (the former blank-region bug).
     const view = computed(() => atlas.views.get(systemId.value + '.whole-body.' + orientation.value));
-    const posteriorView = computed(() => atlas.views.get('muscular.whole-body.posterior'));
-    const combinedMuscles = computed(() => systemId.value === 'muscular' && facing.value === 'both');
+    const posteriorView = computed(() => atlas.views.get(systemId.value + '.whole-body.posterior'));
+    const combinedSurfaces = computed(() => (systemId.value === 'muscular' || systemId.value === 'nervous')
+      && facing.value === 'both');
     const layers = computed(() => {
       const frontLayers = view.value ? atlas.layersByView.get(view.value.id) ?? [] : [];
-      if (!combinedMuscles.value || !posteriorView.value) return frontLayers;
+      if (!combinedSurfaces.value || !posteriorView.value) return frontLayers;
       return [...(atlas.layersByView.get(posteriorView.value.id) ?? []), ...frontLayers];
     });
     const focus = computed(() => {
       const options = systemId.value === 'skeletal' ? skeletalRegions
-        : systemId.value === 'muscular' ? muscularRegions : undefined;
+        : systemId.value === 'muscular' ? muscularRegions
+          : systemId.value === 'nervous' ? nervousRegions : undefined;
       return options?.find(region => region.id === regionId.value) ?? options?.[0];
     });
     const shapes = computed(() => {
       const current = view.value ? atlas.shapesByView.get(view.value.id) ?? [] : [];
       // The posterior drawing mirrors anatomical laterality; remap it to the
       // anterior projection when Both overlays both surface diagrams.
-      const posterior = combinedMuscles.value && posteriorView.value
-        ? (atlas.shapesByView.get(posteriorView.value.id) ?? []).map(shape =>
-          ({ ...shape, mirrorX: !shape.mirrorX }))
+      const anteriorIds = new Set(current.map(shape => shape.structureId));
+      const posterior = combinedSurfaces.value && posteriorView.value
+        ? (atlas.shapesByView.get(posteriorView.value.id) ?? [])
+          // Nervous structures that appear in both projections must not be
+          // drawn twice on top of themselves in the combined projection.
+          .filter(shape => systemId.value !== 'nervous' || !anteriorIds.has(shape.structureId))
+          .map(shape => ({ ...shape, mirrorX: !shape.mirrorX }))
         : [];
       return [...posterior, ...current].filter(shape => {
         const structure = atlas.structures.get(shape.structureId);
@@ -72,6 +78,7 @@ export const Anatomy = defineComponent({
             && boneVisibleFrom(structure, facing.value);
         }
         if (systemId.value === 'muscular') return muscleInRegion(structure, regionId.value);
+        if (systemId.value === 'nervous') return nerveInRegion(structure, regionId.value);
         return true;
       });
     });
@@ -79,7 +86,9 @@ export const Anatomy = defineComponent({
       ? [...atlas.structures.values()].filter(bone => bone.systemId === 'skeletal'
         && !boneVisibleFrom(bone, 'front')).map(bone => bone.id)
       : []);
-    const ghostLayerIds = computed(() => combinedMuscles.value ? ['muscular.surface.posterior'] : []);
+    const ghostLayerIds = computed(() => combinedSurfaces.value
+      ? [systemId.value === 'muscular' ? 'muscular.surface.posterior' : 'nervous.network.posterior']
+      : []);
     const visibleIds = computed(() => new Set(shapes.value
       .filter(shape => shape.renderMode !== 'etch' && shape.renderMode !== 'cutout')
       .map(shape => shape.structureId)));
@@ -89,7 +98,8 @@ export const Anatomy = defineComponent({
       ? atlas.structures.get(selectedId.value) : undefined);
     const regions = computed(() => systemId.value === 'skeletal' ? skeletalRegions
       : systemId.value === 'muscular' ? muscularRegions
-        : [{ id: 'whole-body', name: 'Whole body' }]);
+        : systemId.value === 'nervous' ? nervousRegions
+          : [{ id: 'whole-body', name: 'Whole body' }]);
 
     function setSystemsCollapsed(collapsed: boolean) {
       systemsCollapsed.value = collapsed;
@@ -141,7 +151,7 @@ export const Anatomy = defineComponent({
           }, [h(Icon, { name: 'panel-open' }), 'Structures']) : null,
           h('div', { class: 'anatomy-viewer-identity' }, [
             h('strong', { title: system.value?.description ?? '' }, system.value?.name ?? props.title),
-            systemId.value === 'skeletal' || systemId.value === 'muscular' ? null
+            ['skeletal', 'muscular', 'nervous'].includes(systemId.value) ? null
               : h('span', { class: 'anatomy-viewer-status' }, 'Coming soon'),
           ]),
         ]),
@@ -160,7 +170,8 @@ export const Anatomy = defineComponent({
               'aria-pressed': facing.value === mode.id,
               title: mode.id === 'both'
                 ? (systemId.value === 'muscular' ? 'Overlay anterior and posterior muscles'
-                  : 'Show all bones, including those behind others')
+                  : systemId.value === 'nervous' ? 'Overlay anterior and posterior nerve pathways'
+                    : 'Show all bones, including those behind others')
                 : 'Show the ' + mode.name.toLowerCase() + ' view',
               onClick: () => { facing.value = mode.id; selectedId.value = null; },
             }, mode.name))),
@@ -199,7 +210,7 @@ export const Anatomy = defineComponent({
             key: view.value.id + '.' + regionId.value,
             view: view.value, focus: focus.value, layers: layers.value, shapes: shapes.value,
             occludedIds: occludedIds.value, ghostLayerIds: ghostLayerIds.value,
-            showPlaceholder: systemId.value !== 'skeletal' && systemId.value !== 'muscular',
+            showPlaceholder: !['skeletal', 'muscular', 'nervous'].includes(systemId.value),
             structures: [...atlas.structures.values()], selectedId: selectedId.value ?? '',
             selectedStructure: selected.value ?? null,
             onSelect: selectStructure,
@@ -216,7 +227,7 @@ export const Anatomy = defineComponent({
         h('div', { class: 'anatomy-panel-top' }, [
           h('div', { class: 'anatomy-panel-heading' }, [
             h('h2', 'Structures'),
-            systemId.value === 'skeletal' || systemId.value === 'muscular'
+            ['skeletal', 'muscular', 'nervous'].includes(systemId.value)
               ? null : h('p', 'Content coming soon.'),
           ]),
           panelToggle('Hide structures', 'anatomy-structures-panel',
@@ -242,7 +253,9 @@ export const Anatomy = defineComponent({
                 ? 'No surface-visible bones here. Choose Both to inspect deeper structures.'
                 : systemId.value === 'muscular'
                   ? 'No illustrated muscles in this region and view.'
-                  : 'Structure diagrams are being prepared.'),
+                  : systemId.value === 'nervous'
+                    ? 'No illustrated neural structures in this region and view.'
+                    : 'Structure diagrams are being prepared.'),
 
       ]),
     ]);
