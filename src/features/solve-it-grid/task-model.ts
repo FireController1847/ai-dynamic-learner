@@ -9,13 +9,14 @@ export const TASK_CATEGORIES = [
 ] as const;
 export type TaskCategory = typeof TASK_CATEGORIES[number]['id'];
 export type CategoryValues<T> = Record<TaskCategory, T>;
-export interface GridTask { id: string; text: string; completed?: true; repeat?: number; timesCompleted?: number }
+export interface GridTask { id: string; text: string; completed?: true; repeat?: number; timesCompleted?: number; resumeNote?: string }
 /** A positive repeat count is the number of extra completions after the first. -1 means unlimited. */
 export const REPEAT_OPTIONS = [-1, 1, 2, 3, 4, 5, 7, 10, 15, 20, 25, 50, 100] as const;
 export type TaskLists = CategoryValues<GridTask[]>;
 export interface RoundSlot { taskId: string | null; skipped?: true; completed?: true }
 export interface GridRound { number: number; slots: CategoryValues<RoundSlot> }
 export const MAX_TASK_TEXT_LENGTH = 10000;
+export const MAX_RESUME_NOTE_LENGTH = 1200;
 
 export function categoryValues<T>(create: (category: typeof TASK_CATEGORIES[number]) => T): CategoryValues<T> {
   return Object.fromEntries(TASK_CATEGORIES.map(category => [category.id, create(category)])) as CategoryValues<T>;
@@ -82,9 +83,11 @@ export function validateTaskLists(value: unknown): asserts value is TaskLists {
     const tasks = value[category.id];
     if (!Array.isArray(tasks)) throw new Error('Each task list must be an array.');
     for (const task of tasks) {
-      if (!isRecord(task) || Object.keys(task).some(key => !['id', 'text', 'completed', 'repeat', 'timesCompleted'].includes(key)) ||
+      if (!isRecord(task) || Object.keys(task).some(key => !['id', 'text', 'completed', 'repeat', 'timesCompleted', 'resumeNote'].includes(key)) ||
           !isValidId(task.id) || ids.has(task.id) || typeof task.text !== 'string' || !task.text.trim() ||
-          task.text.length > MAX_TASK_TEXT_LENGTH || (Object.hasOwn(task, 'completed') && task.completed !== true) ||
+          task.text.length > MAX_TASK_TEXT_LENGTH ||
+          (Object.hasOwn(task, 'resumeNote') && (typeof task.resumeNote !== 'string' || task.resumeNote.length > MAX_RESUME_NOTE_LENGTH)) ||
+          (Object.hasOwn(task, 'completed') && task.completed !== true) ||
           (Object.hasOwn(task, 'repeat') && !REPEAT_OPTIONS.some(option => option === task.repeat)) ||
           (Object.hasOwn(task, 'timesCompleted') && (typeof task.timesCompleted !== 'number' ||
             !Number.isSafeInteger(task.timesCompleted) || task.timesCompleted < 1 || !Object.hasOwn(task, 'repeat') ||

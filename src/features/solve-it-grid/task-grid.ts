@@ -4,7 +4,7 @@ import { PopupDialog } from '../../components/popup-dialog.ts';
 import { GridConstruction } from './grid-construction.ts';
 import { TaskCheckIn } from './task-check-in.ts';
 import { MAX_ROUND_HISTORY, type TaskSet, type CheckInMode } from './library-model.ts';
-import { createRound, markCompleted, nextCategory, remainingCount, roundTask, slotState, TASK_CATEGORIES, taskAvailable, taskCount, undoCompleted, categoryValues, type TaskCategory, type GridRound } from './task-model.ts';
+import { createRound, markCompleted, nextCategory, remainingCount, roundTask, slotState, TASK_CATEGORIES, taskAvailable, taskCount, undoCompleted, categoryValues, MAX_RESUME_NOTE_LENGTH, type TaskCategory, type GridRound } from './task-model.ts';
 
 type Phase = 'ready' | 'celebrating' | 'turning' | 'constructing' | 'revealing' | 'complete';
 const ROUND_HOLD_MS = 650;
@@ -320,11 +320,22 @@ export const TaskGrid = defineComponent({
       const state = activeCheckIn.value;
       if (!state) return;
       const time = Date.now();
-      const renewed = { ...state, remindAt: time + state.minutes * 60000 };
+      const renewed = { ...state,
+        keepGoingCount: Math.min((state.keepGoingCount ?? 0) + 1, 1000000),
+        remindAt: time + state.minutes * 60000 };
       delete renewed.notifiedAt;
       props.item.checkIn = renewed;
       now.value = time;
       announcement.value = 'We will check in with you again later.';
+    }
+    function saveResumeNote(value: string) {
+      const category = working.value;
+      if (!category || viewing.value !== null || phase.value !== 'ready') return;
+      const task = roundTask(lists.value, round.value, category);
+      if (!task || slotState(lists.value, round.value, category) !== 'ready') return;
+      const note = value.slice(0, MAX_RESUME_NOTE_LENGTH);
+      if (note) task.resumeNote = note;
+      else delete task.resumeNote;
     }
     function moveOn() {
       const category = working.value;
@@ -392,6 +403,8 @@ export const TaskGrid = defineComponent({
           key: `${round.value.number}-${working.value}`,
           categoryLabel: TASK_CATEGORIES.find(category => category.id === working.value)?.label ?? '',
           taskText: roundTask(lists.value, round.value, working.value)?.text ?? '',
+          resumeNote: roundTask(lists.value, round.value, working.value)?.resumeNote ?? '',
+          onNoteChange: saveResumeNote,
           focus: activeCheckIn.value, now: now.value,
           completed: workFinishing.value,
           onBack: returnToGrid, onStart: startWorking,

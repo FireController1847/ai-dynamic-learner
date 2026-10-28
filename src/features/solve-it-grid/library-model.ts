@@ -15,6 +15,8 @@ export interface ActiveCheckIn {
   remindAt: number;
   /** The reminder deadline already handed to the browser notification system. */
   notifiedAt?: number;
+  /** Number of consecutive Keep going choices in this work period. */
+  keepGoingCount?: number;
 }
 export interface TaskSet extends DatedLibraryRecord { lists?: TaskLists; round?: GridRound; history?: GridRound[]; checkIn?: ActiveCheckIn }
 export interface SolveItGridModel {
@@ -75,7 +77,7 @@ export function validateSolveItGrid(value: unknown): asserts value is SolveItGri
       const savedRound = item.round as GridRound | undefined;
       const savedLists = item.lists as TaskLists | undefined;
       const focus = item.checkIn;
-      if (!isRecord(focus) || Object.keys(focus).some(key => !['taskId', 'category', 'roundNumber', 'mode', 'minutes', 'startedAt', 'remindAt', 'notifiedAt'].includes(key)) ||
+      if (!isRecord(focus) || Object.keys(focus).some(key => !['taskId', 'category', 'roundNumber', 'mode', 'minutes', 'startedAt', 'remindAt', 'notifiedAt', 'keepGoingCount'].includes(key)) ||
           !TASK_CATEGORIES.some(category => category.id === focus.category) ||
           !isValidId(focus.taskId) || (typeof focus.roundNumber !== 'number' || !Number.isSafeInteger(focus.roundNumber)) || (focus.roundNumber as number) < 1 ||
           !['time', 'completion', 'both'].includes(String(focus.mode)) ||
@@ -83,6 +85,9 @@ export function validateSolveItGrid(value: unknown): asserts value is SolveItGri
           (typeof focus.startedAt !== 'number' || !Number.isSafeInteger(focus.startedAt)) || (typeof focus.remindAt !== 'number' || !Number.isSafeInteger(focus.remindAt)) ||
           (focus.startedAt as number) < 0 || (focus.remindAt as number) < (focus.startedAt as number) ||
           (Object.hasOwn(focus, 'notifiedAt') && (typeof focus.notifiedAt !== 'number' || focus.notifiedAt !== focus.remindAt)) ||
+          (Object.hasOwn(focus, 'keepGoingCount') &&
+            (typeof focus.keepGoingCount !== 'number' || !Number.isSafeInteger(focus.keepGoingCount) ||
+              focus.keepGoingCount < 0 || focus.keepGoingCount > 1000000)) ||
           !savedRound || savedRound.number !== focus.roundNumber ||
           !savedLists || !TASK_CATEGORIES.some(category => category.id === focus.category &&
             savedRound.slots[category.id].taskId === focus.taskId &&

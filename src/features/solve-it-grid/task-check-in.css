@@ -54,6 +54,14 @@
 .sig-work-switch-button { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding-inline: 16px; border-color: transparent; background: transparent; color: var(--text-secondary); }
 .sig-work-switch-button:hover { background: var(--surface-hover); color: var(--text-color); }
 .sig-work-checkin-finish { display: flex; justify-content: center; width: 100%; padding-top: 6px; }
+.sig-work-reflection { display: grid; gap: 7px; max-width: 56ch; padding: 14px 16px; margin: 8px auto 0; border-left: 2px solid var(--brand); background: var(--surface-subtle); border-radius: 0 10px 10px 0; text-align: left; }
+.sig-work-reflection-count { font-size: 11px; font-weight: 600; color: var(--text-secondary); }
+.sig-work-reflection p { margin: 0; font-size: 13px; font-weight: 400; line-height: 1.55; color: var(--text-secondary); }
+.sig-work-resume-note { display: grid; gap: 8px; width: min(100%, 560px); margin: 0 auto; padding-top: 8px; text-align: left; }
+.sig-work-resume-note label { font-size: 13px; font-weight: 600; }
+.sig-work-resume-note textarea { box-sizing: border-box; width: 100%; min-height: 72px; padding: 10px 12px; resize: vertical; border: 1px solid var(--control-border); border-radius: 10px; background: var(--page-background); color: var(--text-color); font: inherit; line-height: 1.5; }
+.sig-work-resume-note textarea:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.sig-work-resume-note small { font-size: 12px; line-height: 1.55; color: var(--text-secondary); }
 .sig-work-footnote { font-size: 12px; text-align: center; }
 /* A completion is a moment of delight, not another message box.
    The check is the focal point; text stays secondary and calm. */
