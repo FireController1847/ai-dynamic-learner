@@ -1,5 +1,6 @@
 import type { AtlasDataset, AtlasOrientation, AtlasSystem, AtlasRegion } from './atlas-model.ts';
-import { skeletalLayers, skeletalShapes, skeletalStructures } from './skeletal-outline.ts';
+import { skeletalStructures } from './skeletal-bones.ts';
+import { skeletalLayers, skeletalShapes } from './skeletal-geometry.ts';
 
 // These are navigational categories, not claims that their anatomical content
 // is complete. Structure data and diagram paths are added in separate, reviewed packs.
@@ -50,7 +51,7 @@ export const foundationAtlas: AtlasDataset = {
     width: 320,
     // The skeletal artwork now extends through anatomically longer lower limbs.
     // Keep unillustrated system placeholders at their existing proportions.
-    height: system.id === 'skeletal' ? 660 : 560,
+    height: system.id === 'skeletal' ? 700 : 560,
   }))),
   layers: skeletalLayers,
   shapes: skeletalShapes,

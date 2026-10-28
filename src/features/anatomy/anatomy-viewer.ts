@@ -1,4 +1,4 @@
-import { computed, defineComponent, h, ref, watch, type PropType, type VNode } from 'vue';
+import { computed, defineComponent, h, onBeforeUnmount, onMounted, ref, watch, type PropType, type VNode } from 'vue';
 import type { AtlasLayer, AtlasShape, AtlasStructure, AtlasView } from './atlas-model.ts';
 import { Icon } from '../../components/icon.ts';
 
@@ -6,7 +6,7 @@ import { Icon } from '../../components/icon.ts';
 // breathing room while keeping the whole figure in view.
 const MIN_ZOOM = 0.1;
 const MAX_ZOOM = 16;
-const FIT_ZOOM = 0.8;
+const FIT_ZOOM = 0.68;
 
 export const AnatomyViewer = defineComponent({
   name: 'AnatomyViewer',
@@ -24,7 +24,36 @@ export const AnatomyViewer = defineComponent({
     const panX = ref(0);
     const panY = ref(0);
     const svg = ref<SVGSVGElement | null>(null);
-    let drag: { pointerId: number; x: number; y: number } | null = null;
+    const zHeld = ref(false);
+    let suppressClick = false;
+    interface Drag {
+      id: number; kind: 'pan' | 'scrub'; clientX: number; clientY: number;
+      zoom: number; panX: number; panY: number; moved: boolean;
+      anchorX: number; anchorY: number; stageX: number; stageY: number;
+    }
+    let drag: Drag | null = null;
+    function keyDown(event: KeyboardEvent) {
+      const target = event.target;
+      if (target instanceof HTMLElement &&
+        (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))) return;
+      if (!event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === 'z') {
+        zHeld.value = true;
+      }
+    }
+    function keyUp(event: KeyboardEvent) {
+      if (event.key.toLowerCase() === 'z') zHeld.value = false;
+    }
+    onMounted(() => {
+      window.addEventListener('keydown', keyDown);
+      window.addEventListener('keyup', keyUp);
+      window.addEventListener('blur', clearKey);
+    });
+    function clearKey() { zHeld.value = false; drag = null; }
+    onBeforeUnmount(() => {
+      window.removeEventListener('keydown', keyDown);
+      window.removeEventListener('keyup', keyUp);
+      window.removeEventListener('blur', clearKey);
+    });
     const structureNames = computed(() => new Map(props.structures.map(item => [item.id, item.name])));
     const orderedShapes = computed(() => {
       const order = new Map(props.layers.map((layer, index) => [layer.id, index]));
@@ -42,29 +71,90 @@ export const AnatomyViewer = defineComponent({
 
     function reset() { zoom.value = FIT_ZOOM; panX.value = 0; panY.value = 0; drag = null; }
     watch(() => props.view.id, reset);
+    function sizeFor(value: number) {
+      const vw = props.view.width / value, vh = props.view.height / value;
+      const box = svg.value?.getBoundingClientRect();
+      if (!box || !box.width || !box.height) return null;
+      const scale = Math.min(box.width / vw, box.height / vh);
+      return { box, vw, vh, scale,
+        padX: (box.width - vw * scale) / 2,
+        padY: (box.height - vh * scale) / 2 };
+    }
+    function worldAt(value: number, px: number, py: number, x: number, y: number) {
+      const scene = sizeFor(value);
+      if (!scene) return { x: props.view.width / 2, y: props.view.height / 2 };
+      return {
+        x: (props.view.width - scene.vw) / 2 + x + (px - scene.padX) / scene.scale,
+        y: (props.view.height - scene.vh) / 2 + y + (py - scene.padY) / scene.scale,
+      };
+    }
+    function zoomAt(value: number, worldX: number, worldY: number, px: number, py: number) {
+      const next = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, value));
+      const scene = sizeFor(next);
+      if (!scene) { zoom.value = next; return; }
+      panX.value = worldX - (props.view.width - scene.vw) / 2
+        - (px - scene.padX) / scene.scale;
+      panY.value = worldY - (props.view.height - scene.vh) / 2
+        - (py - scene.padY) / scene.scale;
+      zoom.value = next;
+    }
     function setZoom(value: number) {
-      zoom.value = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, value));
+      const previous = sizeFor(zoom.value);
+      if (!previous) { zoom.value = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, value)); return; }
+      const px = previous.box.width / 2, py = previous.box.height / 2;
+      const anchor = worldAt(zoom.value, px, py, panX.value, panY.value);
+      zoomAt(value, anchor.x, anchor.y, px, py);
     }
     function pointerDown(event: PointerEvent) {
-      if (event.button !== 0 || !svg.value) return;
-      drag = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
-      svg.value.setPointerCapture(event.pointerId);
+      if (event.button !== 0 || !svg.value || drag) return;
+      suppressClick = false;
+      const box = svg.value.getBoundingClientRect();
+      const px = event.clientX - box.left, py = event.clientY - box.top;
+      const world = worldAt(zoom.value, px, py, panX.value, panY.value);
+      drag = {
+        id: event.pointerId, kind: zHeld.value ? 'scrub' : 'pan',
+        clientX: event.clientX, clientY: event.clientY,
+        zoom: zoom.value, panX: panX.value, panY: panY.value, moved: false,
+        anchorX: world.x, anchorY: world.y, stageX: px, stageY: py,
+      };
+      if (drag.kind === 'scrub') svg.value.setPointerCapture(event.pointerId);
     }
     function pointerMove(event: PointerEvent) {
-      if (!drag || drag.pointerId !== event.pointerId || !svg.value) return;
-      const bounds = svg.value.getBoundingClientRect();
-      const scale = Math.min(bounds.width / viewport.value[2], bounds.height / viewport.value[3]);
-      if (scale > 0) {
-        panX.value -= (event.clientX - drag.x) / scale;
-        panY.value -= (event.clientY - drag.y) / scale;
+      if (!drag || drag.id !== event.pointerId || !svg.value) return;
+      const dx = event.clientX - drag.clientX, dy = event.clientY - drag.clientY;
+      if (!drag.moved && Math.hypot(dx, dy) < 4) return;
+      drag.moved = true;
+      suppressClick = true;
+      if (!svg.value.hasPointerCapture(event.pointerId)) svg.value.setPointerCapture(event.pointerId);
+      if (drag.kind === 'scrub') {
+        // Match Graph Paper's exponential scrub-zoom along the horizontal axis.
+        zoomAt(drag.zoom * Math.exp(dx / 240), drag.anchorX, drag.anchorY,
+          drag.stageX, drag.stageY);
+      } else {
+        const scene = sizeFor(drag.zoom);
+        if (!scene) return;
+        panX.value = drag.panX - dx / scene.scale;
+        panY.value = drag.panY - dy / scene.scale;
       }
-      drag.x = event.clientX;
-      drag.y = event.clientY;
     }
     function pointerEnd(event: PointerEvent) {
-      if (drag?.pointerId !== event.pointerId) return;
-      drag = null;
+      if (!drag || drag.id !== event.pointerId) return;
+      const current = drag;
+      if (event.type === 'pointerup' && current.kind === 'scrub' && !current.moved) {
+        zoomAt(current.zoom * 1.3, current.anchorX, current.anchorY,
+          current.stageX, current.stageY);
+        suppressClick = true;
+      }
       if (svg.value?.hasPointerCapture(event.pointerId)) svg.value.releasePointerCapture(event.pointerId);
+      drag = null;
+    }
+    function wheel(event: WheelEvent) {
+      if (!event.ctrlKey || !svg.value) return;
+      event.preventDefault();
+      const box = svg.value.getBoundingClientRect();
+      const px = event.clientX - box.left, py = event.clientY - box.top;
+      const world = worldAt(zoom.value, px, py, panX.value, panY.value);
+      zoomAt(zoom.value * Math.exp(-event.deltaY / 240), world.x, world.y, px, py);
     }
     function shapeNode(shape: AtlasShape, tabbable: boolean): VNode {
       const transform = shape.mirrorX ? 'translate(' + props.view.width + ' 0) scale(-1 1)' : undefined;
@@ -87,8 +177,9 @@ export const AnatomyViewer = defineComponent({
         tabindex: tabbable ? 0 : -1,
         'aria-label': 'Select ' + name,
         'aria-pressed': props.selectedId === shape.structureId,
-        onPointerdown: (event: PointerEvent) => event.stopPropagation(),
-        onClick: () => emit('select', shape.structureId),
+        onClick: () => {
+          if (!suppressClick && !zHeld.value) emit('select', shape.structureId);
+        },
         onKeydown: (event: KeyboardEvent) => {
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
@@ -139,7 +230,7 @@ export const AnatomyViewer = defineComponent({
       h('div', { class: 'anatomy-diagram-stage' }, [
         h('svg', {
           ref: svg,
-          class: 'anatomy-diagram',
+          class: ['anatomy-diagram', { 'is-scrubbing': zHeld.value, 'is-dragging': drag?.moved }],
           viewBox: viewport.value.join(' '),
           preserveAspectRatio: 'xMidYMid meet',
           role: 'group',
@@ -148,6 +239,7 @@ export const AnatomyViewer = defineComponent({
           onPointermove: pointerMove,
           onPointerup: pointerEnd,
           onPointercancel: pointerEnd,
+          onWheel: wheel,
           onLostpointercapture: () => { drag = null; },
         }, [
           ...(props.shapes.length ? [] : [placeholder()]),

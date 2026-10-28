@@ -101,7 +101,7 @@ export const Anatomy = defineComponent({
           h('div', { class: 'anatomy-viewer-identity' }, [
             h('strong', { title: system.value?.description ?? '' }, system.value?.name ?? props.title),
             h('span', { class: 'anatomy-viewer-status' },
-              systemId.value === 'skeletal' ? 'Illustrative' : 'Coming soon'),
+              systemId.value === 'skeletal' ? '206 individual bones · illustrative 2D' : 'Coming soon'),
           ]),
         ]),
         h('div', { class: 'anatomy-viewer-view-options' }, [
@@ -170,7 +170,9 @@ export const Anatomy = defineComponent({
         h('div', { class: 'anatomy-panel-top' }, [
           h('div', { class: 'anatomy-panel-heading' }, [
             h('h2', 'Structures'),
-            h('p', 'Choose a bone from the diagram or list.'),
+            h('p', systemId.value === 'skeletal'
+              ? '206 individual adult bones. Zoom to identify smaller bones.'
+              : 'Structure diagrams are being prepared.'),
           ]),
           panelToggle('Hide structures', 'anatomy-structures-panel',
             () => setStructuresCollapsed(true), hideStructuresButton),

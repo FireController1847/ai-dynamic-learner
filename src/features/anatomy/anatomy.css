@@ -210,7 +210,7 @@
   display: grid;
   place-items: center;
   flex: 1 0 auto;
-  min-height: clamp(520px, calc(100dvh - 230px), 930px);
+  min-height: clamp(440px, calc(100dvh - 310px), 700px);
   overflow: hidden;
   background: var(--anatomy-stage);
 }
@@ -222,7 +222,10 @@
   max-height: none;
   touch-action: none;
   user-select: none;
+  cursor: grab;
 }
+.anatomy-diagram.is-scrubbing { cursor: ew-resize; }
+.anatomy-diagram.is-dragging { cursor: grabbing; }
 .anatomy-shape {
   fill: var(--anatomy-bone);
   stroke: var(--anatomy-bone-outline);
@@ -255,7 +258,7 @@
 .anatomy-stroke-hit {
   fill: none;
   stroke: transparent;
-  stroke-width: 14;
+  stroke-width: 4.5;
   pointer-events: stroke;
   cursor: pointer;
 }
@@ -300,7 +303,7 @@
     max-height: min(220px, calc(100% - 20px));
     padding: 10px;
   }
-  .anatomy-diagram-stage { min-height: max(460px, calc(100dvh - 235px)); }
+  .anatomy-diagram-stage { min-height: max(400px, calc(100dvh - 325px)); }
   .anatomy-details { max-height: none; overflow: visible; border-top: 1px solid var(--border-color); }
 }
 @media (pointer: coarse) {
