@@ -16,8 +16,9 @@ import { TipsExperience } from '../../packages/tips/src/index.ts';
 import { tipsCatalog } from './tips-content.ts';
 import { Icon } from '../components/icon.ts';
 import { AppIcon } from './app-icon.ts';
+import { deliverDueCheckInNotifications } from '../features/solve-it-grid/check-in-notifications.ts';
 
-import { defineComponent, type PropType, computed, createApp, h, KeepAlive, nextTick, ref, watch } from 'vue';
+import { defineComponent, type PropType, computed, createApp, h, KeepAlive, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 initializeTheme();
 
@@ -36,6 +37,25 @@ const App = defineComponent({
   name: 'App',
   setup() {
     const workspace = useWorkspace();
+    // Reminder delivery lives in the app shell, not in the grid view, so
+    // navigating to another Dynamic Learner app does not stop notifications.
+    function checkDueReminders() {
+      if (workspace.ready.value && !workspace.needsReconcile.value) {
+        deliverDueCheckInNotifications(workspace.state.value.features['solve-it-grid'].items);
+      }
+    }
+    let reminderTimer: number | undefined;
+    onMounted(() => {
+      checkDueReminders();
+      reminderTimer = window.setInterval(checkDueReminders, 5000);
+      document.addEventListener('visibilitychange', checkDueReminders);
+      window.addEventListener('focus', checkDueReminders);
+    });
+    onBeforeUnmount(() => {
+      if (reminderTimer !== undefined) window.clearInterval(reminderTimer);
+      document.removeEventListener('visibilitychange', checkDueReminders);
+      window.removeEventListener('focus', checkDueReminders);
+    });
     provideStatistics({
       data: () => workspace.state.value.statistics,
       setData: data => { workspace.state.value.statistics = data; },

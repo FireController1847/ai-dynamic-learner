@@ -11,6 +11,7 @@ import { defaultLibrarySettings, isArchived, orderedDatedItems } from '../../cor
 import { createTaskSet, MAX_NAME_LENGTH, MAX_TASK_SETS, type SolveItGridModel } from './library-model.ts';
 import { TaskSetBuilder, type TaskSetBuilderHandle, type TaskSetDraft } from './task-set-builder.ts';
 import { TaskGrid } from './task-grid.ts';
+import { canAskForCheckInNotifications, requestCheckInNotifications } from './check-in-notifications.ts';
 import { taskCount } from './task-model.ts';
 
 const MIN_LIBRARY_WIDTH = 280;
@@ -36,6 +37,8 @@ export const SolveItGrid = defineComponent({
     const library = ref<DatedLibraryHandle | null>(null);
     const showLibrary = ref<HTMLButtonElement | null>(null);
     const settingsOpen = ref(false);
+    const notificationsOpen = ref(false);
+    const notificationsBusy = ref(false);
     const message = ref('');
     const builderMode = ref<'new' | 'edit' | null>(null);
     const builderSequence = ref(0);
@@ -74,7 +77,10 @@ export const SolveItGrid = defineComponent({
       startClock();
       archiveOpen.value = activeItems.value.length === 0 && archivedItems.value.length > 0;
     });
-    onDeactivated(() => { stopClock(); settingsOpen.value = false; panel.resizing.value = false; builderMode.value = null; pendingDelete.value = null; });
+    onDeactivated(() => {
+      stopClock(); settingsOpen.value = false; notificationsOpen.value = false;
+      panel.resizing.value = false; builderMode.value = null; pendingDelete.value = null;
+    });
     onBeforeUnmount(() => {
       stopClock();
       document.removeEventListener('visibilitychange', refreshClock);
@@ -110,7 +116,8 @@ export const SolveItGrid = defineComponent({
     }
     async function save(draft: TaskSetDraft) {
       try {
-        const item = builderMode.value === 'new'
+        const newlyCreated = builderMode.value === 'new';
+        const item = newlyCreated
           ? createTaskSet(props.model.items, draft.name, draft.lists, Date.now()) : selected.value;
         if (!item) throw new Error('This task set no longer exists.');
         if (builderMode.value === 'edit') {
@@ -123,8 +130,17 @@ export const SolveItGrid = defineComponent({
         message.value = 'Task set saved. Your grid is ready.';
         if (overlay.value) collapsed.value = true;
         await nextTick();
-        detail.value?.querySelector<HTMLElement>('.sig-quadrant.is-current, .sig-completion h3')?.focus();
+        // A native permission request requires the user's own click.
+        // Ask first in a short, optional in-app dialog, never on page load.
+        if (newlyCreated && canAskForCheckInNotifications()) notificationsOpen.value = true;
+        else detail.value?.querySelector<HTMLElement>('.sig-quadrant.is-current, .sig-completion h3')?.focus();
       } catch (error) { creationError.value = error instanceof Error ? error.message : String(error); }
+    }
+    async function allowNotifications() {
+      if (notificationsBusy.value) return;
+      notificationsBusy.value = true;
+      try { await requestCheckInNotifications(); }
+      finally { notificationsBusy.value = false; notificationsOpen.value = false; }
     }
     function select(id: string) {
       if (!canLeaveBuilder()) return;
@@ -255,6 +271,19 @@ export const SolveItGrid = defineComponent({
         settings: settings.value, idPrefix: 'solve-it-grid', pluralLabel: 'task sets',
         onUpdate: value => { props.model.settings = value; },
       }) }) : null,
+      notificationsOpen.value ? h(PopupDialog, {
+        title: 'Gentle reminders?', headingId: 'solve-it-grid-notifications-title', width: 460,
+        onClose: () => { if (!notificationsBusy.value) notificationsOpen.value = false; },
+      }, { default: () => [
+        h('p', 'May we send you notifications when it’s time to check in? They’ll only be used for your Solve-It Grid reminders.'),
+        h('p', 'Keep this browser tab open to receive reminders.'),
+        h('div', { class: 'sig-dialog-actions' }, [
+          h('button', { type: 'button', class: 'quiet-button', disabled: notificationsBusy.value,
+            onClick: () => { notificationsOpen.value = false; } }, 'Not now'),
+          h('button', { type: 'button', class: 'card-primary-button', disabled: notificationsBusy.value,
+            onClick: () => { void allowNotifications(); } }, 'Allow notifications'),
+        ]),
+      ] }) : null,
     ]);
   },
 });

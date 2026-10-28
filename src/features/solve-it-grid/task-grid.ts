@@ -320,7 +320,9 @@ export const TaskGrid = defineComponent({
       const state = activeCheckIn.value;
       if (!state) return;
       const time = Date.now();
-      props.item.checkIn = { ...state, remindAt: time + state.minutes * 60000 };
+      const renewed = { ...state, remindAt: time + state.minutes * 60000 };
+      delete renewed.notifiedAt;
+      props.item.checkIn = renewed;
       now.value = time;
       announcement.value = 'We will check in with you again later.';
     }
