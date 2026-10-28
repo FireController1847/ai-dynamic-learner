@@ -124,6 +124,7 @@ function draw(direction: Direction): AtlasShape[] {
   }
   // Floating lower ribs.
   paired('ribs', 'M156 223 Q138 222 127 236', 'stroke');
+  paired('ribs', 'M156 231 Q141 230 132 244', 'stroke');
 
   // Broad bilateral iliac wings, obturator openings, sacral wedge.
   paired('pelvis', 'M151 281 Q135 272 120 281 Q109 294 105 311 Q103 325 115 329 Q130 332 142 319 L159 313 L154 301 Z');

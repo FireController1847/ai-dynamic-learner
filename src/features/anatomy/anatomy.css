@@ -185,6 +185,7 @@
   stroke-dasharray: 3 2;
 }
 .anatomy-stroke-group:focus-visible { outline: none; }
+.anatomy-stroke-group:hover .anatomy-shape,
 .anatomy-stroke-group:focus-visible .anatomy-shape {
   stroke: var(--anatomy-bone-active-outline);
   stroke-dasharray: 3 2;
