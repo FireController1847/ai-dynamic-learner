@@ -125,19 +125,23 @@ function draw(facing: Facing): AtlasShape[] {
   // arm's total length; no enormous phalanges. Digit I has no middle phalanx.
   for (const side of ['left', 'right'] as const) {
     shaft('humerus', 107, 155, 92, 241, 10, side);
-    shaft('ulna', 89, 250, 72, 319, 6, side);
-    shaft('radius', 99, 250, 84, 319, 5.6, side);
+    // In anatomical position the radius is lateral (thumb side) and
+    // the ulna medial. Canonical left-screen coordinates are mirrored
+    // for the anatomically left limb in the anterior projection.
+    shaft('radius', 89, 250, 72, 319, 5.6, side);
+    shaft('ulna', 99, 250, 84, 319, 6, side);
     const wrist = [
-      ['scaphoid', 78, 326], ['lunate', 73, 326], ['triquetrum', 68, 327],
-      ['pisiform', 65, 331], ['trapezium', 83, 333], ['trapezoid', 78, 333],
-      ['capitate', 73, 334], ['hamate', 68, 335],
+      // Proximal row from radial to ulnar, then distal row.
+      ['scaphoid', 68, 326], ['lunate', 73, 326], ['triquetrum', 78, 327],
+      ['pisiform', 83, 331], ['trapezium', 66, 333], ['trapezoid', 71, 333],
+      ['capitate', 76, 334], ['hamate', 81, 335],
     ] as const;
     for (const [id, x, y] of wrist) ellipse(id, x, y, 2.4, 3, side);
     for (let digit = 1; digit <= 5; digit++) {
       // Anatomical digit I (thumb) is the radial/lateral digit.
-      const x = digit === 1 ? 86 : 78 - (digit - 2) * 5.5;
+      const x = digit === 1 ? 65 : 70 + (digit - 2) * 5.3;
       const baseY = digit === 1 ? 339 : 341;
-      const lateral = digit === 1 ? 7 : -(.4 * (digit - 2));
+      const lateral = digit === 1 ? -7 : (.4 * (digit - 2));
       shaft('metacarpal-' + digit, x, baseY, x + lateral, baseY + (digit === 1 ? 8 : 11), 2.3, side);
       const firstX = x + lateral, firstY = baseY + (digit === 1 ? 10 : 14);
       shaft('hand-proximal-' + digit, firstX, firstY, firstX + (digit === 1 ? 4 : -1),
@@ -152,7 +156,7 @@ function draw(facing: Facing): AtlasShape[] {
   }
 
   for (const side of ['left', 'right'] as const) {
-    shaft('femur', 141, 335, 130, 456, 14, side);
+    shaft('femur', 133, 335, 130, 456, 14, side);
     ellipse('patella', 128, 465, 7, 9, side);
     shaft('tibia', 128, 480, 124, 597, 10.5, side);
     shaft('fibula', 113, 483, 109, 601, 5, side);

@@ -2,8 +2,9 @@
 
 Anatomy is a self-contained, offline-first reference tool in Dynamic Learner's
 **Tools** group. The initial release is **foundation only**. Its 11 body-system
-categories, independently collapsible navigation/structure panels, front/back
-selection, zoomable SVG stage, structure list, and data contracts are functional.
+categories, independently collapsible navigation/structure panels,
+**Both / Front / Back** visibility, regional views, zoomable SVG stage,
+structure list, and data contracts are functional.
 The skeletal atlas now enumerates 206 individual adult bones (80 axial and
 126 appendicular). Each bone has a stable ID and an individually selectable
 vector shape in the front and back 2D projections. This is an **authored,
@@ -22,6 +23,9 @@ All other systems still show a neutral, explicitly non-anatomical placeholder.
 - `skeletal-geometry.ts`: individual 2D SVG hit shapes for each of the
   206 bones on each orientation, including proportional limb scaling and
   mirrored anatomy. It asserts that neither orientation omits a bone.
+- `anatomy-regions.ts`: regional focused camera bounds and filters, plus
+  explicit occlusion rules for Front and Back (Both is an X-ray-like
+  teaching overlay).
 - `atlas-index.ts`: consistency validation, hierarchy safety, sorted layer
   access, shape-to-view indexing, and structure search.
 - `anatomy-viewer.ts`: native Vue/SVG pan/zoom, keyboard-selectable geometry,
@@ -79,46 +83,58 @@ altering Review's persistence contract.
 
 ## Presentation and interaction
 
-The viewer uses neutral bone/paper tones in both themes and separates fine
-engraved contours from selectable geometry. Thin rib, finger and toe strokes
-have larger invisible pointer targets, preserving a delicate visual appearance.
-One keyboard tab stop per anatomical group avoids forcing navigation through
-every repeated rib or digit. Selected structure details overlay the upper-right
-side of the diagram inside the drawing stage rather than taking up a toolbar
-row or resizing the SVG. The inspector can be dismissed, remains available
-when the Structures index is hidden or moved below the viewer, and has an
-internally scrollable height limit for compact screens. The viewer's white
-header holds the current body-system name, region selector, front/back
-orientation and zoom/fit controls in a single responsive row (wrapping only
-when necessary). The drawing surface grows with the viewport, with no
-independent 700px SVG height cap, so the full skeleton uses the available
-vertical space instead of appearing miniature under oversized chrome.
+The viewer uses neutral bone/paper tones with fine strokes and reduced
+hit-target overlap, so adjacent small bones can be distinguished after
+zooming. A stationary click selects; mouse drag pans from the stage,
+including on a bone. Holding Z while dragging horizontally scrubs zoom
+around the starting point. Ctrl+wheel zooms around the pointer. Ordinary
+vertical mouse-wheel/trackpad scroll pans vertically inside the diagram;
+Shift+wheel pans horizontally. The floating selection inspector stays over
+the diagram without resizing it or stealing the scroll from the canvas.
 
-The skeletal projection uses a 320 × 700 anatomical coordinate frame.
-It separates the 24 individual ribs and 24 articulated vertebrae from the
-fused sacrum and coccyx, treats the adult hip bones as fused os coxae,
-and enumerates individual wrist, hand, ankle, and foot bones. The familiar
-206-bone adult convention excludes variable sesamoids, accessory/sutural
-bones, teeth, and unfused developmental elements. Proportions are
-illustrative, not measured against cadaveric or imaging reference data.
+The regional dropdown includes Whole body, Head & neck, Chest & shoulders,
+Spine, Lower torso, Pelvis, Arms, Hands & wrists, Legs, and Feet & ankles.
+Each uses its own focused rectangle within the existing 320 × 700 canonical
+2D artwork and filters the structure list; regional zoom does not copy
+the geometry or duplicate data IDs.
 
-Fit starts at 68% of the atlas view to leave clear margins and show the
-entire figure. Zoom ranges from 10% to 1,600%. Click-drag pans anywhere
-on the SVG (including over bones); a stationary click selects a bone.
-Hold **Z** and drag horizontally for continuous exponential scrub zoom,
-anchored to the starting point, following the Graph Paper interaction
-model. Z-click zooms in one increment; Ctrl+wheel also zooms around
-the pointer. Pointer drags cancel accidental bone selection. Small shapes
-have appropriately small click regions; zoom in to distinguish them.
-Both a front and a back projection exist for every cataloged bone.
-The drawing stage uses a compact viewport-relative height rather than
-an oversized forced canvas.
+Visibility modes: **Both** defaults to all structures overlaid in an
+anterior schematic projection, including bone locations otherwise obscured.
+**Front** and **Back** render their respective front/back projections and
+hide bones not visible from that surface, such as the scapula in Front,
+sternum and face in Back, and middle-ear ossicles in both. This is a simple
+educational occlusion model, not ray-tracing, and cannot replace detailed
+cutaways or clinically validated plates.
+
+Whole-body Fit defaults to 91% of a tightly framed anatomical rectangle
+to keep the full figure with reasonable margin. The user can zoom between
+10% and 1,600%. The canvas height is restrained to avoid excessive vertical
+blank space. At 100%, the atlas frame keeps the skull and toes within
+view. Selection remains available at any zoom; the app does not artificially
+enlarge nearby bone hit targets.
+
+### Anatomy audit
+
+Corrections against OpenStax Anatomy and Physiology references:
+- Radius is **lateral (thumb side)**, ulna **medial** in anatomical
+  position. Their shafts, wrist alignment and thumb direction were previously
+  reversed and have been corrected. Wrist rows now progress radial to
+  ulnar in the appropriate order.
+- Patellae are anterior; scapulae are posterior; clavicle and sternum
+  are anterior. Visibility filters now hide these from the opposite side.
+- Femoral shafts have been realigned relative to pelvis and knee.
+- The vertebral column retains 7 cervical, 12 thoracic, and 5 lumbar
+  vertebrae, followed by the fused sacrum and coccyx.
+
+Reference comparisons verify these positional relationships and the bone
+inventory, **not the exact contours or clinical positional accuracy** of
+all 206 hand-authored projection shapes.
 
 ## Manual verification
 
 - Open `/anatomy/` from the Tools category and directly through its URL.
-- Switch all 11 systems and front/back orientations; select skeletal bone shapes
-  and corresponding list items; search all 206 individually named bones.
+- Switch all 11 systems and Both/Front/Back modes; inspect anatomy
+  regions, selecting bones in the diagram and searchable structure list.
 - Check that the inventory is exactly 206, broken into 80 axial and 126
   appendicular bones, with distinct left/right IDs, fused adult hip bones,
   and each finger/toe phalanx.
@@ -128,7 +144,8 @@ an oversized forced canvas.
   without accidentally selecting; a stationary click selects.
 - Verify Z+horizontal drag scrubs continuously around the initial cursor
   position, and Z+click zooms one step; releasing Z restores pan.
-- Verify Ctrl+wheel anchor, zoom/fit, and reset from a panned state.
+- Verify wheel/trackpad vertical panning, Shift+wheel horizontal panning,
+  Ctrl+wheel anchored zoom, and reset from a scrolled or dragged state.
 - Collapse/reopen both body-system and structure panels independently,
   including the bottom Structures panel at narrower widths.
 - Verify the “Lymphatic and immune” entry stays on one line.
@@ -140,16 +157,20 @@ an oversized forced canvas.
 - Confirm system, region, orientation, and zoom appear in the single white
   viewer bar; the former heading/toolbar rows are gone.
 - Compare average, tall, and short windows: the whole skeleton fits
-  at the default 68%, without clipping its head or toes or filling the
+  at the default 91%, without clipping its head or toes or filling the
   screen excessively.
 - Zoom below 100% (down to 10%) and far above (up to 1,600%); drag
-  to pan even at lower zoom. Fit restores the centered 68% view.
+  to pan even at lower zoom. Fit restores the centered 91% view.
+- Check head/torso/limb regional framing and structure filters, returning
+  to Whole body with no stale camera state.
+- Verify Front hides scapula/occulted deep structures and Back hides
+  sternum, face and patella; Both restores all skeletal entries.
 - Compare the thigh and lower-leg lengths against the torso and
   finger lengths against the forearms on both front and back views.
 - Verify there is no instruction strip below the diagram, and skeletal
   fill/outline styles are neutral and consistent in both themes.
-- Check empty-state messaging for non-skeletal systems and the skeleton's
-  compact illustrative-only label.
+- Check empty-state messaging for non-skeletal systems, with no unwanted
+  bone-count or illustration labels in the controls.
 - Check narrow screens, light/dark themes, keyboard focus, and reduced motion.
 - Confirm offline navigation and no unintended workspace backup changes.
 

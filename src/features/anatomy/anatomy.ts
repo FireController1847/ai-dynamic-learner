@@ -5,11 +5,14 @@ import { readNumberPreference, writeNumberPreference } from '../../core/ui-prefe
 import { foundationAtlas } from './atlas-catalog.ts';
 import { buildAtlasIndex, searchStructures } from './atlas-index.ts';
 import type { AtlasOrientation, AtlasSystemId } from './atlas-model.ts';
+import { boneInRegion, boneVisibleFrom, skeletalRegions, type AnatomyFacing } from './anatomy-regions.ts';
 import { AnatomyViewer } from './anatomy-viewer.ts';
 
 // Reference content is bundled locally, independent of workspace saves.
 const atlas = buildAtlasIndex(foundationAtlas);
-const viewOrientations: readonly AtlasOrientation[] = ['anterior', 'posterior'];
+const faceModes: readonly { id: AnatomyFacing; name: string }[] = [
+  { id: 'both', name: 'Both' }, { id: 'front', name: 'Front' }, { id: 'back', name: 'Back' },
+];
 const SYSTEMS_COLLAPSED_KEY = 'dynamic-learner.ui.anatomy.systems-collapsed';
 const STRUCTURES_COLLAPSED_KEY = 'dynamic-learner.ui.anatomy.structures-collapsed';
 
@@ -23,7 +26,8 @@ export const Anatomy = defineComponent({
   props: { title: { type: String, required: true } },
   setup(props) {
     const systemId = ref<AtlasSystemId>('skeletal');
-    const orientation = ref<AtlasOrientation>('anterior');
+    const facing = ref<AnatomyFacing>('both');
+    const orientation = computed<AtlasOrientation>(() => facing.value === 'back' ? 'posterior' : 'anterior');
     const regionId = ref('whole-body');
     const selectedId = ref<string | null>(null);
     const search = ref('');
@@ -39,15 +43,24 @@ export const Anatomy = defineComponent({
     const view = computed(() => [...atlas.views.values()].find(item => item.systemId === systemId.value
       && item.regionId === regionId.value && item.orientation === orientation.value));
     const layers = computed(() => view.value ? atlas.layersByView.get(view.value.id) ?? [] : []);
-    const shapes = computed(() => view.value ? atlas.shapesByView.get(view.value.id) ?? [] : []);
+    const focus = computed(() => systemId.value === 'skeletal'
+      ? skeletalRegions.find(region => region.id === regionId.value) ?? skeletalRegions[0]
+      : undefined);
+    const shapes = computed(() => {
+      const all = view.value ? atlas.shapesByView.get(view.value.id) ?? [] : [];
+      return all.filter(shape => {
+        const bone = atlas.structures.get(shape.structureId);
+        return bone && (systemId.value !== 'skeletal'
+          || boneInRegion(bone, regionId.value) && boneVisibleFrom(bone, facing.value));
+      });
+    });
     const visibleIds = computed(() => new Set(shapes.value.map(shape => shape.structureId)));
     const structures = computed(() => searchStructures(atlas, search.value, systemId.value)
       .filter(item => visibleIds.value.has(item.id)));
     const selected = computed(() => selectedId.value && visibleIds.value.has(selectedId.value)
       ? atlas.structures.get(selectedId.value) : undefined);
-    const regions = computed(() => [...atlas.regions.values()].filter(region => [...atlas.views.values()].some(
-      candidate => candidate.systemId === systemId.value && candidate.regionId === region.id,
-    )));
+    const regions = computed(() => systemId.value === 'skeletal'
+      ? skeletalRegions : [{ id: 'whole-body', name: 'Whole body' }]);
 
     function setSystemsCollapsed(collapsed: boolean) {
       systemsCollapsed.value = collapsed;
@@ -62,14 +75,14 @@ export const Anatomy = defineComponent({
     function selectSystem(id: AtlasSystemId) {
       systemId.value = id;
       regionId.value = 'whole-body';
-      orientation.value = 'anterior';
+      facing.value = 'both';
       selectedId.value = null;
       search.value = '';
     }
     function selectRegion(id: string) {
       regionId.value = id;
       selectedId.value = null;
-      if (!view.value) orientation.value = 'anterior';
+
     }
     function selectStructure(id: string) {
       selectedId.value = id;
@@ -100,8 +113,8 @@ export const Anatomy = defineComponent({
           }, [h(Icon, { name: 'panel-open' }), 'Structures']) : null,
           h('div', { class: 'anatomy-viewer-identity' }, [
             h('strong', { title: system.value?.description ?? '' }, system.value?.name ?? props.title),
-            h('span', { class: 'anatomy-viewer-status' },
-              systemId.value === 'skeletal' ? '206 individual bones · illustrative 2D' : 'Coming soon'),
+            systemId.value === 'skeletal' ? null
+              : h('span', { class: 'anatomy-viewer-status' }, 'Coming soon'),
           ]),
         ]),
         h('div', { class: 'anatomy-viewer-view-options' }, [
@@ -111,16 +124,16 @@ export const Anatomy = defineComponent({
             'aria-label': 'Anatomical region',
             onChange: (event: Event) => selectRegion(inputValue(event)),
           }, regions.value.map(region => h('option', { value: region.id }, region.name))),
-          h('div', { class: 'anatomy-orientation', role: 'group', 'aria-label': 'Body orientation' },
-            viewOrientations.map(next => h('button', {
-              key: next,
+          h('div', { class: 'anatomy-orientation', role: 'group', 'aria-label': 'Anatomical visibility' },
+            faceModes.map(mode => h('button', {
+              key: mode.id,
               type: 'button',
-              class: ['quiet-button', { 'is-active': orientation.value === next }],
-              'aria-pressed': orientation.value === next,
-              disabled: ![...atlas.views.values()].some(item => item.systemId === systemId.value
-                && item.regionId === regionId.value && item.orientation === next),
-              onClick: () => { orientation.value = next; selectedId.value = null; },
-            }, next === 'anterior' ? 'Front' : 'Back'))),
+              class: ['quiet-button', { 'is-active': facing.value === mode.id }],
+              'aria-pressed': facing.value === mode.id,
+              title: mode.id === 'both' ? 'Show all bones, including those behind others'
+                : 'Show only bones visible from the ' + mode.name.toLowerCase(),
+              onClick: () => { facing.value = mode.id; selectedId.value = null; },
+            }, mode.name))),
         ]),
       ];
     }
@@ -153,7 +166,8 @@ export const Anatomy = defineComponent({
       h('div', { class: 'anatomy-workspace' }, [
         view.value
           ? h(AnatomyViewer, {
-            key: view.value.id, view: view.value, layers: layers.value, shapes: shapes.value,
+            key: view.value.id + '.' + regionId.value,
+            view: view.value, focus: focus.value, layers: layers.value, shapes: shapes.value,
             structures: [...atlas.structures.values()], selectedId: selectedId.value ?? '',
             selectedStructure: selected.value ?? null,
             onSelect: selectStructure,
@@ -170,9 +184,7 @@ export const Anatomy = defineComponent({
         h('div', { class: 'anatomy-panel-top' }, [
           h('div', { class: 'anatomy-panel-heading' }, [
             h('h2', 'Structures'),
-            h('p', systemId.value === 'skeletal'
-              ? '206 individual adult bones. Zoom to identify smaller bones.'
-              : 'Structure diagrams are being prepared.'),
+            systemId.value === 'skeletal' ? null : h('p', 'Content coming soon.'),
           ]),
           panelToggle('Hide structures', 'anatomy-structures-panel',
             () => setStructuresCollapsed(true), hideStructuresButton),

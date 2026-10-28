@@ -1,17 +1,19 @@
 import { computed, defineComponent, h, onBeforeUnmount, onMounted, ref, watch, type PropType, type VNode } from 'vue';
 import type { AtlasLayer, AtlasShape, AtlasStructure, AtlasView } from './atlas-model.ts';
+import type { AnatomyRegion } from './anatomy-regions.ts';
 import { Icon } from '../../components/icon.ts';
 
 // 100% is a normal zoom level, not the minimum. Fit adds comfortable
 // breathing room while keeping the whole figure in view.
 const MIN_ZOOM = 0.1;
 const MAX_ZOOM = 16;
-const FIT_ZOOM = 0.68;
+const FIT_ZOOM = 0.91;
 
 export const AnatomyViewer = defineComponent({
   name: 'AnatomyViewer',
   props: {
     view: { type: Object as PropType<AtlasView>, required: true },
+    focus: { type: Object as PropType<AnatomyRegion>, default: undefined },
     layers: { type: Array as PropType<readonly AtlasLayer[]>, required: true },
     shapes: { type: Array as PropType<readonly AtlasShape[]>, required: true },
     structures: { type: Array as PropType<readonly AtlasStructure[]>, required: true },
@@ -59,20 +61,20 @@ export const AnatomyViewer = defineComponent({
       const order = new Map(props.layers.map((layer, index) => [layer.id, index]));
       return [...props.shapes].sort((a, b) => (order.get(a.layerId) ?? 0) - (order.get(b.layerId) ?? 0));
     });
-    const viewport = computed(() => {
-      const width = props.view.width / zoom.value;
-      const height = props.view.height / zoom.value;
-      return [
-        (props.view.width - width) / 2 + panX.value,
-        (props.view.height - height) / 2 + panY.value,
-        width, height,
-      ];
+    const area = computed(() => props.focus ?? {
+      x: 0, y: 0, width: props.view.width, height: props.view.height,
     });
-
+    const viewport = computed(() => {
+      const width = area.value.width / zoom.value;
+      const height = area.value.height / zoom.value;
+      return [area.value.x + (area.value.width - width) / 2 + panX.value,
+        area.value.y + (area.value.height - height) / 2 + panY.value,
+        width, height];
+    });
     function reset() { zoom.value = FIT_ZOOM; panX.value = 0; panY.value = 0; drag = null; }
     watch(() => props.view.id, reset);
     function sizeFor(value: number) {
-      const vw = props.view.width / value, vh = props.view.height / value;
+      const vw = area.value.width / value, vh = area.value.height / value;
       const box = svg.value?.getBoundingClientRect();
       if (!box || !box.width || !box.height) return null;
       const scale = Math.min(box.width / vw, box.height / vh);
@@ -82,19 +84,22 @@ export const AnatomyViewer = defineComponent({
     }
     function worldAt(value: number, px: number, py: number, x: number, y: number) {
       const scene = sizeFor(value);
-      if (!scene) return { x: props.view.width / 2, y: props.view.height / 2 };
+      if (!scene) return { x: area.value.x + area.value.width / 2,
+        y: area.value.y + area.value.height / 2 };
       return {
-        x: (props.view.width - scene.vw) / 2 + x + (px - scene.padX) / scene.scale,
-        y: (props.view.height - scene.vh) / 2 + y + (py - scene.padY) / scene.scale,
+        x: area.value.x + (area.value.width - scene.vw) / 2 + x
+          + (px - scene.padX) / scene.scale,
+        y: area.value.y + (area.value.height - scene.vh) / 2 + y
+          + (py - scene.padY) / scene.scale,
       };
     }
     function zoomAt(value: number, worldX: number, worldY: number, px: number, py: number) {
       const next = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, value));
       const scene = sizeFor(next);
       if (!scene) { zoom.value = next; return; }
-      panX.value = worldX - (props.view.width - scene.vw) / 2
+      panX.value = worldX - area.value.x - (area.value.width - scene.vw) / 2
         - (px - scene.padX) / scene.scale;
-      panY.value = worldY - (props.view.height - scene.vh) / 2
+      panY.value = worldY - area.value.y - (area.value.height - scene.vh) / 2
         - (py - scene.padY) / scene.scale;
       zoom.value = next;
     }
@@ -149,12 +154,25 @@ export const AnatomyViewer = defineComponent({
       drag = null;
     }
     function wheel(event: WheelEvent) {
-      if (!event.ctrlKey || !svg.value) return;
+      if (!svg.value || event.target instanceof Element
+        && event.target.closest('.anatomy-selected-inspector')) return;
+      // Wheel scrolls through the scene, as a native page scroll would.
+      // Ctrl+wheel zooms about the cursor and Shift+wheel pans horizontally.
       event.preventDefault();
-      const box = svg.value.getBoundingClientRect();
-      const px = event.clientX - box.left, py = event.clientY - box.top;
-      const world = worldAt(zoom.value, px, py, panX.value, panY.value);
-      zoomAt(zoom.value * Math.exp(-event.deltaY / 240), world.x, world.y, px, py);
+      const scene = sizeFor(zoom.value);
+      if (!scene) return;
+      const multiplier = event.deltaMode === 1 ? 16
+        : event.deltaMode === 2 ? scene.box.height : 1;
+      if (event.ctrlKey) {
+        const box = scene.box;
+        const px = event.clientX - box.left, py = event.clientY - box.top;
+        const world = worldAt(zoom.value, px, py, panX.value, panY.value);
+        zoomAt(zoom.value * Math.exp(-event.deltaY * multiplier / 240),
+          world.x, world.y, px, py);
+      } else {
+        panX.value += (event.deltaX + (event.shiftKey ? event.deltaY : 0)) * multiplier / scene.scale;
+        panY.value += (event.shiftKey ? 0 : event.deltaY) * multiplier / scene.scale;
+      }
     }
     function shapeNode(shape: AtlasShape, tabbable: boolean): VNode {
       const transform = shape.mirrorX ? 'translate(' + props.view.width + ' 0) scale(-1 1)' : undefined;
@@ -227,7 +245,7 @@ export const AnatomyViewer = defineComponent({
             onClick: reset }, 'Fit'),
         ]),
       ]),
-      h('div', { class: 'anatomy-diagram-stage' }, [
+      h('div', { class: 'anatomy-diagram-stage', onWheel: wheel }, [
         h('svg', {
           ref: svg,
           class: ['anatomy-diagram', { 'is-scrubbing': zHeld.value, 'is-dragging': drag?.moved }],
@@ -239,7 +257,6 @@ export const AnatomyViewer = defineComponent({
           onPointermove: pointerMove,
           onPointerup: pointerEnd,
           onPointercancel: pointerEnd,
-          onWheel: wheel,
           onLostpointercapture: () => { drag = null; },
         }, [
           ...(props.shapes.length ? [] : [placeholder()]),
