@@ -48,7 +48,9 @@ export const foundationAtlas: AtlasDataset = {
     orientation: orientation.id,
     name: system.name + ' — ' + orientation.name,
     width: 320,
-    height: 560,
+    // The skeletal artwork now extends through anatomically longer lower limbs.
+    // Keep unillustrated system placeholders at their existing proportions.
+    height: system.id === 'skeletal' ? 660 : 560,
   }))),
   layers: skeletalLayers,
   shapes: skeletalShapes,

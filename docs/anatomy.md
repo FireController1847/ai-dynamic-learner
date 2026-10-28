@@ -90,6 +90,19 @@ when necessary). The drawing surface grows with the viewport, with no
 independent 700px SVG height cap, so the full skeleton uses the available
 vertical space instead of appearing miniature under oversized chrome.
 
+The schematic skeletal figure has been re-proportioned: the pelvis-to-feet
+distance now accounts for approximately half of the figure's height; the
+thigh and lower-leg paths are longer while the carpals, metacarpals and
+phalanges occupy a smaller wrist-to-fingertip span. The skeletal view
+uses a 320 × 660 coordinate system; other systems retain their neutral
+placeholder dimensions.
+
+Fit uses 80% zoom to leave comfortable space around the whole-body diagram.
+Zoom ranges from 10% to 1,600%, including below 100%; dragging the SVG's
+open drawing area pans at **any** zoom level, including below 100%.
+Fit recenters without changing the selected bone. The drawing stage also
+uses more moderate viewport-relative height than the previous giant layout.
+
 ## Manual verification
 
 - Open `/anatomy/` from the Tools category and directly through its URL.
@@ -107,9 +120,13 @@ vertical space instead of appearing miniature under oversized chrome.
   or reflow the SVG, zoom controls, or workspace.
 - Confirm system, region, orientation, and zoom appear in the single white
   viewer bar; the former heading/toolbar rows are gone.
-- Compare average, tall, and short windows: the complete skeleton scales
-  to a tall drawing stage without a fixed SVG height limit. No clipping at
-  the head or feet at Fit (100%) and no unexpected extra empty canvas.
+- Compare average, tall, and short windows: the whole skeleton fits
+  at the default 80%, without clipping its head or toes or filling the
+  screen excessively.
+- Zoom below 100% (down to 10%) and far above (up to 1,600%); drag
+  to pan even at lower zoom. Fit restores the centered 80% view.
+- Compare the thigh and lower-leg lengths against the torso and
+  finger lengths against the forearms on both front and back views.
 - Verify there is no instruction strip below the diagram, and skeletal
   fill/outline styles are neutral and consistent in both themes.
 - Check empty-state messaging for non-skeletal systems and the skeleton's

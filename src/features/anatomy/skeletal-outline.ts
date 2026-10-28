@@ -143,44 +143,46 @@ function draw(direction: Direction): AtlasShape[] {
   paired('radii',
     'M95 247 Q98 244 102 250 L94 264 L85 314 Q85 321 78 321 L75 319 Q76 313 81 306 L90 263 Z');
 
-  // Wrists as small overlapping carpal bones; metacarpals and distinct fingers.
+  // Proportioned wrists and hands: the fingertip-to-wrist span is much
+  // shorter than the forearm, and individual phalanges have small gaps.
   for (let i = 0; i < 4; i++) {
-    ellipse('carpals', 67 + i * 5, 327 + (i % 2) * 3, 3, 4.2);
-    ellipse('carpals', 67 + i * 5, 334 + (i % 2) * 2, 3.1, 3.2);
-    ellipse('carpals', 67 + i * 5, 327 + (i % 2) * 3, 3, 4.2, 'filled', true);
-    ellipse('carpals', 67 + i * 5, 334 + (i % 2) * 2, 3.1, 3.2, 'filled', true);
+    ellipse('carpals', 67 + i * 5, 326 + (i % 2) * 2, 3, 3.6);
+    ellipse('carpals', 67 + i * 5, 332 + (i % 2), 3, 3);
+    ellipse('carpals', 67 + i * 5, 326 + (i % 2) * 2, 3, 3.6, 'filled', true);
+    ellipse('carpals', 67 + i * 5, 332 + (i % 2), 3, 3, 'filled', true);
   }
   for (let i = 0; i < 4; i++) {
     const x = 68 + i * 5.3;
-    paired('metacarpals', 'M' + x + ' 338 Q' + (x - 3) + ' 347 ' + (x - 5) + ' 355', 'stroke');
+    paired('metacarpals', 'M' + x + ' 335 Q' + (x - 2) + ' 341 ' + (x - 4) + ' 348', 'stroke');
     // Finger segments and visible knuckle gaps.
-    paired('hand-phalanges', 'M' + (x - 5) + ' 359 L' + (x - 6 - i) + ' ' + (371 + (i % 2) * 4)
-      + ' M' + (x - 6 - i) + ' ' + (374 + (i % 2) * 4) + ' l-2 8', 'stroke');
+    paired('hand-phalanges', 'M' + (x - 4) + ' 350 L' + (x - 5 - i) + ' ' + (357 + (i % 2) * 3)
+      + ' M' + (x - 5 - i) + ' ' + (360 + (i % 2) * 3) + ' l-1 7', 'stroke');
   }
-  paired('metacarpals', 'M83 338 L91 349', 'stroke');
-  paired('hand-phalanges', 'M93 353 L98 361', 'stroke');
+  paired('metacarpals', 'M83 335 L91 343', 'stroke');
+  paired('hand-phalanges', 'M92 346 L96 352', 'stroke');
 
-  // Femoral neck and greater trochanter, smooth shaft, knee condyles.
+  // Longer thigh and shin bones balance the pelvis-to-ground distance with
+  // the head-to-hip distance. The knee stays near the midpoint of the leg.
   paired('femora',
-    'M139 329 Q132 326 128 333 Q125 339 132 343 L125 361 L122 418 Q119 424 125 429 L134 429 Q140 425 136 418 L139 358 L147 343 Q156 339 154 334 Q150 326 145 331 Z');
-  paired('femora', 'M135 355 L128 409', 'etch');
+    'M139 329 Q132 326 128 333 Q125 339 132 343 L125 372 L121 447 Q118 454 124 460 L136 460 Q141 454 137 447 L141 370 L149 343 Q156 339 154 334 Q150 326 145 331 Z');
+  paired('femora', 'M135 372 L128 440', 'etch');
   if (direction === 'anterior') {
-    ellipse('patellae', 129, 432, 7.2, 9.4);
+    ellipse('patellae', 129, 465, 7.2, 9.4);
     ellipse('patellae', 129, 432, 7.2, 9.4, 'filled', true);
-    paired('patellae', 'M126 431 L133 431 M129 427 L129 437', 'etch');
+    paired('patellae', 'M126 465 L133 465 M129 460 L129 470', 'etch');
   }
   paired('tibiae',
-    'M122 445 Q130 441 137 447 L134 456 L130 508 Q131 513 125 518 L121 517 Q116 511 119 507 L119 457 Z');
+    'M122 478 Q130 474 137 480 L134 491 L130 590 Q131 596 125 602 L121 601 Q116 596 119 590 L119 492 Z');
   paired('fibulae',
-    'M116 447 Q112 443 109 450 L108 466 L105 510 Q105 517 110 519 L114 515 L114 509 L117 461 Z');
+    'M116 478 Q112 475 109 482 L108 501 L105 594 Q105 601 110 602 L114 599 L114 590 L117 491 Z');
 
-  // Tarsal cluster, long forefoot bones, and separate toe phalanges.
-  paired('tarsals', 'M110 519 Q116 512 126 519 L132 526 L130 535 L119 538 L109 532 Z');
+  // Small ankle, forefoot and toe groups complete the longer lower limbs.
+  paired('tarsals', 'M110 602 Q117 596 126 603 L132 612 L130 622 L119 624 L109 615 Z');
   for (let i = 0; i < 5; i++) {
     const origin = 118 + i * 3;
     const end = 105 + i * 8;
-    paired('metatarsals', 'M' + origin + ' 534 L' + end + ' 544', 'stroke');
-    paired('toe-phalanges', 'M' + end + ' 548 l' + (i - 2) + ' 5', 'stroke');
+    paired('metatarsals', 'M' + origin + ' 620 L' + end + ' 633', 'stroke');
+    paired('toe-phalanges', 'M' + end + ' 638 l' + (i - 2) + ' 6', 'stroke');
   }
 
   return shapes;

@@ -2,8 +2,11 @@ import { computed, defineComponent, h, ref, watch, type PropType, type VNode } f
 import type { AtlasLayer, AtlasShape, AtlasStructure, AtlasView } from './atlas-model.ts';
 import { Icon } from '../../components/icon.ts';
 
-const MIN_ZOOM = 1;
-const MAX_ZOOM = 5;
+// 100% is a normal zoom level, not the minimum. Fit adds comfortable
+// breathing room while keeping the whole figure in view.
+const MIN_ZOOM = 0.1;
+const MAX_ZOOM = 16;
+const FIT_ZOOM = 0.8;
 
 export const AnatomyViewer = defineComponent({
   name: 'AnatomyViewer',
@@ -17,7 +20,7 @@ export const AnatomyViewer = defineComponent({
   },
   emits: { select: (_structureId: string) => true, clearSelection: () => true },
   setup(props, { emit, slots }) {
-    const zoom = ref(1);
+    const zoom = ref(FIT_ZOOM);
     const panX = ref(0);
     const panY = ref(0);
     const svg = ref<SVGSVGElement | null>(null);
@@ -37,14 +40,13 @@ export const AnatomyViewer = defineComponent({
       ];
     });
 
-    function reset() { zoom.value = 1; panX.value = 0; panY.value = 0; drag = null; }
+    function reset() { zoom.value = FIT_ZOOM; panX.value = 0; panY.value = 0; drag = null; }
     watch(() => props.view.id, reset);
     function setZoom(value: number) {
       zoom.value = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, value));
-      if (zoom.value === 1) { panX.value = 0; panY.value = 0; }
     }
     function pointerDown(event: PointerEvent) {
-      if (event.button !== 0 || !svg.value || zoom.value <= 1) return;
+      if (event.button !== 0 || !svg.value) return;
       drag = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
       svg.value.setPointerCapture(event.pointerId);
     }
@@ -124,11 +126,13 @@ export const AnatomyViewer = defineComponent({
         ...(slots.toolbar?.() ?? []),
         h('div', { class: 'anatomy-viewer-zoom', role: 'group', 'aria-label': 'Diagram zoom' }, [
           h('button', { class: 'icon-button', type: 'button', title: 'Zoom out', 'aria-label': 'Zoom out',
-            disabled: zoom.value <= MIN_ZOOM, onClick: () => setZoom(zoom.value / 1.4) }, [h(Icon, { name: 'minus' })]),
+            disabled: zoom.value <= MIN_ZOOM, onClick: () => setZoom(zoom.value / 1.3) }, [h(Icon, { name: 'minus' })]),
           h('span', { class: 'anatomy-zoom-value', 'aria-live': 'off' }, Math.round(zoom.value * 100) + '%'),
           h('button', { class: 'icon-button', type: 'button', title: 'Zoom in', 'aria-label': 'Zoom in',
-            disabled: zoom.value >= MAX_ZOOM, onClick: () => setZoom(zoom.value * 1.4) }, [h(Icon, { name: 'plus' })]),
-          h('button', { class: 'quiet-button', type: 'button', disabled: zoom.value === 1,
+            disabled: zoom.value >= MAX_ZOOM, onClick: () => setZoom(zoom.value * 1.3) }, [h(Icon, { name: 'plus' })]),
+          h('button', { class: 'quiet-button', type: 'button',
+            title: 'Fit whole figure',
+            disabled: zoom.value === FIT_ZOOM && panX.value === 0 && panY.value === 0,
             onClick: reset }, 'Fit'),
         ]),
       ]),
