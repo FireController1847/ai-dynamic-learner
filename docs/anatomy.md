@@ -1,10 +1,11 @@
 # Anatomy atlas
 
 Anatomy is a self-contained, offline-first reference tool in Dynamic Learner's
-**Tools** group. The initial release is **foundation only**. Its 11 body-system
-categories, independently collapsible navigation/structure panels,
-**Both / Front / Back** visibility, regional views, zoomable SVG stage,
-structure list, and data contracts are functional.
+**Tools** group. Its 11 body-system categories, independently collapsible
+navigation/structure panels, **Both / Front / Back** visibility, regional
+views, zoomable SVG stage, structure list and data contracts are functional.
+Skeletal, Muscular, Nervous and Endocrine have original teaching illustrations;
+the remaining seven systems retain neutral placeholders.
 The skeletal atlas now enumerates 206 individual adult bones (80 axial and
 126 appendicular). Each bone has a stable ID and an individually selectable
 vector shape in the front and back 2D projections. This is an **authored,
@@ -15,8 +16,8 @@ The Muscular system also contains a curated introductory atlas of major
 superficial muscles in the anterior and posterior views, with individual
 selection, descriptions, and regional navigation. Nervous also contains an introductory atlas of the brain, spinal cord
 and major peripheral nerve pathways, with independently selectable
-structures and descriptions. The remaining eight systems still show
-neutral, non-anatomical placeholders.
+structures and descriptions. Endocrine now includes the major endocrine
+glands and their subregions, including mutually exclusive gonadal anatomy.
 
 ## Source ownership
 
@@ -32,6 +33,10 @@ neutral, non-anatomical placeholders.
   source attributions, and anterior/posterior availability.
 - `nervous-geometry.ts`: original selectable neural paths and a
   completeness guard for all illustrated structure IDs.
+- `endocrine-structures.ts`: stable gland and subregion records,
+  side-specific anatomy, hormones, and gonad configuration.
+- `endocrine-geometry.ts`: original anterior/posterior gland shapes,
+  anatomical guide contours and completeness checks.
 - `skeletal-bones.ts`: canonical count-checked adult bone inventory,
   side-specific bone IDs, and NCI/OpenStax anatomical categories.
 - `skeletal-geometry.ts`: individual 2D SVG hit shapes for each of the
@@ -133,6 +138,65 @@ hand-authored and bundled offline.
   verify selection remains stable when zooming and moving across regions.
 - Check wheel pan, Z scrub zoom, sidebars, mobile, dark mode and
   keyboard selection; return to Skeletal and Muscular for regressions.
+
+## Endocrine atlas
+
+The Endocrine system adds **15 named anatomical structures or tissue types**,
+yielding **21 independently selectable records** when the four parathyroids,
+paired adrenal subregions and paired gonads are counted separately.
+The full-body view includes the hypothalamus, pituitary stalk, anterior and
+posterior pituitary, pineal, thyroid, four parathyroids, thymus, both adrenal
+cortices and medullae, pancreatic islets, and ovaries **or** testes.
+
+Anatomical conventions:
+
+- The pineal is shown posteriorly and the pituitary and hypothalamus use
+  a transparent intracranial teaching projection. They are not visible
+  through the skull at the surface.
+- The thyroid is an anterior-neck butterfly-shaped gland. The normally
+  four parathyroids sit on its **posterior** surface, so Front omits
+  them while Back and Both make them individually selectable.
+- The thymus is in the anterior superior mediastinum and ordinarily
+  becomes smaller with age. Its teaching shape is exaggerated.
+- The adrenal cortex surrounds the medulla; both are projected just
+  superior to the kidneys. The pancreatic islets are microscopic cell
+  clusters *throughout* the pancreas, represented by several shared-ID
+  dots, not a single macroscopic endocrine organ.
+- The **Gonads** selector offers *Ovaries*, *Testes*, or *Hidden*.
+  Ovaries and testes never appear together in one figure.
+- **Front / Back / Both** use anatomical diagrams rather than claims
+  of skin-level visibility. Both overlays rear-only deep glands with
+  softer opacity over the front teaching view.
+
+Regional views: Whole body, Brain glands, Thyroid & parathyroids,
+Chest, Abdominal glands and Gonads. Each region uses its own framing
+rectangle within the original 320 × 700 drawing, without changing the
+structure IDs or persistence model.
+
+Terminology, locations and hormone descriptions were checked against
+[OpenStax Anatomy and Physiology 2e, Chapter 17](https://openstax.org/books/anatomy-and-physiology-2e/pages/17-introduction)
+and [MedlinePlus: Endocrine glands](https://medlineplus.gov/ency/article/002351.htm).
+All drawings are hand-authored, offline illustrations. Size, exact
+surgical anatomy and microscopic tissue detail are **not medically
+validated**. This atlas is for introductory study, not clinical decisions.
+
+### Endocrine manual verification
+
+- Switch to Endocrine and confirm the whole-body illustration,
+  searchable structure list, selected structure details and sidebar
+  collapse controls all work.
+- Check Front/Both/Back: four separately selectable parathyroids
+  should appear only in Back and Both; pineal is similarly posterior.
+- Zoom into Brain glands and select hypothalamus, pituitary stalk,
+  anterior/posterior pituitary and pineal. Fit should restore framing.
+- Zoom into Thyroid & parathyroids and Abdominal glands; distinguish
+  thyroid, cortex/medulla and the distributed islet markers.
+- In Gonads, verify only ovaries or testes appear when selected,
+  and none appear when Hidden is selected. The list and inspector
+  must update with the same choice.
+- Confirm wheel pan, Z scrub zoom, keyboard focus, narrow screens,
+  dark mode and selection responsiveness. Switch back to each
+  already-implemented system to check for regressions.
 
 ## Stable identifiers and anatomy coverage
 

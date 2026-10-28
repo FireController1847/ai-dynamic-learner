@@ -298,6 +298,53 @@
 .anatomy-viewer.is-nervous .anatomy-shape.is-occluded:hover { opacity: 0.8; }
 .anatomy-viewer.is-nervous .anatomy-stroke-hit { stroke-width: 3.4; }
 
+.anatomy-viewer.is-endocrine {
+  --anatomy-bone: #83bcb0;
+  --anatomy-bone-outline: #386e66;
+  --anatomy-bone-active: #f5d394;
+  --anatomy-bone-active-outline: #986a2d;
+  --anatomy-muscle-body: #ede9e1;
+  --anatomy-muscle-body-outline: #c9c0b5;
+}
+:root[data-theme='dark'] .anatomy-viewer.is-endocrine {
+  --anatomy-bone: #6daba0;
+  --anatomy-bone-outline: #c0e2d9;
+  --anatomy-bone-active: #f2d08c;
+  --anatomy-bone-active-outline: #986c32;
+  --anatomy-muscle-body: #3d3832;
+  --anatomy-muscle-body-outline: #756d62;
+}
+.anatomy-viewer.is-endocrine .anatomy-shape { stroke-width: 0.75; }
+.anatomy-viewer.is-endocrine .anatomy-shape.is-adrenal { fill: #ca9679; stroke: #865a48; }
+.anatomy-viewer.is-endocrine .anatomy-shape.is-neuroendocrine { fill: #a99bce; stroke: #6a5b90; }
+.anatomy-viewer.is-endocrine .anatomy-shape.is-pancreatic { fill: #d99e8b; stroke: #915f4f; }
+.anatomy-viewer.is-endocrine .anatomy-shape.is-gonadal { fill: #d7b77d; stroke: #8b744e; }
+.anatomy-viewer.is-endocrine .anatomy-shape.is-occluded:not(.is-selected) { opacity: 0.66; }
+.anatomy-viewer.is-endocrine .anatomy-shape.is-occluded:hover { opacity: 1; }
+.anatomy-viewer.is-endocrine .anatomy-shape.is-selected,
+.anatomy-viewer.is-endocrine .anatomy-shape:focus-visible {
+  fill: var(--anatomy-bone-active);
+  stroke: var(--anatomy-bone-active-outline);
+  stroke-width: 1.2;
+}
+.anatomy-gonad-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.anatomy-gonad-choice select {
+  max-width: 100px;
+  min-width: 0;
+  height: 32px;
+  padding-block: 3px;
+}
+@media (pointer: coarse) {
+  .anatomy-gonad-choice select { min-height: 44px; }
+}
+
 .anatomy-shape {
   fill: var(--anatomy-bone);
   stroke: var(--anatomy-bone-outline);

@@ -215,19 +215,26 @@ export const AnatomyViewer = defineComponent({
       const selected = props.selectedId === shape.structureId;
       const behind = occluded.value.has(shape.structureId) || ghostLayers.value.has(shape.layerId);
       const central = props.view.systemId === 'nervous' && centralIds.value.has(shape.structureId);
+      const gland = props.view.systemId === 'endocrine';
+      const adrenal = gland && shape.structureId.includes('adrenal-');
+      const neural = gland && /hypothalamus|pituitary|pineal/.test(shape.structureId);
+      const pancreatic = gland && shape.structureId.endsWith('pancreatic-islets');
+      const gonadal = gland && /\.(ovary|testis)$/.test(shape.structureId);
+      const subtypes = { 'is-adrenal': adrenal, 'is-neuroendocrine': neural,
+        'is-pancreatic': pancreatic, 'is-gonadal': gonadal };
       if (shape.renderMode === 'stroke' && shape.geometry.kind === 'path') {
         // Separate touch hit target from the thin visual line.
         return h('g', { ...interaction, key: shape.id, transform,
           class: ['anatomy-stroke-group', { 'is-central': central }] }, [
           h('path', { d: shape.geometry.d, class: ['anatomy-shape', 'is-stroke', { 'is-selected': selected,
-            'is-occluded': behind, 'is-central': central }] }),
+            'is-occluded': behind, 'is-central': central, ...subtypes }] }),
           h('path', { d: shape.geometry.d, class: 'anatomy-stroke-hit', 'aria-hidden': 'true' }),
         ]);
       }
       return h(geometry.tag, {
         ...geometry.attrs, ...interaction, key: shape.id, transform,
         class: ['anatomy-shape', { 'is-selected': selected, 'is-occluded': behind,
-          'is-central': central }],
+          'is-central': central, ...subtypes }],
       });
     }
 
@@ -268,6 +275,7 @@ export const AnatomyViewer = defineComponent({
       return h('div', { class: ['anatomy-viewer', {
         'is-muscular': props.view.systemId === 'muscular',
         'is-nervous': props.view.systemId === 'nervous',
+        'is-endocrine': props.view.systemId === 'endocrine',
       }] }, [
       h('div', { class: 'anatomy-viewer-controls' }, [
         ...(slots.toolbar?.() ?? []),
@@ -297,7 +305,7 @@ export const AnatomyViewer = defineComponent({
           onPointercancel: pointerEnd,
           onLostpointercapture: () => { drag = null; },
         }, [
-          ...(['muscular', 'nervous'].includes(props.view.systemId) ? [bodySilhouette()] : []),
+          ...(['muscular', 'nervous', 'endocrine'].includes(props.view.systemId) ? [bodySilhouette()] : []),
           ...(props.shapes.length || !props.showPlaceholder ? [] : [placeholder()]),
           ...orderedShapes.value.map(shape => {
             const tabbable = !tabStops.has(shape.structureId);
@@ -311,7 +319,9 @@ export const AnatomyViewer = defineComponent({
               ? 'No illustrated muscles in this region and view.'
               : props.view.systemId === 'nervous'
                 ? 'No neural structures illustrated in this region and view.'
-                : 'No bones visible from this direction in this region. Choose Both for deeper structures.')
+                : props.view.systemId === 'endocrine'
+                  ? 'No endocrine glands shown here. Try Both or another gonad setting.'
+                  : 'No bones visible from this direction in this region. Choose Both for deeper structures.')
           : null,
         props.selectedStructure ? h('section', {
           key: props.selectedStructure.id,

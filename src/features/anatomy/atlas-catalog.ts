@@ -5,6 +5,8 @@ import { muscularStructures } from './muscular-structures.ts';
 import { muscularLayers, muscularShapes } from './muscular-geometry.ts';
 import { nervousStructures } from './nervous-structures.ts';
 import { nervousLayers, nervousShapes } from './nervous-geometry.ts';
+import { endocrineStructures } from './endocrine-structures.ts';
+import { endocrineLayers, endocrineShapes } from './endocrine-geometry.ts';
 
 // These are navigational categories, not claims that their anatomical content
 // is complete. Structure data and diagram paths are added in separate, reviewed packs.
@@ -25,6 +27,8 @@ export const atlasSystems: readonly AtlasSystem[] = [
 export const atlasRegions: readonly AtlasRegion[] = [
   { id: 'whole-body', name: 'Whole body' },
   { id: 'head-neck', name: 'Head and neck', parentId: 'whole-body' },
+  { id: 'brain', name: 'Brain glands', parentId: 'head-neck' },
+  { id: 'neck', name: 'Neck glands', parentId: 'head-neck' },
   { id: 'thorax', name: 'Thorax', parentId: 'whole-body' },
   { id: 'abdomen', name: 'Abdomen', parentId: 'whole-body' },
   { id: 'pelvis', name: 'Pelvis', parentId: 'whole-body' },
@@ -51,8 +55,11 @@ export const foundationAtlas: AtlasDataset = {
     { id: 'openstax-ap2e-nervous', title: 'Anatomy and Physiology 2e, Chapter 13',
       attribution: 'OpenStax / Rice University', license: 'CC BY 4.0',
       url: 'https://openstax.org/books/anatomy-and-physiology-2e/pages/13-introduction' },
+    { id: 'openstax-ap2e-endocrine', title: 'Anatomy and Physiology 2e, Chapter 17',
+      attribution: 'OpenStax / Rice University', license: 'CC BY 4.0',
+      url: 'https://openstax.org/books/anatomy-and-physiology-2e/pages/17-introduction' },
   ],
-  structures: [...skeletalStructures, ...muscularStructures, ...nervousStructures],
+  structures: [...skeletalStructures, ...muscularStructures, ...nervousStructures, ...endocrineStructures],
   views: atlasSystems.flatMap(system => orientations.map(orientation => ({
     id: system.id + '.whole-body.' + orientation.id,
     systemId: system.id,
@@ -62,8 +69,8 @@ export const foundationAtlas: AtlasDataset = {
     width: 320,
     // The skeletal artwork now extends through anatomically longer lower limbs.
     // Keep unillustrated system placeholders at their existing proportions.
-    height: ['skeletal', 'muscular', 'nervous'].includes(system.id) ? 700 : 560,
+    height: ['skeletal', 'muscular', 'nervous', 'endocrine'].includes(system.id) ? 700 : 560,
   }))),
-  layers: [...skeletalLayers, ...muscularLayers, ...nervousLayers],
-  shapes: [...skeletalShapes, ...muscularShapes, ...nervousShapes],
+  layers: [...skeletalLayers, ...muscularLayers, ...nervousLayers, ...endocrineLayers],
+  shapes: [...skeletalShapes, ...muscularShapes, ...nervousShapes, ...endocrineShapes],
 };

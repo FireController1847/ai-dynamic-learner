@@ -123,3 +123,18 @@ export function nerveInRegion(structure: AtlasStructure, region: string): boolea
   }
   return structure.regionIds.includes(region);
 }
+
+
+// Endocrine regions focus the deep-organ teaching projection at useful scales.
+// The cervical and cranial structures intentionally have separate close-ups.
+export const endocrineRegions: readonly AnatomyRegion[] = [
+  { id: 'whole-body', name: 'Whole body', x: 53, y: 12, width: 214, height: 657 },
+  { id: 'brain', name: 'Brain glands', x: 126, y: 37, width: 68, height: 72 },
+  { id: 'neck', name: 'Thyroid & parathyroids', x: 133, y: 108, width: 54, height: 44 },
+  { id: 'thorax', name: 'Chest', x: 129, y: 141, width: 62, height: 64 },
+  { id: 'abdomen', name: 'Abdominal glands', x: 106, y: 232, width: 108, height: 84 },
+  { id: 'pelvis', name: 'Gonads', x: 112, y: 307, width: 96, height: 99 },
+];
+export function endocrineInRegion(structure: AtlasStructure, region: string): boolean {
+  return region === 'whole-body' || structure.regionIds.includes(region);
+}
