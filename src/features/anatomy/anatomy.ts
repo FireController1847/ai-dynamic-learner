@@ -210,7 +210,9 @@ export const Anatomy = defineComponent({
           : h('p', { class: 'anatomy-empty-structures', role: 'status' },
             search.value.trim()
               ? 'No matching structures in this view.'
-              : 'Selectable structures will appear here as this body system is illustrated.'),
+              : systemId.value === 'skeletal'
+                ? 'No surface-visible bones here. Choose Both to inspect deeper structures.'
+                : 'Structure diagrams are being prepared.'),
 
       ]),
     ]);
