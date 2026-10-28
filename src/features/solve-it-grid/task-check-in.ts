@@ -115,9 +115,9 @@ export const TaskCheckIn = defineComponent({
           ]) : h('div', { key: 'active', class: 'sig-work-active' }, [
             h(Icon, { name: 'heart' }),
             h('p', 'Just focus on what you are doing.'),
-            h('span', focus.mode === 'completion'
+            h('span', focus?.mode === 'completion'
               ? 'We will gently check in after an hour.'
-              : `We will gently check in after ${focus.minutes} minutes.`),
+              : `We will gently check in after ${focus?.minutes ?? minutes.value} minutes.`),
             h('small', 'There is no deadline to finish.'),
             h('div', { class: 'sig-work-actions' }, [
               doneButton(),
