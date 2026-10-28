@@ -316,6 +316,8 @@
 }
 .anatomy-viewer.is-endocrine .anatomy-shape { stroke-width: 0.75; }
 .anatomy-viewer.is-endocrine .anatomy-shape.is-adrenal { fill: #ca9679; stroke: #865a48; }
+.anatomy-viewer.is-endocrine .anatomy-shape.is-medulla { fill: #996379; stroke: #734455; }
+.anatomy-viewer.is-endocrine .anatomy-shape.is-parathyroid { fill: #dec989; stroke: #867340; }
 .anatomy-viewer.is-endocrine .anatomy-shape.is-neuroendocrine { fill: #a99bce; stroke: #6a5b90; }
 .anatomy-viewer.is-endocrine .anatomy-shape.is-pancreatic { fill: #d99e8b; stroke: #915f4f; }
 .anatomy-viewer.is-endocrine .anatomy-shape.is-gonadal { fill: #d7b77d; stroke: #8b744e; }

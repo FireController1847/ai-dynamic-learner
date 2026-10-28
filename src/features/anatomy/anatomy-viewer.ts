@@ -217,10 +217,13 @@ export const AnatomyViewer = defineComponent({
       const central = props.view.systemId === 'nervous' && centralIds.value.has(shape.structureId);
       const gland = props.view.systemId === 'endocrine';
       const adrenal = gland && shape.structureId.includes('adrenal-');
+      const medulla = gland && shape.structureId.endsWith('adrenal-medulla');
+      const parathyroid = gland && shape.structureId.includes('parathyroid-');
       const neural = gland && /hypothalamus|pituitary|pineal/.test(shape.structureId);
       const pancreatic = gland && shape.structureId.endsWith('pancreatic-islets');
       const gonadal = gland && /\.(ovary|testis)$/.test(shape.structureId);
-      const subtypes = { 'is-adrenal': adrenal, 'is-neuroendocrine': neural,
+      const subtypes = { 'is-adrenal': adrenal, 'is-medulla': medulla,
+        'is-parathyroid': parathyroid, 'is-neuroendocrine': neural,
         'is-pancreatic': pancreatic, 'is-gonadal': gonadal };
       if (shape.renderMode === 'stroke' && shape.geometry.kind === 'path') {
         // Separate touch hit target from the thin visual line.
