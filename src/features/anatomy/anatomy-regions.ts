@@ -77,3 +77,26 @@ export function boneVisibleFrom(bone: AtlasStructure, facing: AnatomyFacing): bo
   if (code === 'pisiform') return false;
   return true;
 }
+
+// Major superficial-muscle regional views use the same 320 × 700 artwork as
+// Skeletal. Detailed intrinsic hand/foot musculature will need dedicated plates.
+export const muscularRegions: readonly AnatomyRegion[] = [
+  { id: 'whole-body', name: 'Whole body', x: 53, y: 12, width: 214, height: 657 },
+  { id: 'head-neck', name: 'Head & neck', x: 113, y: 18, width: 94, height: 127 },
+  { id: 'thorax', name: 'Chest & shoulders', x: 88, y: 132, width: 144, height: 132 },
+  { id: 'spine', name: 'Back', x: 99, y: 115, width: 122, height: 198 },
+  { id: 'abdomen', name: 'Abdomen', x: 101, y: 208, width: 118, height: 112 },
+  { id: 'pelvis', name: 'Hips & glutes', x: 102, y: 286, width: 116, height: 92 },
+  { id: 'upper-limb', name: 'Arms & forearms', x: 50, y: 141, width: 220, height: 191 },
+  { id: 'lower-limb', name: 'Thighs & lower legs', x: 98, y: 317, width: 124, height: 293 },
+];
+
+// Only include muscles with artwork that can plausibly appear within the crop;
+// a whole-body muscle may belong to several regions but never duplicates IDs.
+export function muscleInRegion(muscle: AtlasStructure, region: string): boolean {
+  if (region === 'whole-body') return true;
+  if (region === 'spine') {
+    return muscle.regionIds.includes('back') || muscle.id.endsWith('trapezius');
+  }
+  return muscle.regionIds.includes(region);
+}

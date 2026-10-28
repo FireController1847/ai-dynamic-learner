@@ -226,6 +226,35 @@
 }
 .anatomy-diagram.is-scrubbing { cursor: ew-resize; }
 .anatomy-diagram.is-dragging { cursor: grabbing; }
+.anatomy-viewer.is-muscular {
+  --anatomy-bone: #c87e72;
+  --anatomy-bone-outline: #874d48;
+  --anatomy-bone-detail: #e6b3a1;
+  --anatomy-bone-active: #eac17d;
+  --anatomy-bone-active-outline: #835026;
+  --anatomy-muscle-body: #ede6df;
+  --anatomy-muscle-body-outline: #c5b7ac;
+}
+:root[data-theme='dark'] .anatomy-viewer.is-muscular {
+  --anatomy-bone: #ac645a;
+  --anatomy-bone-outline: #d2a094;
+  --anatomy-bone-detail: #dfb29c;
+  --anatomy-bone-active: #e4b46f;
+  --anatomy-bone-active-outline: #623b1b;
+  --anatomy-muscle-body: #403733;
+  --anatomy-muscle-body-outline: #72625b;
+}
+.anatomy-muscle-silhouette {
+  fill: var(--anatomy-muscle-body);
+  stroke: var(--anatomy-muscle-body-outline);
+  stroke-width: 1;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+.anatomy-viewer.is-muscular .anatomy-shape { stroke-width: 0.85; }
+.anatomy-viewer.is-muscular .anatomy-shape.is-selected { stroke-width: 1.4; }
+.anatomy-viewer.is-muscular .anatomy-shape.is-occluded:not(.is-selected) { opacity: 0.28; }
+.anatomy-viewer.is-muscular .anatomy-shape.is-occluded:hover { opacity: 0.8; }
 .anatomy-shape {
   fill: var(--anatomy-bone);
   stroke: var(--anatomy-bone-outline);

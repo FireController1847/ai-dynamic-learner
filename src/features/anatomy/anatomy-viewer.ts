@@ -20,6 +20,7 @@ export const AnatomyViewer = defineComponent({
     selectedId: { type: String, default: '' },
     selectedStructure: { type: Object as PropType<AtlasStructure | null>, default: null },
     occludedIds: { type: Array as PropType<readonly string[]>, default: () => [] },
+    ghostLayerIds: { type: Array as PropType<readonly string[]>, default: () => [] },
     showPlaceholder: { type: Boolean, default: true },
   },
   emits: { select: (_structureId: string) => true, clearSelection: () => true },
@@ -60,6 +61,7 @@ export const AnatomyViewer = defineComponent({
     });
     const structureNames = computed(() => new Map(props.structures.map(item => [item.id, item.name])));
     const occluded = computed(() => new Set(props.occludedIds));
+    const ghostLayers = computed(() => new Set(props.ghostLayerIds));
     const orderedShapes = computed(() => {
       const order = new Map(props.layers.map((layer, index) => [layer.id, index]));
       return [...props.shapes].sort((a, b) => (order.get(a.layerId) ?? 0) - (order.get(b.layerId) ?? 0));
@@ -209,17 +211,41 @@ export const AnatomyViewer = defineComponent({
         },
       };
       const selected = props.selectedId === shape.structureId;
+      const behind = occluded.value.has(shape.structureId) || ghostLayers.value.has(shape.layerId);
       if (shape.renderMode === 'stroke' && shape.geometry.kind === 'path') {
         // Separate touch hit target from the thin visual line.
         return h('g', { ...interaction, key: shape.id, transform, class: 'anatomy-stroke-group' }, [
-          h('path', { d: shape.geometry.d, class: ['anatomy-shape', 'is-stroke', { 'is-selected': selected, 'is-occluded': occluded.value.has(shape.structureId) }] }),
+          h('path', { d: shape.geometry.d, class: ['anatomy-shape', 'is-stroke', { 'is-selected': selected, 'is-occluded': behind }] }),
           h('path', { d: shape.geometry.d, class: 'anatomy-stroke-hit', 'aria-hidden': 'true' }),
         ]);
       }
       return h(geometry.tag, {
         ...geometry.attrs, ...interaction, key: shape.id, transform,
-        class: ['anatomy-shape', { 'is-selected': selected, 'is-occluded': occluded.value.has(shape.structureId) }],
+        class: ['anatomy-shape', { 'is-selected': selected, 'is-occluded': behind }],
       });
+    }
+
+    function muscularSilhouette(): VNode {
+      // Neutral orientation guide behind the separately selectable muscles.
+      // Not anatomical structure data: no invisible bones/extra muscles.
+      const leftArm = 'M106 144 Q98 144 94 164 L85 235 L66 317 '
+        + 'Q62 323 69 327 L82 324 L104 249 L119 177 Z';
+      const leftLeg = 'M122 317 Q113 329 114 346 L116 446 '
+        + 'Q113 462 113 481 L108 595 Q102 610 107 624 '
+        + 'L102 650 Q102 662 117 666 L136 666 '
+        + 'L136 655 L126 605 L139 471 L146 348 Z';
+      return h('g', { class: 'anatomy-muscle-silhouette', 'aria-hidden': 'true',
+        'pointer-events': 'none' }, [
+        h('ellipse', { cx: 160, cy: 61, rx: 32, ry: 43 }),
+        h('path', { d: 'M145 102 L141 118 Q119 122 110 142 '
+          + 'L120 215 L114 275 L105 314 Q126 335 160 338 '
+          + 'Q194 335 215 314 L206 275 L200 215 L210 142 '
+          + 'Q201 122 179 118 L175 102 Z' }),
+        h('path', { d: leftArm }),
+        h('path', { d: leftArm, transform: 'translate(320 0) scale(-1 1)' }),
+        h('path', { d: leftLeg }),
+        h('path', { d: leftLeg, transform: 'translate(320 0) scale(-1 1)' }),
+      ]);
     }
 
     function placeholder(): VNode {
@@ -233,7 +259,7 @@ export const AnatomyViewer = defineComponent({
 
     return () => {
       const tabStops = new Set<string>();
-      return h('div', { class: 'anatomy-viewer' }, [
+      return h('div', { class: ['anatomy-viewer', { 'is-muscular': props.view.systemId === 'muscular' }] }, [
       h('div', { class: 'anatomy-viewer-controls' }, [
         ...(slots.toolbar?.() ?? []),
         h('div', { class: 'anatomy-viewer-zoom', role: 'group', 'aria-label': 'Diagram zoom' }, [
@@ -262,6 +288,7 @@ export const AnatomyViewer = defineComponent({
           onPointercancel: pointerEnd,
           onLostpointercapture: () => { drag = null; },
         }, [
+          ...(props.view.systemId === 'muscular' ? [muscularSilhouette()] : []),
           ...(props.shapes.length || !props.showPlaceholder ? [] : [placeholder()]),
           ...orderedShapes.value.map(shape => {
             const tabbable = !tabStops.has(shape.structureId);
@@ -271,7 +298,9 @@ export const AnatomyViewer = defineComponent({
         ]),
         !props.shapes.length && !props.showPlaceholder
           ? h('p', { class: 'anatomy-no-visible-bones', role: 'status' },
-            'No bones visible from this direction in this region. Choose Both for deeper structures.')
+            props.view.systemId === 'muscular'
+              ? 'No illustrated muscles in this region and view.'
+              : 'No bones visible from this direction in this region. Choose Both for deeper structures.')
           : null,
         props.selectedStructure ? h('section', {
           key: props.selectedStructure.id,

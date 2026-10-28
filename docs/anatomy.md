@@ -11,13 +11,21 @@ vector shape in the front and back 2D projections. This is an **authored,
 schematic projection**, not clinically validated morphology; especially
 deep skull bones and middle-ear ossicles require dedicated sectional or
 regional plates to represent their precise 3D positions and contours.
-All other systems still show a neutral, explicitly non-anatomical placeholder.
+The Muscular system also contains a curated introductory atlas of major
+superficial muscles in the anterior and posterior views, with individual
+selection, descriptions, and regional navigation. The remaining nine
+systems still show neutral, explicitly non-anatomical placeholders.
 
 ## Source ownership
 
 - `atlas-model.ts`: immutable, versioned domain contract for systems, regions,
   structures, attributed sources, views, depth layers, and diagram geometry.
 - `atlas-catalog.ts`: bundled catalog with all systems and the early skeletal pack.
+- `muscular-structures.ts`: 46 named superficial muscle types, 91 individual
+  selectable anatomical structures, region membership, actions, and curated
+  anterior/posterior surface coverage.
+- `muscular-geometry.ts`: separately authored front/back muscle silhouettes
+  with a completeness guard for all curated surface-view entries.
 - `skeletal-bones.ts`: canonical count-checked adult bone inventory,
   side-specific bone IDs, and NCI/OpenStax anatomical categories.
 - `skeletal-geometry.ts`: individual 2D SVG hit shapes for each of the
@@ -41,6 +49,40 @@ Atlas data is reference material that ships with the web build. It is not
 user-created workspace state, is not written to IndexedDB, and must not
 introduce online runtime dependencies. Later optional offline caches or
 user progress would need their own explicit, validated persistence contract.
+
+## Muscular atlas
+
+The muscular atlas introduces **46 named superficial muscle types** (91
+structures including left/right laterality; orbicularis oris is modeled as
+a single circumoral muscle). The source-backed descriptions emphasize basic
+actions; shapes were drawn independently and use the same 320 × 700 canvas
+and common viewer as Skeletal.
+
+- **Front:** facial expression and chewing muscles, sternocleidomastoid,
+  pectoralis major, serratus anterior, rectus abdominis, external oblique,
+  deltoid, biceps and forearm flexors, tensor fasciae latae, sartorius,
+  superficial thigh muscles, tibialis anterior and lateral lower-leg muscles.
+- **Back:** posterior scalp/neck, trapezius, deltoid, infraspinatus,
+  teres major, latissimus dorsi, erector spinae columns, triceps and
+  forearm extensors, gluteals, hamstrings, gastrocnemius and soleus.
+- **Both:** a lighter posterior layer behind anterior muscles, with
+  individual selection across the composite.
+- **Regions:** Whole body, Head & neck, Chest & shoulders, Back,
+  Abdomen, Hips & glutes, Arms & forearms, Thighs & lower legs. Intrinsic
+  hand/foot and deep muscle detail regions are not falsely advertised
+  before corresponding artwork exists.
+
+The muscle drawings are intentionally illustrative, and not an exhaustive
+map of the hundreds of individual skeletal muscles or every fascicle,
+origin, insertion and layer. Some listed muscles (e.g., brachialis or
+erector spinae) are partly obscured or are groups whose exact topology
+needs regional sectional illustrations. **Do not claim clinical
+morphological accuracy.** Terminology and basic actions are sourced to
+[OpenStax Anatomy & Physiology 2e, Chapter 11](https://openstax.org/books/anatomy-and-physiology-2e/pages/11-introduction),
+including [head and neck](https://openstax.org/books/anatomy-and-physiology-2e/pages/11-3-axial-muscles-of-the-head-neck-and-back),
+[upper limb](https://openstax.org/books/anatomy-and-physiology-2e/pages/11-5-muscles-of-the-pectoral-girdle-and-upper-limbs),
+and [lower limb](https://openstax.org/books/anatomy-and-physiology-2e/pages/11-6-appendicular-muscles-of-the-pelvic-girdle-and-lower-limbs).
+No OpenStax images were copied; original SVG paths are bundled offline.
 
 ## Stable identifiers and anatomy coverage
 
@@ -138,6 +180,22 @@ Corrections against OpenStax Anatomy and Physiology references:
 Reference comparisons verify these positional relationships and the bone
 inventory, **not the exact contours or clinical positional accuracy** of
 all 206 hand-authored projection shapes.
+
+### Muscular manual checks
+
+- Open **Muscular** from the sidebar. Verify a nonempty full-body diagram
+  and searchable Structures list in Both, Front, and Back.
+- Front-select pectoralis major, biceps brachii, rectus abdominis,
+  rectus femoris and tibialis anterior. Back-select trapezius,
+  latissimus dorsi, triceps brachii, gluteus maximus and gastrocnemius.
+- Confirm the **Both** overlay keeps posterior muscles subdued while
+  retaining selection, and that left/right labels match anatomical
+  orientation when switching to Back.
+- Switch through every muscular region; verify the geometry is framed,
+  its corresponding list is populated, and selecting a muscle does not
+  change the viewport. Test zoom, Z scrub, wheel pan and Fit.
+- Check narrow screens and dark mode, including the floating inspector.
+- Switch back to Skeletal; bone counts and geometry must be unchanged.
 
 ## Manual verification
 
