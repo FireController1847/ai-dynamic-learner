@@ -13,8 +13,9 @@ export const AnatomyViewer = defineComponent({
     shapes: { type: Array as PropType<readonly AtlasShape[]>, required: true },
     structures: { type: Array as PropType<readonly AtlasStructure[]>, required: true },
     selectedId: { type: String, default: '' },
+    selectedStructure: { type: Object as PropType<AtlasStructure | null>, default: null },
   },
-  emits: { select: (_structureId: string) => true },
+  emits: { select: (_structureId: string) => true, clearSelection: () => true },
   setup(props, { emit }) {
     const zoom = ref(1);
     const panX = ref(0);
@@ -149,6 +150,28 @@ export const AnatomyViewer = defineComponent({
             return shapeNode(shape, tabbable);
           }),
         ]),
+        props.selectedStructure ? h('section', {
+          key: props.selectedStructure.id,
+          class: 'anatomy-selected-inspector',
+          role: 'region',
+          'aria-label': 'Selected anatomical structure',
+          'aria-live': 'polite',
+        }, [
+          h('button', {
+            type: 'button',
+            class: 'icon-button anatomy-inspector-dismiss',
+            title: 'Clear selected structure',
+            'aria-label': 'Clear selected structure',
+            onClick: () => emit('clearSelection'),
+          }, [h(Icon, { name: 'x' })]),
+          h('div', { class: 'anatomy-selected-copy' }, [
+            h('strong', { class: 'anatomy-selected-name' }, props.selectedStructure.name),
+            h('span', { class: 'anatomy-selected-type' }, props.selectedStructure.classification),
+            props.selectedStructure.description
+              ? h('p', props.selectedStructure.description)
+              : null,
+          ]),
+        ]) : null,
       ]),
     ]);
     };

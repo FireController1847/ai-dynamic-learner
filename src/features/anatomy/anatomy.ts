@@ -145,31 +145,13 @@ export const Anatomy = defineComponent({
               onClick: () => { orientation.value = next; selectedId.value = null; },
             }, next === 'anterior' ? 'Front' : 'Back'))),
         ]),
-        selected.value ? h('section', {
-          class: 'anatomy-selected-inspector',
-          'aria-label': 'Selected anatomical structure',
-          'aria-live': 'polite',
-        }, [
-          h('div', { class: 'anatomy-selected-copy' }, [
-            h('div', { class: 'anatomy-selected-heading' }, [
-              h('strong', selected.value.name),
-              h('span', selected.value.classification),
-            ]),
-            selected.value.description
-              ? h('p', selected.value.description)
-              : null,
-          ]),
-          h('button', {
-            type: 'button', class: 'icon-button anatomy-inspector-dismiss',
-            title: 'Clear selected structure', 'aria-label': 'Clear selected structure',
-            onClick: () => { selectedId.value = null; },
-          }, '×'),
-        ]) : null,
         view.value
           ? h(AnatomyViewer, {
             key: view.value.id, view: view.value, layers: layers.value, shapes: shapes.value,
             structures: [...atlas.structures.values()], selectedId: selectedId.value ?? '',
+            selectedStructure: selected.value ?? null,
             onSelect: selectStructure,
+            onClearSelection: () => { selectedId.value = null; },
           })
           : h('div', { class: 'anatomy-unavailable', role: 'status' }, [
             h(Icon, { name: 'anatomy' }),

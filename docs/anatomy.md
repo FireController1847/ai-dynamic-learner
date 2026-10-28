@@ -21,10 +21,11 @@ All other systems still show a neutral, explicitly non-anatomical placeholder.
 - `atlas-index.ts`: consistency validation, hierarchy safety, sorted layer
   access, shape-to-view indexing, and structure search.
 - `anatomy-viewer.ts`: native Vue/SVG pan/zoom, keyboard-selectable geometry,
-  selected-state highlighting, and empty-state display.
+  selected-state highlighting, and a dismissible floating structure inspector
+  over the right side of the drawing stage (no reflow of the SVG).
 - `anatomy.ts`: route-level state, system and orientation selection, search,
-  and a sticky selection inspector above the diagram. The scrollable
-  Structures panel remains only an index, never a second details page.
+  and the selected structure's data. The scrollable Structures panel remains
+  an independent index, never a second details page.
 - `anatomy.css`: presentation using Dynamic Learner theme tokens.
 
 Atlas data is reference material that ships with the web build. It is not
@@ -77,8 +78,11 @@ The viewer uses neutral bone/paper tones in both themes and separates fine
 engraved contours from selectable geometry. Thin rib, finger and toe strokes
 have larger invisible pointer targets, preserving a delicate visual appearance.
 One keyboard tab stop per anatomical group avoids forcing navigation through
-every repeated rib or digit. Structure details are shown in the workspace
-above the viewer rather than appended after a long index.
+every repeated rib or digit. Selected structure details overlay the upper-right
+side of the diagram inside the drawing stage rather than taking up a toolbar
+row or resizing the SVG. The inspector can be dismissed, remains available
+when the Structures index is hidden or moved below the viewer, and has an
+internally scrollable height limit for compact screens.
 
 ## Manual verification
 
@@ -90,8 +94,11 @@ above the viewer rather than appended after a long index.
 - Collapse/reopen both body-system and structure panels independently,
   including the bottom Structures panel at narrower widths.
 - Verify the “Lymphatic and immune” entry stays on one line.
-- Confirm the selected structure's name and description appear immediately
-  above the diagram, even if Structures is collapsed or docked below.
+- Confirm the selected structure's name and description appear in a small
+  floating card at the right side of the viewer, even if Structures is
+  collapsed or docked below.
+- Confirm selecting and dismissing the floating card does not resize, move,
+  or reflow the SVG, zoom controls, or workspace.
 - Verify there is no instruction strip below the diagram, and skeletal
   fill/outline styles are neutral and consistent in both themes.
 - Check empty-state messaging for non-skeletal systems and the skeleton's
