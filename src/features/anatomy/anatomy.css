@@ -245,6 +245,21 @@
   fill: var(--anatomy-bone-active);
   stroke: var(--anatomy-bone-active-outline);
 }
+.anatomy-shape.is-occluded:not(.is-selected) { opacity: 0.45; }
+.anatomy-shape.is-occluded:hover { opacity: 1; }
+.anatomy-no-visible-bones {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(300px, calc(100% - 48px));
+  margin: 0;
+  transform: translate(-50%, -50%);
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 20px;
+  text-align: center;
+  pointer-events: none;
+}
 .anatomy-shape:focus-visible {
   outline: none;
   stroke-dasharray: 2 1.5;

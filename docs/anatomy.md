@@ -100,9 +100,14 @@ the geometry or duplicate data IDs.
 
 Visibility modes: **Both** defaults to all structures overlaid in an
 anterior schematic projection, including bone locations otherwise obscured.
+Deep bones are drawn with reduced opacity to distinguish them from the
+surface view.
 **Front** and **Back** render their respective front/back projections and
 hide bones not visible from that surface, such as the scapula in Front,
-sternum and face in Back, and middle-ear ossicles in both. This is a simple
+sternum and face in Back, and middle-ear ossicles in both. Some
+region/direction combinations intentionally have no visible bones;
+an explicit message suggests Both, rather than showing an unrelated
+figure placeholder. This is a simple
 educational occlusion model, not ray-tracing, and cannot replace detailed
 cutaways or clinically validated plates.
 

@@ -54,6 +54,10 @@ export const Anatomy = defineComponent({
           || boneInRegion(bone, regionId.value) && boneVisibleFrom(bone, facing.value));
       });
     });
+    const occludedIds = computed(() => facing.value === 'both' && systemId.value === 'skeletal'
+      ? [...atlas.structures.values()].filter(bone => bone.systemId === 'skeletal'
+        && !boneVisibleFrom(bone, 'front')).map(bone => bone.id)
+      : []);
     const visibleIds = computed(() => new Set(shapes.value.map(shape => shape.structureId)));
     const structures = computed(() => searchStructures(atlas, search.value, systemId.value)
       .filter(item => visibleIds.value.has(item.id)));
@@ -168,6 +172,7 @@ export const Anatomy = defineComponent({
           ? h(AnatomyViewer, {
             key: view.value.id + '.' + regionId.value,
             view: view.value, focus: focus.value, layers: layers.value, shapes: shapes.value,
+            occludedIds: occludedIds.value, showPlaceholder: systemId.value !== 'skeletal',
             structures: [...atlas.structures.values()], selectedId: selectedId.value ?? '',
             selectedStructure: selected.value ?? null,
             onSelect: selectStructure,

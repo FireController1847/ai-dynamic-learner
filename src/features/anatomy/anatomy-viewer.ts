@@ -19,6 +19,8 @@ export const AnatomyViewer = defineComponent({
     structures: { type: Array as PropType<readonly AtlasStructure[]>, required: true },
     selectedId: { type: String, default: '' },
     selectedStructure: { type: Object as PropType<AtlasStructure | null>, default: null },
+    occludedIds: { type: Array as PropType<readonly string[]>, default: () => [] },
+    showPlaceholder: { type: Boolean, default: true },
   },
   emits: { select: (_structureId: string) => true, clearSelection: () => true },
   setup(props, { emit, slots }) {
@@ -57,6 +59,7 @@ export const AnatomyViewer = defineComponent({
       window.removeEventListener('blur', clearKey);
     });
     const structureNames = computed(() => new Map(props.structures.map(item => [item.id, item.name])));
+    const occluded = computed(() => new Set(props.occludedIds));
     const orderedShapes = computed(() => {
       const order = new Map(props.layers.map((layer, index) => [layer.id, index]));
       return [...props.shapes].sort((a, b) => (order.get(a.layerId) ?? 0) - (order.get(b.layerId) ?? 0));
@@ -209,13 +212,13 @@ export const AnatomyViewer = defineComponent({
       if (shape.renderMode === 'stroke' && shape.geometry.kind === 'path') {
         // Separate touch hit target from the thin visual line.
         return h('g', { ...interaction, key: shape.id, transform, class: 'anatomy-stroke-group' }, [
-          h('path', { d: shape.geometry.d, class: ['anatomy-shape', 'is-stroke', { 'is-selected': selected }] }),
+          h('path', { d: shape.geometry.d, class: ['anatomy-shape', 'is-stroke', { 'is-selected': selected, 'is-occluded': occluded.value.has(shape.structureId) }] }),
           h('path', { d: shape.geometry.d, class: 'anatomy-stroke-hit', 'aria-hidden': 'true' }),
         ]);
       }
       return h(geometry.tag, {
         ...geometry.attrs, ...interaction, key: shape.id, transform,
-        class: ['anatomy-shape', { 'is-selected': selected }],
+        class: ['anatomy-shape', { 'is-selected': selected, 'is-occluded': occluded.value.has(shape.structureId) }],
       });
     }
 
@@ -259,13 +262,17 @@ export const AnatomyViewer = defineComponent({
           onPointercancel: pointerEnd,
           onLostpointercapture: () => { drag = null; },
         }, [
-          ...(props.shapes.length ? [] : [placeholder()]),
+          ...(props.shapes.length || !props.showPlaceholder ? [] : [placeholder()]),
           ...orderedShapes.value.map(shape => {
             const tabbable = !tabStops.has(shape.structureId);
             if (shape.renderMode !== 'etch' && shape.renderMode !== 'cutout') tabStops.add(shape.structureId);
             return shapeNode(shape, tabbable);
           }),
         ]),
+        !props.shapes.length && !props.showPlaceholder
+          ? h('p', { class: 'anatomy-no-visible-bones', role: 'status' },
+            'No bones visible from this direction in this region. Choose Both for deeper structures.')
+          : null,
         props.selectedStructure ? h('section', {
           key: props.selectedStructure.id,
           class: 'anatomy-selected-inspector',
