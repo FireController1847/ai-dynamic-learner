@@ -16,6 +16,38 @@ export async function requestCheckInNotifications(): Promise<NotificationPermiss
 }
 
 const failedReminders = new Set<string>();
+const CHECK_IN_NOTIFICATION_TITLE = 'Solve-It Grid — gentle check-in';
+const CHECK_IN_NOTIFICATION_BODY = 'How are you feeling about what you are doing? Check in whenever you are ready.';
+
+function showCheckInNotification(tag: string, preview = false): boolean {
+  try {
+    const notification = new Notification(CHECK_IN_NOTIFICATION_TITLE, {
+      body: preview ? `Preview: ${CHECK_IN_NOTIFICATION_BODY}` : CHECK_IN_NOTIFICATION_BODY,
+      tag,
+    });
+    notification.onclick = () => {
+      window.focus();
+      notification.close();
+    };
+    return true;
+  } catch {
+    // Some browser contexts cannot construct notifications, even with
+    // permission. In-app check-ins remain available.
+    return false;
+  }
+}
+
+export type CheckInPreviewNotificationResult = 'sent' | 'denied' | 'unsupported' | 'failed';
+
+/** Triggered directly by the speaker's click, never by an automatic timer. */
+export async function previewCheckInNotification(): Promise<CheckInPreviewNotificationResult> {
+  if (!window.isSecureContext || !('Notification' in window)) return 'unsupported';
+  const permission = Notification.permission === 'default'
+    ? await requestCheckInNotifications() : Notification.permission;
+  if (permission !== 'granted') return 'denied';
+  // Distinct from real reminder tags and never updates persisted deadlines.
+  return showCheckInNotification('solve-it-grid-preview', true) ? 'sent' : 'failed';
+}
 
 /**
  * A tab-open reminder delivery check. Called from the persistent app shell,
@@ -34,19 +66,10 @@ export function deliverDueCheckInNotifications(items: TaskSet[], now = Date.now(
 
     const identifier = `${item.id}:${focus.taskId}:${focus.remindAt}`;
     if (failedReminders.has(identifier)) continue;
-    try {
-      const notification = new Notification('Solve-It Grid — gentle check-in', {
-        body: 'How are you feeling about what you are doing? Check in whenever you are ready.',
-        tag: `solve-it-grid-${item.id}-${focus.taskId}`,
-      });
-      notification.onclick = () => {
-        window.focus();
-        notification.close();
-      };
+    if (showCheckInNotification(`solve-it-grid-${item.id}-${focus.taskId}`)) {
       focus.notifiedAt = focus.remindAt;
-    } catch {
-      // Some browsers require installed-app notifications. The in-app
-      // reminder remains available; avoid retrying a failing constructor.
+    } else {
+      // Avoid repeatedly trying a failing notification constructor.
       failedReminders.add(identifier);
     }
   }

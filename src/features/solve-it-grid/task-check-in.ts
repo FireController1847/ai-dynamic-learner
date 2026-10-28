@@ -1,6 +1,7 @@
 import { defineComponent, h, ref, Transition, type PropType } from 'vue';
 import { Icon } from '../../components/icon.ts';
 import { CHECK_IN_MINUTES, type ActiveCheckIn, type CheckInMode } from './library-model.ts';
+import { previewCheckInNotification } from './check-in-notifications.ts';
 
 export const TaskCheckIn = defineComponent({
   name: 'TaskCheckIn',
@@ -22,7 +23,24 @@ export const TaskCheckIn = defineComponent({
     const mode = ref<CheckInMode>('both');
     const minutes = ref<number>(25);
     const preview = ref(false);
+    const previewMessage = ref('Preview only — no reminder has been scheduled.');
     function closePreview() { preview.value = false; }
+    function previewReminder() {
+      // Open the in-app preview immediately. The same click requests browser
+      // permission if needed, then attempts the sample system notification.
+      preview.value = true;
+      previewMessage.value = 'Preview only — no reminder has been scheduled.';
+      void previewCheckInNotification().then(result => {
+        if (!preview.value) return;
+        previewMessage.value = result === 'sent'
+          ? 'Preview only — a sample system notification was requested. No reminder has been scheduled.'
+          : result === 'denied'
+            ? 'Preview only — browser notifications are blocked. You can enable them in your browser settings.'
+            : result === 'unsupported'
+              ? 'Preview only — system notifications are unavailable in this browser or context.'
+              : 'Preview only — the browser could not send a system notification. The in-app check-in still works.';
+      });
+    }
     function doneButton() {
       // The full-screen completion is the only celebration. Saving begins
       // immediately; no second button animation or artificial click delay.
@@ -88,9 +106,9 @@ export const TaskCheckIn = defineComponent({
                     class: ['sig-duration', { 'is-selected': minutes.value === n }],
                     'aria-pressed': minutes.value === n, onClick: () => { minutes.value = n; } }, `${n} min`)),
                   h('button', { type: 'button', class: 'sig-work-preview-button',
-                    title: 'Preview the gentle check-in',
-                    'aria-label': 'Preview the gentle check-in now',
-                    onClick: () => { preview.value = true; },
+                    title: 'Preview the check-in and send a sample system notification',
+                    'aria-label': 'Preview the check-in and send a test system notification',
+                    onClick: previewReminder,
                   }, [h(Icon, { name: 'volume-2' })]),
                 ]),
             ]) : h('p', { key: 'reminder', class: 'sig-work-reminder' }, 'A gentle reminder after one hour, even if you are not finished.'),
@@ -98,8 +116,8 @@ export const TaskCheckIn = defineComponent({
             h('button', { type: 'button', class: 'card-primary-button sig-work-start',
               onClick: () => emit('start', mode.value, minutes.value) }, [h(Icon, { name: 'play' }), 'Start working']),
           ]) : due ? h('div', { key: 'checkin', class: 'sig-work-checkin', role: 'status' }, [
-            previewing ? h('p', { class: 'sig-work-preview-caption' },
-              'Preview only — no reminder has been scheduled.') : null,
+            previewing ? h('p', { class: 'sig-work-preview-caption', role: 'status' },
+              previewMessage.value) : null,
             h(Icon, { name: 'heart' }),
             h('h4', 'How are you feeling about what you are doing?'),
             h('p', 'You have spent some time here. Nothing has to be finished now.'),
