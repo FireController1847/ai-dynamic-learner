@@ -21,6 +21,8 @@ export const TaskCheckIn = defineComponent({
   setup(props, { emit }) {
     const mode = ref<CheckInMode>('both');
     const minutes = ref<number>(25);
+    const preview = ref(false);
+    function closePreview() { preview.value = false; }
     function doneButton() {
       // The full-screen completion is the only celebration. Saving begins
       // immediately; no second button animation or artificial click delay.
@@ -28,7 +30,10 @@ export const TaskCheckIn = defineComponent({
         type: 'button',
         class: 'sig-work-done-button',
         'aria-label': 'Mark this item finished',
-        onClick: () => { if (!props.completed) emit('done'); },
+        onClick: () => {
+          if (preview.value && !props.focus) { closePreview(); return; }
+          if (!props.completed) emit('done');
+        },
       }, [
         h(Icon, { name: 'check' }),
         h('span', 'I’m finished'),
@@ -55,18 +60,20 @@ export const TaskCheckIn = defineComponent({
         ]),
       ]);
       const focus = props.focus;
-      const due = !!focus && props.now >= focus.remindAt;
+      const previewing = !focus && preview.value;
+      const due = previewing || (!!focus && props.now >= focus.remindAt);
       return h('section', { class: 'sig-work', 'aria-label': 'Work on an item' }, [
         h('div', { class: 'sig-work-top' }, [
-          h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('back') },
-            [h(Icon, { name: 'arrow-left' }), 'Back to grid']),
+          h('button', { type: 'button', class: 'quiet-button',
+            onClick: () => { if (previewing) closePreview(); else emit('back'); } },
+            [h(Icon, { name: 'arrow-left' }), previewing ? 'Back to choices' : 'Back to grid']),
           h('span', { class: 'sig-work-category' }, props.categoryLabel),
         ]),
         h('div', { class: 'sig-work-main' }, [
           h('p', { class: 'sig-work-eyebrow' }, 'One thing at a time'),
           h('h3', props.taskText),
           h(Transition, { name: 'sig-work-stage', mode: 'out-in' }, { default: () =>
-            !focus ? h('div', { key: 'setup', class: 'sig-work-setup' }, [
+            !focus && !previewing ? h('div', { key: 'setup', class: 'sig-work-setup' }, [
             h('p', 'What would help you check back in with yourself? You can always switch activities without finishing.'),
             h('div', { class: 'sig-work-modes', role: 'group', 'aria-label': 'Check-in style' }, modes.map(option =>
               h('button', { type: 'button', class: ['sig-work-mode', { 'is-selected': option.id === mode.value }],
@@ -76,21 +83,32 @@ export const TaskCheckIn = defineComponent({
               mode.value !== 'completion' ? h('div', { key: 'time', class: 'sig-work-timing' }, [
               h('strong', 'Check in after'),
               h('div', { class: 'sig-work-durations', role: 'group', 'aria-label': 'Check-in time' },
-                CHECK_IN_MINUTES.map(n => h('button', { type: 'button',
-                  class: ['sig-duration', { 'is-selected': minutes.value === n }],
-                  'aria-pressed': minutes.value === n, onClick: () => { minutes.value = n; } }, `${n} min`))),
+                [
+                  ...CHECK_IN_MINUTES.map(n => h('button', { type: 'button',
+                    class: ['sig-duration', { 'is-selected': minutes.value === n }],
+                    'aria-pressed': minutes.value === n, onClick: () => { minutes.value = n; } }, `${n} min`)),
+                  h('button', { type: 'button', class: 'sig-work-preview-button',
+                    title: 'Preview the gentle check-in',
+                    'aria-label': 'Preview the gentle check-in now',
+                    onClick: () => { preview.value = true; },
+                  }, [h(Icon, { name: 'volume-2' })]),
+                ]),
             ]) : h('p', { key: 'reminder', class: 'sig-work-reminder' }, 'A gentle reminder after one hour, even if you are not finished.'),
             }),
             h('button', { type: 'button', class: 'card-primary-button sig-work-start',
               onClick: () => emit('start', mode.value, minutes.value) }, [h(Icon, { name: 'play' }), 'Start working']),
           ]) : due ? h('div', { key: 'checkin', class: 'sig-work-checkin', role: 'status' }, [
+            previewing ? h('p', { class: 'sig-work-preview-caption' },
+              'Preview only — no reminder has been scheduled.') : null,
             h(Icon, { name: 'heart' }),
             h('h4', 'How are you feeling about what you are doing?'),
             h('p', 'You have spent some time here. Nothing has to be finished now.'),
             h('div', { class: 'sig-work-choices' }, [
-              h('button', { type: 'button', class: 'sig-work-option', onClick: () => emit('continue') },
+              h('button', { type: 'button', class: 'sig-work-option',
+                onClick: () => { if (previewing) closePreview(); else emit('continue'); } },
                 [h(Icon, { name: 'play' }), h('span', [h('strong', 'Keep going'), h('small', 'Check in again later.')])]),
-              h('button', { type: 'button', class: 'sig-work-option', onClick: () => emit('moveOn') },
+              h('button', { type: 'button', class: 'sig-work-option',
+                onClick: () => { if (previewing) closePreview(); else emit('moveOn'); } },
                 [h(Icon, { name: 'refresh-cw' }), h('span', [h('strong', 'Choose something else'), h('small', 'This item stays available.')])]),
             ]),
             h('div', { class: 'sig-work-checkin-finish' }, [doneButton()]),

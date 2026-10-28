@@ -23,6 +23,11 @@
 .sig-work-durations { display: flex; flex-wrap: wrap; gap: 8px; }
 .sig-duration { min-height: 40px; min-width: 62px; padding: 6px 12px; border: 1px solid var(--control-border); border-radius: 8px; background: var(--page-background); color: var(--text-color); cursor: pointer; transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease; }
 .sig-duration:not(.is-selected):hover { background: var(--surface-hover); }
+.sig-work-preview-button { display: inline-grid; place-items: center; flex: none; width: 40px; height: 40px; padding: 0; border: 1px solid var(--control-border); border-radius: 8px; background: var(--page-background); color: var(--text-secondary); cursor: pointer; transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease; }
+.sig-work-preview-button .ui-icon { width: 19px; height: 19px; }
+.sig-work-preview-button:hover { background: var(--surface-hover); color: var(--text-color); }
+.sig-work-preview-button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.sig-work-preview-caption { margin: 0; color: var(--text-secondary); font-size: 12px; font-weight: 600; line-height: 1.5; }
 .sig-work-mode:focus-visible, .sig-duration:focus-visible, .sig-work-option:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 .sig-work-start { display: inline-flex; align-items: center; justify-content: center; gap: 8px; justify-self: start; min-height: 44px; }
 .sig-work-start .ui-icon { width: 16px; height: 16px; }
@@ -102,7 +107,7 @@
   .sig-work, .sig-work-checkin, .sig-work-success *,
   .sig-work-stage-enter-active, .sig-work-stage-leave-active,
   .sig-work-suboption-enter-active, .sig-work-suboption-leave-active,
-  .sig-work-mode, .sig-duration, .sig-work-option { transition: none !important; }
+  .sig-work-mode, .sig-duration, .sig-work-preview-button, .sig-work-option { transition: none !important; }
   .sig-work-success-mark .ui-icon { animation: none !important; transition: none !important; }
   .sig-work-success-halo, .sig-work-success-sparks { display: none; }
 }
