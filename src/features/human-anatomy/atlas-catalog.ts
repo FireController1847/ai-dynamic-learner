@@ -1,4 +1,5 @@
 import type { AtlasDataset, AtlasOrientation, AtlasSystem, AtlasRegion } from './atlas-model.ts';
+import { skeletalLayers, skeletalShapes, skeletalStructures } from './skeletal-outline.ts';
 
 // These are navigational categories, not claims that their anatomical content
 // is complete. Structure data and diagram paths are added in separate, reviewed packs.
@@ -32,14 +33,14 @@ const orientations: readonly { id: AtlasOrientation; name: string }[] = [
   { id: 'posterior', name: 'Back' },
 ];
 
-// Bundled, versioned reference material. The foundation deliberately ships
-// without unlicensed diagrams or unverifiable structure labels.
+// Bundled, versioned reference material. The skeletal view is a deliberately
+// simplified original outline, not a medically validated full-body diagram.
 export const foundationAtlas: AtlasDataset = {
   schemaVersion: 1,
   systems: atlasSystems,
   regions: atlasRegions,
   sources: [],
-  structures: [],
+  structures: skeletalStructures,
   views: atlasSystems.flatMap(system => orientations.map(orientation => ({
     id: system.id + '.whole-body.' + orientation.id,
     systemId: system.id,
@@ -49,6 +50,6 @@ export const foundationAtlas: AtlasDataset = {
     width: 320,
     height: 560,
   }))),
-  layers: [],
-  shapes: [],
+  layers: skeletalLayers,
+  shapes: skeletalShapes,
 };

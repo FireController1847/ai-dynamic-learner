@@ -44,7 +44,7 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'human-anatomy', label: 'Human Anatomy', path: '/human-anatomy/', icon: 'anatomy',
     group: 'tools',
-    version: '0.1.0',
+    version: '0.2.0',
     image: 'assets/app-icons/human-anatomy.svg',
     description: 'Browse body systems in the foundation of an interactive 2D anatomy atlas.',
     metadata: {

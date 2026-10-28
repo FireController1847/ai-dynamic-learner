@@ -1,11 +1,19 @@
 .human-anatomy-page {
+  --anatomy-systems-width: 264px;
+  --anatomy-details-width: 280px;
   display: grid;
-  grid-template-columns: 224px minmax(0, 1fr) 264px;
+  grid-template-columns: var(--anatomy-systems-width) minmax(0, 1fr) var(--anatomy-details-width);
+  grid-template-rows: minmax(0, 1fr);
+  transition: grid-template-columns var(--motion-normal) var(--ease-out);
   flex: 1;
   min-width: 0;
   min-height: 0;
   background: var(--surface-workspace);
 }
+
+.human-anatomy-page.systems-collapsed { --anatomy-systems-width: 0px; }
+.human-anatomy-page.structures-collapsed { --anatomy-details-width: 0px; }
+.anatomy-systems[hidden], .anatomy-details[hidden] { display: none; }
 
 .anatomy-systems, .anatomy-details {
   min-width: 0;
@@ -14,8 +22,13 @@
   overflow-y: auto;
   background: var(--page-background);
 }
-.anatomy-systems { border-right: 1px solid var(--border-color); }
-.anatomy-details { border-left: 1px solid var(--border-color); }
+.anatomy-systems { grid-column: 1; grid-row: 1; border-right: 1px solid var(--border-color); }
+.anatomy-details { grid-column: 3; grid-row: 1; border-left: 1px solid var(--border-color); }
+.anatomy-panel-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; }
+.anatomy-panel-heading { min-width: 0; }
+.anatomy-panel-toggle { margin-top: -4px; }
+.anatomy-show-panel { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.anatomy-show-panel .ui-icon { width: 16px; height: 16px; }
 .anatomy-panel-heading { margin: 0 4px 18px; }
 .anatomy-panel-heading h2 { font-size: 16px; }
 .anatomy-panel-heading p { margin: 6px 0 0; color: var(--text-secondary); font-size: 12px; line-height: 18px; }
@@ -29,6 +42,7 @@
   border: 1px solid transparent;
   border-radius: var(--radius);
 }
+.anatomy-system-choice { white-space: nowrap; }
 .anatomy-system-choice:hover, .anatomy-structure-choice:hover { background: var(--surface-hover); }
 .anatomy-system-choice.is-active, .anatomy-structure-choice.is-active {
   color: var(--brand-text);
@@ -37,6 +51,8 @@
   font-weight: 600;
 }
 .anatomy-workspace {
+  grid-column: 2;
+  grid-row: 1;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -134,6 +150,16 @@
   cursor: pointer;
   transition: fill-opacity var(--motion-fast), stroke-width var(--motion-fast);
 }
+.anatomy-shape.is-stroke {
+  fill: none;
+  stroke-width: 7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: stroke;
+}
+.anatomy-shape.is-stroke:hover, .anatomy-shape.is-stroke:focus-visible, .anatomy-shape.is-stroke.is-selected {
+  stroke-width: 10;
+}
 .anatomy-shape:hover, .anatomy-shape:focus-visible, .anatomy-shape.is-selected {
   fill-opacity: 0.58;
   stroke-width: 2.3;
@@ -185,12 +211,21 @@
 .anatomy-structure-detail p { color: var(--text-secondary); }
 
 @media (max-width: 1050px) {
-  .human-anatomy-page { grid-template-columns: 208px minmax(0, 1fr); }
-  .anatomy-details { grid-column: 2; border-left: 0; border-top: 1px solid var(--border-color); }
+  .human-anatomy-page {
+    grid-template-columns: var(--anatomy-systems-width) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+  .anatomy-details {
+    grid-column: 2;
+    grid-row: 2;
+    max-height: min(320px, 40vh);
+    border-left: 0;
+    border-top: 1px solid var(--border-color);
+  }
   .anatomy-systems { grid-row: 1 / span 2; }
 }
 @media (max-width: 700px) {
-  .human-anatomy-page { display: flex; flex-direction: column; }
+  .human-anatomy-page { display: flex; flex-direction: column; overflow-y: auto; }
   .anatomy-systems { overflow: visible; padding: 14px; border-right: 0; border-bottom: 1px solid var(--border-color); }
   .anatomy-panel-heading { margin-bottom: 10px; }
   .anatomy-system-list { display: flex; overflow-x: auto; padding-bottom: 4px; }
@@ -199,7 +234,7 @@
   .anatomy-workspace-heading h1 { font-size: 21px; }
   .anatomy-viewer { min-height: 400px; }
   .anatomy-diagram-stage { min-height: 320px; flex-basis: 320px; }
-  .anatomy-details { overflow: visible; border-top: 1px solid var(--border-color); }
+  .anatomy-details { max-height: none; overflow: visible; border-top: 1px solid var(--border-color); }
 }
 @media (prefers-reduced-motion: reduce) {
   .anatomy-shape { transition: none; }

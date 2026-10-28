@@ -67,6 +67,8 @@ export interface AtlasShape {
   layerId: string;
   structureId: string;
   geometry: AtlasGeometry;
+  // Stroke mode allows open SVG paths (e.g., a stylized long bone or rib).
+  renderMode?: 'filled' | 'stroke';
 }
 
 export interface AtlasDataset {

@@ -67,7 +67,10 @@ export const AnatomyViewer = defineComponent({
       const name = structureNames.value.get(shape.structureId) ?? shape.structureId;
       const attrs = {
         key: shape.id,
-        class: ['anatomy-shape', { 'is-selected': props.selectedId === shape.structureId }],
+        class: ['anatomy-shape', {
+          'is-selected': props.selectedId === shape.structureId,
+          'is-stroke': shape.renderMode === 'stroke',
+        }],
         role: 'button',
         tabindex: 0,
         'aria-label': 'Select ' + name,
@@ -125,7 +128,7 @@ export const AnatomyViewer = defineComponent({
         ]),
       ]),
       h('p', { class: 'anatomy-viewer-note' },
-        props.shapes.length ? 'Select a highlighted structure to view its details. Zoom to inspect smaller regions.'
+        props.shapes.length ? 'Simplified skeletal outline: select a major bone group to learn more. Not a complete or clinically validated anatomical drawing.'
           : 'Diagram foundation only — anatomical illustrations and selectable structures have not been added yet.'),
     ]);
   },

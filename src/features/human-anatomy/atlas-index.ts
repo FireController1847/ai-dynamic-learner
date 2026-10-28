@@ -91,6 +91,9 @@ export function buildAtlasIndex(dataset: AtlasDataset): AtlasIndex {
     if (shape.geometry.kind === 'ellipse' &&
       (![shape.geometry.cx, shape.geometry.cy, shape.geometry.rx, shape.geometry.ry].every(Number.isFinite)
         || shape.geometry.rx <= 0 || shape.geometry.ry <= 0)) throw new Error('Invalid ellipse: ' + shape.id);
+    if (shape.renderMode === 'stroke' && shape.geometry.kind !== 'path') {
+      throw new Error('Only paths support stroke mode: ' + shape.id);
+    }
     const group = shapesByView.get(view.id) ?? [];
     group.push(shape);
     shapesByView.set(view.id, group);
