@@ -197,7 +197,7 @@ export const TaskSetBuilder = defineComponent({
           h('div', { class: 'sig-intro-credentials' }, [
             h('span', 'Designed for those with ADHD.'),
             h('span', { class: 'sig-intro-credential-verified' }, [
-              h('span', 'Verified by a Licensed Therapist'),
+              h('span', 'Verified via. Licensed Therapy'),
               h(Icon, { name: 'verified' }),
             ]),
           ]),
