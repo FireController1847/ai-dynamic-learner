@@ -70,7 +70,7 @@ export const neuralSpecs: readonly NeuralSpec[] = [
     description: 'Anterior rami of thoracic spinal nerves that follow rib spaces to supply the thoracic wall; shown as a grouped overview.' },
   { id: 'sympathetic-trunk', name: 'Sympathetic trunk (chain)', division: 'Autonomic nervous system', region: 'thorax', otherRegions: ['head-neck', 'abdomen', 'pelvis', 'back'], surfaces: both, paired: true,
     description: 'Paired paravertebral chains of sympathetic ganglia extending from the neck into the pelvis.' },
-  { id: 'lumbar-plexus', name: 'Lumbar plexus', division: 'Peripheral nervous system', region: 'abdomen', otherRegions: ['pelvis', 'lower-limb'], surfaces: front, paired: true,
+  { id: 'lumbar-plexus', name: 'Lumbar plexus', division: 'Peripheral nervous system', region: 'abdomen', otherRegions: ['pelvis'], surfaces: front, paired: true,
     description: 'Network mainly from L1–L4 anterior rami, giving rise to nerves of the anterior and medial thigh.' },
   { id: 'femoral-nerve', name: 'Femoral nerve', division: 'Peripheral nervous system', region: 'lower-limb', otherRegions: ['pelvis'], surfaces: front, paired: true,
     description: 'Supplies anterior thigh muscles and conveys sensation from the anterior thigh and part of the medial leg.' },

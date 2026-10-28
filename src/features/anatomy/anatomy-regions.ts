@@ -106,8 +106,8 @@ export function muscleInRegion(muscle: AtlasStructure, region: string): boolean 
 // A region never creates a duplicate or a new anatomical structure ID.
 export const nervousRegions: readonly AnatomyRegion[] = [
   { id: 'whole-body', name: 'Whole body', x: 53, y: 12, width: 214, height: 657 },
-  { id: 'head-neck', name: 'Brain & head', x: 114, y: 17, width: 92, height: 132 },
-  { id: 'spine', name: 'Spinal cord', x: 126, y: 92, width: 68, height: 245 },
+  { id: 'head-neck', name: 'Brain & head', x: 112, y: 17, width: 96, height: 171 },
+  { id: 'spine', name: 'Spinal cord', x: 137, y: 111, width: 46, height: 221 },
   { id: 'thorax', name: 'Chest nerves', x: 92, y: 128, width: 136, height: 144 },
   { id: 'abdomen', name: 'Abdomen', x: 102, y: 216, width: 116, height: 111 },
   { id: 'pelvis', name: 'Pelvis', x: 101, y: 271, width: 118, height: 104 },
@@ -118,8 +118,8 @@ export function nerveInRegion(structure: AtlasStructure, region: string): boolea
   if (region === 'whole-body') return true;
   if (region === 'spine') {
     const id = structure.id.split('.').pop() ?? '';
-    return ['midbrain', 'pons', 'medulla', 'cervical-cord', 'thoracic-cord',
-      'lumbosacral-cord', 'cauda-equina', 'sympathetic-trunk'].includes(id);
+    return ['cervical-cord', 'thoracic-cord', 'lumbosacral-cord',
+      'cauda-equina'].includes(id);
   }
   return structure.regionIds.includes(region);
 }
