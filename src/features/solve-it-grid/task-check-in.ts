@@ -1,4 +1,4 @@
-import { defineComponent, h, ref, type PropType } from 'vue';
+import { defineComponent, h, onBeforeUnmount, ref, type PropType } from 'vue';
 import { Icon } from '../../components/icon.ts';
 import { CHECK_IN_MINUTES, type ActiveCheckIn, type CheckInMode } from './library-model.ts';
 
@@ -21,10 +21,40 @@ export const TaskCheckIn = defineComponent({
   setup(props, { emit }) {
     const mode = ref<CheckInMode>('both');
     const minutes = ref<number>(25);
+    const finishing = ref(false);
+    let finishTimer: number | undefined;
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+    function finish() {
+      if (finishing.value || props.completed) return;
+      finishing.value = true;
+      // Let the control itself respond before the larger celebration takes over.
+      finishTimer = window.setTimeout(() => {
+        finishTimer = undefined;
+        emit('done');
+      }, reduced.matches ? 0 : 340);
+    }
+    onBeforeUnmount(() => {
+      if (finishTimer !== undefined) window.clearTimeout(finishTimer);
+    });
+    function doneButton() {
+      return h('button', {
+        type: 'button',
+        class: ['sig-work-done-button', { 'is-finishing': finishing.value }],
+        disabled: finishing.value,
+        'aria-label': 'Mark this item finished',
+        onClick: finish,
+      }, [
+        h('span', { class: 'sig-work-done-icon', 'aria-hidden': true }, [
+          h(Icon, { name: 'check' }),
+          h('span', { class: 'sig-work-done-ring' }),
+        ]),
+        h('span', finishing.value ? 'Completed!' : 'I’m finished'),
+      ]);
+    }
     const modes: { id: CheckInMode; label: string; detail: string }[] = [
       { id: 'time', label: 'Time', detail: 'Check in after a little while.' },
-      { id: 'completion', label: 'Until finished', detail: 'Work until you feel done. Get a reminder after an hour.' },
-      { id: 'both', label: 'Both', detail: 'A gentle time reminder, or finish sooner.' },
+      { id: 'completion', label: 'Until finished', detail: 'Mark it done whenever you’re ready. Get a reminder after an hour.' },
+      { id: 'both', label: 'Both', detail: 'A gentle time reminder and a finish control.' },
     ];
     return () => {
       if (props.completed) return h('section', {
@@ -72,12 +102,11 @@ export const TaskCheckIn = defineComponent({
             h('h4', 'How are you feeling about what you are doing?'),
             h('p', 'You have spent some time here. Nothing has to be finished now.'),
             h('div', { class: 'sig-work-choices' }, [
-              h('button', { type: 'button', class: 'sig-work-option', onClick: () => emit('continue') },
+              h('button', { type: 'button', class: 'sig-work-option', disabled: finishing.value, onClick: () => emit('continue') },
                 [h(Icon, { name: 'play' }), h('span', [h('strong', 'Keep going'), h('small', 'Check in again later.')])]),
-              h('button', { type: 'button', class: 'sig-work-option', onClick: () => emit('moveOn') },
+              h('button', { type: 'button', class: 'sig-work-option', disabled: finishing.value, onClick: () => emit('moveOn') },
                 [h(Icon, { name: 'refresh-cw' }), h('span', [h('strong', 'Choose something else'), h('small', 'This item stays available.')])]),
-              h('button', { type: 'button', class: 'sig-work-option', onClick: () => emit('done') },
-                [h(Icon, { name: 'check' }), h('span', [h('strong', 'I am finished'), h('small', 'Mark this item complete.')])]),
+              doneButton(),
             ]),
           ]) : h('div', { class: 'sig-work-active' }, [
             h(Icon, { name: 'heart' }),
@@ -88,12 +117,9 @@ export const TaskCheckIn = defineComponent({
             h('small', 'There is no deadline to finish.'),
           ]),
           focus && !due ? h('div', { class: 'sig-work-actions' }, [
-            focus.mode !== 'time' ? h('label', { class: 'sig-work-finish-toggle' }, [
-              h('input', { type: 'checkbox', checked: false, onChange: () => emit('done') }),
-              h('span', 'I am finished with this'),
-            ]) : h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('done') },
-              [h(Icon, { name: 'check' }), 'I am finished']),
-            h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('moveOn') },
+            doneButton(),
+            h('button', { type: 'button', class: 'quiet-button', disabled: finishing.value,
+              onClick: () => emit('moveOn') },
               [h(Icon, { name: 'refresh-cw' }), 'Choose something else']),
           ]) : null,
           h('p', { class: 'sig-work-footnote' }, 'You can move on without finishing. This item will remain available later.'),

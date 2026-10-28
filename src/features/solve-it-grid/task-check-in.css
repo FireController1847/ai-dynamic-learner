@@ -18,7 +18,7 @@
 .sig-work-mode:focus-visible, .sig-duration:focus-visible, .sig-work-option:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 .sig-work-start { display: inline-flex; align-items: center; justify-content: center; gap: 8px; justify-self: start; min-height: 44px; }
 .sig-work-start .ui-icon { width: 16px; height: 16px; }
-.sig-work-active { display: grid; gap: 10px; justify-items: center; padding: clamp(26px, 6vw, 54px) 18px; border-radius: var(--radius-dialog); background: var(--surface-subtle); text-align: center; }
+.sig-work-active { display: grid; gap: 10px; justify-items: center; padding: 24px 12px; text-align: center; }
 .sig-work-active > .ui-icon { width: 32px; height: 32px; color: var(--text-secondary); }
 .sig-work-active p { margin: 0; font-size: 20px; font-weight: 600; }
 .sig-work-active > span, .sig-work-active > small { color: var(--text-secondary); line-height: 1.5; }
@@ -28,13 +28,25 @@
 .sig-work-choices { display: grid; gap: 8px; width: 100%; }
 .sig-work-option { display: flex; align-items: center; gap: 14px; min-height: 68px; padding: 12px 16px; border: 1px solid var(--control-border); border-radius: var(--radius-dialog); background: var(--page-background); text-align: left; color: var(--text-color); cursor: pointer; }
 .sig-work-option:hover { background: var(--surface-hover); }
+.sig-work-option:disabled { cursor: default; opacity: .6; }
 .sig-work-option > .ui-icon { width: 22px; height: 22px; flex: none; color: var(--text-secondary); }
 .sig-work-option > span { display: grid; gap: 4px; }
 .sig-work-option small { color: var(--text-secondary); font-size: 12px; }
-.sig-work-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
-.sig-work-finish-toggle { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer; }
-.sig-work-finish-toggle input { width: 20px; height: 20px; accent-color: var(--brand); cursor: pointer; }
-.sig-work-footnote { font-size: 12px; }
+.sig-work-actions { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 12px; }
+.sig-work-done-button { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 12px; min-height: 60px; padding: 12px 20px; border: 1.5px solid var(--brand); border-radius: 12px; background: var(--brand-tint); color: var(--brand-text); font: inherit; font-size: 16px; font-weight: 600; text-align: center; cursor: pointer; transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease; }
+.sig-work-done-button:not(:disabled):hover { box-shadow: 0 3px 14px rgb(0 0 0 / .09); }
+.sig-work-done-button:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
+.sig-work-done-button.is-finishing { background: var(--brand); color: var(--page-background); cursor: default; animation: sig-work-done-press 330ms ease-out both; }
+.sig-work-done-icon { position: relative; display: inline-grid; flex: none; place-items: center; width: 29px; height: 29px; border: 2px solid currentColor; border-radius: 8px; }
+.sig-work-done-icon .ui-icon { width: 22px; height: 22px; opacity: 0; transform: scale(.2) rotate(-25deg); stroke-width: 3; }
+.sig-work-done-button.is-finishing .sig-work-done-icon { background: var(--page-background); color: var(--brand); border-color: var(--page-background); }
+.sig-work-done-button.is-finishing .sig-work-done-icon .ui-icon { animation: sig-work-done-check 300ms cubic-bezier(.18, 1.45, .3, 1) both; }
+.sig-work-done-ring { position: absolute; inset: -4px; border: 2px solid var(--brand); border-radius: 12px; opacity: 0; pointer-events: none; }
+.sig-work-done-button.is-finishing .sig-work-done-ring { animation: sig-work-done-ring 340ms ease-out both; }
+.sig-work-footnote { font-size: 12px; text-align: center; }
+@keyframes sig-work-done-press { 0% { transform: scale(1); } 44% { transform: scale(.96); } 100% { transform: scale(1); } }
+@keyframes sig-work-done-check { 0% { opacity: 0; transform: scale(.2) rotate(-25deg); } 62% { opacity: 1; transform: scale(1.23) rotate(4deg); } 100% { opacity: 1; transform: scale(1) rotate(0); } }
+@keyframes sig-work-done-ring { 0% { opacity: .75; transform: scale(.7); } 100% { opacity: 0; transform: scale(1.8); } }
 /* A completion is a moment of delight, not another message box.
    The check is the focal point; text stays secondary and calm. */
 .sig-work-finished { justify-content: center; align-items: center; }
@@ -82,9 +94,12 @@
   .sig-work-main { gap: 18px; }
   .sig-work-actions { align-items: stretch; flex-direction: column; }
   .sig-work-actions > * { width: 100%; justify-content: center; }
+  .sig-work-done-button { min-height: 60px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .sig-work, .sig-work-checkin, .sig-work-success *,
+  .sig-work, .sig-work-checkin, .sig-work-done-button, .sig-work-done-button *,
+  .sig-work-success *,
   .sig-work-success-mark .ui-icon { animation: none !important; transition: none !important; }
-  .sig-work-success-halo, .sig-work-success-sparks { display: none; }
+  .sig-work-success-halo, .sig-work-success-sparks, .sig-work-done-ring { display: none; }
+  .sig-work-done-button.is-finishing .sig-work-done-icon .ui-icon { opacity: 1; transform: none; }
 }
