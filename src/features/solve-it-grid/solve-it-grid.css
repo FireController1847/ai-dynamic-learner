@@ -19,6 +19,11 @@
 }
 .solve-it-grid-layout.library-resizing { transition: none; user-select: none; }
 .solve-it-grid-layout.library-collapsed { grid-template-columns: 0 minmax(0, 1fr); }
+.solve-it-grid-detail > .item-heading { animation: sig-detail-heading-arrive 180ms ease-out both; }
+@keyframes sig-detail-heading-arrive { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .solve-it-grid-detail > .item-heading { animation: none; }
+}
 .solve-it-grid-detail {
   position: relative;
   container: solve-it-grid / inline-size;

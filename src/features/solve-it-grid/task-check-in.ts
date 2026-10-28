@@ -1,4 +1,4 @@
-import { defineComponent, h, ref, type PropType } from 'vue';
+import { defineComponent, h, ref, Transition, type PropType } from 'vue';
 import { Icon } from '../../components/icon.ts';
 import { CHECK_IN_MINUTES, type ActiveCheckIn, type CheckInMode } from './library-model.ts';
 
@@ -65,22 +65,25 @@ export const TaskCheckIn = defineComponent({
         h('div', { class: 'sig-work-main' }, [
           h('p', { class: 'sig-work-eyebrow' }, 'One thing at a time'),
           h('h3', props.taskText),
-          !focus ? h('div', { class: 'sig-work-setup' }, [
+          h(Transition, { name: 'sig-work-stage', mode: 'out-in' }, { default: () =>
+            !focus ? h('div', { key: 'setup', class: 'sig-work-setup' }, [
             h('p', 'What would help you check back in with yourself? You can always switch activities without finishing.'),
             h('div', { class: 'sig-work-modes', role: 'group', 'aria-label': 'Check-in style' }, modes.map(option =>
               h('button', { type: 'button', class: ['sig-work-mode', { 'is-selected': option.id === mode.value }],
                 'aria-pressed': mode.value === option.id, onClick: () => { mode.value = option.id; } },
               [h('strong', option.label), h('small', option.detail)]))),
-            mode.value !== 'completion' ? h('div', { class: 'sig-work-timing' }, [
+            h(Transition, { name: 'sig-work-suboption', mode: 'out-in' }, { default: () =>
+              mode.value !== 'completion' ? h('div', { key: 'time', class: 'sig-work-timing' }, [
               h('strong', 'Check in after'),
               h('div', { class: 'sig-work-durations', role: 'group', 'aria-label': 'Check-in time' },
                 CHECK_IN_MINUTES.map(n => h('button', { type: 'button',
                   class: ['sig-duration', { 'is-selected': minutes.value === n }],
                   'aria-pressed': minutes.value === n, onClick: () => { minutes.value = n; } }, `${n} min`))),
-            ]) : h('p', { class: 'sig-work-reminder' }, 'A gentle reminder after one hour, even if you are not finished.'),
+            ]) : h('p', { key: 'reminder', class: 'sig-work-reminder' }, 'A gentle reminder after one hour, even if you are not finished.'),
+            }),
             h('button', { type: 'button', class: 'card-primary-button sig-work-start',
               onClick: () => emit('start', mode.value, minutes.value) }, [h(Icon, { name: 'play' }), 'Start working']),
-          ]) : due ? h('div', { class: 'sig-work-checkin', role: 'status' }, [
+          ]) : due ? h('div', { key: 'checkin', class: 'sig-work-checkin', role: 'status' }, [
             h(Icon, { name: 'heart' }),
             h('h4', 'How are you feeling about what you are doing?'),
             h('p', 'You have spent some time here. Nothing has to be finished now.'),
@@ -91,20 +94,21 @@ export const TaskCheckIn = defineComponent({
                 [h(Icon, { name: 'refresh-cw' }), h('span', [h('strong', 'Choose something else'), h('small', 'This item stays available.')])]),
             ]),
             h('div', { class: 'sig-work-checkin-finish' }, [doneButton()]),
-          ]) : h('div', { class: 'sig-work-active' }, [
+          ]) : h('div', { key: 'active', class: 'sig-work-active' }, [
             h(Icon, { name: 'heart' }),
             h('p', 'Just focus on what you are doing.'),
             h('span', focus.mode === 'completion'
               ? 'We will gently check in after an hour.'
               : `We will gently check in after ${focus.minutes} minutes.`),
             h('small', 'There is no deadline to finish.'),
+            h('div', { class: 'sig-work-actions' }, [
+              doneButton(),
+              h('button', { type: 'button', class: 'quiet-button sig-work-switch-button',
+                onClick: () => emit('moveOn') },
+                [h(Icon, { name: 'refresh-cw' }), 'Choose something else']),
+            ]),
           ]),
-          focus && !due ? h('div', { class: 'sig-work-actions' }, [
-            doneButton(),
-            h('button', { type: 'button', class: 'quiet-button sig-work-switch-button',
-              onClick: () => emit('moveOn') },
-              [h(Icon, { name: 'refresh-cw' }), 'Choose something else']),
-          ]) : null,
+          }),
           h('p', { class: 'sig-work-footnote' }, 'You can move on without finishing. This item will remain available later.'),
         ]),
       ]);

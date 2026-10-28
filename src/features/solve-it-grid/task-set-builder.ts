@@ -1,4 +1,4 @@
-import { computed, defineComponent, h, nextTick, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref, Transition, type PropType } from 'vue';
+import { computed, defineComponent, h, nextTick, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref, Transition, TransitionGroup, type PropType } from 'vue';
 import { Icon } from '../../components/icon.ts';
 import { PopupDialog } from '../../components/popup-dialog.ts';
 import { inputValue } from '../../core/dom.ts';
@@ -297,7 +297,8 @@ export const TaskSetBuilder = defineComponent({
             h('ul', { class: 'sig-examples', 'aria-label': `${category.label} examples` }, category.examples.map(example =>
               h('li', { key: example }, example))),
           ]) : null,
-          h('ol', { class: 'sig-task-inputs' }, lists.value[category.id].map((task, index) => h('li', { key: task.id, class: 'sig-item-card' }, [
+          h(TransitionGroup, { tag: 'ol', name: 'sig-item', class: 'sig-task-inputs' }, { default: () =>
+            lists.value[category.id].map((task, index) => h('li', { key: task.id, class: 'sig-item-card' }, [
             h('div', { class: 'sig-item-line' }, [
               h('span', { class: 'sig-task-index', 'aria-hidden': true }, index + 1),
               h('div', { class: 'sig-item-entry' }, [
@@ -340,9 +341,10 @@ export const TaskSetBuilder = defineComponent({
                 onClick: () => { void remove(category.id, index); },
               }, [h(Icon, { name: 'trash' })]),
             ]),
-            task.repeat !== undefined && expandedOptions.value.has(task.id) ? h('div', {
-              class: 'sig-item-options', id: `sig-item-options-${task.id}`,
-            }, [
+            h(Transition, { name: 'sig-options' }, { default: () =>
+              task.repeat !== undefined && expandedOptions.value.has(task.id) ? h('div', {
+                class: 'sig-item-options', id: `sig-item-options-${task.id}`,
+              }, [
               h('label', { class: 'sig-repeat-limit' }, [
                 h('span', 'Repeat'),
                 h('select', {
@@ -358,7 +360,8 @@ export const TaskSetBuilder = defineComponent({
                   `${task.timesCompleted} completed${task.repeat === -1 ? '' : ` · ${Math.max(0, task.repeat + 1 - (task.timesCompleted ?? 0))} left`}`)
                 : null,
              ]) : null,
-          ]))),
+            }),
+          ])) }),
           h('div', { class: 'sig-list-bottom' }, [
             h('button', { type: 'button', class: 'quiet-button', onClick: () => { void add(category.id); } }, [h(Icon, { name: 'plus' }), 'Add item']),
             h('span', { class: 'sig-muted' }, `${counts.value[category.id]} ${counts.value[category.id] === 1 ? 'item' : 'items'}`),

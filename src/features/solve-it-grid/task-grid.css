@@ -1,4 +1,5 @@
 .sig-play { display: flex; flex-direction: column; flex: 1; min-height: 0; width: min(1040px, 100%); margin: 0 auto; gap: 8px; padding: 12px 20px; }
+.sig-play-actions, .sig-round-navigation, .sig-checkin-return, .sig-completion { animation: sig-ui-settle 180ms ease-out both; }
 .sig-play-actions { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px; }
 .sig-round-navigation { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; flex-shrink: 0; gap: 8px; padding: 4px 0; }
 .sig-round-navigation .quiet-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; }
@@ -8,7 +9,7 @@
 .sig-checkin-return { align-self: center; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; }
 .sig-checkin-return .ui-icon { width: 16px; height: 16px; }
 
-.sig-chart { --sig-origin-gap: 72px; --sig-number-size: 32px; --sig-number-outset: 30px; position: relative; display: flex; flex: 1; min-height: 240px; margin: 0; padding: 28px 68px; isolation: isolate; }
+.sig-chart { animation: sig-chart-appear 200ms ease-out both; --sig-origin-gap: 72px; --sig-number-size: 32px; --sig-number-outset: 30px; position: relative; display: flex; flex: 1; min-height: 240px; margin: 0; padding: 28px 68px; isolation: isolate; }
 .sig-grid-board { position: relative; display: grid; flex: 1; min-width: 0; min-height: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: var(--sig-origin-gap); }
 .sig-grid-board::before, .sig-grid-board::after { content: ''; position: absolute; z-index: -1; background: var(--text-secondary); opacity: .55; pointer-events: none; }
 .sig-grid-board::before { width: 1px; inset: 0 auto 0 calc(50% - .5px); }
@@ -25,7 +26,7 @@
 .sig-quadrant:disabled { opacity: 1; }
 .sig-quadrant:focus-visible { outline: none; }
 .sig-quadrant:focus-visible .sig-quadrant-number { outline: 2px solid var(--brand); outline-offset: 4px; }
-.sig-quadrant-heading { display: flex; align-items: flex-start; gap: 8px; min-width: 0; color: var(--text-secondary); font-size: 18px; line-height: 24px; font-weight: 600; }
+.sig-quadrant-heading { display: flex; align-items: flex-start; gap: 8px; min-width: 0; color: var(--text-secondary); font-size: 18px; line-height: 24px; font-weight: 600; transition: color 180ms ease; }
 .sig-quadrant-heading > .ui-icon { flex-shrink: 0; width: 18px; height: 18px; margin-top: 1px; }
 .sig-quadrant-heading > span { min-width: 0; overflow-wrap: anywhere; }
 .sig-quadrant-number { position: absolute; width: var(--sig-number-size); height: var(--sig-number-size); border-width: 1.5px; color: var(--text-secondary); font-size: 15px; transition: color 180ms, background-color 180ms, border-color 180ms; }
@@ -57,8 +58,8 @@
 .sig-quadrant.can-undo:hover .sig-completed-check { color: var(--text-color); }
 .sig-quadrant.is-empty .sig-task-text { font-size: 14px; font-weight: 400; color: var(--text-secondary); }
 .sig-quadrant.is-skipped .sig-task-text { opacity: .5; }
-.sig-later-label { position: absolute; right: 12px; bottom: 4px; color: var(--text-secondary); font-size: 11px; }
-.sig-click-cue { position: absolute; right: 10px; bottom: 6px; display: inline-grid; place-items: center; width: 28px; height: 28px; border: 1px solid var(--control-border); border-radius: 50%; background: var(--page-background); color: var(--text-secondary); pointer-events: none; transition: color 160ms, background-color 160ms; }
+.sig-later-label { position: absolute; right: 12px; bottom: 4px; color: var(--text-secondary); font-size: 11px; animation: sig-ui-settle 160ms ease-out both; }
+.sig-click-cue { position: absolute; right: 10px; bottom: 6px; display: inline-grid; place-items: center; width: 28px; height: 28px; border: 1px solid var(--control-border); border-radius: 50%; background: var(--page-background); color: var(--text-secondary); pointer-events: none; transition: color 160ms, background-color 160ms, border-color 160ms; }
 .sig-click-cue .ui-icon { width: 16px; height: 16px; }
 .sig-quadrant.is-current .sig-click-cue:not(.sig-safety-lock) { color: var(--brand-text); border-color: var(--brand); background: var(--brand-tint); }
 .sig-quadrant:not(:disabled):is(:hover, :focus-visible) .sig-click-cue { color: var(--text-color); background: var(--surface-hover); }
@@ -85,6 +86,8 @@
 .sig-completion { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; flex-shrink: 0; gap: 12px; padding-top: 8px; border-top: 1px solid var(--border-color); }
 .sig-completion h3 { font-size: 16px; line-height: 22px; }
 .sig-dialog-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+@keyframes sig-ui-settle { from { opacity: 0; } to { opacity: 1; } }
+@keyframes sig-chart-appear { from { opacity: 0; } to { opacity: 1; } }
 @keyframes sig-check-ring { 0% { opacity: .75; transform: scale(.35); } 70% { opacity: .35; } 100% { opacity: 0; transform: scale(1.65); } }
 @keyframes sig-check-spark { 0% { opacity: 0; transform: rotate(var(--spark-angle)) translateY(-9px) scale(.2); } 18% { opacity: 1; } 65% { opacity: 1; } 100% { opacity: 0; transform: rotate(var(--spark-angle)) translateY(-62px) scale(.45); } }
 @keyframes sig-check-text { 0% { transform: scale(1); } 45% { transform: scale(.97); } 100% { transform: scale(1); } }
@@ -110,6 +113,8 @@
   .sig-completed-check { inset-block-start: 40px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .sig-chart *, .sig-chart.is-celebrating .sig-grid-board, .sig-chart.is-turning .sig-grid-board { animation: none !important; transition: none !important; }
+  .sig-chart, .sig-chart *, .sig-play-actions, .sig-round-navigation,
+  .sig-checkin-return, .sig-completion,
+  .sig-chart.is-celebrating .sig-grid-board, .sig-chart.is-turning .sig-grid-board { animation: none !important; transition: none !important; }
   .sig-round-burst { display: none; }
 }
