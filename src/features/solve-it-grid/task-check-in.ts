@@ -1,4 +1,4 @@
-import { defineComponent, h, onBeforeUnmount, ref, type PropType } from 'vue';
+import { defineComponent, h, ref, type PropType } from 'vue';
 import { Icon } from '../../components/icon.ts';
 import { CHECK_IN_MINUTES, type ActiveCheckIn, type CheckInMode } from './library-model.ts';
 
@@ -21,34 +21,17 @@ export const TaskCheckIn = defineComponent({
   setup(props, { emit }) {
     const mode = ref<CheckInMode>('both');
     const minutes = ref<number>(25);
-    const finishing = ref(false);
-    let finishTimer: number | undefined;
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
-    function finish() {
-      if (finishing.value || props.completed) return;
-      finishing.value = true;
-      // Let the control itself respond before the larger celebration takes over.
-      finishTimer = window.setTimeout(() => {
-        finishTimer = undefined;
-        emit('done');
-      }, reduced.matches ? 0 : 340);
-    }
-    onBeforeUnmount(() => {
-      if (finishTimer !== undefined) window.clearTimeout(finishTimer);
-    });
     function doneButton() {
+      // The full-screen completion is the only celebration. Saving begins
+      // immediately; no second button animation or artificial click delay.
       return h('button', {
         type: 'button',
-        class: ['sig-work-done-button', { 'is-finishing': finishing.value }],
-        disabled: finishing.value,
+        class: 'sig-work-done-button',
         'aria-label': 'Mark this item finished',
-        onClick: finish,
+        onClick: () => { if (!props.completed) emit('done'); },
       }, [
-        h('span', { class: 'sig-work-done-icon', 'aria-hidden': true }, [
-          h(Icon, { name: 'check' }),
-          h('span', { class: 'sig-work-done-ring' }),
-        ]),
-        h('span', finishing.value ? 'Completed!' : 'I’m finished'),
+        h(Icon, { name: 'check' }),
+        h('span', 'I’m finished'),
       ]);
     }
     const modes: { id: CheckInMode; label: string; detail: string }[] = [
@@ -102,12 +85,12 @@ export const TaskCheckIn = defineComponent({
             h('h4', 'How are you feeling about what you are doing?'),
             h('p', 'You have spent some time here. Nothing has to be finished now.'),
             h('div', { class: 'sig-work-choices' }, [
-              h('button', { type: 'button', class: 'sig-work-option', disabled: finishing.value, onClick: () => emit('continue') },
+              h('button', { type: 'button', class: 'sig-work-option', onClick: () => emit('continue') },
                 [h(Icon, { name: 'play' }), h('span', [h('strong', 'Keep going'), h('small', 'Check in again later.')])]),
-              h('button', { type: 'button', class: 'sig-work-option', disabled: finishing.value, onClick: () => emit('moveOn') },
+              h('button', { type: 'button', class: 'sig-work-option', onClick: () => emit('moveOn') },
                 [h(Icon, { name: 'refresh-cw' }), h('span', [h('strong', 'Choose something else'), h('small', 'This item stays available.')])]),
-              doneButton(),
             ]),
+            h('div', { class: 'sig-work-checkin-finish' }, [doneButton()]),
           ]) : h('div', { class: 'sig-work-active' }, [
             h(Icon, { name: 'heart' }),
             h('p', 'Just focus on what you are doing.'),
@@ -118,7 +101,7 @@ export const TaskCheckIn = defineComponent({
           ]),
           focus && !due ? h('div', { class: 'sig-work-actions' }, [
             doneButton(),
-            h('button', { type: 'button', class: 'quiet-button', disabled: finishing.value,
+            h('button', { type: 'button', class: 'quiet-button sig-work-switch-button',
               onClick: () => emit('moveOn') },
               [h(Icon, { name: 'refresh-cw' }), 'Choose something else']),
           ]) : null,

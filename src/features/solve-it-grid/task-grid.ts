@@ -119,20 +119,27 @@ export const TaskGrid = defineComponent({
         announcement.value = 'Preparing the next set of items.';
       }
     }
-    function cycle() {
+    function cycle(skipGridCelebration = false) {
       if (!active || viewing.value !== null || phase.value !== 'ready' || current.value) return;
       const number = round.value.number;
       const stillCurrent = () => {
         if (round.value.number === number && !current.value && viewing.value === null) return true;
         phase.value = 'ready'; announceCurrent(); return false;
       };
-      phase.value = 'celebrating'; announcement.value = 'You can still undo the latest check.';
-      later(() => {
+      const proceed = () => {
         if (!stillCurrent()) return;
         if (!remaining.value) { phase.value = 'complete'; void focusCurrent(); return; }
         phase.value = 'turning';
         later(() => { if (stillCurrent()) revealNext(); }, reduced.matches ? 0 : ROUND_TURN_MS);
-      }, reduced.matches ? 250 : ROUND_HOLD_MS);
+      };
+      if (skipGridCelebration) {
+        // The work screen already celebrated completion. Transition straight
+        // toward the next draw without a second burst or grid pulse.
+        proceed();
+      } else {
+        phase.value = 'celebrating'; announcement.value = 'You can still undo the latest check.';
+        later(proceed, reduced.matches ? 250 : ROUND_HOLD_MS);
+      }
     }
     function resume() {
       active = true;
@@ -334,8 +341,9 @@ export const TaskGrid = defineComponent({
         workFinishing.value = false;
         working.value = null;
         if (!active || round.value.number !== finishedRound || viewing.value !== null) return;
-        celebrateCheck(category);
-        if (current.value) void focusCurrent(); else cycle();
+        // The fullscreen success is the only completion celebration.
+        // A completed quadrant keeps a static check after returning.
+        if (current.value) void focusCurrent(); else cycle(true);
       }, reduced.matches ? 350 : 1120);
     }
     function returnToGrid() {
