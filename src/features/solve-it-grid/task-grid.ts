@@ -99,6 +99,14 @@ export const TaskGrid = defineComponent({
     }
     function showNewItems() {
       if (!active || phase.value !== 'constructing') return;
+      // The mosaic also plays after a final completion with no tasks left.
+      // Finish cleanly rather than attempting to reveal an empty round.
+      if (!current.value && !remaining.value) {
+        phase.value = 'complete';
+        announcement.value = 'Your grid is clear.';
+        void focusCurrent();
+        return;
+      }
       phase.value = 'revealing';
       announceCurrent();
       later(() => { phase.value = 'ready'; void focusCurrent(); }, ROUND_REVEAL_MS);
@@ -341,9 +349,23 @@ export const TaskGrid = defineComponent({
         workFinishing.value = false;
         working.value = null;
         if (!active || round.value.number !== finishedRound || viewing.value !== null) return;
-        // The fullscreen success is the only completion celebration.
-        // A completed quadrant keeps a static check after returning.
-        if (current.value) void focusCurrent(); else cycle(true);
+        // The fullscreen success is the only *celebration*. Follow it with
+        // the same quiet square-mosaic transition after every completion,
+        // not only at the end of a four-quadrant draw.
+        if (!current.value && remaining.value) {
+          // A completed draw needs fresh item selections and saved history.
+          // The next round's own construction phase handles the mosaic once.
+          revealNext();
+        } else if (reduced.matches) {
+          phase.value = remaining.value ? 'ready' : 'complete';
+          announceCurrent();
+          void focusCurrent();
+        } else {
+          // Keep the current draw intact when other quadrants remain.
+          // Even the final completion gets its mosaic before the summary.
+          phase.value = 'constructing';
+          announcement.value = 'Preparing the grid.';
+        }
       }, reduced.matches ? 350 : 1120);
     }
     function returnToGrid() {
