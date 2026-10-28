@@ -73,10 +73,8 @@ export const Anatomy = defineComponent({
     }
     function selectStructure(id: string) {
       selectedId.value = id;
-      if (structuresCollapsed.value) {
-        structuresCollapsed.value = false;
-        writeNumberPreference(STRUCTURES_COLLAPSED_KEY, 0);
-      }
+      // Selection details live beside the diagram, never below the list.
+      // Keep the structure index's collapsed state exactly as the user chose.
     }
     function panelToggle(title: string, target: string, action: () => void, buttonRef: typeof hideSystemsButton) {
       return h('button', {
@@ -119,7 +117,7 @@ export const Anatomy = defineComponent({
             h('p', { class: 'anatomy-system-description' }, system.value?.description ?? ''),
           ]),
           h('span', { class: 'anatomy-foundation-label' },
-            systemId.value === 'skeletal' ? 'Outline preview' : 'Atlas foundation'),
+            systemId.value === 'skeletal' ? 'Illustrative diagram' : 'Illustrations pending'),
         ]),
         h('div', { class: 'anatomy-toolbar' }, [
           systemsCollapsed.value ? h('button', {
@@ -147,6 +145,26 @@ export const Anatomy = defineComponent({
               onClick: () => { orientation.value = next; selectedId.value = null; },
             }, next === 'anterior' ? 'Front' : 'Back'))),
         ]),
+        selected.value ? h('section', {
+          class: 'anatomy-selected-inspector',
+          'aria-label': 'Selected anatomical structure',
+          'aria-live': 'polite',
+        }, [
+          h('div', { class: 'anatomy-selected-copy' }, [
+            h('div', { class: 'anatomy-selected-heading' }, [
+              h('strong', selected.value.name),
+              h('span', selected.value.classification),
+            ]),
+            selected.value.description
+              ? h('p', selected.value.description)
+              : null,
+          ]),
+          h('button', {
+            type: 'button', class: 'icon-button anatomy-inspector-dismiss',
+            title: 'Clear selected structure', 'aria-label': 'Clear selected structure',
+            onClick: () => { selectedId.value = null; },
+          }, '×'),
+        ]) : null,
         view.value
           ? h(AnatomyViewer, {
             key: view.value.id, view: view.value, layers: layers.value, shapes: shapes.value,
@@ -163,7 +181,7 @@ export const Anatomy = defineComponent({
         h('div', { class: 'anatomy-panel-top' }, [
           h('div', { class: 'anatomy-panel-heading' }, [
             h('h2', 'Structures'),
-            h('p', 'Select an anatomical structure to learn more.'),
+            h('p', 'Choose a bone from the diagram or list.'),
           ]),
           panelToggle('Hide structures', 'anatomy-structures-panel',
             () => setStructuresCollapsed(true), hideStructuresButton),
@@ -185,11 +203,7 @@ export const Anatomy = defineComponent({
             search.value.trim()
               ? 'No matching structures in this view.'
               : 'Selectable structures will appear here as this body system is illustrated.'),
-        selected.value ? h('section', { class: 'anatomy-structure-detail', 'aria-label': 'Selected structure' }, [
-          h('h3', selected.value.name),
-          h('p', selected.value.classification),
-          selected.value.description ? h('p', selected.value.description) : null,
-        ]) : null,
+
       ]),
     ]);
   },

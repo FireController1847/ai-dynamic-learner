@@ -63,16 +63,25 @@ export const AnatomyViewer = defineComponent({
       drag = null;
       if (svg.value?.hasPointerCapture(event.pointerId)) svg.value.releasePointerCapture(event.pointerId);
     }
-    function shapeNode(shape: AtlasShape): VNode {
+    function shapeNode(shape: AtlasShape, tabbable: boolean): VNode {
+      const transform = shape.mirrorX ? 'translate(' + props.view.width + ' 0) scale(-1 1)' : undefined;
+      const geometry = shape.geometry.kind === 'path'
+        ? { tag: 'path', attrs: { d: shape.geometry.d } }
+        : { tag: 'ellipse', attrs: {
+          cx: shape.geometry.cx, cy: shape.geometry.cy, rx: shape.geometry.rx, ry: shape.geometry.ry,
+        } };
+      if (shape.renderMode === 'etch' || shape.renderMode === 'cutout') {
+        return h(geometry.tag, {
+          ...geometry.attrs,
+          key: shape.id, transform,
+          class: shape.renderMode === 'etch' ? 'anatomy-bone-etch' : 'anatomy-bone-cutout',
+          'aria-hidden': 'true', 'pointer-events': 'none',
+        });
+      }
       const name = structureNames.value.get(shape.structureId) ?? shape.structureId;
-      const attrs = {
-        key: shape.id,
-        class: ['anatomy-shape', {
-          'is-selected': props.selectedId === shape.structureId,
-          'is-stroke': shape.renderMode === 'stroke',
-        }],
+      const interaction = {
         role: 'button',
-        tabindex: 0,
+        tabindex: tabbable ? 0 : -1,
         'aria-label': 'Select ' + name,
         'aria-pressed': props.selectedId === shape.structureId,
         onPointerdown: (event: PointerEvent) => event.stopPropagation(),
@@ -84,10 +93,18 @@ export const AnatomyViewer = defineComponent({
           }
         },
       };
-      return shape.geometry.kind === 'path'
-        ? h('path', { ...attrs, d: shape.geometry.d })
-        : h('ellipse', { ...attrs, cx: shape.geometry.cx, cy: shape.geometry.cy,
-          rx: shape.geometry.rx, ry: shape.geometry.ry });
+      const selected = props.selectedId === shape.structureId;
+      if (shape.renderMode === 'stroke' && shape.geometry.kind === 'path') {
+        // Separate touch hit target from the thin visual line.
+        return h('g', { ...interaction, key: shape.id, transform, class: 'anatomy-stroke-group' }, [
+          h('path', { d: shape.geometry.d, class: ['anatomy-shape', 'is-stroke', { 'is-selected': selected }] }),
+          h('path', { d: shape.geometry.d, class: 'anatomy-stroke-hit', 'aria-hidden': 'true' }),
+        ]);
+      }
+      return h(geometry.tag, {
+        ...geometry.attrs, ...interaction, key: shape.id, transform,
+        class: ['anatomy-shape', { 'is-selected': selected }],
+      });
     }
 
     function placeholder(): VNode {
@@ -99,7 +116,9 @@ export const AnatomyViewer = defineComponent({
       ]);
     }
 
-    return () => h('div', { class: 'anatomy-viewer' }, [
+    return () => {
+      const tabStops = new Set<string>();
+      return h('div', { class: 'anatomy-viewer' }, [
       h('div', { class: 'anatomy-viewer-controls', 'aria-label': 'Diagram zoom' }, [
         h('button', { class: 'icon-button', type: 'button', title: 'Zoom out', 'aria-label': 'Zoom out',
           disabled: zoom.value <= MIN_ZOOM, onClick: () => setZoom(zoom.value / 1.4) }, [h(Icon, { name: 'minus' })]),
@@ -124,12 +143,14 @@ export const AnatomyViewer = defineComponent({
           onLostpointercapture: () => { drag = null; },
         }, [
           ...(props.shapes.length ? [] : [placeholder()]),
-          ...orderedShapes.value.map(shapeNode),
+          ...orderedShapes.value.map(shape => {
+            const tabbable = !tabStops.has(shape.structureId);
+            if (shape.renderMode !== 'etch' && shape.renderMode !== 'cutout') tabStops.add(shape.structureId);
+            return shapeNode(shape, tabbable);
+          }),
         ]),
       ]),
-      h('p', { class: 'anatomy-viewer-note' },
-        props.shapes.length ? 'Simplified skeletal outline: select a major bone group to learn more. Not a complete or clinically validated anatomical drawing.'
-          : 'Diagram foundation only — anatomical illustrations and selectable structures have not been added yet.'),
     ]);
+    };
   },
 });

@@ -4,8 +4,10 @@ Anatomy is a self-contained, offline-first reference tool in Dynamic Learner's
 **Tools** group. The initial release is **foundation only**. Its 11 body-system
 categories, independently collapsible navigation/structure panels, front/back
 selection, zoomable SVG stage, structure list, and data contracts are functional.
-A small hand-authored SVG skeletal outline includes broad bone-group names,
-but no clinical-grade drawings or exhaustive anatomical reference is provided.
+A richer, fully original SVG skeletal illustration depicts major axial and
+appendicular bone groups, with cranial landmarks, segmented vertebrae, rib
+arcs, shaped long bones, individual hands and feet. These remain teaching
+illustrations rather than clinical-grade reference drawings.
 All other systems still show a neutral, explicitly non-anatomical placeholder.
 
 ## Source ownership
@@ -13,14 +15,16 @@ All other systems still show a neutral, explicitly non-anatomical placeholder.
 - `atlas-model.ts`: immutable, versioned domain contract for systems, regions,
   structures, attributed sources, views, depth layers, and diagram geometry.
 - `atlas-catalog.ts`: bundled catalog with all systems and the early skeletal pack.
-- `skeletal-outline.ts`: small hand-authored schematic skeletal geometry
-  and stable records for major axial/appendicular bone groups.
+- `skeletal-outline.ts`: original layered anatomical teaching geometry
+  and stable bone-group identifiers, with bilateral mirroring and etched
+  decorative details.
 - `atlas-index.ts`: consistency validation, hierarchy safety, sorted layer
   access, shape-to-view indexing, and structure search.
 - `anatomy-viewer.ts`: native Vue/SVG pan/zoom, keyboard-selectable geometry,
   selected-state highlighting, and empty-state display.
 - `anatomy.ts`: route-level state, system and orientation selection, search,
-  and structure details. It must not become the canonical anatomy database.
+  and a sticky selection inspector above the diagram. The scrollable
+  Structures panel remains only an index, never a second details page.
 - `anatomy.css`: presentation using Dynamic Learner theme tokens.
 
 Atlas data is reference material that ships with the web build. It is not
@@ -67,17 +71,30 @@ identification practice may refer to stable atlas IDs and generate assessment
 items through a feature-owned adapter, without copying path geometry or
 altering Review's persistence contract.
 
+## Presentation and interaction
+
+The viewer uses neutral bone/paper tones in both themes and separates fine
+engraved contours from selectable geometry. Thin rib, finger and toe strokes
+have larger invisible pointer targets, preserving a delicate visual appearance.
+One keyboard tab stop per anatomical group avoids forcing navigation through
+every repeated rib or digit. Structure details are shown in the workspace
+above the viewer rather than appended after a long index.
+
 ## Manual verification
 
 - Open `/anatomy/` from the Tools category and directly through its URL.
 - Switch all 11 systems and front/back orientations; select skeletal bone shapes
-  and corresponding list items; search the 15 named bone groups.
+  and corresponding list items; search the 28 named bone groups.
 - Zoom/fit and pan the schematic SVG; verify both orientations and selected
   highlights.
 - Collapse/reopen both body-system and structure panels independently,
   including the bottom Structures panel at narrower widths.
 - Verify the “Lymphatic and immune” entry stays on one line.
+- Confirm the selected structure's name and description appear immediately
+  above the diagram, even if Structures is collapsed or docked below.
+- Verify there is no instruction strip below the diagram, and skeletal
+  fill/outline styles are neutral and consistent in both themes.
 - Check empty-state messaging for non-skeletal systems and the skeleton's
-  schematic-only disclaimer.
+  compact illustrative-only label.
 - Check narrow screens, light/dark themes, keyboard focus, and reduced motion.
 - Confirm offline navigation and no unintended workspace backup changes.

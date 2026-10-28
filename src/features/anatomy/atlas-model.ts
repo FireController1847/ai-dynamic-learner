@@ -67,8 +67,11 @@ export interface AtlasShape {
   layerId: string;
   structureId: string;
   geometry: AtlasGeometry;
-  // Stroke mode allows open SVG paths (e.g., a stylized long bone or rib).
-  renderMode?: 'filled' | 'stroke';
+  // Decorative etched lines and cutouts are drawn but never given selection
+  // controls; they belong to the parent structure.
+  renderMode?: 'filled' | 'stroke' | 'etch' | 'cutout';
+  // Mirror the original vector shape across the current view width.
+  mirrorX?: boolean;
 }
 
 export interface AtlasDataset {
