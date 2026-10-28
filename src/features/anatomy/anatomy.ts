@@ -84,6 +84,47 @@ export const Anatomy = defineComponent({
       }, [h(Icon, { name: 'panel-close' })]);
     }
 
+    // Navigation lives in the viewer's single white bar alongside its zoom controls.
+    function viewerToolbar() {
+      return [
+        h('div', { class: 'anatomy-viewer-leading' }, [
+          systemsCollapsed.value ? h('button', {
+            ref: showSystemsButton, type: 'button', class: 'quiet-button anatomy-show-panel',
+            'aria-label': 'Show body systems', 'aria-controls': 'anatomy-systems-panel',
+            'aria-expanded': false, onClick: () => setSystemsCollapsed(false),
+          }, [h(Icon, { name: 'panel-open' }), 'Systems']) : null,
+          structuresCollapsed.value ? h('button', {
+            ref: showStructuresButton, type: 'button', class: 'quiet-button anatomy-show-panel',
+            'aria-label': 'Show structures', 'aria-controls': 'anatomy-structures-panel',
+            'aria-expanded': false, onClick: () => setStructuresCollapsed(false),
+          }, [h(Icon, { name: 'panel-open' }), 'Structures']) : null,
+          h('div', { class: 'anatomy-viewer-identity' }, [
+            h('strong', { title: system.value?.description ?? '' }, system.value?.name ?? props.title),
+            h('span', { class: 'anatomy-viewer-status' },
+              systemId.value === 'skeletal' ? 'Illustrative' : 'Coming soon'),
+          ]),
+        ]),
+        h('div', { class: 'anatomy-viewer-view-options' }, [
+          h('label', { class: 'visually-hidden', for: 'anatomy-region' }, 'Anatomical region'),
+          h('select', {
+            id: 'anatomy-region', value: regionId.value, title: 'Anatomical region',
+            'aria-label': 'Anatomical region',
+            onChange: (event: Event) => selectRegion(inputValue(event)),
+          }, regions.value.map(region => h('option', { value: region.id }, region.name))),
+          h('div', { class: 'anatomy-orientation', role: 'group', 'aria-label': 'Body orientation' },
+            viewOrientations.map(next => h('button', {
+              key: next,
+              type: 'button',
+              class: ['quiet-button', { 'is-active': orientation.value === next }],
+              'aria-pressed': orientation.value === next,
+              disabled: ![...atlas.views.values()].some(item => item.systemId === systemId.value
+                && item.regionId === regionId.value && item.orientation === next),
+              onClick: () => { orientation.value = next; selectedId.value = null; },
+            }, next === 'anterior' ? 'Front' : 'Back'))),
+        ]),
+      ];
+    }
+
     return () => h('section', {
       class: ['anatomy-page', {
         'systems-collapsed': systemsCollapsed.value,
@@ -110,41 +151,6 @@ export const Anatomy = defineComponent({
           }, item.name))),
       ]),
       h('div', { class: 'anatomy-workspace' }, [
-        h('header', { class: 'anatomy-workspace-heading' }, [
-          h('div', [
-            h('p', { class: 'anatomy-eyebrow' }, 'Anatomy'),
-            h('h1', system.value?.name ?? props.title),
-            h('p', { class: 'anatomy-system-description' }, system.value?.description ?? ''),
-          ]),
-          h('span', { class: 'anatomy-foundation-label' },
-            systemId.value === 'skeletal' ? 'Illustrative diagram' : 'Illustrations pending'),
-        ]),
-        h('div', { class: 'anatomy-toolbar' }, [
-          systemsCollapsed.value ? h('button', {
-            ref: showSystemsButton, type: 'button', class: 'quiet-button anatomy-show-panel',
-            'aria-label': 'Show body systems', 'aria-controls': 'anatomy-systems-panel',
-            'aria-expanded': false, onClick: () => setSystemsCollapsed(false),
-          }, [h(Icon, { name: 'panel-open' }), 'Body systems']) : null,
-          structuresCollapsed.value ? h('button', {
-            ref: showStructuresButton, type: 'button', class: 'quiet-button anatomy-show-panel',
-            'aria-label': 'Show structures', 'aria-controls': 'anatomy-structures-panel',
-            'aria-expanded': false, onClick: () => setStructuresCollapsed(false),
-          }, [h(Icon, { name: 'panel-open' }), 'Structures']) : null,
-          h('label', { for: 'anatomy-region' }, 'Region'),
-          h('select', { id: 'anatomy-region', value: regionId.value,
-            onChange: (event: Event) => selectRegion(inputValue(event)) },
-          regions.value.map(region => h('option', { value: region.id }, region.name))),
-          h('div', { class: 'anatomy-orientation', role: 'group', 'aria-label': 'Body orientation' },
-            viewOrientations.map(next => h('button', {
-              key: next,
-              type: 'button',
-              class: ['quiet-button', { 'is-active': orientation.value === next }],
-              'aria-pressed': orientation.value === next,
-              disabled: ![...atlas.views.values()].some(item => item.systemId === systemId.value
-                && item.regionId === regionId.value && item.orientation === next),
-              onClick: () => { orientation.value = next; selectedId.value = null; },
-            }, next === 'anterior' ? 'Front' : 'Back'))),
-        ]),
         view.value
           ? h(AnatomyViewer, {
             key: view.value.id, view: view.value, layers: layers.value, shapes: shapes.value,
@@ -152,8 +158,9 @@ export const Anatomy = defineComponent({
             selectedStructure: selected.value ?? null,
             onSelect: selectStructure,
             onClearSelection: () => { selectedId.value = null; },
-          })
+          }, { toolbar: viewerToolbar })
           : h('div', { class: 'anatomy-unavailable', role: 'status' }, [
+            h('strong', system.value?.name ?? props.title),
             h(Icon, { name: 'anatomy' }),
             h('p', 'This region and view are not available in the atlas yet.'),
           ]),

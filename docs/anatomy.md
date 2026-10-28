@@ -21,8 +21,9 @@ All other systems still show a neutral, explicitly non-anatomical placeholder.
 - `atlas-index.ts`: consistency validation, hierarchy safety, sorted layer
   access, shape-to-view indexing, and structure search.
 - `anatomy-viewer.ts`: native Vue/SVG pan/zoom, keyboard-selectable geometry,
-  selected-state highlighting, and a dismissible floating structure inspector
-  over the right side of the drawing stage (no reflow of the SVG).
+  a single compact white viewer header containing system, orientation, region
+  and zoom controls, plus a dismissible floating structure inspector over
+  the right side of the drawing stage (no reflow of the SVG).
 - `anatomy.ts`: route-level state, system and orientation selection, search,
   and the selected structure's data. The scrollable Structures panel remains
   an independent index, never a second details page.
@@ -82,7 +83,12 @@ every repeated rib or digit. Selected structure details overlay the upper-right
 side of the diagram inside the drawing stage rather than taking up a toolbar
 row or resizing the SVG. The inspector can be dismissed, remains available
 when the Structures index is hidden or moved below the viewer, and has an
-internally scrollable height limit for compact screens.
+internally scrollable height limit for compact screens. The viewer's white
+header holds the current body-system name, region selector, front/back
+orientation and zoom/fit controls in a single responsive row (wrapping only
+when necessary). The drawing surface grows with the viewport, with no
+independent 700px SVG height cap, so the full skeleton uses the available
+vertical space instead of appearing miniature under oversized chrome.
 
 ## Manual verification
 
@@ -99,6 +105,11 @@ internally scrollable height limit for compact screens.
   collapsed or docked below.
 - Confirm selecting and dismissing the floating card does not resize, move,
   or reflow the SVG, zoom controls, or workspace.
+- Confirm system, region, orientation, and zoom appear in the single white
+  viewer bar; the former heading/toolbar rows are gone.
+- Compare average, tall, and short windows: the complete skeleton scales
+  to a tall drawing stage without a fixed SVG height limit. No clipping at
+  the head or feet at Fit (100%) and no unexpected extra empty canvas.
 - Verify there is no instruction strip below the diagram, and skeletal
   fill/outline styles are neutral and consistent in both themes.
 - Check empty-state messaging for non-skeletal systems and the skeleton's

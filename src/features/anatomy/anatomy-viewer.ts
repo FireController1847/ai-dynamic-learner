@@ -16,7 +16,7 @@ export const AnatomyViewer = defineComponent({
     selectedStructure: { type: Object as PropType<AtlasStructure | null>, default: null },
   },
   emits: { select: (_structureId: string) => true, clearSelection: () => true },
-  setup(props, { emit }) {
+  setup(props, { emit, slots }) {
     const zoom = ref(1);
     const panX = ref(0);
     const panY = ref(0);
@@ -120,14 +120,17 @@ export const AnatomyViewer = defineComponent({
     return () => {
       const tabStops = new Set<string>();
       return h('div', { class: 'anatomy-viewer' }, [
-      h('div', { class: 'anatomy-viewer-controls', 'aria-label': 'Diagram zoom' }, [
-        h('button', { class: 'icon-button', type: 'button', title: 'Zoom out', 'aria-label': 'Zoom out',
-          disabled: zoom.value <= MIN_ZOOM, onClick: () => setZoom(zoom.value / 1.4) }, [h(Icon, { name: 'minus' })]),
-        h('span', { class: 'anatomy-zoom-value', 'aria-live': 'off' }, Math.round(zoom.value * 100) + '%'),
-        h('button', { class: 'icon-button', type: 'button', title: 'Zoom in', 'aria-label': 'Zoom in',
-          disabled: zoom.value >= MAX_ZOOM, onClick: () => setZoom(zoom.value * 1.4) }, [h(Icon, { name: 'plus' })]),
-        h('button', { class: 'quiet-button', type: 'button', disabled: zoom.value === 1,
-          onClick: reset }, 'Fit'),
+      h('div', { class: 'anatomy-viewer-controls' }, [
+        ...(slots.toolbar?.() ?? []),
+        h('div', { class: 'anatomy-viewer-zoom', role: 'group', 'aria-label': 'Diagram zoom' }, [
+          h('button', { class: 'icon-button', type: 'button', title: 'Zoom out', 'aria-label': 'Zoom out',
+            disabled: zoom.value <= MIN_ZOOM, onClick: () => setZoom(zoom.value / 1.4) }, [h(Icon, { name: 'minus' })]),
+          h('span', { class: 'anatomy-zoom-value', 'aria-live': 'off' }, Math.round(zoom.value * 100) + '%'),
+          h('button', { class: 'icon-button', type: 'button', title: 'Zoom in', 'aria-label': 'Zoom in',
+            disabled: zoom.value >= MAX_ZOOM, onClick: () => setZoom(zoom.value * 1.4) }, [h(Icon, { name: 'plus' })]),
+          h('button', { class: 'quiet-button', type: 'button', disabled: zoom.value === 1,
+            onClick: reset }, 'Fit'),
+        ]),
       ]),
       h('div', { class: 'anatomy-diagram-stage' }, [
         h('svg', {
