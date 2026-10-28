@@ -2,6 +2,7 @@ import { defineComponent, type PropType, h } from 'vue';
 
 // Small inline SVGs keep essential controls independent of icon fonts or CDNs.
 const paths: Record<string, string> = {
+  anatomy: 'M12 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6ZM7 10l-3 7m13-7 3 7M8 10l-1 12m9-12 1 12M7 10q5-3 10 0l-1 7H8Z',
   calculator: 'M5 2h14a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2ZM7 6h10v4H7M8 14h1M12 14h1M16 14h1M8 18h1M12 18h1M16 18h1',
   folder: 'M3 5h6l2 2h10v13H3Z',
   check: 'm5 12 4 4L19 6',

@@ -30,6 +30,7 @@ Use this as a starting-file index, not a feature specification. Follow imports o
 | Backup reminders / study suppression | `src/app/backup-reminders.ts`, `backup-reminder-policy.ts`, `backup-reminder-ui.ts`, `src/core/study-activity.ts`, `src/components/use-study-session.ts` |
 | GitHub Pages / route output | `webpack.config.mts`, `build/site-config.mts`, `build/page-metadata.mts`, `.github/workflows/deploy-pages.yml` |
 | Calculator | `src/features/calculator/` |
+| Human Anatomy atlas catalog, structure IDs, geometry and viewer | `src/features/human-anatomy/`, `docs/human-anatomy.md` |
 | Notebook composition/library | `src/features/notebook/notebook.ts`, `library.ts`, `library-model.ts`, `document-types.ts` |
 | Notebook Markdown | `markdown-editor.ts`, `markdown-renderer.ts`, `markdown-outline.ts`, `document-files.ts` |
 | Notebook Lined Paper | `lined-editor.ts` for writing and RTF download controls; `lined-pagination.ts` for on-screen page divisions; `lined-txt.ts` for page titles and line-aligned margin/text export; `document-files.ts` for safe download filenames; `lined-editor.css` for paper and toolbar presentation |

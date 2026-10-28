@@ -33,6 +33,7 @@
 }
 @import './home.css';
 @import '../features/calculator/calculator.css';
+@import '../features/human-anatomy/human-anatomy.css';
 @import '../features/notebook/notebook.css';
 @import '../features/notebook/markdown-editor.css';
 @import '../features/notebook/lined-editor.css';

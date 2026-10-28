@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Human Anatomy">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop stop-color="#1976c9"/>
+      <stop offset="1" stop-color="#0e477d"/>
+    </linearGradient>
+  </defs>
+  <rect x="13" y="13" width="230" height="230" rx="48" fill="url(#bg)"/>
+  <circle cx="127" cy="62" r="25" fill="#ddf5ff" stroke="#78cbe8" stroke-width="4"/>
+  <path d="M105 94 Q80 100 73 125 L64 188 Q63 201 75 204 Q85 206 89 193 L100 158 L101 215 M149 94 Q174 100 181 125 L190 188 Q191 201 179 204 Q169 206 165 193 L154 158 L153 215" stroke="#ddf5ff" stroke-width="17" fill="none" stroke-linecap="round"/>
+  <path d="M104 96 Q127 87 150 96 L155 173 Q142 181 127 182 Q112 181 99 173Z" fill="#ddf5ff"/>
+  <path d="M110 109 Q127 100 144 109 M106 126H148 M103 142H151 M106 156H148" fill="none" stroke="#1f91be" stroke-width="5" stroke-linecap="round"/>
+  <path d="M127 104 V173" stroke="#1f91be" stroke-width="5" stroke-linecap="round"/>
+  <path d="M109 178 L103 223 M145 178 L151 223" stroke="#ddf5ff" stroke-width="18" stroke-linecap="round"/>
+  <path d="M127 125 C120 111 103 117 103 130 C103 141 118 150 127 158 C136 150 151 141 151 130 C151 117 134 111 127 125Z" fill="#f16a7c" stroke="#fff" stroke-width="3"/>
+</svg>

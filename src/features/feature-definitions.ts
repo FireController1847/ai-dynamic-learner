@@ -1,7 +1,7 @@
 // Shared by the browser registry and webpack build; keep this data browser-neutral.
 import type { PageMetadataOverrides } from '../core/metadata.ts';
 
-export type FeatureId = 'calculator' | 'notebook' | 'todo-list' | 'solve-it-grid' | 'index-cards' | 'word-search' | 'crossword' | 'guide' | 'knowledge-check';
+export type FeatureId = 'calculator' | 'human-anatomy' | 'notebook' | 'todo-list' | 'solve-it-grid' | 'index-cards' | 'word-search' | 'crossword' | 'guide' | 'knowledge-check';
 export type FeatureGroup = 'tools' | 'work' | 'study' | 'master';
 export const featureGroups: readonly { id: FeatureGroup; label: string }[] = [
   { id: 'tools', label: 'Tools' },
@@ -39,6 +39,16 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
         height: 350,
         alt: 'Calculator — Layered blue calculator with a pale display and cyan arithmetic keys.',
       },
+    },
+  },
+  {
+    id: 'human-anatomy', label: 'Human Anatomy', path: '/human-anatomy/', icon: 'anatomy',
+    group: 'tools',
+    version: '0.1.0',
+    image: 'assets/app-icons/human-anatomy.svg',
+    description: 'Browse body systems in the foundation of an interactive 2D anatomy atlas.',
+    metadata: {
+      keywords: ['human anatomy', 'body systems', 'skeletal', 'muscular', 'nervous', 'anatomical atlas']
     },
   },
   {
