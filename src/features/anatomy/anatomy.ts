@@ -10,16 +10,16 @@ import { AnatomyViewer } from './anatomy-viewer.ts';
 // Reference content is bundled locally, independent of workspace saves.
 const atlas = buildAtlasIndex(foundationAtlas);
 const viewOrientations: readonly AtlasOrientation[] = ['anterior', 'posterior'];
-const SYSTEMS_COLLAPSED_KEY = 'dynamic-learner.ui.human-anatomy.systems-collapsed';
-const STRUCTURES_COLLAPSED_KEY = 'dynamic-learner.ui.human-anatomy.structures-collapsed';
+const SYSTEMS_COLLAPSED_KEY = 'dynamic-learner.ui.anatomy.systems-collapsed';
+const STRUCTURES_COLLAPSED_KEY = 'dynamic-learner.ui.anatomy.structures-collapsed';
 
 function initialCollapsed(key: string) {
   const stored = readNumberPreference(key);
   return stored === null ? window.matchMedia('(max-width: 700px)').matches : stored === 1;
 }
 
-export const HumanAnatomy = defineComponent({
-  name: 'HumanAnatomy',
+export const Anatomy = defineComponent({
+  name: 'Anatomy',
   props: { title: { type: String, required: true } },
   setup(props) {
     const systemId = ref<AtlasSystemId>('skeletal');
@@ -87,7 +87,7 @@ export const HumanAnatomy = defineComponent({
     }
 
     return () => h('section', {
-      class: ['human-anatomy-page', {
+      class: ['anatomy-page', {
         'systems-collapsed': systemsCollapsed.value,
         'structures-collapsed': structuresCollapsed.value,
       }],
@@ -114,7 +114,7 @@ export const HumanAnatomy = defineComponent({
       h('div', { class: 'anatomy-workspace' }, [
         h('header', { class: 'anatomy-workspace-heading' }, [
           h('div', [
-            h('p', { class: 'anatomy-eyebrow' }, 'Human Anatomy'),
+            h('p', { class: 'anatomy-eyebrow' }, 'Anatomy'),
             h('h1', system.value?.name ?? props.title),
             h('p', { class: 'anatomy-system-description' }, system.value?.description ?? ''),
           ]),

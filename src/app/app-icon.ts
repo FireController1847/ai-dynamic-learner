@@ -16,9 +16,9 @@ export const AppIcon = defineComponent({
     imageClass: { type: String, default: '' },
   },
   setup(props) {
-    return () => props.name === 'human-anatomy' ? h('img', {
+    return () => props.name === 'anatomy' ? h('img', {
       class: props.imageClass,
-      src: new URL('assets/app-icons/human-anatomy.svg', document.baseURI).href,
+      src: new URL('assets/app-icons/anatomy.svg', document.baseURI).href,
       width: 256, height: 256, alt: '', 'aria-hidden': 'true',
     }) : h('picture', { class: 'app-icon-picture' }, [
       h('source', { type: 'image/webp', srcset: appIconUrl(props.name, 'webp') }),

@@ -1,4 +1,4 @@
-.human-anatomy-page {
+.anatomy-page {
   --anatomy-systems-width: 264px;
   --anatomy-details-width: 280px;
   display: grid;
@@ -11,8 +11,8 @@
   background: var(--surface-workspace);
 }
 
-.human-anatomy-page.systems-collapsed { --anatomy-systems-width: 0px; }
-.human-anatomy-page.structures-collapsed { --anatomy-details-width: 0px; }
+.anatomy-page.systems-collapsed { --anatomy-systems-width: 0px; }
+.anatomy-page.structures-collapsed { --anatomy-details-width: 0px; }
 .anatomy-systems[hidden], .anatomy-details[hidden] { display: none; }
 
 .anatomy-systems, .anatomy-details {
@@ -211,7 +211,7 @@
 .anatomy-structure-detail p { color: var(--text-secondary); }
 
 @media (max-width: 1050px) {
-  .human-anatomy-page {
+  .anatomy-page {
     grid-template-columns: var(--anatomy-systems-width) minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr) auto;
   }
@@ -225,7 +225,7 @@
   .anatomy-systems { grid-row: 1 / span 2; }
 }
 @media (max-width: 700px) {
-  .human-anatomy-page { display: flex; flex-direction: column; overflow-y: auto; }
+  .anatomy-page { display: flex; flex-direction: column; overflow-y: auto; }
   .anatomy-systems { overflow: visible; padding: 14px; border-right: 0; border-bottom: 1px solid var(--border-color); }
   .anatomy-panel-heading { margin-bottom: 10px; }
   .anatomy-system-list { display: flex; overflow-x: auto; padding-bottom: 4px; }

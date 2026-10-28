@@ -1,6 +1,6 @@
 import { h, type VNode } from 'vue';
 import { Calculator } from './calculator/calculator.ts';
-import { HumanAnatomy } from './human-anatomy/human-anatomy.ts';
+import { Anatomy } from './anatomy/anatomy.ts';
 import { Notebook } from './notebook/notebook.ts';
 import { TodoList } from './todo-list/todo-list.ts';
 import { SolveItGrid } from './solve-it-grid/solve-it-grid.ts';
@@ -33,7 +33,7 @@ export interface FeatureModels {
 // Each renderer keeps the component and its model paired at the typed boundary.
 const renderers: Record<FeatureId, (definition: FeatureDefinition, models: FeatureModels) => VNode> = {
   calculator: (definition) => h(Calculator, { key: definition.id, title: definition.label }),
-  'human-anatomy': (definition) => h(HumanAnatomy, { key: definition.id, title: definition.label }),
+  'anatomy': (definition) => h(Anatomy, { key: definition.id, title: definition.label }),
   notebook: (definition, models) => h(Notebook, { key: definition.id, title: definition.label, model: models.notebook }),
   'todo-list': (definition, models) => h(TodoList, { key: definition.id, title: definition.label, model: models['todo-list'] }),
   'solve-it-grid': (definition, models) => h(SolveItGrid, { key: definition.id, title: definition.label, model: models['solve-it-grid'] }),

@@ -1,6 +1,6 @@
-# Human Anatomy atlas
+# Anatomy atlas
 
-Human Anatomy is a self-contained, offline-first reference tool in Dynamic Learner's
+Anatomy is a self-contained, offline-first reference tool in Dynamic Learner's
 **Tools** group. The initial release is **foundation only**. Its 11 body-system
 categories, independently collapsible navigation/structure panels, front/back
 selection, zoomable SVG stage, structure list, and data contracts are functional.
@@ -19,9 +19,9 @@ All other systems still show a neutral, explicitly non-anatomical placeholder.
   access, shape-to-view indexing, and structure search.
 - `anatomy-viewer.ts`: native Vue/SVG pan/zoom, keyboard-selectable geometry,
   selected-state highlighting, and empty-state display.
-- `human-anatomy.ts`: route-level state, system and orientation selection, search,
+- `anatomy.ts`: route-level state, system and orientation selection, search,
   and structure details. It must not become the canonical anatomy database.
-- `human-anatomy.css`: presentation using Dynamic Learner theme tokens.
+- `anatomy.css`: presentation using Dynamic Learner theme tokens.
 
 Atlas data is reference material that ships with the web build. It is not
 user-created workspace state, is not written to IndexedDB, and must not
@@ -69,7 +69,7 @@ altering Review's persistence contract.
 
 ## Manual verification
 
-- Open `/human-anatomy/` from the Tools category and directly through its URL.
+- Open `/anatomy/` from the Tools category and directly through its URL.
 - Switch all 11 systems and front/back orientations; select skeletal bone shapes
   and corresponding list items; search the 15 named bone groups.
 - Zoom/fit and pan the schematic SVG; verify both orientations and selected

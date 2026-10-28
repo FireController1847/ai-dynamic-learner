@@ -38,14 +38,14 @@ When adding a feature:
 4. add concise Tips only when useful;
 5. update change routing and version docs as needed.
 
-## Human Anatomy reference atlas
+## Anatomy reference atlas
 
-Human Anatomy is a Tools feature at `/human-anatomy/`. Its versioned, bundled, read-only
-reference atlas lives in `features/human-anatomy/`: the data model owns stable
+Anatomy is a Tools feature at `/anatomy/`. Its versioned, bundled, read-only
+reference atlas lives in `features/anatomy/`: the data model owns stable
 system/region/structure/view/layer/shape IDs, the atlas index checks relationships
 and builds lookup maps, and the Vue SVG viewer owns selection and 2D navigation.
 The initial catalog exposes the 11 body-system categories but contains no
-medical illustrations or authored structure annotations. See `human-anatomy.md`
+medical illustrations or authored structure annotations. See `anatomy.md`
 for the structure/content extension contract. Reference assets are not stored
 in user workspace data or backups.
 

@@ -293,7 +293,7 @@ const App = defineComponent({
           ref: main,
           class: ['app-content', {
             'app-content--home': currentPath.value === '/',
-            'app-content--workspace': ['notebook', 'todo-list', 'solve-it-grid', 'index-cards', 'word-search', 'crossword', 'guide', 'knowledge-check', 'human-anatomy'].includes(activeFeature.value?.id ?? ''),
+            'app-content--workspace': ['notebook', 'todo-list', 'solve-it-grid', 'index-cards', 'word-search', 'crossword', 'guide', 'knowledge-check', 'anatomy'].includes(activeFeature.value?.id ?? ''),
           }],
           tabindex: -1,
           'aria-busy': !workspace.ready.value && !workspace.storageProblem.value,
@@ -315,7 +315,7 @@ const App = defineComponent({
         ]),
       ]),
       statisticsOpen.value ? h(GlobalStatistics, {
-        apps: features.flatMap(feature => (feature.id === 'solve-it-grid' || feature.id === 'human-anatomy') ? [] : [{ id: feature.id, label: feature.label }]), returnFocus: statisticsButton.value,
+        apps: features.flatMap(feature => (feature.id === 'solve-it-grid' || feature.id === 'anatomy') ? [] : [{ id: feature.id, label: feature.label }]), returnFocus: statisticsButton.value,
         onClose: () => { statisticsOpen.value = false; },
       }) : null,
       activeFeature.value ? h('span', {
