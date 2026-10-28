@@ -2,10 +2,11 @@ import type { Workspace } from '../workspace-format.ts';
 import { emptyWorkspace, parseWorkspace } from '../workspace-format.ts';
 import { createId, isValidId } from '../../core/ids.ts';
 import {
-  IndexedDataStore, DataApiError, dataPrimaryKey, type DataChange, type DataCommit,
+  IndexedDataStore, DataApiError, dataPrimaryKey, DATABASE_VERSION, type DataChange, type DataCommit,
   type DataOperation, type DataStoreName, type IndexedRow,
 } from '../../core/data/indexeddb.ts';
 import { hydrateWorkspace, workspaceRows, WORKSPACE_RECORD_STORES } from './workspace-mapping.ts';
+import { compatibleWorkspace, type WorkspaceCompatibility } from './workspace-compatibility.ts';
 import { createLibraryCommands } from './library-commands.ts';
 import { createEntryCommands } from './entry-commands.ts';
 import { createTodoCommands } from './todo-commands.ts';
@@ -46,6 +47,7 @@ export class WorkspaceDataApi {
   private readonly store = new IndexedDataStore();
   private workspaceId: string | null = null;
   private initialization: Promise<void> | null = null;
+  private compatibility: WorkspaceCompatibility | null = null;
 
   ready(): Promise<void> {
     if (this.workspaceId) return Promise.resolve();
@@ -91,9 +93,11 @@ export class WorkspaceDataApi {
       workspaceId = await this.store.activeWorkspaceId();
     }
     if (!workspaceId) throw new DataApiError('unavailable', 'No active workspace is available.');
-    // Check the complete stored model before granting edit access.
-    await hydrateWorkspace(this.store, workspaceId);
+    // A feature that this build cannot read is not necessarily corrupt.
+    // Validate a compatibility projection before granting any edit access.
     this.workspaceId = workspaceId;
+    try { await this.initialSnapshot(); }
+    catch (error) { this.workspaceId = null; throw error; }
   }
 
   private active(): string {
@@ -135,6 +139,7 @@ export class WorkspaceDataApi {
     workspace: Workspace;
     revisions: { commitSequence: number; authoredRevision: number };
     records: Array<{ store: DataStoreName; key: IDBValidKey; value: IndexedRow; revision: number }>;
+    compatibility: WorkspaceCompatibility;
   }> {
     // Only cross-tab refresh is allowed to follow a new active-workspace
     // pointer. A failed refresh must leave the old in-memory view recoverable.
@@ -152,9 +157,9 @@ export class WorkspaceDataApi {
     if (typeof meta?.commitSequence !== 'number' || typeof meta.authoredRevision !== 'number') {
       throw new DataApiError('unavailable', 'Workspace revision metadata is missing.');
     }
-    const reader = { all: async <T>(store: DataStoreName): Promise<T[]> =>
-      (snapshot.get(store) ?? []) as T[] };
-    const workspace = await hydrateWorkspace(reader, workspaceId);
+    const { workspace, compatibility } = await compatibleWorkspace(
+      snapshot, workspaceId, this.store.databaseVersion, DATABASE_VERSION);
+    this.compatibility = compatibility;
     const records = stores.filter(store => !['control', 'workspaceMeta'].includes(store))
       .flatMap(store => (snapshot.get(store) ?? []).filter(value => value.workspaceId === workspaceId)
         .map(value => ({
@@ -164,7 +169,7 @@ export class WorkspaceDataApi {
     // The caller decides when it is safe to adopt the active pointer. In
     // particular, local keystrokes can arrive while this async read runs.
     return {
-      workspaceId, workspace,
+      workspaceId, workspace, compatibility,
       revisions: { commitSequence: meta.commitSequence, authoredRevision: meta.authoredRevision },
       records,
     };
@@ -404,6 +409,8 @@ export class WorkspaceDataApi {
    * cascading deletes, imports). Callers must validate their domain invariants.
    */
   async commit(operations: readonly DataOperation[], scopes: readonly string[], authored = true): Promise<DataCommit> {
+    if (this.compatibility?.readOnly) throw new DataApiError('validation',
+      'Saved data requires a newer or repaired build. Editing is disabled to protect it.');
     return this.store.commit(this.active(), operations, { authored, scopes });
   }
 
@@ -459,6 +466,9 @@ export class WorkspaceDataApi {
    * pointer; pending writes from the old workspace are rejected by the store.
    */
   async restoreWorkspace(payload: unknown): Promise<void> {
+    if (this.compatibility?.mode !== 'normal' && this.compatibility !== null) {
+      throw new DataApiError('validation', 'A compatibility workspace cannot be replaced by a partial backup. Download a raw rescue copy first.');
+    }
     // Reuse the same runtime validators as the existing JSON upload path.
     const parsed = parseWorkspace(JSON.stringify(payload));
     // Explicit user-confirmed recovery is allowed when the legacy source was
@@ -483,6 +493,9 @@ export class WorkspaceDataApi {
    */
   async clearWorkspace(): Promise<void> {
     await this.store.open();
+    if (this.compatibility?.mode !== 'normal' && this.compatibility !== null) {
+      throw new DataApiError('validation', 'This build cannot safely clear unsupported or damaged workspace data.');
+    }
     const previous = await this.store.activeWorkspaceId();
     if (this.workspaceId && this.workspaceId !== previous) {
       throw new DataApiError('conflict', 'Another tab replaced this workspace. Reload before clearing it.');
@@ -498,6 +511,9 @@ export class WorkspaceDataApi {
    * cause us to incorrectly mark newer content as backed up.
    */
   async exportSnapshot(): Promise<{ json: string; workspaceId: string; authoredRevision: number }> {
+    if (this.compatibility?.mode !== 'normal' && this.compatibility !== null) {
+      throw new DataApiError('validation', 'The standard backup would omit unsupported content. Download a raw IndexedDB rescue copy instead.');
+    }
     const workspaceId = this.active();
     const snapshots = await this.store.snapshot<IndexedRow>(
       [...WORKSPACE_RECORD_STORES, 'control', 'workspaceMeta'], workspaceId);
@@ -519,6 +535,12 @@ export class WorkspaceDataApi {
 
   async exportWorkspaceJson(): Promise<string> {
     return (await this.exportSnapshot()).json;
+  }
+
+  /** A full read-only capture, including unknown stores and inactive generations. */
+  async exportRawRescue(): Promise<string> {
+    await this.store.open();
+    return JSON.stringify(await this.store.rawRescue());
   }
 
   close() { this.store.close(); this.workspaceId = null; this.initialization = null; }

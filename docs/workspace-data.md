@@ -24,6 +24,14 @@ interface Workspace {
 }
 ```
 
+## Backward-compatible IndexedDB loading
+
+An older build can recognize known application records while a newer build's data remains in the same origin. `src/app/data/workspace-compatibility.ts` produces a read-only projection of persisted rows without normalizing or writing them. It ignores unsupported feature and collection scopes for display, leaving original IndexedDB records intact. Supported feature validation remains strict. Empty, absent library roots may be synthesized **in memory** only where the library is genuinely empty.
+
+The normal mode validates everything and allows regular backups and edits. Compatibility mode preserves unknown application records while allowing scoped edits in supported apps when physical IndexedDB schema is unchanged; global structural reconciliation explicitly excludes unknown rows from deletion. Newer physical DB schema versions are opened without downgrade requests and shown read-only. If a known feature fails validation, its original records remain untouched and the running build projects the other features in a **read-only recovery** mode. Never convert failed content into an empty *editable* workspace.
+
+Portable v1 backup exports are not complete when unsupported content is excluded. In compatibility or recovery mode, downloading a backup creates a **raw IndexedDB rescue** JSON snapshot, including all object stores (even those unknown to the running build), inactive generations, original keys, and row data. Raw rescues are not importable through Upload backup. Restoring a normal backup and clearing workspace data are disabled while the workspace is partial or unsupported. These protections do not retroactively protect builds created before this mechanism.
+
 **Clear workspace data** in the navigation drawer is intentionally different from restoring a backup: after two custom confirmations it atomically deletes every IndexedDB workspace generation and replaces them with a fresh empty workspace. It also removes the old localStorage migration copy, saved Review session snapshots, and AI category history while leaving unrelated UI preferences and downloaded backup files untouched. Clearing can proceed even if a saved workspace fails validation. Canceling either confirmation performs no deletion; an IndexedDB transaction failure leaves the original database intact.
 
 The legacy browser-local key `dynamic-learner.workspace.v1` is used only as a read-only migration/recovery source. IndexedDB `dynamic-learner-data` is authoritative after successful staged migration. The 128 MiB cap applies to uploaded JSON backups, **not** to ongoing IndexedDB writes; compressed backup support and a revised import limit remain separate work.

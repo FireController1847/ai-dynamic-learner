@@ -163,12 +163,12 @@ function backfillV1Collections(transaction: IDBTransaction): void {
 }
 
 export function openDataDatabase(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    if (!('indexedDB' in globalThis)) {
-      reject(new DataApiError('unavailable', 'IndexedDB is not available in this browser.'));
-      return;
-    }
-    const request = indexedDB.open(DATABASE_NAME, DATABASE_VERSION);
+  if (!('indexedDB' in globalThis)) {
+    return Promise.reject(new DataApiError('unavailable', 'IndexedDB is not available in this browser.'));
+  }
+  const attempt = (version?: number): Promise<IDBDatabase> => new Promise((resolve, reject) => {
+    const request = version === undefined ? indexedDB.open(DATABASE_NAME)
+      : indexedDB.open(DATABASE_NAME, version);
     request.onupgradeneeded = event => {
       const database = request.result;
       for (const [name, definition] of Object.entries(definitions)) {
@@ -195,6 +195,13 @@ export function openDataDatabase(): Promise<IDBDatabase> {
       else resolve(request.result);
     };
   });
+  return attempt(DATABASE_VERSION).catch(error => {
+    // Browsers refuse version downgrades. Read an existing higher-version
+    // database without requesting a schema change, but never create/write
+    // with a newer schema using this build.
+    if (error instanceof DOMException && error.name === 'VersionError') return attempt();
+    throw error;
+  });
 }
 
 /** A low-level provider; no app feature may access an IDBTransaction directly. */
@@ -211,6 +218,22 @@ export class IndexedDataStore {
     if (this.database) return;
     const database = await openDataDatabase();
     if (this.closed) { database.close(); return; }
+    // A future build may change the shape of an existing store. In that case
+    // even read-only reconstruction with old keys is unsafe to assume.
+    for (const [name, definition] of Object.entries(definitions)) {
+      if (!database.objectStoreNames.contains(name)) {
+        database.close();
+        throw new DataApiError('unavailable', 'The database schema is missing a required store: ' + name +
+          '. Saved data has not been changed.');
+      }
+      const tx = database.transaction(name, 'readonly');
+      const expected = JSON.stringify(definition.key);
+      if (JSON.stringify(tx.objectStore(name).keyPath) !== expected) {
+        database.close();
+        throw new DataApiError('unavailable', 'The database uses an incompatible key format in ' + name +
+          '. Saved data has not been changed.');
+      }
+    }
     database.onversionchange = () => {
       // Another tab opened a newer schema. This connection cannot accept
       // writes anymore; notify the current editor before closing it.
@@ -239,6 +262,39 @@ export class IndexedDataStore {
   private db(): IDBDatabase {
     if (!this.database || this.closed) throw new DataApiError('unavailable', 'The data connection is not available.');
     return this.database;
+  }
+
+  get databaseVersion(): number { return this.db().version; }
+
+  /**
+   * Capture ALL existing stores, including ones introduced by a newer branch.
+   * This is a forensic backup, not an importable v1 workspace. It never
+   * filters unknown fields, inactive workspaces, or extra object stores.
+   */
+  async rawRescue(): Promise<{
+    format: 'dynamic-learner-raw-indexeddb-rescue';
+    version: number;
+    exportedAt: string;
+    stores: Array<{ name: string; keyPath: string | string[] | null;
+      keys: IDBValidKey[]; rows: unknown[] }>;
+  }> {
+    const database = this.db();
+    const names = Array.from(database.objectStoreNames);
+    const tx = database.transaction(names, 'readonly');
+    const completion = transactionDone(tx);
+    const contents = names.map(async name => {
+      const store = tx.objectStore(name);
+      const keyPath = store.keyPath;
+      const [keys, rows] = await Promise.all([
+        requestResult(store.getAllKeys()),
+        requestResult(store.getAll()),
+      ]);
+      return { name, keyPath, keys, rows };
+    });
+    const stores = await Promise.all(contents);
+    await completion;
+    return { format: 'dynamic-learner-raw-indexeddb-rescue',
+      version: database.version, exportedAt: new Date().toISOString(), stores };
   }
 
   subscribe(listener: (change: DataChange) => void): () => void {
@@ -390,6 +446,10 @@ export class IndexedDataStore {
     workspaceId: string, expectedWorkspaceId: string | null,
     rows: readonly Extract<DataOperation, { type: 'put' }>[],
   ): Promise<void> {
+    if (this.databaseVersion > DATABASE_VERSION ||
+        this.db().objectStoreNames.length !== Object.keys(definitions).length) {
+      throw new DataApiError('validation', 'A newer or unrecognized database cannot be cleared by this build.');
+    }
     for (const row of rows) {
       if (row.value.workspaceId !== workspaceId ||
           ['control', 'workspaceMeta', 'changeJournal'].includes(row.store)) {
@@ -428,6 +488,9 @@ export class IndexedDataStore {
    */
   async commit(workspaceId: string, operations: readonly DataOperation[],
     options: { authored: boolean; scopes: readonly string[] }): Promise<DataCommit> {
+    if (this.databaseVersion > DATABASE_VERSION) {
+      throw new DataApiError('validation', 'This database was upgraded by a newer build; editing is disabled.');
+    }
     if (!operations.length) throw new DataApiError('validation', 'A transaction needs at least one operation.');
     for (const operation of operations) {
       if (['control', 'workspaceMeta', 'changeJournal'].includes(operation.store)) {

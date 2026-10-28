@@ -47,13 +47,24 @@ export const WorkspaceTools = defineComponent({
       }
     }
 
+    async function downloadRaw() {
+      error.value = ''; message.value = ''; downloading.value = true;
+      try {
+        await props.workspace.downloadRawRescue();
+        message.value = 'Raw IndexedDB rescue downloaded. Keep this file safe; it is not a regular workspace import.';
+      } catch (problem) { error.value = problem instanceof Error ? problem.message : String(problem); }
+      finally { downloading.value = false; }
+    }
+
     async function download() {
       error.value = '';
       message.value = '';
       downloading.value = true;
       try {
         await props.workspace.downloadBackup();
-        message.value = 'Download started. Check your Downloads folder and keep the backup file somewhere safe.';
+        message.value = props.workspace.compatibility.value?.mode === 'normal' || !props.workspace.compatibility.value
+          ? 'Download started. Check your Downloads folder and keep the backup file somewhere safe.'
+          : 'Raw IndexedDB rescue downloaded. It preserves unsupported records but cannot be uploaded as a normal workspace backup.';
       } catch (problem) {
         error.value = (problem instanceof Error ? problem.message : String(problem)) || 'The backup could not be downloaded.';
       } finally {
@@ -98,10 +109,18 @@ export const WorkspaceTools = defineComponent({
       h('h2', { class: 'workspace-tools-heading' }, 'Workspace'),
       h('div', { class: 'workspace-actions' }, [
         h('button', { type: 'button', class: 'quiet-button', disabled: downloading.value, onClick: () => { void download(); } }, [
-          h(Icon, { name: 'download' }), downloading.value ? 'Preparing backup…' : 'Download backup',
+          h(Icon, { name: 'download' }), downloading.value ? 'Preparing backup…'
+            : props.workspace.compatibility.value && props.workspace.compatibility.value.mode !== 'normal'
+              ? 'Download raw rescue' : 'Download backup',
         ]),
         h('button', {
-          type: 'button', class: 'quiet-button', disabled: busy.value,
+          type: 'button', class: 'quiet-button', disabled: downloading.value,
+          onClick: () => { void downloadRaw(); },
+        }, [h(Icon, { name: 'archive' }), 'Raw IndexedDB rescue']),
+        h('button', {
+          type: 'button', class: 'quiet-button',
+          disabled: busy.value || (props.workspace.compatibility.value !== null &&
+            props.workspace.compatibility.value.mode !== 'normal'),
           onClick: () => fileInput.value?.click(),
         }, [h(Icon, { name: 'upload' }), busy.value ? 'Reading backup…' : 'Upload backup']),
         h('input', {
@@ -109,10 +128,15 @@ export const WorkspaceTools = defineComponent({
           onChange: upload,
         }),
       ]),
+      props.workspace.compatibility.value && props.workspace.compatibility.value.mode !== 'normal'
+        ? h('p', { class: 'backup-preferences-help' },
+          'Compatibility mode: regular backup restore and workspace clearing are disabled. Raw rescue includes unsupported saved data and is not importable with Upload backup.') : null,
       h('div', { class: 'workspace-danger-actions' }, [
         h('button', {
           type: 'button', class: 'quiet-button delete-button',
           disabled: busy.value || downloading.value ||
+            (props.workspace.compatibility.value !== null &&
+              props.workspace.compatibility.value.mode !== 'normal') ||
             (!props.workspace.ready.value && !props.workspace.storageProblem.value),
           onClick: () => { error.value = ''; message.value = ''; clearStep.value = 1; },
         }, [h(Icon, { name: 'trash' }), busy.value ? 'Clearing workspace…' : 'Clear workspace data']),

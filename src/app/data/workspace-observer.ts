@@ -3,6 +3,7 @@ import type { Workspace } from '../workspace-format.ts';
 import { workspaceRows } from './workspace-mapping.ts';
 import { WorkspaceDataApi } from './data-api.ts';
 import { TASK_CATEGORIES } from '../../features/solve-it-grid/task-model.ts';
+import { rowIsUnknown } from './workspace-compatibility.ts';
 import type { DataOperation, DataStoreName, IndexedRow } from '../../core/data/indexeddb.ts';
 
 type Plain = Record<string, unknown>;
@@ -114,6 +115,10 @@ export async function observeWorkspace(
     if (removeMissing) {
       for (const [id, previous] of known) {
         if (desired.has(id) || (removedStores && !removedStores.has(previous.store))) continue;
+        // A prior build may have written a feature/collection/statistics scope
+        // this build does not understand. Absence in our Vue projection is
+        // never permission to delete those records.
+        if (rowIsUnknown(previous.store, asObject(JSON.parse(previous.serialized)))) continue;
         const op: DataOperation = { store: previous.store, type: 'delete', key: previous.key,
           expectedRevision: previous.revision };
         operations.push(op);
