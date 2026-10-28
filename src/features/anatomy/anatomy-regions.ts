@@ -13,8 +13,8 @@ export interface AnatomyRegion {
 
 export const skeletalRegions: readonly AnatomyRegion[] = [
   { id: 'whole-body', name: 'Whole body', x: 56, y: 12, width: 208, height: 660 },
-  { id: 'head-neck', name: 'Head & neck', x: 119, y: 15, width: 82, height: 124 },
-  { id: 'thorax', name: 'Chest & shoulders', x: 88, y: 130, width: 144, height: 112 },
+  { id: 'head-neck', name: 'Head & neck', x: 119, y: 15, width: 82, height: 152 },
+  { id: 'thorax', name: 'Chest & shoulders', x: 88, y: 128, width: 144, height: 143 },
   { id: 'spine', name: 'Spine', x: 128, y: 109, width: 64, height: 245 },
   { id: 'abdomen', name: 'Lower torso', x: 105, y: 233, width: 110, height: 109 },
   { id: 'pelvis', name: 'Pelvis', x: 98, y: 278, width: 124, height: 92 },
@@ -40,8 +40,8 @@ export function boneInRegion(bone: AtlasStructure, region: string): boolean {
   if (region === 'feet-ankles') {
     return /Tarsal bones|Metatarsals|Toe phalanges/.test(group);
   }
-  if (region === 'upper-limb') return bone.regionIds.includes('upper-limb');
-  if (region === 'lower-limb') return bone.regionIds.includes('lower-limb');
+  if (region === 'upper-limb') return ['humerus', 'radius', 'ulna'].includes(code);
+  if (region === 'lower-limb') return ['femur', 'patella', 'tibia', 'fibula'].includes(code);
   if (region === 'thorax') {
     return bone.regionIds.includes('thorax')
       || code === 'scapula' || /^t\d+$/.test(code);

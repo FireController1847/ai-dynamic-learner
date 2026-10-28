@@ -97,6 +97,10 @@ Spine, Lower torso, Pelvis, Arms, Hands & wrists, Legs, and Feet & ankles.
 Each uses its own focused rectangle within the existing 320 × 700 canonical
 2D artwork and filters the structure list; regional zoom does not copy
 the geometry or duplicate data IDs.
+The Arms and Legs scopes intentionally exclude the separate Hands & wrists
+and Feet & ankles bones. Head & neck includes C1–C7; Chest & shoulders
+includes the lowest ribs. A regional choice does not conceal bones beyond
+its crop while continuing to list them in the Structures panel.
 
 Visibility modes: **Both** defaults to all structures overlaid in an
 anterior schematic projection, including bone locations otherwise obscured.
