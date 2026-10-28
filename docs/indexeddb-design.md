@@ -2,9 +2,15 @@
 
 > **Status: IndexedDB cutover integrated on this draft PR, not yet browser-validated.** The schema, transaction provider, staging/activation, model mapping and compatibility observer are implemented. `src/app/workspace.ts` now uses IndexedDB as the live persistence provider. Direct feature command integration and polished same-record conflict resolution UX remain future work. Read with [Unified Data API](data-api-design.md).
 
+## Compatibility and safe recovery
+
+The storage connection retries a versionless IndexedDB open on a browser `VersionError`, allowing read-only access to compatible existing stores even if the database was upgraded by a newer branch. Key-format mismatches remain non-editable. A separate raw rescue path opens the database without typed schema assumptions and captures all available object stores.
+
+`src/app/data/workspace-compatibility.ts` projects supported feature records and preserves unknown scopes; the legacy Vue observer never deletes unrecognized rows during structural writes. Records with unknown properties that the running serializer cannot round-trip and known malformed data force a read-only view. Regular portable backup exports, restores and workspace clearing cannot operate on partial projections. Returning to a compatible build exposes preserved data again.
+
 ## Selected storage model
 
-Use one same-origin IndexedDB database named `dynamic-learner-data`, currently at **IDB schema version 2**. Store **individual semantic records** rather than one JSON workspace or one giant item blob. No IndexedDB structure is exposed to feature UI.
+Use one same-origin IndexedDB database named `dynamic-learner-data`, currently at **IDB schema version 3**. Store **individual semantic records** rather than one JSON workspace or one giant item blob. No IndexedDB structure is exposed to feature UI.
 
 - IndexedDB is the local working database. Persistent data is stored using structured clone, not `JSON.stringify`.
 - Every record is scoped by a stable local `workspaceId`. This permits safe staged restore and, later, separate local/account workspaces without key collisions.

@@ -2,7 +2,7 @@ import type { Workspace } from '../workspace-format.ts';
 import { emptyWorkspace, parseWorkspace } from '../workspace-format.ts';
 import { createId, isValidId } from '../../core/ids.ts';
 import {
-  IndexedDataStore, DataApiError, dataPrimaryKey, DATABASE_VERSION, type DataChange, type DataCommit,
+  IndexedDataStore, DataApiError, dataPrimaryKey, DATABASE_VERSION, exportRawIndexedDb, type DataChange, type DataCommit,
   type DataOperation, type DataStoreName, type IndexedRow,
 } from '../../core/data/indexeddb.ts';
 import { hydrateWorkspace, workspaceRows, WORKSPACE_RECORD_STORES } from './workspace-mapping.ts';
@@ -64,6 +64,11 @@ export class WorkspaceDataApi {
     await this.store.open();
     let workspaceId = await this.store.activeWorkspaceId();
     if (!workspaceId) {
+      // Missing control metadata must not be mistaken for a fresh install.
+      // Existing workspace generations are preserved for recovery.
+      const prior = await this.store.all<IndexedRow>('workspaceMeta');
+      if (prior.length) throw new DataApiError('validation',
+        'The active workspace pointer is missing, but previous workspaces exist. Download a raw IndexedDB rescue before proceeding.');
       // Legacy localStorage is an optional, read-only migration source.
       // Some browsers disallow access to it even when IndexedDB works.
       // Do not mistake an inaccessible legacy store for a corrupt workspace,
@@ -154,11 +159,16 @@ export class WorkspaceDataApi {
       throw new DataApiError('conflict', 'The workspace changed while it was being loaded. Reload this tab.');
     }
     const meta = snapshot.get('workspaceMeta')?.find(value => value.id === workspaceId);
-    if (typeof meta?.commitSequence !== 'number' || typeof meta.authoredRevision !== 'number') {
-      throw new DataApiError('unavailable', 'Workspace revision metadata is missing.');
-    }
-    const { workspace, compatibility } = await compatibleWorkspace(
+    const metadataMissing = typeof meta?.commitSequence !== 'number' ||
+      typeof meta.authoredRevision !== 'number';
+    const result = await compatibleWorkspace(
       snapshot, workspaceId, this.store.databaseVersion, DATABASE_VERSION);
+    const { workspace } = result;
+    const compatibility = metadataMissing ? {
+      ...result.compatibility, mode: 'recovery' as const, readOnly: true,
+      issues: [...result.compatibility.issues,
+        'Workspace revision metadata is missing. Content is displayed read-only; original records remain untouched.'],
+    } : result.compatibility;
     this.compatibility = compatibility;
     const records = stores.filter(store => !['control', 'workspaceMeta'].includes(store))
       .flatMap(store => (snapshot.get(store) ?? []).filter(value => value.workspaceId === workspaceId)
@@ -170,7 +180,10 @@ export class WorkspaceDataApi {
     // particular, local keystrokes can arrive while this async read runs.
     return {
       workspaceId, workspace, compatibility,
-      revisions: { commitSequence: meta.commitSequence, authoredRevision: meta.authoredRevision },
+      revisions: {
+        commitSequence: metadataMissing ? 0 : meta!.commitSequence as number,
+        authoredRevision: metadataMissing ? 0 : meta!.authoredRevision as number,
+      },
       records,
     };
   }
@@ -539,8 +552,7 @@ export class WorkspaceDataApi {
 
   /** A full read-only capture, including unknown stores and inactive generations. */
   async exportRawRescue(): Promise<string> {
-    await this.store.open();
-    return JSON.stringify(await this.store.rawRescue());
+    return JSON.stringify(await exportRawIndexedDb());
   }
 
   close() { this.store.close(); this.workspaceId = null; this.initialization = null; }

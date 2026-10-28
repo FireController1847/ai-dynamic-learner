@@ -204,6 +204,38 @@ export function openDataDatabase(): Promise<IDBDatabase> {
   });
 }
 
+async function captureRawData(database: IDBDatabase): Promise<{
+  format: 'dynamic-learner-raw-indexeddb-rescue';
+  version: number;
+  exportedAt: string;
+  stores: Array<{ name: string; keyPath: string | string[] | null;
+    keys: IDBValidKey[]; rows: unknown[] }>;
+}> {
+  const names = Array.from(database.objectStoreNames);
+  const tx = database.transaction(names, 'readonly');
+  const completion = transactionDone(tx);
+  const contents = names.map(async name => {
+    const store = tx.objectStore(name);
+    const keyPath = store.keyPath;
+    const [keys, rows] = await Promise.all([
+      requestResult(store.getAllKeys()),
+      requestResult(store.getAll()),
+    ]);
+    return { name, keyPath, keys, rows };
+  });
+  const stores = await Promise.all(contents);
+  await completion;
+  return { format: 'dynamic-learner-raw-indexeddb-rescue',
+    version: database.version, exportedAt: new Date().toISOString(), stores };
+}
+
+/** Rescue bypasses typed schema checks; all stored keys and rows are retained. */
+export async function exportRawIndexedDb(): Promise<Awaited<ReturnType<typeof captureRawData>>> {
+  const database = await openDataDatabase();
+  try { return await captureRawData(database); }
+  finally { database.close(); }
+}
+
 /** A low-level provider; no app feature may access an IDBTransaction directly. */
 export class IndexedDataStore {
   private database: IDBDatabase | null = null;
@@ -271,30 +303,8 @@ export class IndexedDataStore {
    * This is a forensic backup, not an importable v1 workspace. It never
    * filters unknown fields, inactive workspaces, or extra object stores.
    */
-  async rawRescue(): Promise<{
-    format: 'dynamic-learner-raw-indexeddb-rescue';
-    version: number;
-    exportedAt: string;
-    stores: Array<{ name: string; keyPath: string | string[] | null;
-      keys: IDBValidKey[]; rows: unknown[] }>;
-  }> {
-    const database = this.db();
-    const names = Array.from(database.objectStoreNames);
-    const tx = database.transaction(names, 'readonly');
-    const completion = transactionDone(tx);
-    const contents = names.map(async name => {
-      const store = tx.objectStore(name);
-      const keyPath = store.keyPath;
-      const [keys, rows] = await Promise.all([
-        requestResult(store.getAllKeys()),
-        requestResult(store.getAll()),
-      ]);
-      return { name, keyPath, keys, rows };
-    });
-    const stores = await Promise.all(contents);
-    await completion;
-    return { format: 'dynamic-learner-raw-indexeddb-rescue',
-      version: database.version, exportedAt: new Date().toISOString(), stores };
+  async rawRescue(): Promise<Awaited<ReturnType<typeof captureRawData>>> {
+    return captureRawData(this.db());
   }
 
   subscribe(listener: (change: DataChange) => void): () => void {
