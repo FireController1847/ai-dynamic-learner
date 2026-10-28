@@ -47,7 +47,7 @@ export function boneInRegion(bone: AtlasStructure, region: string): boolean {
       || code === 'scapula' || /^t\d+$/.test(code);
   }
   if (region === 'abdomen') return /^l\d+$/.test(code)
-    || code === 'sacrum' || code === 'coccyx' || /^rib-(10|11|12)$/.test(code);
+    || /^rib-(10|11|12)$/.test(code);
   if (region === 'pelvis') return bone.regionIds.includes('pelvis');
   return bone.regionIds.includes(region);
 }
