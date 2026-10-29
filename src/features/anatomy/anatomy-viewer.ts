@@ -82,6 +82,21 @@ export const AnatomyViewer = defineComponent({
     });
     function reset() { zoom.value = FIT_ZOOM; panX.value = 0; panY.value = 0; drag = null; }
     watch(() => props.view.id, reset);
+
+    // Keep the artwork on-screen without constraining legitimate zoom-in
+    // inspection. Prior unrestricted wheel/drag offsets could leave only
+    // blank canvas visible, even at the default whole-body Fit zoom.
+    function boundedPan(x: number, y: number, atZoom = zoom.value) {
+      const visibleWidth = area.value.width / atZoom;
+      const visibleHeight = area.value.height / atZoom;
+      const horizontalLimit = Math.max(0, (area.value.width - visibleWidth) / 2)
+        + Math.min(area.value.width, visibleWidth) * 0.12;
+      const verticalLimit = Math.max(0, (area.value.height - visibleHeight) / 2)
+        + Math.min(area.value.height, visibleHeight) * 0.12;
+      panX.value = Math.max(-horizontalLimit, Math.min(horizontalLimit, x));
+      panY.value = Math.max(-verticalLimit, Math.min(verticalLimit, y));
+    }
+
     function sizeFor(value: number) {
       const vw = area.value.width / value, vh = area.value.height / value;
       const box = svg.value?.getBoundingClientRect();
@@ -106,11 +121,12 @@ export const AnatomyViewer = defineComponent({
       const next = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, value));
       const scene = sizeFor(next);
       if (!scene) { zoom.value = next; return; }
-      panX.value = worldX - area.value.x - (area.value.width - scene.vw) / 2
+      const nextX = worldX - area.value.x - (area.value.width - scene.vw) / 2
         - (px - scene.padX) / scene.scale;
-      panY.value = worldY - area.value.y - (area.value.height - scene.vh) / 2
+      const nextY = worldY - area.value.y - (area.value.height - scene.vh) / 2
         - (py - scene.padY) / scene.scale;
       zoom.value = next;
+      boundedPan(nextX, nextY, next);
     }
     function setZoom(value: number) {
       const previous = sizeFor(zoom.value);
@@ -147,8 +163,7 @@ export const AnatomyViewer = defineComponent({
       } else {
         const scene = sizeFor(drag.zoom);
         if (!scene) return;
-        panX.value = drag.panX - dx / scene.scale;
-        panY.value = drag.panY - dy / scene.scale;
+        boundedPan(drag.panX - dx / scene.scale, drag.panY - dy / scene.scale, drag.zoom);
       }
     }
     function pointerEnd(event: PointerEvent) {
@@ -179,8 +194,10 @@ export const AnatomyViewer = defineComponent({
         zoomAt(zoom.value * Math.exp(-event.deltaY * multiplier / 240),
           world.x, world.y, px, py);
       } else {
-        panX.value += (event.deltaX + (event.shiftKey ? event.deltaY : 0)) * multiplier / scene.scale;
-        panY.value += (event.shiftKey ? 0 : event.deltaY) * multiplier / scene.scale;
+        boundedPan(
+          panX.value + (event.deltaX + (event.shiftKey ? event.deltaY : 0)) * multiplier / scene.scale,
+          panY.value + (event.shiftKey ? 0 : event.deltaY) * multiplier / scene.scale,
+        );
       }
     }
     function shapeNode(shape: AtlasShape, tabbable: boolean): VNode {

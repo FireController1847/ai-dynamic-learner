@@ -379,6 +379,35 @@ all 206 hand-authored projection shapes.
 - Check narrow screens and dark mode, including the floating inspector.
 - Switch back to Skeletal; bone counts and geometry must be unchanged.
 
+## Viewer layout and camera guardrails
+
+The drawing stage has a **definite, responsive height**, and the SVG is
+absolutely positioned inside it. Its inherent 320 × 700 viewBox must
+not contribute intrinsic height to CSS layout. Otherwise the stage can
+expand to several screenfuls and leave a huge blank area above the
+anatomical figure (especially with collapsed side panels or wide windows).
+
+The default Fit view remains centered with a comfortable margin.
+Drag pan, vertical/horizontal wheel pan, Ctrl+wheel zoom and Z scrub
+remain available. All camera changes are bounded to the focused
+anatomical region, with modest 12% overscroll, so ordinary navigation
+cannot move the entire figure offscreen. Zoom range is unchanged.
+
+### Viewer regression checks
+
+- On a wide desktop and a tall display, switch through all five
+  illustrated systems and confirm the *whole figure is visible immediately*
+  below the toolbar, not below a tall blank canvas.
+- Collapse both sidebar panels, zoom in/out and resize the window:
+  the stage height must remain controlled and the drawing must stay
+  centered when using Fit.
+- Use fast wheel scrolling and drag in all directions: the canvas should
+  never be able to move the *whole* focused figure out of the viewport.
+  Inspect close-up regions too; their small shapes must remain reachable.
+- Test Front, Back, Both, regional changes and the structure inspector;
+  ensure they do not resize the stage or reintroduce giant scroll areas.
+- Confirm phone/short-window behavior and keyboard-accessible Fit.
+
 ## Manual verification
 
 - Open `/anatomy/` from the Tools category and directly through its URL.
