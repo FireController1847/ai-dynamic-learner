@@ -11,6 +11,8 @@ import { boneInRegion, boneVisibleFrom, cardiovascularInRegion, cardiovascularRe
 import type { VesselView } from './cardiovascular-structures.ts';
 import type { GonadView } from './endocrine-structures.ts';
 import { AnatomyViewer } from './anatomy-viewer.ts';
+import { createIdentificationSession, isIdentificationCorrect,
+  identificationPacks, type IdentificationSession } from './anatomy-identification.ts';
 
 // Reference content is bundled locally, independent of workspace saves.
 const atlas = buildAtlasIndex(foundationAtlas);
@@ -37,6 +39,20 @@ export const Anatomy = defineComponent({
     const vesselView = ref<VesselView>('all');
     const selectedId = ref<string | null>(null);
     const search = ref('');
+    const identification = ref<IdentificationSession | null>(null);
+    const identificationIndex = ref(0);
+    const identificationAnswers = ref<Record<string, string>>({});
+    const identificationChecked = ref<string[]>([]);
+    const identificationSkipped = ref<string[]>([]);
+    const identificationFinished = ref(false);
+    const identifying = computed(() => identification.value !== null);
+    const identificationPage = computed(() => identificationFinished.value ? null
+      : identification.value?.pages[identificationIndex.value] ?? null);
+    const identificationItems = computed(() => identification.value?.pages.flatMap(page => page.items) ?? []);
+    const identificationCorrect = computed(() => identificationItems.value
+      .filter(item => isIdentificationCorrect(item, identificationAnswers.value[item.id] ?? '')).length);
+    const identificationAttempted = computed(() => identificationItems.value
+      .filter(item => (identificationAnswers.value[item.id] ?? '').trim()).length);
 
     const systemsCollapsed = ref(initialCollapsed(SYSTEMS_COLLAPSED_KEY));
     const structuresCollapsed = ref(initialCollapsed(STRUCTURES_COLLAPSED_KEY));
@@ -131,6 +147,138 @@ export const Anatomy = defineComponent({
             : systemId.value === 'cardiovascular' ? cardiovascularRegions
               : [{ id: 'whole-body', name: 'Whole body' }]);
 
+    function startIdentification() {
+      if (identifying.value || !identificationPacks[systemId.value]) return;
+      const session = createIdentificationSession(systemId.value,
+        [...atlas.structures.values()], shapes.value);
+      if (!session?.total) return;
+      identification.value = session;
+      identificationIndex.value = 0;
+      identificationAnswers.value = {};
+      identificationChecked.value = [];
+      identificationSkipped.value = [];
+      identificationFinished.value = false;
+      selectedId.value = null;
+    }
+    function exitIdentification() {
+      identification.value = null;
+      identificationFinished.value = false;
+      selectedId.value = null;
+    }
+    function updateIdentificationAnswer(id: string, answer: string) {
+      if (!identifying.value || identificationFinished.value) return;
+      identificationAnswers.value = { ...identificationAnswers.value, [id]: answer };
+      identificationChecked.value = identificationChecked.value.filter(value => value !== id);
+      identificationSkipped.value = identificationSkipped.value.filter(value => value !== id);
+    }
+    function checkIdentification() {
+      if (!identificationPage.value) return;
+      const toCheck = identificationPage.value.items.filter(item =>
+        (identificationAnswers.value[item.id] ?? '').trim()).map(item => item.id);
+      identificationChecked.value = [...new Set([...identificationChecked.value, ...toCheck])];
+    }
+    function advanceIdentification(skip: boolean) {
+      if (!identification.value || identificationFinished.value) return;
+      if (skip && identificationPage.value) {
+        const untouched = identificationPage.value.items.filter(item =>
+          !(identificationAnswers.value[item.id] ?? '').trim()).map(item => item.id);
+        identificationSkipped.value = [...new Set([...identificationSkipped.value, ...untouched])];
+      }
+      if (identificationIndex.value < identification.value.pages.length - 1) {
+        identificationIndex.value += 1;
+      } else {
+        identificationFinished.value = true;
+      }
+    }
+    function restartIdentification() {
+      if (!identification.value) return;
+      identificationIndex.value = 0;
+      identificationFinished.value = false;
+      identificationAnswers.value = {};
+      identificationChecked.value = [];
+      identificationSkipped.value = [];
+    }
+    function identificationToolbar() {
+      const page = identificationPage.value;
+      return [
+        h('div', { class: 'anatomy-identification-heading' }, [
+          h('strong', 'Skeletal · Fill in the blanks'),
+          page
+            ? h('span', { class: 'anatomy-identification-group' },
+              page.category + ' / ' + page.group)
+            : h('span', 'Results'),
+        ]),
+        h('button', {
+          type: 'button', class: 'quiet-button anatomy-identification-exit',
+          onClick: exitIdentification,
+        }, [h(Icon, { name: 'x' }), 'Exit']),
+      ];
+    }
+    function identificationFooter() {
+      const session = identification.value;
+      if (!session) return [];
+      if (identificationFinished.value) {
+        return [h('div', { class: 'anatomy-identification-footer' }, [
+          h('span', { class: 'anatomy-identification-progress' }, 'Session complete'),
+          h('div', { class: 'anatomy-identification-actions' }, [
+            h('button', { type: 'button', class: 'quiet-button',
+              onClick: () => { identificationFinished.value = false; identificationIndex.value = 0; } }, 'Review pages'),
+            h('button', { type: 'button', class: 'quiet-button',
+              onClick: restartIdentification }, 'Try again'),
+            h('button', { type: 'button', class: 'quiet-button',
+              onClick: exitIdentification }, 'Exit'),
+          ]),
+        ])];
+      }
+      return [h('div', { class: 'anatomy-identification-footer' }, [
+        h('span', { class: 'anatomy-identification-progress', 'aria-live': 'polite' },
+          'Page ' + (identificationIndex.value + 1) + ' of ' + session.pages.length
+          + ' · ' + identificationAttempted.value + ' / ' + session.total + ' attempted'
+          + (identificationSkipped.value.length ? ' · ' + identificationSkipped.value.length + ' skipped' : '')),
+        h('div', { class: 'anatomy-identification-actions' }, [
+          h('button', { type: 'button', class: 'quiet-button',
+            disabled: identificationIndex.value === 0,
+            onClick: () => { identificationIndex.value -= 1; } }, 'Previous'),
+          h('button', { type: 'button', class: 'quiet-button',
+            onClick: () => advanceIdentification(true) }, 'Skip'),
+          h('button', { type: 'button', class: 'quiet-button',
+            onClick: checkIdentification }, 'Check'),
+          h('button', { type: 'button', class: 'quiet-button anatomy-identification-next',
+            onClick: () => advanceIdentification(false) },
+          identificationIndex.value === session.pages.length - 1 ? 'Finish' : 'Next'),
+        ]),
+      ])];
+    }
+    function identificationResults() {
+      const session = identification.value;
+      if (!session || !identificationFinished.value) return [];
+      const missed = identificationItems.value.filter(item =>
+        !isIdentificationCorrect(item, identificationAnswers.value[item.id] ?? ''));
+      return [h('section', {
+        class: 'anatomy-identification-results',
+        role: 'region', 'aria-label': 'Identification results',
+      }, [
+        h('h2', 'Identification complete'),
+        h('p', { class: 'anatomy-identification-score' },
+          identificationCorrect.value + ' / ' + session.total + ' correct'),
+        h('p', identificationAttempted.value + ' attempted · '
+          + (session.total - identificationAttempted.value) + ' left blank'
+          + (identificationSkipped.value.length ? ' (' + identificationSkipped.value.length + ' skipped)' : '')),
+        missed.length
+          ? h('div', { class: 'anatomy-identification-review' }, [
+            h('h3', 'Review these structures'),
+            h('ul', missed.map(item => h('li', { key: item.id }, [
+              h('strong', item.name),
+              h('span', item.classification),
+              (identificationAnswers.value[item.id] ?? '').trim()
+                ? h('small', 'Your answer: ' + identificationAnswers.value[item.id])
+                : null,
+            ]))),
+          ])
+          : h('p', 'Every identification is correct!'),
+      ])];
+    }
+
     function setSystemsCollapsed(collapsed: boolean) {
       systemsCollapsed.value = collapsed;
       writeNumberPreference(SYSTEMS_COLLAPSED_KEY, collapsed ? 1 : 0);
@@ -167,6 +315,7 @@ export const Anatomy = defineComponent({
 
     // Navigation lives in the viewer's single white bar alongside its zoom controls.
     function viewerToolbar() {
+      if (identifying.value) return identificationToolbar();
       return [
         h('div', { class: 'anatomy-viewer-leading' }, [
           systemsCollapsed.value ? h('button', {
@@ -184,6 +333,12 @@ export const Anatomy = defineComponent({
             ['skeletal', 'muscular', 'nervous', 'endocrine', 'cardiovascular'].includes(systemId.value) ? null
               : h('span', { class: 'anatomy-viewer-status' }, 'Coming soon'),
           ]),
+          identificationPacks[systemId.value] && visibleIds.value.size
+            ? h('button', {
+              type: 'button', class: 'quiet-button anatomy-identification-start',
+              onClick: startIdentification,
+            }, [h(Icon, { name: 'pencil-line' }), 'Fill in the blanks'])
+            : null,
         ]),
         h('div', { class: 'anatomy-viewer-view-options' }, [
           h('label', { class: 'visually-hidden', for: 'anatomy-region' }, 'Anatomical region'),
@@ -246,13 +401,14 @@ export const Anatomy = defineComponent({
 
     return () => h('section', {
       class: ['anatomy-page', {
-        'systems-collapsed': systemsCollapsed.value,
-        'structures-collapsed': structuresCollapsed.value,
+        'systems-collapsed': systemsCollapsed.value || identifying.value,
+        'structures-collapsed': structuresCollapsed.value || identifying.value,
+        'is-identifying': identifying.value,
       }],
       'aria-label': props.title,
     }, [
       h('aside', { id: 'anatomy-systems-panel', class: 'anatomy-systems',
-        hidden: systemsCollapsed.value, 'aria-label': 'Body systems' }, [
+        hidden: systemsCollapsed.value || identifying.value, 'aria-label': 'Body systems' }, [
         h('div', { class: 'anatomy-panel-top' }, [
           h('div', { class: 'anatomy-panel-heading' }, [
             h('h2', 'Body systems'),
@@ -277,10 +433,21 @@ export const Anatomy = defineComponent({
             occludedIds: occludedIds.value, ghostLayerIds: ghostLayerIds.value,
             showPlaceholder: !['skeletal', 'muscular', 'nervous', 'endocrine', 'cardiovascular'].includes(systemId.value),
             structures: [...atlas.structures.values()], selectedId: selectedId.value ?? '',
-            selectedStructure: selected.value ?? null,
+            selectedStructure: identifying.value ? null : selected.value ?? null,
+            identificationActive: identifying.value,
+            identificationPage: identificationPage.value,
+            identificationAnswers: identificationAnswers.value,
+            identificationCheckedIds: identificationChecked.value,
+            identificationSkippedIds: identificationSkipped.value,
+            onIdentificationAnswer: updateIdentificationAnswer,
+            onIdentificationCheck: checkIdentification,
             onSelect: selectStructure,
             onClearSelection: () => { selectedId.value = null; },
-          }, { toolbar: viewerToolbar })
+          }, {
+            toolbar: viewerToolbar,
+            footer: identificationFooter,
+            identificationResult: identificationResults,
+          })
           : h('div', { class: 'anatomy-unavailable', role: 'status' }, [
             h('strong', system.value?.name ?? props.title),
             h(Icon, { name: 'anatomy' }),
@@ -288,7 +455,7 @@ export const Anatomy = defineComponent({
           ]),
       ]),
       h('aside', { id: 'anatomy-structures-panel', class: 'anatomy-details',
-        hidden: structuresCollapsed.value, 'aria-label': 'Anatomical structures' }, [
+        hidden: structuresCollapsed.value || identifying.value, 'aria-label': 'Anatomical structures' }, [
         h('div', { class: 'anatomy-panel-top' }, [
           h('div', { class: 'anatomy-panel-heading' }, [
             h('h2', 'Structures'),

@@ -379,6 +379,54 @@ all 206 hand-authored projection shapes.
 - Check narrow screens and dark mode, including the floating inspector.
 - Switch back to Skeletal; bone counts and geometry must be unchanged.
 
+## Fill in the blanks · skeletal identification
+
+Skeletal now has a **Fill in the blanks** practice mode (other anatomical
+systems are unchanged). Enter it from the compact atlas toolbar. Both
+sidebar panels are temporarily hidden without overwriting either stored
+collapsed preference, so the drawing gains the full horizontal workspace.
+The system, region, and Front/Back/Both orientation are locked until exit.
+Pan, zoom, Fit, Z scrub, and wheel navigation remain available.
+
+The system-independent session builder in anatomy-identification.ts is
+controlled by a per-system opt-in registry. Only Skeletal is enabled today;
+a future atlas can use the same UI and grading when its data is ready.
+Questions derive from visible structure IDs at session start, not copied
+answer lists. Whole body + Both covers all 206 adult bones.
+
+Pages are grouped by classification (e.g., Axial skeleton / Cervical
+vertebrae and Appendicular skeleton / Pectoral girdle), with at most six
+numbered blanks per page. Each line sits beside the diagram and points
+to the corresponding bone via a leader line. The overlay measures each
+bone's real rendered SVG bounding box, so leaders remain attached during
+zoom, pan, resize, and navigation. Normal click-to-select and accessible
+bone-name labels are suppressed while practicing.
+
+**Enter** or **Check** marks entered responses without showing answers;
+**Previous** and **Next** navigate, and **Skip** advances unanswered
+blanks without revealing them. Responses persist between pages. **Finish**
+shows the score, missed names and any attempted answers. Users may review
+pages, restart or exit. Exit restores the previous atlas layout. Quiz
+progress stays in memory only, independent from IndexedDB.
+
+Answer checking accepts canonical bone names and aliases, optionally
+without left/right prefixes or generic "bone" / "vertebra" words. Digit
+numbers, rib numbers, and vertebral levels must still be identified.
+
+### Identification manual verification
+
+- Skeletal Whole body / Both: confirm 206 prompts in sensible grouped pages.
+- Both sidebar panels are hidden during quiz; prior collapse preferences
+  return on exit. System, region, view and other settings are unavailable.
+- Zoom/pan/Z scrub/resize on tiny cervical vertebrae, ribs, carpals and
+  phalanges; lines should remain attached to the right bone.
+- Check Enter, Check, Skip, Previous, Next, Finish, Review pages,
+  Try again and Exit. Answers persist when revisiting.
+- Before Finish no bone names leak from SVG focus, selection, tooltips
+  or the former Structures panel. Results reveal missed names at Finish.
+- Verify regional and front/back scopes, keyboard, touch, dark mode
+  and reduced motion. Other body systems do not offer this mode yet.
+
 ## Viewer layout and camera guardrails
 
 The desktop viewer is a **flexible fill-height surface**: the viewer

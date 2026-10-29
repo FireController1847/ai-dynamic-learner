@@ -2,6 +2,8 @@ import { computed, defineComponent, h, onBeforeUnmount, onMounted, ref, watch, t
 import type { AtlasLayer, AtlasShape, AtlasStructure, AtlasView } from './atlas-model.ts';
 import type { AnatomyRegion } from './anatomy-regions.ts';
 import { Icon } from '../../components/icon.ts';
+import type { IdentificationPage } from './anatomy-identification.ts';
+import { AnatomyIdentificationOverlay } from './anatomy-identification-overlay.ts';
 
 // 100% is a normal zoom level, not the minimum. Fit adds comfortable
 // breathing room while keeping the whole figure in view.
@@ -22,8 +24,18 @@ export const AnatomyViewer = defineComponent({
     occludedIds: { type: Array as PropType<readonly string[]>, default: () => [] },
     ghostLayerIds: { type: Array as PropType<readonly string[]>, default: () => [] },
     showPlaceholder: { type: Boolean, default: true },
+    identificationPage: { type: Object as PropType<IdentificationPage | null>, default: null },
+    identificationAnswers: { type: Object as PropType<Readonly<Record<string, string>>>, default: () => ({}) },
+    identificationCheckedIds: { type: Array as PropType<readonly string[]>, default: () => [] },
+    identificationSkippedIds: { type: Array as PropType<readonly string[]>, default: () => [] },
+    identificationActive: { type: Boolean, default: false },
   },
-  emits: { select: (_structureId: string) => true, clearSelection: () => true },
+  emits: {
+    select: (_structureId: string) => true,
+    clearSelection: () => true,
+    identificationAnswer: (_id: string, _answer: string) => true,
+    identificationCheck: () => true,
+  },
   setup(props, { emit, slots }) {
     const zoom = ref(FIT_ZOOM);
     const panX = ref(0);
@@ -215,23 +227,33 @@ export const AnatomyViewer = defineComponent({
           'aria-hidden': 'true', 'pointer-events': 'none',
         });
       }
-      const name = structureNames.value.get(shape.structureId) ?? shape.structureId;
-      const interaction = {
-        role: 'button',
-        tabindex: tabbable ? 0 : -1,
-        'aria-label': 'Select ' + name,
-        'aria-pressed': props.selectedId === shape.structureId,
-        onClick: () => {
-          if (!suppressClick && !zHeld.value) emit('select', shape.structureId);
-        },
-        onKeydown: (event: KeyboardEvent) => {
-          if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault();
-            emit('select', shape.structureId);
-          }
-        },
-      };
-      const selected = props.selectedId === shape.structureId;
+      // The assessment must never leak bone names in accessible SVG labels,
+      // tooltips, keyboard selection, or the standard detail inspector.
+      const interaction = props.identificationActive
+        ? {
+          'data-anatomy-structure-id': shape.structureId,
+          'aria-hidden': 'true',
+          role: 'presentation',
+        }
+        : {
+          'data-anatomy-structure-id': shape.structureId,
+          role: 'button',
+          tabindex: tabbable ? 0 : -1,
+          'aria-label': 'Select ' + (structureNames.value.get(shape.structureId) ?? shape.structureId),
+          'aria-pressed': props.selectedId === shape.structureId,
+          onClick: () => {
+            if (!suppressClick && !zHeld.value) emit('select', shape.structureId);
+          },
+          onKeydown: (event: KeyboardEvent) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              emit('select', shape.structureId);
+            }
+          },
+        };
+      const selected = !props.identificationActive && props.selectedId === shape.structureId;
+      const quizTarget = props.identificationPage?.items.some(item => item.id === shape.structureId) ?? false;
+      const quizMuted = props.identificationActive && !quizTarget;
       const behind = occluded.value.has(shape.structureId) || ghostLayers.value.has(shape.layerId);
       const central = props.view.systemId === 'nervous' && centralIds.value.has(shape.structureId);
       const gland = props.view.systemId === 'endocrine';
@@ -261,14 +283,18 @@ export const AnatomyViewer = defineComponent({
         return h('g', { ...interaction, key: shape.id, transform,
           class: ['anatomy-stroke-group', { 'is-central': central }] }, [
           h('path', { d: shape.geometry.d, class: ['anatomy-shape', 'is-stroke', { 'is-selected': selected,
-            'is-occluded': behind, 'is-central': central, ...subtypes }] }),
+            'is-occluded': behind, 'is-central': central,
+            'is-identification-target': quizTarget && props.identificationActive,
+            'is-identification-muted': quizMuted, ...subtypes }] }),
           h('path', { d: shape.geometry.d, class: 'anatomy-stroke-hit', 'aria-hidden': 'true' }),
         ]);
       }
       return h(geometry.tag, {
         ...geometry.attrs, ...interaction, key: shape.id, transform,
         class: ['anatomy-shape', { 'is-selected': selected, 'is-occluded': behind,
-          'is-central': central, ...subtypes }],
+          'is-central': central,
+          'is-identification-target': quizTarget && props.identificationActive,
+          'is-identification-muted': quizMuted, ...subtypes }],
       });
     }
 
@@ -311,6 +337,7 @@ export const AnatomyViewer = defineComponent({
         'is-nervous': props.view.systemId === 'nervous',
         'is-endocrine': props.view.systemId === 'endocrine',
         'is-cardiovascular': props.view.systemId === 'cardiovascular',
+        'is-identifying': props.identificationActive,
       }] }, [
       h('div', { class: 'anatomy-viewer-controls' }, [
         ...(slots.toolbar?.() ?? []),
@@ -349,6 +376,17 @@ export const AnatomyViewer = defineComponent({
             return shapeNode(shape, tabbable);
           }),
         ]),
+        props.identificationPage
+          ? h(AnatomyIdentificationOverlay, {
+            page: props.identificationPage,
+            answers: props.identificationAnswers,
+            checkedIds: props.identificationCheckedIds,
+            skippedIds: props.identificationSkippedIds,
+            cameraKey: viewport.value.join(' '),
+            onAnswer: (id: string, answer: string) => emit('identificationAnswer', id, answer),
+            onCheck: () => emit('identificationCheck'),
+          }) : null,
+        ...(!props.identificationPage ? (slots.identificationResult?.() ?? []) : []),
         !props.shapes.length && !props.showPlaceholder
           ? h('p', { class: 'anatomy-no-visible-bones', role: 'status' },
             props.view.systemId === 'muscular'
@@ -361,7 +399,7 @@ export const AnatomyViewer = defineComponent({
                     ? 'No major vessels illustrated here. Try Both or All vessels.'
                     : 'No bones visible from this direction in this region. Choose Both for deeper structures.')
           : null,
-        props.selectedStructure ? h('section', {
+        !props.identificationActive && props.selectedStructure ? h('section', {
           key: props.selectedStructure.id,
           class: 'anatomy-selected-inspector',
           role: 'region',
@@ -384,6 +422,7 @@ export const AnatomyViewer = defineComponent({
           ]),
         ]) : null,
       ]),
+      ...(slots.footer?.() ?? []),
     ]);
     };
   },
