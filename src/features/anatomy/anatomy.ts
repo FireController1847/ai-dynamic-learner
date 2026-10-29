@@ -11,6 +11,7 @@ import { boneInRegion, boneVisibleFrom, cardiovascularInRegion, cardiovascularRe
 import type { VesselView } from './cardiovascular-structures.ts';
 import type { GonadView } from './endocrine-structures.ts';
 import { AnatomyViewer } from './anatomy-viewer.ts';
+import { AnatomyStructureTree } from './anatomy-structure-tree.ts';
 import { createIdentificationSession, isIdentificationCorrect,
   identificationPacks, type IdentificationSession } from './anatomy-identification.ts';
 
@@ -138,6 +139,12 @@ export const Anatomy = defineComponent({
       .map(shape => shape.structureId)));
     const structures = computed(() => searchStructures(atlas, search.value, systemId.value)
       .filter(item => visibleIds.value.has(item.id)));
+    // Preserve the authored anatomical ordering inside each hierarchy, rather
+    // than the flat alphabetical search result order.
+    const orderedStructures = computed(() => {
+      const matches = new Set(structures.value.map(item => item.id));
+      return [...atlas.structures.values()].filter(item => matches.has(item.id));
+    });
     const selected = computed(() => selectedId.value && visibleIds.value.has(selectedId.value)
       ? atlas.structures.get(selectedId.value) : undefined);
     const regions = computed(() => systemId.value === 'skeletal' ? skeletalRegions
@@ -323,7 +330,7 @@ export const Anatomy = defineComponent({
         ? [h('button', {
           type: 'button', class: 'quiet-button anatomy-identification-start',
           onClick: startIdentification,
-        }, [h(Icon, { name: 'pencil-line' }), 'Fill in the blanks'])]
+        }, [h(Icon, { name: 'pencil' }), 'Fill in the blanks'])]
         : [];
     }
 
@@ -480,12 +487,11 @@ export const Anatomy = defineComponent({
             placeholder: 'Search structures', onInput: (event: Event) => { search.value = inputValue(event); } }),
         ]),
         structures.value.length
-          ? h('ul', { class: 'anatomy-structure-list' }, structures.value.map(item => h('li', { key: item.id }, [
-            h('button', { type: 'button',
-              class: ['anatomy-structure-choice', { 'is-active': selectedId.value === item.id }],
-              'aria-pressed': selectedId.value === item.id,
-              onClick: () => { selectedId.value = item.id; } }, item.name),
-          ])))
+          ? h(AnatomyStructureTree, {
+            systemId: systemId.value, structures: orderedStructures.value,
+            selectedId: selectedId.value ?? '', query: search.value,
+            onSelect: selectStructure,
+          })
           : h('p', { class: 'anatomy-empty-structures', role: 'status' },
             search.value.trim()
               ? 'No matching structures in this view.'

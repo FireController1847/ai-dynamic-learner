@@ -379,6 +379,52 @@ all 206 hand-authored projection shapes.
 - Check narrow screens and dark mode, including the floating inspector.
 - Switch back to Skeletal; bone counts and geometry must be unchanged.
 
+## Structures hierarchy
+
+The right-hand **Structures** index groups visible anatomical records
+using the *same classification parser* as Fill in the Blanks
+(\`anatomy-structure-groups.ts\`). A classification such as
+\`Axial skeleton · Cervical vertebrae\` produces the disclosure hierarchy:
+
+- **Axial skeleton** (category, with a count of visible structures)
+  - **Cervical vertebrae** (subgroup, with a count)
+    - C1, C2, … C7 (selectable individual structures)
+
+The structure list preserves the authored anatomical ordering, rather
+than mixing all 206 bones in a flat alphabetical list. All illustrated
+systems share the hierarchy component; categories with only one
+classification level (e.g. "Central nervous system") simply list
+their structures directly beneath that heading. Categories start open;
+subgroups start collapsed for compact browsing. A diagram selection
+automatically opens its corresponding category and subgroup. Search
+temporarily expands all groups containing matching names, aliases, or
+classifications; clearing search restores the user's earlier disclosure
+choices. Counts reflect the current region, orientation and filters.
+No duplicate records or taxonomy-specific persistent data are added.
+
+The Fill in the Blanks button uses the existing **Pencil** icon.
+The formerly requested \`pencil-line\` icon was not registered and
+rendered as an empty SVG with an unexplained gap before the label.
+A real close (\`x\`) glyph is also registered for the quiz **Exit** action.
+
+### Structures hierarchy manual checks
+
+- On Skeletal Whole body / Both, verify Axial skeleton and
+  Appendicular skeleton, with nested Cranium, Cervical vertebrae,
+  Pectoral girdle and other subgroups, and every bone selectable.
+- Expand/collapse categories and subgroups using mouse, touch and
+  keyboard. Confirm count labels and no duplicated names.
+- Search by bone, subgroup, Latin/alias and a classification term;
+  only matching structures should appear and all filtered groups should
+  expand. Clearing search restores the previously collapsed groups.
+- Select a bone from the figure while its group is closed: its group
+  must open and the corresponding structure entry become selected.
+- Change system, region, Front/Back/Both, and cardiovascular vessel
+  filters: groups and counts must accurately reflect visible records.
+- Check light/dark and narrow/mobile views, focus rings and reduced
+  motion. Confirm the FitB and Exit buttons have **visible icons**
+  without wasted space ahead of their text.
+
 ## Fill in the blanks · skeletal identification
 
 Skeletal now has a **Fill in the blanks** practice mode (other anatomical

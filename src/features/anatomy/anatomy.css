@@ -676,7 +676,76 @@
 .anatomy-search .ui-icon { width: 16px; height: 16px; }
 .anatomy-search input { width: 100%; min-width: 0; height: var(--control-height); background: transparent; border: 0; outline-offset: 4px; }
 .anatomy-empty-structures { margin: 14px 2px; padding: 12px; line-height: 20px; color: var(--text-secondary); border: 1px dashed var(--border-color); border-radius: var(--radius); }
-.anatomy-structure-list { list-style: none; margin: 10px 0; padding: 0; }
+/* Hierarchical Structures navigator, using the same authored classification
+   groups as the Fill in the Blanks session. No duplicate taxonomy. */
+.anatomy-structure-tree { margin-top: 10px; min-width: 0; }
+.anatomy-structure-categories, .anatomy-structure-children {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.anatomy-structure-categories { gap: 6px; }
+.anatomy-structure-children {
+  margin: 1px 0 5px 12px;
+  padding-left: 8px;
+  border-left: 1px solid var(--border-color);
+}
+.anatomy-structure-children.is-leaves {
+  margin: 1px 0 4px 8px;
+  padding-left: 7px;
+}
+.anatomy-structure-disclosure {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 6px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-color);
+  text-align: left;
+  line-height: 18px;
+  cursor: pointer;
+}
+.anatomy-structure-disclosure.is-category { font-weight: 600; font-size: 13px; }
+.anatomy-structure-disclosure.is-subgroup { font-weight: 500; font-size: 12px; }
+.anatomy-structure-disclosure:hover:not(:disabled) { background: var(--surface-hover); }
+.anatomy-structure-disclosure:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px; }
+.anatomy-structure-disclosure:disabled { opacity: 1; cursor: default; }
+.anatomy-structure-chevron {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  transition: transform var(--motion-fast);
+}
+.anatomy-structure-chevron.is-collapsed { transform: rotate(-90deg); }
+.anatomy-structure-group-label { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.anatomy-structure-count {
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.anatomy-structure-children .anatomy-structure-choice {
+  padding: 6px 8px;
+  font-size: 12px;
+  line-height: 18px;
+  overflow-wrap: anywhere;
+}
+@media (pointer: coarse) {
+  .anatomy-structure-disclosure,
+  .anatomy-structure-children .anatomy-structure-choice {
+    min-height: 44px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .anatomy-structure-chevron { transition: none; }
+}
 
 @media (max-width: 1050px) {
   .anatomy-page {

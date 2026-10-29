@@ -1,4 +1,5 @@
 import type { AtlasShape, AtlasStructure, AtlasSystemId } from './atlas-model.ts';
+import { parseAnatomyClassification } from './anatomy-structure-groups.ts';
 
 // Eligibility is registered per anatomical system. Future packs can opt in
 // without changing the session, scoring, or leader-line rendering.
@@ -49,9 +50,9 @@ export function createIdentificationSession(
   }
   const pages: IdentificationPage[] = [];
   for (const [classification, items] of groups) {
-    const split = classification.split(' · ');
-    const category = split.length > 1 ? split[0] : systemId;
-    const group = split.length > 1 ? split.slice(1).join(' · ') : classification;
+    const parsed = parseAnatomyClassification(classification);
+    const category = parsed.subgroup ? parsed.category : systemId;
+    const group = parsed.subgroup ?? parsed.category;
     for (let index = 0; index < items.length; index += pack.pageSize) {
       const part = items.slice(index, index + pack.pageSize);
       pages.push({ id: classification + ':' + index, category, group, items: part });
