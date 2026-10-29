@@ -44,11 +44,18 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'anatomy', label: 'Anatomy', path: '/anatomy/', icon: 'anatomy',
     group: 'tools',
-    version: '0.9.2',
-    image: 'assets/app-icons/anatomy.svg',
+    version: '0.9.3',
+    image: 'assets/app-icons/anatomy.png',
     description: 'Explore selectable skeletal, muscular, nervous, endocrine and cardiovascular systems in an offline 2D atlas.',
     metadata: {
-      keywords: ['human anatomy', 'body systems', 'skeletal', 'muscular', 'nervous', 'endocrine', 'cardiovascular', 'heart', 'blood vessels', 'anatomical atlas']
+      keywords: ['human anatomy', 'body systems', 'skeletal', 'muscular', 'nervous', 'endocrine', 'cardiovascular', 'heart', 'blood vessels', 'anatomical atlas'],
+      socialImage: {
+        path: 'assets/app-icons/anatomy.png',
+        type: 'image/png',
+        width: 1408,
+        height: 1408,
+        alt: 'Anatomy — Layered blue human torso with an icy-blue ribcage and cyan heart.',
+      },
     },
   },
   {
