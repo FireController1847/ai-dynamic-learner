@@ -379,6 +379,28 @@ all 206 hand-authored projection shapes.
 - Check narrow screens and dark mode, including the floating inspector.
 - Switch back to Skeletal; bone counts and geometry must be unchanged.
 
+## Skeletal presentation polish (v0.12.3)
+
+The default Skeletal drawing now uses an approachable, classroom-style
+treatment: a warm neutral background, softer ivory bone shapes and
+lower-contrast rounded outlines. A lightly tinted, noninteractive
+human silhouette gives the skull and individual bones anatomical context
+rather than leaving their negative spaces as stark empty cutouts.
+A matching restrained dark-theme palette retains separation and legibility.
+
+The silhouette is decorative, is placed *behind* bones, has no pointer
+interactions or accessible label, and adds **zero** selectable structures.
+All original 206 stable bone IDs, Front/Back/Both view definitions,
+regional crops, atlas geometry, pan/zoom/fit, and Fill in the Blanks
+identification targets remain unchanged. Selected, hovered, and quiz
+structures still receive clear emphasis.
+
+Manual QA: check Skeletal front/back/both and head close-up in light
+and dark themes; select cranial/facial bones and verify their hit targets
+and detail inspector. Check that the softly tinted outline does not
+obscure small bones, that FitB prompts/leader lines still align,
+and that the four other implemented body-system styles are unchanged.
+
 ## Anatomy history compatibility (v0.12.1)
 
 Anatomy's first saved-results release required `attempts: []` while

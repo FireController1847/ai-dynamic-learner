@@ -336,6 +336,7 @@ export const AnatomyViewer = defineComponent({
     return () => {
       const tabStops = new Set<string>();
       return h('div', { class: ['anatomy-viewer', {
+        'is-skeletal': props.view.systemId === 'skeletal',
         'is-muscular': props.view.systemId === 'muscular',
         'is-nervous': props.view.systemId === 'nervous',
         'is-endocrine': props.view.systemId === 'endocrine',
@@ -372,8 +373,10 @@ export const AnatomyViewer = defineComponent({
           onPointercancel: pointerEnd,
           onLostpointercapture: () => { drag = null; },
         }, [
-          ...(['muscular', 'nervous', 'endocrine', 'cardiovascular'].includes(props.view.systemId)
-            ? [bodySilhouette()] : []),
+          // A gentle non-interactive human silhouette grounds the skeleton
+          // visually without changing any bone IDs or hit targets.
+          ...(['skeletal', 'muscular', 'nervous', 'endocrine', 'cardiovascular']
+            .includes(props.view.systemId) ? [bodySilhouette()] : []),
           ...(props.shapes.length || !props.showPlaceholder ? [] : [placeholder()]),
           ...orderedShapes.value.map(shape => {
             const tabbable = !tabStops.has(shape.structureId);

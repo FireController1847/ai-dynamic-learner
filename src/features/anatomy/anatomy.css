@@ -231,6 +231,55 @@
 }
 .anatomy-diagram.is-scrubbing { cursor: ew-resize; }
 .anatomy-diagram.is-dragging { cursor: grabbing; }
+/* Friendlier skeletal plate: soft ivory bones on a quiet human silhouette.
+   The backdrop is purely decorative, with no interactive or quiz targets. */
+.anatomy-viewer.is-skeletal {
+  --anatomy-stage: #faf8f5;
+  --anatomy-bone: #f2e9da;
+  --anatomy-bone-outline: #a39789;
+  --anatomy-bone-detail: #b8a99a;
+  --anatomy-bone-active: #f3d9a8;
+  --anatomy-bone-active-outline: #9a713b;
+  --anatomy-muscle-body: #eee3dc;
+  --anatomy-muscle-body-outline: #dbcac0;
+}
+:root[data-theme='dark'] .anatomy-viewer.is-skeletal {
+  --anatomy-stage: #302e2c;
+  --anatomy-bone: #e0d5c4;
+  --anatomy-bone-outline: #95877a;
+  --anatomy-bone-detail: #a49788;
+  --anatomy-bone-active: #ecc992;
+  --anatomy-bone-active-outline: #876239;
+  --anatomy-muscle-body: #514944;
+  --anatomy-muscle-body-outline: #665b54;
+}
+.anatomy-viewer.is-skeletal .anatomy-body-silhouette {
+  opacity: 0.64;
+  stroke-width: 0.9;
+}
+.anatomy-viewer.is-skeletal .anatomy-shape {
+  stroke-width: 0.52;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.anatomy-viewer.is-skeletal .anatomy-shape.is-stroke {
+  stroke-width: 1.5;
+}
+.anatomy-viewer.is-skeletal .anatomy-shape.is-selected,
+.anatomy-viewer.is-skeletal .anatomy-shape:focus-visible {
+  stroke-width: 1.3;
+}
+.anatomy-viewer.is-skeletal .anatomy-bone-cutout {
+  stroke: var(--anatomy-bone-outline);
+  stroke-width: 0.35;
+}
+.anatomy-viewer.is-skeletal .anatomy-shape.is-occluded:not(.is-selected) {
+  opacity: 0.32;
+}
+.anatomy-viewer.is-skeletal .anatomy-shape.is-occluded:hover {
+  opacity: 0.88;
+}
+
 .anatomy-viewer.is-muscular {
   --anatomy-bone: #c87e72;
   --anatomy-bone-outline: #874d48;
