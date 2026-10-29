@@ -341,7 +341,8 @@ export const AnatomyViewer = defineComponent({
       }] }, [
       h('div', { class: 'anatomy-viewer-controls' }, [
         ...(slots.toolbar?.() ?? []),
-        h('div', { class: 'anatomy-viewer-zoom', role: 'group', 'aria-label': 'Diagram zoom' }, [
+        h('div', { class: 'anatomy-viewer-zoom', role: 'group', 'aria-label': 'Diagram zoom and practice' }, [
+          ...(slots.zoomAction?.() ?? []),
           h('button', { class: 'icon-button', type: 'button', title: 'Zoom out', 'aria-label': 'Zoom out',
             disabled: zoom.value <= MIN_ZOOM, onClick: () => setZoom(zoom.value / 1.3) }, [h(Icon, { name: 'minus' })]),
           h('span', { class: 'anatomy-zoom-value', 'aria-live': 'off' }, Math.round(zoom.value * 100) + '%'),

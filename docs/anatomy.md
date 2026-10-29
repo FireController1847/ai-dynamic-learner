@@ -386,7 +386,10 @@ systems are unchanged). Enter it from the compact atlas toolbar. Both
 sidebar panels are temporarily hidden without overwriting either stored
 collapsed preference, so the drawing gains the full horizontal workspace.
 The system, region, and Front/Back/Both orientation are locked until exit.
-Pan, zoom, Fit, Z scrub, and wheel navigation remain available.
+The **Fill in the blanks** action (and **Exit** during a session) lives
+immediately to the left of the zoom controls; it no longer separates the
+system name from the region selector. Pan, zoom, Fit, Z scrub, and wheel
+navigation remain available.
 
 The system-independent session builder in anatomy-identification.ts is
 controlled by a per-system opt-in registry. Only Skeletal is enabled today;
@@ -397,7 +400,11 @@ answer lists. Whole body + Both covers all 206 adult bones.
 Pages are grouped by classification (e.g., Axial skeleton / Cervical
 vertebrae and Appendicular skeleton / Pectoral girdle), with at most six
 numbered blanks per page. Each line sits beside the diagram and points
-to the corresponding bone via a leader line. The overlay measures each
+to the corresponding bone via a leader line. Rather than alternating
+left/right by question number, each blank is positioned on the **same
+visible side as its bone**. Labels are sorted by their targets' screen
+height, spaced to avoid overlapping, and leader paths preserve the order
+so lines do not cross across the figure. The overlay measures each
 bone's real rendered SVG bounding box, so leaders remain attached during
 zoom, pan, resize, and navigation. Normal click-to-select and accessible
 bone-name labels are suppressed while practicing.
@@ -419,7 +426,11 @@ numbers, rib numbers, and vertebral levels must still be identified.
 - Both sidebar panels are hidden during quiz; prior collapse preferences
   return on exit. System, region, view and other settings are unavailable.
 - Zoom/pan/Z scrub/resize on tiny cervical vertebrae, ribs, carpals and
-  phalanges; lines should remain attached to the right bone.
+  phalanges; lines should remain attached to the right bone. Verify
+  paired bones put each label on its own side, and clustered bones keep
+  top-to-bottom leader order without crossing or overlapping blanks.
+- Confirm Fill in the blanks / Exit are next to the zoom cluster,
+  on narrow and wide widths, without arbitrary space between controls.
 - Check Enter, Check, Skip, Previous, Next, Finish, Review pages,
   Try again and Exit. Answers persist when revisiting.
 - Before Finish no bone names leak from SVG focus, selection, tooltips

@@ -395,7 +395,31 @@
   stroke: var(--anatomy-bone-active-outline);
 }
 .anatomy-viewer.is-cardiovascular .anatomy-shape.is-stroke.is-selected,
-.anatomy-viewer.is-cardiovascular .anatomy-stroke-group:focus-visible /* Anatomy identification sessions: shared callouts and leaders work for any
+.anatomy-viewer.is-cardiovascular .anatomy-stroke-group:focus-visible .anatomy-shape {
+  fill: none;
+  stroke: var(--anatomy-bone-active-outline);
+  stroke-width: 2.75;
+}
+.anatomy-viewer.is-cardiovascular .anatomy-stroke-hit { stroke-width: 3.3; }
+.anatomy-vessel-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.anatomy-vessel-choice select {
+  max-width: 106px;
+  min-width: 0;
+  height: 32px;
+  padding-block: 3px;
+}
+@media (pointer: coarse) {
+  .anatomy-vessel-choice select { min-height: 44px; }
+}
+
+/* Anatomy identification sessions: shared callouts and leaders work for any
    anatomical pack that opts into the identification registry. */
 .anatomy-identification-start {
   display: inline-flex;
@@ -404,6 +428,9 @@
   white-space: nowrap;
 }
 .anatomy-identification-start .ui-icon { width: 16px; height: 16px; }
+.anatomy-identification-start, .anatomy-identification-exit {
+  margin-right: 9px;
+}
 .anatomy-identification-heading {
   display: flex;
   flex: 1 1 auto;
@@ -587,30 +614,6 @@
   .anatomy-identification-label input { font-size: 11px; }
   .anatomy-identification-footer { padding: 7px 8px; }
   .anatomy-identification-actions { width: 100%; justify-content: space-between; }
-}
-
-.anatomy-shape {
-  fill: none;
-  stroke: var(--anatomy-bone-active-outline);
-  stroke-width: 2.75;
-}
-.anatomy-viewer.is-cardiovascular .anatomy-stroke-hit { stroke-width: 3.3; }
-.anatomy-vessel-choice {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--text-secondary);
-  font-size: 11px;
-  white-space: nowrap;
-}
-.anatomy-vessel-choice select {
-  max-width: 106px;
-  min-width: 0;
-  height: 32px;
-  padding-block: 3px;
-}
-@media (pointer: coarse) {
-  .anatomy-vessel-choice select { min-height: 44px; }
 }
 
 .anatomy-shape {

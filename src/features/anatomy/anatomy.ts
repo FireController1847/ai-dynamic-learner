@@ -208,10 +208,6 @@ export const Anatomy = defineComponent({
               page.category + ' / ' + page.group)
             : h('span', 'Results'),
         ]),
-        h('button', {
-          type: 'button', class: 'quiet-button anatomy-identification-exit',
-          onClick: exitIdentification,
-        }, [h(Icon, { name: 'x' }), 'Exit']),
       ];
     }
     function identificationFooter() {
@@ -314,6 +310,23 @@ export const Anatomy = defineComponent({
     }
 
     // Navigation lives in the viewer's single white bar alongside its zoom controls.
+    // The session action belongs with the camera controls, not between
+    // the system title and the region / facing selectors.
+    function viewerZoomAction() {
+      if (identifying.value) {
+        return [h('button', {
+          type: 'button', class: 'quiet-button anatomy-identification-exit',
+          onClick: exitIdentification,
+        }, [h(Icon, { name: 'x' }), 'Exit'])];
+      }
+      return identificationPacks[systemId.value] && visibleIds.value.size
+        ? [h('button', {
+          type: 'button', class: 'quiet-button anatomy-identification-start',
+          onClick: startIdentification,
+        }, [h(Icon, { name: 'pencil-line' }), 'Fill in the blanks'])]
+        : [];
+    }
+
     function viewerToolbar() {
       if (identifying.value) return identificationToolbar();
       return [
@@ -333,12 +346,6 @@ export const Anatomy = defineComponent({
             ['skeletal', 'muscular', 'nervous', 'endocrine', 'cardiovascular'].includes(systemId.value) ? null
               : h('span', { class: 'anatomy-viewer-status' }, 'Coming soon'),
           ]),
-          identificationPacks[systemId.value] && visibleIds.value.size
-            ? h('button', {
-              type: 'button', class: 'quiet-button anatomy-identification-start',
-              onClick: startIdentification,
-            }, [h(Icon, { name: 'pencil-line' }), 'Fill in the blanks'])
-            : null,
         ]),
         h('div', { class: 'anatomy-viewer-view-options' }, [
           h('label', { class: 'visually-hidden', for: 'anatomy-region' }, 'Anatomical region'),
@@ -445,6 +452,7 @@ export const Anatomy = defineComponent({
             onClearSelection: () => { selectedId.value = null; },
           }, {
             toolbar: viewerToolbar,
+            zoomAction: viewerZoomAction,
             footer: identificationFooter,
             identificationResult: identificationResults,
           })
