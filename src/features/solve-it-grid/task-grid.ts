@@ -141,7 +141,10 @@ export const TaskGrid = defineComponent({
       }
     }
     function cycle(skipGridCelebration = false) {
-      if (!active || viewing.value !== null || phase.value !== 'ready' || current.value) return;
+      // Immediate entries must be submitted as a set of four before this draw
+      // can advance. The setup screen is the only way to start it.
+      if ((immediate && !round.value.started) || !active || viewing.value !== null ||
+          phase.value !== 'ready' || current.value) return;
       const number = round.value.number;
       const stillCurrent = () => {
         if (round.value.number === number && !current.value && viewing.value === null) return true;
@@ -512,8 +515,9 @@ export const TaskGrid = defineComponent({
           !immediate ? h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('edit') }, 'Edit lists') : null,
           total.value ? h('button', { type: 'button', class: 'quiet-button', onClick: () => { resetOpen.value = true; } }, 'Start again') : null,
         ]),
-      ]) : working.value === null && phase.value === 'ready' && viewing.value === null && !current.value && remaining.value ? h('div', { class: 'sig-play-actions' }, [
-        h('button', { type: 'button', class: 'quiet-button', onClick: cycle }, 'Continue'),
+      ]) : working.value === null && phase.value === 'ready' && viewing.value === null &&
+        (!immediate || round.value.started) && !current.value && remaining.value ? h('div', { class: 'sig-play-actions' }, [
+        h('button', { type: 'button', class: 'quiet-button', onClick: () => cycle() }, 'Continue'),
       ]) : null,
       h('p', { class: 'visually-hidden', role: 'status', 'aria-live': 'polite' }, announcement.value),
       rewindOpen.value && viewing.value !== null ? h(PopupDialog, {
