@@ -170,8 +170,8 @@
 .anatomy-viewer {
   position: relative;
   display: flex;
-  /* Do not let the SVG's intrinsic 320x700 ratio size the entire page. */
-  flex: 0 0 auto;
+  /* Grow within the workspace, but never size from the SVG's intrinsic ratio. */
+  flex: 1 1 auto;
   flex-direction: column;
   min-width: 0;
   min-height: 0;
@@ -208,11 +208,11 @@
 }
 .anatomy-diagram-stage {
   position: relative;
-  /* A definite viewport-sized canvas stops grid / SVG intrinsic sizing
-     from creating several screenfuls of empty space. */
+  /* Use the height *remaining* below the controls, even on tall screens.
+     The absolutely positioned SVG does not contribute intrinsic sizing. */
   display: block;
-  flex: none;
-  height: clamp(430px, calc(100dvh - 230px), 760px);
+  flex: 1 1 auto;
+  height: auto;
   min-height: 0;
   overflow: hidden;
   background: var(--anatomy-stage);
@@ -512,7 +512,12 @@
     max-height: min(220px, calc(100% - 20px));
     padding: 10px;
   }
-  .anatomy-diagram-stage { height: clamp(380px, calc(100dvh - 265px), 630px); }
+  /* Phone layouts scroll vertically; keep a useful explicit canvas height. */
+  .anatomy-viewer { flex: 0 0 auto; }
+  .anatomy-diagram-stage {
+    flex: 0 0 auto;
+    height: clamp(380px, calc(100dvh - 265px), 630px);
+  }
   .anatomy-details { max-height: none; overflow: visible; border-top: 1px solid var(--border-color); }
 }
 @media (pointer: coarse) {

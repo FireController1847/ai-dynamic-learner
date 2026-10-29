@@ -381,11 +381,14 @@ all 206 hand-authored projection shapes.
 
 ## Viewer layout and camera guardrails
 
-The drawing stage has a **definite, responsive height**, and the SVG is
-absolutely positioned inside it. Its inherent 320 × 700 viewBox must
-not contribute intrinsic height to CSS layout. Otherwise the stage can
-expand to several screenfuls and leave a huge blank area above the
-anatomical figure (especially with collapsed side panels or wide windows).
+The desktop viewer is a **flexible fill-height surface**: the viewer
+grows with the workspace and the diagram stage takes all remaining height
+below the compact controls. The SVG is absolutely positioned inside that
+stage, so its inherent 320 × 700 viewBox never contributes intrinsic height
+to CSS layout. This avoids both a giant scrollable canvas and the opposite
+bug of a fixed-height canvas stopping before the workspace's bottom edge.
+On phones, where the page itself scrolls, the stage retains an explicit
+responsive height rather than stretching unpredictably.
 
 The default Fit view remains centered with a comfortable margin.
 Drag pan, vertical/horizontal wheel pan, Ctrl+wheel zoom and Z scrub
@@ -397,7 +400,10 @@ cannot move the entire figure offscreen. Zoom range is unchanged.
 
 - On a wide desktop and a tall display, switch through all five
   illustrated systems and confirm the *whole figure is visible immediately*
-  below the toolbar, not below a tall blank canvas.
+  below the toolbar, and the canvas **extends to the workspace bottom**
+  without a separate empty band underneath.
+- Resize the window taller and shorter: the stage must grow/shrink
+  with the available height, not stop at a hard maximum height.
 - Collapse both sidebar panels, zoom in/out and resize the window:
   the stage height must remain controlled and the drawing must stay
   centered when using Fit.
