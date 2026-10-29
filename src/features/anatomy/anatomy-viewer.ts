@@ -3,6 +3,7 @@ import type { AtlasLayer, AtlasShape, AtlasStructure, AtlasView } from './atlas-
 import type { AnatomyRegion } from './anatomy-regions.ts';
 import { Icon } from '../../components/icon.ts';
 import type { IdentificationPage } from './anatomy-identification.ts';
+import { SOURCE_MAPPED_BONE_IDS } from './source-skeletal-geometry.ts';
 import { AnatomyIdentificationOverlay } from './anatomy-identification-overlay.ts';
 
 // 100% is a normal zoom level, not the minimum. Fit adds comfortable
@@ -448,7 +449,7 @@ export const AnatomyViewer = defineComponent({
         'Medical illustration by Lukic et al. (CC BY 4.0). ',
         h('a', { href: 'https://github.com/DigitalHealthZurich/open-pain-illustration',
           target: '_blank', rel: 'noopener noreferrer' }, 'Source and attribution'),
-        '. Not all 206 adult bones have distinct artwork.',
+        '. Source-backed geometry: ' + SOURCE_MAPPED_BONE_IDS.size + '/206 canonical adult bones.',
       ])] : []),
       ...(slots.footer?.() ?? []),
     ]);
