@@ -7,6 +7,8 @@ import { nervousStructures } from './nervous-structures.ts';
 import { nervousLayers, nervousShapes } from './nervous-geometry.ts';
 import { endocrineStructures } from './endocrine-structures.ts';
 import { endocrineLayers, endocrineShapes } from './endocrine-geometry.ts';
+import { cardiovascularStructures } from './cardiovascular-structures.ts';
+import { cardiovascularLayers, cardiovascularShapes } from './cardiovascular-geometry.ts';
 
 // These are navigational categories, not claims that their anatomical content
 // is complete. Structure data and diagram paths are added in separate, reviewed packs.
@@ -58,8 +60,15 @@ export const foundationAtlas: AtlasDataset = {
     { id: 'openstax-ap2e-endocrine', title: 'Anatomy and Physiology 2e, Chapter 17',
       attribution: 'OpenStax / Rice University', license: 'CC BY 4.0',
       url: 'https://openstax.org/books/anatomy-and-physiology-2e/pages/17-introduction' },
+    { id: 'openstax-ap2e-heart', title: 'Anatomy and Physiology 2e, 19.1 Heart Anatomy',
+      attribution: 'OpenStax / Rice University', license: 'CC BY 4.0',
+      url: 'https://openstax.org/books/anatomy-and-physiology-2e/pages/19-1-heart-anatomy' },
+    { id: 'openstax-ap2e-vessels', title: 'Anatomy and Physiology 2e, 20.5 Circulatory Pathways',
+      attribution: 'OpenStax / Rice University', license: 'CC BY 4.0',
+      url: 'https://openstax.org/books/anatomy-and-physiology-2e/pages/20-5-circulatory-pathways' },
   ],
-  structures: [...skeletalStructures, ...muscularStructures, ...nervousStructures, ...endocrineStructures],
+  structures: [...skeletalStructures, ...muscularStructures, ...nervousStructures,
+    ...endocrineStructures, ...cardiovascularStructures],
   views: atlasSystems.flatMap(system => orientations.map(orientation => ({
     id: system.id + '.whole-body.' + orientation.id,
     systemId: system.id,
@@ -69,8 +78,8 @@ export const foundationAtlas: AtlasDataset = {
     width: 320,
     // The skeletal artwork now extends through anatomically longer lower limbs.
     // Keep unillustrated system placeholders at their existing proportions.
-    height: ['skeletal', 'muscular', 'nervous', 'endocrine'].includes(system.id) ? 700 : 560,
+    height: ['skeletal', 'muscular', 'nervous', 'endocrine', 'cardiovascular'].includes(system.id) ? 700 : 560,
   }))),
-  layers: [...skeletalLayers, ...muscularLayers, ...nervousLayers, ...endocrineLayers],
-  shapes: [...skeletalShapes, ...muscularShapes, ...nervousShapes, ...endocrineShapes],
+  layers: [...skeletalLayers, ...muscularLayers, ...nervousLayers, ...endocrineLayers, ...cardiovascularLayers],
+  shapes: [...skeletalShapes, ...muscularShapes, ...nervousShapes, ...endocrineShapes, ...cardiovascularShapes],
 };

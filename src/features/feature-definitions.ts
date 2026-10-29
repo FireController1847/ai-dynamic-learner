@@ -44,11 +44,11 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'anatomy', label: 'Anatomy', path: '/anatomy/', icon: 'anatomy',
     group: 'tools',
-    version: '0.8.0',
+    version: '0.9.0',
     image: 'assets/app-icons/anatomy.svg',
-    description: 'Explore selectable skeletal, muscular, nervous and endocrine anatomy in an offline 2D atlas.',
+    description: 'Explore selectable skeletal, muscular, nervous, endocrine and cardiovascular systems in an offline 2D atlas.',
     metadata: {
-      keywords: ['human anatomy', 'body systems', 'skeletal', 'muscular', 'nervous', 'endocrine', 'anatomical atlas']
+      keywords: ['human anatomy', 'body systems', 'skeletal', 'muscular', 'nervous', 'endocrine', 'cardiovascular', 'heart', 'blood vessels', 'anatomical atlas']
     },
   },
   {

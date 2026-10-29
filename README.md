@@ -49,7 +49,7 @@ The current application includes:
 
 | Tool | What it does |
 | --- | --- |
-| **Anatomy** | An offline 2D atlas with selectable bones, superficial muscles, major nerves and endocrine glands, with regional and front/back navigation. |
+| **Anatomy** | An offline 2D atlas with selectable bones, major muscles, nerves, endocrine glands, and heart and blood vessels, with regional and front/back navigation. |
 | **Calculator** | Uses a MathPrint-style scientific entry display with clickable cursor editing, editable stacked fractions, insert/backspace/delete controls, expression history navigation, normal precedence, scientific functions, explicit decimal-place rounding, DEG/RAD and fraction/decimal modes, configurable display precision, memory controls, and a reusable session-history panel. |
 | **Notebook** | Organizes documents into a nested library. Write on Lined Paper with automatic overflow pages, use Markdown source and preview, or combine expressions and visual drawing on Graph Paper with point coordinates, line measurements, and closed-region areas. Customize appearance separately for each paper type. |
 | **Todo List** | Lined-paper tasks with adjustable fonts and alignment, checkboxes, centered section priorities, and shared section-name prefixes. Lists are organized by creation date and gradually fade into an archive with configurable expiry. |

@@ -4,8 +4,8 @@ Anatomy is a self-contained, offline-first reference tool in Dynamic Learner's
 **Tools** group. Its 11 body-system categories, independently collapsible
 navigation/structure panels, **Both / Front / Back** visibility, regional
 views, zoomable SVG stage, structure list and data contracts are functional.
-Skeletal, Muscular, Nervous and Endocrine have original teaching illustrations;
-the remaining seven systems retain neutral placeholders.
+Skeletal, Muscular, Nervous, Endocrine and Cardiovascular have original
+teaching illustrations; the remaining six systems retain neutral placeholders.
 The skeletal atlas now enumerates 206 individual adult bones (80 axial and
 126 appendicular). Each bone has a stable ID and an individually selectable
 vector shape in the front and back 2D projections. This is an **authored,
@@ -37,6 +37,10 @@ glands and their subregions, including mutually exclusive gonadal anatomy.
   side-specific anatomy, hormones, and gonad configuration.
 - `endocrine-geometry.ts`: original anterior/posterior gland shapes,
   anatomical guide contours and completeness checks.
+- `cardiovascular-structures.ts`: major systemic, pulmonary and coronary
+  pathways plus four heart chambers, with direction-specific coverage.
+- `cardiovascular-geometry.ts`: original cardiac cutaway and anterior/posterior
+  SVG vessels with a coverage guard for every published structure.
 - `skeletal-bones.ts`: canonical count-checked adult bone inventory,
   side-specific bone IDs, and NCI/OpenStax anatomical categories.
 - `skeletal-geometry.ts`: individual 2D SVG hit shapes for each of the
@@ -197,6 +201,70 @@ validated**. This atlas is for introductory study, not clinical decisions.
 - Confirm wheel pan, Z scrub zoom, keyboard focus, narrow screens,
   dark mode and selection responsiveness. Switch back to each
   already-implemented system to check for regressions.
+
+## Cardiovascular atlas
+
+Cardiovascular introduces **60 named heart chambers and major vascular structures
+or groups**, with independently selectable right/left vessels where appropriate.
+It is a teaching-scale projection of the **heart, pulmonary circuit and major
+systemic arteries and veins**; it does not represent every microscopic vessel,
+capillary bed or anatomic variant.
+
+- **Heart:** four chamber cutaways (right/left atria and ventricles),
+  ascending aorta, pulmonary trunk and pulmonary vessels, and named major
+  coronary arteries and veins. The heart lies in the mediastinum with
+  its apex directed toward the person's left side.
+- **Arteries:** aortic arch, descending thoracic and abdominal aorta,
+  carotid/subclavian branches, arm and leg artery pathways, renal and
+  mesenteric branches. Left/right IDs follow anatomical laterality.
+- **Veins:** superior and inferior venae cavae, jugular/brachiocephalic
+  venous return, deep and superficial upper/lower limb pathways, renal,
+  hepatic and portal venous channels and coronary drainage.
+- **Pulmonary circulation:** right ventricle → pulmonary trunk/arteries →
+  lungs → pulmonary veins → left atrium. **Pulmonary arteries carry
+  oxygen-poor blood**, unlike most systemic arteries. The pulmonary veins
+  return oxygen-rich blood.
+- **Both / Front / Back:** Front and Back offer separate schematics;
+  Both overlays posterior-only structures at reduced opacity over
+  the front. Shared structures are not drawn twice.
+- **Vessels filter:** All, Arteries or Veins. Heart chambers remain
+  selectable in every filter. Colors indicate *relative oxygenation*
+  (warm red for oxygen-rich and muted blue for oxygen-poor) rather
+  than a universal "arteries red, veins blue" assumption.
+- **Regional views:** Whole body, Heart & coronary vessels,
+  Head & neck, Chest circulation, Abdominal circulation,
+  Pelvic vessels, Arms & hands, Legs & feet.
+
+Paths are original 2D schematic routes with simplified curves, **not**
+clinically reviewed anatomical traces of vessel depth, normal variants,
+anastomoses, precise branching angle or coronary dominance. The
+four-chamber heart is a transparent cutaway, not what is all visible
+from the body's front surface. Relative vessel dimensions and
+capillary exchange are deliberately simplified.
+
+Anatomical relationships and pathway descriptions were checked against
+[OpenStax Anatomy and Physiology 2e — Heart Anatomy](https://openstax.org/books/anatomy-and-physiology-2e/pages/19-1-heart-anatomy)
+and [Circulatory Pathways](https://openstax.org/books/anatomy-and-physiology-2e/pages/20-5-circulatory-pathways).
+No reference artwork is copied. All assets are bundled offline.
+
+### Cardiovascular manual verification
+
+- Switch to Cardiovascular, check whole body shows selectable arterial
+  and venous routes and a four-chamber heart cutaway.
+- Zoom into Heart & coronary vessels to select all four chambers,
+  aortic arch, pulmonary trunk, coronary arteries and coronary sinus.
+- Confirm red/blue assignments: systemic arteries and pulmonary
+  veins are oxygen-rich; systemic veins and pulmonary arteries are
+  oxygen-poor. Atria and ventricles use the corresponding sides.
+- Switch Arteries / Veins / All, verifying the structure list and
+  outlines update together while the chamber selection remains.
+- Switch Front / Back / Both and confirm back-only popliteal and
+  posterior intercostal paths are correctly displayed and subdued
+  when overlaid in Both.
+- Test every vascular region, its crop, and the search results.
+  Verify normal drag, mouse wheel, Ctrl+wheel, Z scrub, and Fit.
+- Verify selected structure inspector, collapsed panels, responsive
+  layout, dark theme, keyboard focus and switching to older systems.
 
 ## Stable identifiers and anatomy coverage
 

@@ -347,6 +347,73 @@
   .anatomy-gonad-choice select { min-height: 44px; }
 }
 
+.anatomy-viewer.is-cardiovascular {
+  --anatomy-vessel-red: #bd615d;
+  --anatomy-vessel-red-outline: #8d403e;
+  --anatomy-vessel-blue: #668fb6;
+  --anatomy-vessel-blue-outline: #3e668e;
+  --anatomy-bone-active: #f2ce8c;
+  --anatomy-bone-active-outline: #93652d;
+  --anatomy-muscle-body: #ece7e1;
+  --anatomy-muscle-body-outline: #c8beb3;
+}
+:root[data-theme='dark'] .anatomy-viewer.is-cardiovascular {
+  --anatomy-vessel-red: #d7857e;
+  --anatomy-vessel-red-outline: #f0b5aa;
+  --anatomy-vessel-blue: #88b1d5;
+  --anatomy-vessel-blue-outline: #c1def4;
+  --anatomy-bone-active: #efcb88;
+  --anatomy-bone-active-outline: #805522;
+  --anatomy-muscle-body: #3e3934;
+  --anatomy-muscle-body-outline: #72675b;
+}
+.anatomy-viewer.is-cardiovascular .anatomy-shape.is-oxygen-rich {
+  fill: var(--anatomy-vessel-red);
+  stroke: var(--anatomy-vessel-red-outline);
+}
+.anatomy-viewer.is-cardiovascular .anatomy-shape.is-oxygen-poor {
+  fill: var(--anatomy-vessel-blue);
+  stroke: var(--anatomy-vessel-blue-outline);
+}
+.anatomy-viewer.is-cardiovascular .anatomy-shape.is-stroke {
+  fill: none;
+  stroke-width: 1.8;
+}
+.anatomy-viewer.is-cardiovascular .anatomy-shape.is-heart-chamber {
+  stroke-width: 0.95;
+}
+.anatomy-viewer.is-cardiovascular .anatomy-shape.is-occluded:not(.is-selected) { opacity: 0.28; }
+.anatomy-viewer.is-cardiovascular .anatomy-shape.is-occluded:hover { opacity: 0.85; }
+.anatomy-viewer.is-cardiovascular .anatomy-shape.is-selected,
+.anatomy-viewer.is-cardiovascular .anatomy-shape:focus-visible {
+  fill: var(--anatomy-bone-active);
+  stroke: var(--anatomy-bone-active-outline);
+}
+.anatomy-viewer.is-cardiovascular .anatomy-shape.is-stroke.is-selected,
+.anatomy-viewer.is-cardiovascular .anatomy-stroke-group:focus-visible .anatomy-shape {
+  fill: none;
+  stroke: var(--anatomy-bone-active-outline);
+  stroke-width: 2.75;
+}
+.anatomy-viewer.is-cardiovascular .anatomy-stroke-hit { stroke-width: 3.3; }
+.anatomy-vessel-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.anatomy-vessel-choice select {
+  max-width: 106px;
+  min-width: 0;
+  height: 32px;
+  padding-block: 3px;
+}
+@media (pointer: coarse) {
+  .anatomy-vessel-choice select { min-height: 44px; }
+}
+
 .anatomy-shape {
   fill: var(--anatomy-bone);
   stroke: var(--anatomy-bone-outline);

@@ -138,3 +138,30 @@ export const endocrineRegions: readonly AnatomyRegion[] = [
 export function endocrineInRegion(structure: AtlasStructure, region: string): boolean {
   return region === 'whole-body' || structure.regionIds.includes(region);
 }
+
+
+// Cardiovascular close-ups crop the shared whole-body teaching projection;
+// each vascular record retains its canonical ID and orientation.
+export const cardiovascularRegions: readonly AnatomyRegion[] = [
+  { id: 'whole-body', name: 'Whole body', x: 53, y: 12, width: 214, height: 657 },
+  { id: 'heart', name: 'Heart & coronary vessels', x: 131, y: 135, width: 71, height: 104 },
+  { id: 'head-neck', name: 'Head & neck', x: 113, y: 28, width: 94, height: 142 },
+  { id: 'thorax', name: 'Chest circulation', x: 89, y: 133, width: 142, height: 115 },
+  { id: 'abdomen', name: 'Abdominal circulation', x: 105, y: 226, width: 110, height: 110 },
+  { id: 'pelvis', name: 'Pelvic vessels', x: 104, y: 316, width: 112, height: 82 },
+  { id: 'upper-limb', name: 'Arms & hands', x: 53, y: 148, width: 214, height: 207 },
+  { id: 'lower-limb', name: 'Legs & feet', x: 98, y: 372, width: 124, height: 282 },
+];
+export function cardiovascularInRegion(structure: AtlasStructure, region: string): boolean {
+  if (region === 'whole-body') return true;
+  if (region === 'heart') {
+    const id = structure.id.split('.').pop() ?? '';
+    return structure.classification === 'Heart chamber'
+      || structure.classification.startsWith('Coronary')
+      || ['ascending-aorta', 'aortic-arch', 'pulmonary-trunk',
+        'pulmonary-artery', 'superior-pulmonary-vein',
+        'inferior-pulmonary-vein', 'superior-vena-cava',
+        'coronary-sinus'].includes(id);
+  }
+  return structure.regionIds.includes(region);
+}

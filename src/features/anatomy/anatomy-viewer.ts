@@ -63,6 +63,8 @@ export const AnatomyViewer = defineComponent({
     const occluded = computed(() => new Set(props.occludedIds));
     const centralIds = computed(() => new Set(props.structures.filter(item =>
       item.classification === 'Central nervous system').map(item => item.id)));
+    const classifications = computed(() =>
+      new Map(props.structures.map(item => [item.id, item.classification])));
     const ghostLayers = computed(() => new Set(props.ghostLayerIds));
     const orderedShapes = computed(() => {
       const order = new Map(props.layers.map((layer, index) => [layer.id, index]));
@@ -222,9 +224,21 @@ export const AnatomyViewer = defineComponent({
       const neural = gland && /hypothalamus|pituitary|pineal/.test(shape.structureId);
       const pancreatic = gland && shape.structureId.endsWith('pancreatic-islets');
       const gonadal = gland && /\.(ovary|testis)$/.test(shape.structureId);
+      const circulation = props.view.systemId === 'cardiovascular';
+      const family = circulation ? (classifications.value.get(shape.structureId) ?? '') : '';
+      // Vessels are colored by oxygenation, not simply artery vs vein:
+      // pulmonary arteries are oxygen-poor and pulmonary veins oxygen-rich.
+      const oxygenRich = circulation && (family === 'Systemic artery'
+        || family === 'Coronary artery' || family === 'Pulmonary vein'
+        || family === 'Heart chamber' && /\.left-(atrium|ventricle)$/.test(shape.structureId));
+      const oxygenPoor = circulation && (family === 'Systemic vein'
+        || family === 'Coronary vein' || family === 'Pulmonary artery'
+        || family === 'Heart chamber' && /\.right-(atrium|ventricle)$/.test(shape.structureId));
       const subtypes = { 'is-adrenal': adrenal, 'is-medulla': medulla,
         'is-parathyroid': parathyroid, 'is-neuroendocrine': neural,
-        'is-pancreatic': pancreatic, 'is-gonadal': gonadal };
+        'is-pancreatic': pancreatic, 'is-gonadal': gonadal,
+        'is-oxygen-rich': oxygenRich, 'is-oxygen-poor': oxygenPoor,
+        'is-heart-chamber': circulation && family === 'Heart chamber' };
       if (shape.renderMode === 'stroke' && shape.geometry.kind === 'path') {
         // Separate touch hit target from the thin visual line.
         return h('g', { ...interaction, key: shape.id, transform,
@@ -279,6 +293,7 @@ export const AnatomyViewer = defineComponent({
         'is-muscular': props.view.systemId === 'muscular',
         'is-nervous': props.view.systemId === 'nervous',
         'is-endocrine': props.view.systemId === 'endocrine',
+        'is-cardiovascular': props.view.systemId === 'cardiovascular',
       }] }, [
       h('div', { class: 'anatomy-viewer-controls' }, [
         ...(slots.toolbar?.() ?? []),
@@ -308,7 +323,8 @@ export const AnatomyViewer = defineComponent({
           onPointercancel: pointerEnd,
           onLostpointercapture: () => { drag = null; },
         }, [
-          ...(['muscular', 'nervous', 'endocrine'].includes(props.view.systemId) ? [bodySilhouette()] : []),
+          ...(['muscular', 'nervous', 'endocrine', 'cardiovascular'].includes(props.view.systemId)
+            ? [bodySilhouette()] : []),
           ...(props.shapes.length || !props.showPlaceholder ? [] : [placeholder()]),
           ...orderedShapes.value.map(shape => {
             const tabbable = !tabStops.has(shape.structureId);
@@ -324,7 +340,9 @@ export const AnatomyViewer = defineComponent({
                 ? 'No neural structures illustrated in this region and view.'
                 : props.view.systemId === 'endocrine'
                   ? 'No endocrine glands shown here. Try Both or another gonad setting.'
-                  : 'No bones visible from this direction in this region. Choose Both for deeper structures.')
+                  : props.view.systemId === 'cardiovascular'
+                    ? 'No major vessels illustrated here. Try Both or All vessels.'
+                    : 'No bones visible from this direction in this region. Choose Both for deeper structures.')
           : null,
         props.selectedStructure ? h('section', {
           key: props.selectedStructure.id,

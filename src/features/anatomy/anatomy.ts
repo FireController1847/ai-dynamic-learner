@@ -5,9 +5,10 @@ import { readNumberPreference, writeNumberPreference } from '../../core/ui-prefe
 import { foundationAtlas } from './atlas-catalog.ts';
 import { buildAtlasIndex, searchStructures } from './atlas-index.ts';
 import type { AtlasOrientation, AtlasSystemId } from './atlas-model.ts';
-import { boneInRegion, boneVisibleFrom, endocrineInRegion, endocrineRegions,
-  muscleInRegion, muscularRegions, nerveInRegion, nervousRegions,
-  skeletalRegions, type AnatomyFacing } from './anatomy-regions.ts';
+import { boneInRegion, boneVisibleFrom, cardiovascularInRegion, cardiovascularRegions,
+  endocrineInRegion, endocrineRegions, muscleInRegion, muscularRegions,
+  nerveInRegion, nervousRegions, skeletalRegions, type AnatomyFacing } from './anatomy-regions.ts';
+import type { VesselView } from './cardiovascular-structures.ts';
 import type { GonadView } from './endocrine-structures.ts';
 import { AnatomyViewer } from './anatomy-viewer.ts';
 
@@ -33,6 +34,7 @@ export const Anatomy = defineComponent({
     const orientation = computed<AtlasOrientation>(() => facing.value === 'back' ? 'posterior' : 'anterior');
     const regionId = ref('whole-body');
     const gonads = ref<GonadView>('ovaries');
+    const vesselView = ref<VesselView>('all');
     const selectedId = ref<string | null>(null);
     const search = ref('');
 
@@ -49,7 +51,8 @@ export const Anatomy = defineComponent({
     const view = computed(() => atlas.views.get(systemId.value + '.whole-body.' + orientation.value));
     const posteriorView = computed(() => atlas.views.get(systemId.value + '.whole-body.posterior'));
     const combinedSurfaces = computed(() =>
-      ['muscular', 'nervous', 'endocrine'].includes(systemId.value) && facing.value === 'both');
+      ['muscular', 'nervous', 'endocrine', 'cardiovascular'].includes(systemId.value)
+      && facing.value === 'both');
     const layers = computed(() => {
       const frontLayers = view.value ? atlas.layersByView.get(view.value.id) ?? [] : [];
       if (!combinedSurfaces.value || !posteriorView.value) return frontLayers;
@@ -63,7 +66,8 @@ export const Anatomy = defineComponent({
       const options = systemId.value === 'skeletal' ? skeletalRegions
         : systemId.value === 'muscular' ? muscularRegions
           : systemId.value === 'nervous' ? nervousRegions
-            : systemId.value === 'endocrine' ? endocrineRegions : undefined;
+            : systemId.value === 'endocrine' ? endocrineRegions
+              : systemId.value === 'cardiovascular' ? cardiovascularRegions : undefined;
       return options?.find(region => region.id === regionId.value) ?? options?.[0];
     });
     const shapes = computed(() => {
@@ -93,6 +97,13 @@ export const Anatomy = defineComponent({
           if (structure.id.endsWith('.testis')) return gonads.value === 'testes';
           return true;
         }
+        if (systemId.value === 'cardiovascular') {
+          if (!cardiovascularInRegion(structure, regionId.value)) return false;
+          if (structure.classification === 'Heart chamber') return true;
+          if (vesselView.value === 'arteries') return structure.classification.endsWith('artery');
+          if (vesselView.value === 'veins') return structure.classification.endsWith('vein');
+          return true;
+        }
         return true;
       });
     });
@@ -103,7 +114,8 @@ export const Anatomy = defineComponent({
     const ghostLayerIds = computed(() => combinedSurfaces.value
       ? [systemId.value === 'muscular' ? 'muscular.surface.posterior'
         : systemId.value === 'nervous' ? 'nervous.network.posterior'
-          : 'endocrine.glands.posterior']
+          : systemId.value === 'endocrine' ? 'endocrine.glands.posterior'
+            : 'cardiovascular.vessels.posterior']
       : []);
     const visibleIds = computed(() => new Set(shapes.value
       .filter(shape => shape.renderMode !== 'etch' && shape.renderMode !== 'cutout')
@@ -116,7 +128,8 @@ export const Anatomy = defineComponent({
       : systemId.value === 'muscular' ? muscularRegions
         : systemId.value === 'nervous' ? nervousRegions
           : systemId.value === 'endocrine' ? endocrineRegions
-            : [{ id: 'whole-body', name: 'Whole body' }]);
+            : systemId.value === 'cardiovascular' ? cardiovascularRegions
+              : [{ id: 'whole-body', name: 'Whole body' }]);
 
     function setSystemsCollapsed(collapsed: boolean) {
       systemsCollapsed.value = collapsed;
@@ -168,7 +181,7 @@ export const Anatomy = defineComponent({
           }, [h(Icon, { name: 'panel-open' }), 'Structures']) : null,
           h('div', { class: 'anatomy-viewer-identity' }, [
             h('strong', { title: system.value?.description ?? '' }, system.value?.name ?? props.title),
-            ['skeletal', 'muscular', 'nervous', 'endocrine'].includes(systemId.value) ? null
+            ['skeletal', 'muscular', 'nervous', 'endocrine', 'cardiovascular'].includes(systemId.value) ? null
               : h('span', { class: 'anatomy-viewer-status' }, 'Coming soon'),
           ]),
         ]),
@@ -195,6 +208,22 @@ export const Anatomy = defineComponent({
                 h('option', { value: 'none' }, 'Hidden'),
               ]),
             ]) : null,
+          systemId.value === 'cardiovascular'
+            ? h('label', { class: 'anatomy-vessel-choice' }, [
+              h('span', 'Vessels'),
+              h('select', {
+                value: vesselView.value,
+                'aria-label': 'Vessels shown',
+                onChange: (event: Event) => {
+                  vesselView.value = inputValue(event) as VesselView;
+                  selectedId.value = null;
+                },
+              }, [
+                h('option', { value: 'all' }, 'All'),
+                h('option', { value: 'arteries' }, 'Arteries'),
+                h('option', { value: 'veins' }, 'Veins'),
+              ]),
+            ]) : null,
           h('div', { class: 'anatomy-orientation', role: 'group', 'aria-label': 'Anatomical visibility' },
             faceModes.map(mode => h('button', {
               key: mode.id,
@@ -205,7 +234,9 @@ export const Anatomy = defineComponent({
                 ? (systemId.value === 'muscular' ? 'Overlay anterior and posterior muscles'
                   : systemId.value === 'nervous' ? 'Overlay anterior and posterior nerve pathways'
                     : systemId.value === 'endocrine' ? 'Show the major endocrine glands together'
-                      : 'Show all bones, including those behind others')
+                      : systemId.value === 'cardiovascular'
+                        ? 'Overlay anterior and posterior vascular pathways'
+                        : 'Show all bones, including those behind others')
                 : 'Show the ' + mode.name.toLowerCase() + ' view',
               onClick: () => { facing.value = mode.id; selectedId.value = null; },
             }, mode.name))),
@@ -244,7 +275,7 @@ export const Anatomy = defineComponent({
             key: view.value.id + '.' + regionId.value,
             view: view.value, focus: focus.value, layers: layers.value, shapes: shapes.value,
             occludedIds: occludedIds.value, ghostLayerIds: ghostLayerIds.value,
-            showPlaceholder: !['skeletal', 'muscular', 'nervous', 'endocrine'].includes(systemId.value),
+            showPlaceholder: !['skeletal', 'muscular', 'nervous', 'endocrine', 'cardiovascular'].includes(systemId.value),
             structures: [...atlas.structures.values()], selectedId: selectedId.value ?? '',
             selectedStructure: selected.value ?? null,
             onSelect: selectStructure,
@@ -261,7 +292,7 @@ export const Anatomy = defineComponent({
         h('div', { class: 'anatomy-panel-top' }, [
           h('div', { class: 'anatomy-panel-heading' }, [
             h('h2', 'Structures'),
-            ['skeletal', 'muscular', 'nervous', 'endocrine'].includes(systemId.value)
+            ['skeletal', 'muscular', 'nervous', 'endocrine', 'cardiovascular'].includes(systemId.value)
               ? null : h('p', 'Content coming soon.'),
           ]),
           panelToggle('Hide structures', 'anatomy-structures-panel',
@@ -291,7 +322,9 @@ export const Anatomy = defineComponent({
                     ? 'No illustrated neural structures in this region and view.'
                     : systemId.value === 'endocrine'
                       ? 'No endocrine structures in this view. Try Both or another gonad setting.'
-                      : 'Structure diagrams are being prepared.'),
+                      : systemId.value === 'cardiovascular'
+                        ? 'No illustrated vessels in this region and view. Try Both or All vessels.'
+                        : 'Structure diagrams are being prepared.'),
 
       ]),
     ]);
