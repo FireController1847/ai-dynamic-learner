@@ -24,7 +24,10 @@ function draw(direction: Direction): AtlasShape[] {
       id: 'cardiovascular.' + direction + '.' + (side ? side + '.' : '') + id + '.' + shapes.length,
       layerId, structureId: 'cardiovascular.' + (side ? side + '.' : '') + id,
       geometry: { kind: 'path', d }, renderMode: mode,
-      mirrorX: side ? mirror(side) : false,
+      // Anatomical left/right reverses on posterior projection, even for
+      // unpaired structures with lateral positions (e.g. aorta, vena cava
+      // and the named right/left heart chambers).
+      mirrorX: side ? mirror(side) : direction === 'posterior',
     });
   }
   function pair(id: string, d: string) {
