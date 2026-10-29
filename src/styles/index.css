@@ -42,6 +42,7 @@
 @import '../features/solve-it-grid/solve-it-grid.css';
 @import '../features/solve-it-grid/task-set-builder.css';
 @import '../features/solve-it-grid/task-grid.css';
+@import '../features/solve-it-grid/immediate-setup.css';
 @import '../features/solve-it-grid/task-check-in.css';
 @import '../features/index-cards/index-cards.css';
 @import '../features/index-cards/ai-import.css';

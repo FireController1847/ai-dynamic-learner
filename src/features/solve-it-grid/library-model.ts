@@ -1,7 +1,7 @@
 import { archiveTime, validateLibrarySettings, type DatedLibraryRecord, type LibrarySettings } from '../../core/dated-library.ts';
 import { createId, isValidId } from '../../core/ids.ts';
 import { isRecord } from '../../core/validation.ts';
-import { TASK_CATEGORIES, validateRound, validateTaskLists, type GridRound, type TaskLists, type TaskCategory } from './task-model.ts';
+import { TASK_CATEGORIES, createImmediateRound, validateImmediateRound, validateRound, validateTaskLists, type GridRound, type TaskLists, type TaskCategory } from './task-model.ts';
 
 export type CheckInMode = 'time' | 'completion' | 'both';
 export const CHECK_IN_MINUTES = [15, 25, 45, 60, 90, 120] as const;
@@ -18,7 +18,7 @@ export interface ActiveCheckIn {
   /** Number of consecutive Keep going choices in this work period. */
   keepGoingCount?: number;
 }
-export interface TaskSet extends DatedLibraryRecord { lists?: TaskLists; round?: GridRound; history?: GridRound[]; checkIn?: ActiveCheckIn }
+export interface TaskSet extends DatedLibraryRecord { mode?: 'immediate' | 'list-based'; lists?: TaskLists; round?: GridRound; history?: GridRound[]; checkIn?: ActiveCheckIn }
 export interface SolveItGridModel {
   items: TaskSet[];
   settings?: LibrarySettings;
@@ -35,6 +35,14 @@ export function createTaskSet(items: TaskSet[], name: string, lists: TaskLists, 
   return item;
 }
 
+export function createImmediateTaskSet(items: TaskSet[], name: string, now = Date.now()): TaskSet {
+  if (items.length >= MAX_TASK_SETS) throw new Error(`The Solve-It Grid limit is ${MAX_TASK_SETS} task sets.`);
+  const item: TaskSet = { id: createId(), name, createdAt: new Date(now).toISOString(),
+    mode: 'immediate', round: createImmediateRound() };
+  items.push(item);
+  return item;
+}
+
 export function validateSolveItGrid(value: unknown): asserts value is SolveItGridModel {
   if (!isRecord(value) || !Array.isArray(value.items) || value.items.length > MAX_TASK_SETS ||
       Object.keys(value).some(key => !['items', 'settings', 'lastSelectedTaskSetId'].includes(key))) {
@@ -43,28 +51,44 @@ export function validateSolveItGrid(value: unknown): asserts value is SolveItGri
   if (Object.hasOwn(value, 'settings')) validateLibrarySettings(value.settings);
   const ids = new Set<string>();
   for (const item of value.items) {
-    if (!isRecord(item) || Object.keys(item).some(key => !['id', 'name', 'createdAt', 'lists', 'round', 'history', 'checkIn'].includes(key)) ||
+    if (!isRecord(item) || Object.keys(item).some(key => !['id', 'name', 'createdAt', 'mode', 'lists', 'round', 'history', 'checkIn'].includes(key)) ||
         !isValidId(item.id) || ids.has(item.id) || typeof item.name !== 'string' || !item.name.trim() ||
         item.name.length > MAX_NAME_LENGTH || typeof item.createdAt !== 'string' ||
         !Number.isFinite(Date.parse(item.createdAt)) || new Date(item.createdAt).toISOString() !== item.createdAt) {
       throw new Error('A task set has an invalid name, creation date, or ID.');
     }
+    const immediate = item.mode === 'immediate';
+    if (Object.hasOwn(item, 'mode') && !['immediate', 'list-based'].includes(String(item.mode))) {
+      throw new Error('An unsupported Solve-It Grid creation mode was saved.');
+    }
+    if (immediate && (Object.hasOwn(item, 'lists') || !Object.hasOwn(item, 'round'))) {
+      throw new Error('An immediate grid must save its entries directly, without lists.');
+    }
     if (Object.hasOwn(item, 'lists')) validateTaskLists(item.lists);
     if (Object.hasOwn(item, 'round')) {
-      if (!Object.hasOwn(item, 'lists')) throw new Error('A saved grid round requires task lists.');
-      validateTaskLists(item.lists);
-      validateRound(item.round, item.lists);
+      if (immediate) validateImmediateRound(item.round);
+      else {
+        if (!Object.hasOwn(item, 'lists')) throw new Error('A saved grid round requires task lists.');
+        validateTaskLists(item.lists);
+        validateRound(item.round, item.lists);
+      }
     }
     if (Object.hasOwn(item, 'history')) {
-      if (!Object.hasOwn(item, 'round') || !Object.hasOwn(item, 'lists') ||
+      if (!Object.hasOwn(item, 'round') || (!immediate && !Object.hasOwn(item, 'lists')) ||
           !Array.isArray(item.history) || item.history.length > MAX_ROUND_HISTORY) {
         throw new Error('The saved Solve-It Grid history is invalid.');
       }
-      validateTaskLists(item.lists);
-      validateRound(item.round, item.lists);
+      if (immediate) validateImmediateRound(item.round);
+      else {
+        validateTaskLists(item.lists);
+        validateRound(item.round, item.lists);
+      }
       let lastNumber = 0;
       for (const previous of item.history) {
-        validateRound(previous, item.lists);
+        if (immediate) {
+          validateImmediateRound(previous);
+          if (previous.started !== true) throw new Error('An unfinished immediate grid cannot be archived in history.');
+        } else validateRound(previous, item.lists);
         if (previous.number <= lastNumber || previous.number >= item.round.number) {
           throw new Error('Saved Solve-It Grid rounds must be in chronological order.');
         }
@@ -89,9 +113,10 @@ export function validateSolveItGrid(value: unknown): asserts value is SolveItGri
             (typeof focus.keepGoingCount !== 'number' || !Number.isSafeInteger(focus.keepGoingCount) ||
               focus.keepGoingCount < 0 || focus.keepGoingCount > 1000000)) ||
           !savedRound || savedRound.number !== focus.roundNumber ||
-          !savedLists || !TASK_CATEGORIES.some(category => category.id === focus.category &&
+          (!immediate && !savedLists) || !TASK_CATEGORIES.some(category => category.id === focus.category &&
             savedRound.slots[category.id].taskId === focus.taskId &&
-            savedLists[category.id].some(task => task.id === focus.taskId))) {
+            (immediate ? savedRound.slots[category.id].text?.trim() && !savedRound.slots[category.id].completed && !savedRound.slots[category.id].skipped
+              : savedLists?.[category.id].some(task => task.id === focus.taskId)))) {
         throw new Error('The saved check-in is invalid.');
       }
     }

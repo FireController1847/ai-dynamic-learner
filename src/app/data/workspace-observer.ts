@@ -223,14 +223,16 @@ export async function observeWorkspace(
           library(app, item.children as Plain[], id);
           return;
         }
-        if (app === 'solve-it-grid' && Object.hasOwn(item, 'lists')) {
+        if (app === 'solve-it-grid' && (Object.hasOwn(item, 'lists') || item.mode === 'immediate')) {
           signature.push('solve-it-grid:' + id + ':configured');
           attach('solveItTaskSets', [workspaceId, id], item,
-            () => [item.round, item.history, item.checkIn],
+            () => [item.mode, item.round, item.history, item.checkIn],
             () => put('solveItTaskSets', [workspaceId, id], { id, configured: true,
+              ...(item.mode === 'immediate' ? { mode: 'immediate' } : {}),
               ...(Object.hasOwn(item, 'round') ? { round: item.round } : {}),
               ...(Object.hasOwn(item, 'history') ? { history: item.history } : {}),
               ...(Object.hasOwn(item, 'checkIn') ? { checkIn: item.checkIn } : {}) }), true, seen);
+          if (item.mode !== 'immediate') {
           const lists = asObject(item.lists);
           for (const category of TASK_CATEGORIES) {
             const tasks = lists[category.id] as Plain[];
@@ -240,6 +242,7 @@ export async function observeWorkspace(
               attach('solveItTasks', [workspaceId, id, taskId], task, () => task,
                 () => put('solveItTasks', [workspaceId, id, taskId], { setId: id, category: category.id, ...task, position: index }), true, seen);
             });
+          }
           }
         } else if (app === 'notebook') {
           attach('notebookDocuments', [workspaceId, id], item,

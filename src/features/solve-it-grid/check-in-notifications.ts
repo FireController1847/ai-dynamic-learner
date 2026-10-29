@@ -58,11 +58,13 @@ export function deliverDueCheckInNotifications(items: TaskSet[], now = Date.now(
   if (!window.isSecureContext || !('Notification' in window) || Notification.permission !== 'granted') return;
   for (const item of items) {
     const focus = item.checkIn;
-    if (!focus || !item.lists || !item.round || focus.remindAt > now ||
+    if (!focus || !item.round || (!item.lists && item.mode !== 'immediate') || focus.remindAt > now ||
         focus.notifiedAt === focus.remindAt ||
         item.round.number !== focus.roundNumber ||
         item.round.slots[focus.category].taskId !== focus.taskId ||
-        slotState(item.lists, item.round, focus.category) !== 'ready') continue;
+        (item.mode === 'immediate'
+          ? item.round.slots[focus.category].completed === true || item.round.slots[focus.category].skipped === true
+          : !item.lists || slotState(item.lists, item.round, focus.category) !== 'ready')) continue;
 
     const identifier = `${item.id}:${focus.taskId}:${focus.remindAt}`;
     if (failedReminders.has(identifier)) continue;
