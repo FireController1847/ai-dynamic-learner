@@ -379,6 +379,63 @@ all 206 hand-authored projection shapes.
 - Check narrow screens and dark mode, including the floating inspector.
 - Switch back to Skeletal; bone counts and geometry must be unchanged.
 
+## Skeletal anatomical geometry refinement (v0.13.0)
+
+The 320 × 700 anterior/posterior skeletal teaching plates have been revised
+against the gross skeletal relationships in
+[OpenStax Anatomy & Physiology 2e, §7.1](https://openstax.org/books/anatomy-and-physiology-2e/pages/7-1-divisions-of-the-skeletal-system),
+[§7.2](https://openstax.org/books/anatomy-and-physiology-2e/pages/7-2-the-skull),
+[§7.4](https://openstax.org/books/anatomy-and-physiology-2e/pages/7-4-the-thoracic-cage)
+and [§8.1](https://openstax.org/books/anatomy-and-physiology-2e/pages/8-1-the-pectoral-girdle).
+All geometry is independently authored; no textbook SVG paths are copied.
+
+- **Cranium/face:** rounded frontal, parietal, temporal and occipital
+  plates; orbit openings; facial zygomatic/maxillary outlines; nasal
+  aperture and the curved mandibular ramus/chin, with an explicitly
+  different posterior skull projection. Tiny/deep structures (ethmoid,
+  sphenoid, vomer, palatine, ossicles) remain teaching projections, not
+  a claimed surgically precise location or exposed superficial shape.
+- **Vertebral column:** distinguish the narrow cervical, intermediate
+  thoracic and broader lumbar contours; retain C1–C7, T1–T12,
+  L1–L5, sacrum and coccyx as separately selectable IDs.
+- **Thoracic cage:** 12 individually selectable rib pairs with more
+  natural lateral/anterior curves, realistic shorter floating ribs
+  11–12, and costal-cartilage etching separate from the mineralized
+  ribs. Cartilage adds *no* bone-count entries or selectable fake bones.
+- **Girdles/limbs:** separate anterior clavicular S-curve, posterior
+  scapular spine, pelvic iliac crest/ischial/obturator contours, and
+  curving tapered shafts with rounded articular ends (including
+  the long bones and phalanges).
+- **Selection/FitB invariants:** no bone was added, merged or removed.
+  The model still enforces the standard 206 adult bone inventory
+  (80 axial + 126 appendicular) and per-orientation selectable ID
+  completeness. Decorative details use noninteractive etch/cutout
+  geometry referencing existing bone IDs. Study history, persisted
+  results, question matching and leader-line code are untouched.
+
+**Important accuracy limit:** This is still an authored **2D educational
+projection**, *not* a clinically validated anatomical atlas or a set of
+exact 3D bone meshes. Cranial foramina/sutures, joint surfaces,
+vertebral processes, ribs' full 3D curvature, ankle/hand depth and
+partially hidden structures need dedicated high-resolution anterior,
+posterior and sectional plates or a reviewed 3D data source. Drawing
+all 206 bones in one whole-body projection necessarily simplifies
+overlapping/deep structures. No clinical spatial fidelity is claimed.
+
+### Geometry verification
+
+- In Both/Front/Back, inspect the skull, orbits, jaw and nose;
+  the posterior should not show prominent anterior orbit/face openings.
+- Check separate rib labels, ribs 11–12 floating, distinct (unselectable)
+  cartilage etching, scapular posterior spine and pelvic foramina.
+- Select C1/C2, all 12 rib pairs, individual hip bones and digit
+  phalanges. Confirm their true IDs, side mapping and inspector.
+- Use FitB with Head & neck / Whole body to ensure the labels and
+  zoom/pan-following leader lines still point to the correct selectable
+  bone. Confirm 206/80/126 inventory guards and front/back shape guards.
+- Check both themes, Fit, pan, zoom, sidebars and unobscured selection.
+  Verify Muscular, Nervous, Endocrine and Cardiovascular are unchanged.
+
 ## Skeletal presentation polish (v0.12.3)
 
 The default Skeletal drawing now uses an approachable, classroom-style

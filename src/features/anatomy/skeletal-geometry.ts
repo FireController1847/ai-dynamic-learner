@@ -40,86 +40,176 @@ function draw(facing: Facing): AtlasShape[] {
   function eachSide(id: string, x: number, y: number, rx: number, ry: number) {
     for (const side of ['left', 'right'] as const) ellipse(id, x, y, rx, ry, side);
   }
-  // Smooth, tapered long-bone silhouette with a rounded joint at each end.
+  // Curved tapered diaphyses with expanded articular ends, rather than
+  // rectangular sticks. The same helper scales to metacarpals/phalanges.
   function shaft(id: string, x1: number, y1: number, x2: number, y2: number,
     width: number, side?: Side) {
     const dx = x2 - x1, dy = y2 - y1;
     const len = Math.hypot(dx, dy) || 1;
     const px = -dy / len, py = dx / len;
-    const a = width / 2, b = width * 0.38;
-    const d = 'M' + (x1 + px * a) + ' ' + (y1 + py * a)
-      + ' Q' + (x1 - dx * .06 + px * a * 1.2) + ' ' + (y1 - dy * .06 + py * a * 1.2)
-      + ' ' + (x1 - px * a) + ' ' + (y1 - py * a)
-      + ' L' + (x2 - px * b) + ' ' + (y2 - py * b)
-      + ' Q' + (x2 + dx * .045) + ' ' + (y2 + dy * .045)
-      + ' ' + (x2 + px * b) + ' ' + (y2 + py * b) + ' Z';
+    const point = (t: number, lateral: number) => {
+      const x = x1 + dx * t + px * lateral;
+      const y = y1 + dy * t + py * lateral;
+      return x.toFixed(2) + ' ' + y.toFixed(2);
+    };
+    const head = width * .57, waist = width * .30, condyle = width * .50;
+    const d = 'M' + point(0, head)
+      + ' C' + point(-.035, head * .85) + ' ' + point(-.035, -head * .85)
+      + ' ' + point(0, -head)
+      + ' C' + point(.14, -waist) + ' ' + point(.69, -waist)
+      + ' ' + point(.95, -condyle)
+      + ' Q' + point(1.045, 0) + ' ' + point(.95, condyle)
+      + ' C' + point(.69, waist) + ' ' + point(.14, waist)
+      + ' ' + point(0, head) + ' Z';
     path(id, d, side);
   }
 
-  // The neurocranium: distinguish the unpaired bones and each paired bone.
-  path('frontal', 'M139 29 Q160 19 181 29 L179 51 Q169 55 160 56 Q151 55 141 51 Z');
+  // Skull (OpenStax A&P 2e §7.2). A broad cranial vault, paired lateral
+  // plates, orbital rims, nasal aperture, upper jaw and mandibular arch.
+  // Deep bones are retained for atlas/FitB identity but are simplified
+  // projections; a dedicated cutaway is needed for their true 3-D locations.
+  path('frontal', facing === 'anterior'
+    ? 'M135 38 C136 26 148 22 160 22 C172 22 184 26 185 38 '
+      + 'L184 54 Q178 58 169 57 L160 53 Q151 57 142 58 L136 54 Z'
+    : 'M144 28 Q160 22 176 28 L171 38 Q160 34 149 38 Z');
   path('occipital', facing === 'posterior'
-    ? 'M135 50 Q160 57 185 50 L180 76 Q160 91 140 76 Z'
-    : 'M155 78 Q160 82 165 78 L160 87 Z');
-  path('sphenoid', 'M146 61 Q160 57 174 61 L170 70 L150 70 Z');
-  path('ethmoid', 'M156 66 L164 66 L163 79 L160 82 L157 79 Z');
-  both('parietal', 'M139 25 Q127 38 131 54 L145 59 L156 50 L157 25 Z');
-  both('temporal', 'M132 57 L146 60 L149 79 L138 82 L128 69 Z');
+    ? 'M134 51 C142 60 150 61 160 60 C170 61 178 60 186 51 '
+      + 'L182 73 Q175 90 160 92 Q145 90 138 73 Z'
+    : 'M153 93 Q160 95 167 93 L163 97 L157 97 Z');
+  // Sphenoid and ethmoid contribute to the posterior orbital wall and nasal
+  // septum, not separate exterior plates covering the entire upper face.
+  path('sphenoid', 'M146 64 Q150 61 153 66 L154 74 L147 73 Z');
+  path('ethmoid', 'M156 65 L164 65 L162 81 L160 86 L158 81 Z');
+  both('parietal', facing === 'posterior'
+    ? 'M135 31 Q141 21 157 24 L157 57 Q151 62 143 58 L133 51 Z'
+    : 'M137 31 Q142 25 155 25 L156 53 Q148 57 141 55 L134 49 Z');
+  both('temporal', facing === 'posterior'
+    ? 'M136 54 Q142 58 149 62 L148 77 Q141 85 136 77 L131 66 Z'
+    : 'M132 54 Q141 56 147 61 L146 78 Q138 85 131 76 L128 65 Z');
 
-  // Facial bones; tiny/deep elements are intentionally shown as close-up
-  // projections within the head, not claimed to be externally exposed.
-  path('mandible', 'M138 85 Q150 99 160 104 Q170 99 182 85 L178 100 Q160 118 142 100 Z');
-  path('vomer', 'M158 81 L162 81 L160 91 Z');
-  both('maxilla', 'M144 77 L158 79 L159 94 L148 94 L142 85 Z');
-  both('zygomatic', 'M129 69 L144 73 L146 83 L138 87 L130 80 Z');
-  both('nasal', 'M155 60 L159 61 L159 73 L154 72 Z');
-  both('lacrimal', 'M148 64 L153 67 L151 72 L147 70 Z');
-  both('palatine', 'M150 89 L157 90 L155 94 L148 94 Z');
-  both('inferior-nasal-concha', 'M150 75 Q155 73 156 79 L152 83 Z');
-  for (const side of ['left', 'right'] as const) {
-    ellipse('malleus', 132, 72, 1.4, 2.2, side);
-    ellipse('incus', 129.4, 75, 1.4, 1.8, side);
-    ellipse('stapes', 127.5, 77.5, 1, 1.2, side);
+  // Face. The left/right bones are independent selection targets; the
+  // negative spaces beneath the orbital rims are decorative and never scored.
+  path('mandible', facing === 'anterior'
+    ? 'M132 83 Q134 80 138 83 L142 94 Q149 105 160 107 '
+      + 'Q171 105 178 94 L182 83 Q186 80 188 83 '
+      + 'L184 99 Q177 114 160 117 Q143 114 136 99 Z'
+    : 'M137 88 Q140 105 160 111 Q180 105 183 88 '
+      + 'L185 96 Q176 116 160 119 Q144 116 135 96 Z');
+  path('vomer', 'M159 77 L161 77 L161 88 L160 91 L159 88 Z');
+  both('maxilla', 'M143 83 L154 84 L158 89 L159 101 '
+    + 'Q149 101 143 97 L140 90 Z');
+  both('zygomatic', 'M130 67 Q134 66 140 70 L148 78 '
+    + 'Q144 85 139 88 L130 82 Q126 77 130 67 Z');
+  both('nasal', 'M156 60 Q158 60 159 63 L159 74 L156 77 L153 72 Z');
+  both('lacrimal', 'M149 67 L153 68 L152 76 L149 78 Z');
+  both('palatine', 'M150 96 L158 96 L157 101 L150 100 Z');
+  both('inferior-nasal-concha', 'M151 80 Q156 79 156 85 L152 89 Z');
+
+  // Visually identify paired orbit openings and the pear-shaped nasal
+  // aperture; teeth are not part of the standard 206-bone inventory.
+  // These are painted at the end of the skull block, above all facial bones.
+  if (facing === 'anterior') {
+    for (const side of ['left', 'right'] as const) {
+      path('zygomatic', 'M137 65 C142 62 149 64 152 69 '
+        + 'Q153 76 148 81 Q141 82 136 77 Q133 71 137 65 Z', side, 'cutout');
+    }
+    path('frontal', 'M156 77 Q160 72 164 77 L168 86 Q160 92 152 86 Z', undefined, 'cutout');
+    path('mandible', 'M144 100 Q160 106 176 100', undefined, 'etch');
   }
-  path('hyoid', 'M150 116 Q160 112 170 116 L166 121 L154 121 Z');
+  for (const side of ['left', 'right'] as const) {
+    // Deep middle-ear ossicles shown as enlarged markers in this teaching
+    // projection; anatomical location is behind the temporal bone.
+    ellipse('malleus', 133, 72, 1.3, 1.7, side);
+    ellipse('incus', 131.3, 74.6, 1.3, 1.6, side);
+    ellipse('stapes', 129.8, 77, 1, 1.1, side);
+  }
+  path('hyoid', 'M151 121 Q160 117 169 121 L166 125 L154 125 Z');
 
-  // Seven cervical, twelve thoracic, five lumbar vertebrae. Each is a
-  // distinct selectable adult vertebra, not one combined spine region.
+  // Seven cervical, twelve thoracic and five lumbar vertebrae. Widths and
+  // contour sizes increase toward the lumbar spine; C1 has a wider arch.
   for (const [letter, count, top, step, radius] of [
-    ['c', 7, 123, 4.2, 5], ['t', 12, 153, 6.7, 6.2], ['l', 5, 242, 9.5, 7.6],
+    ['c', 7, 129, 4, 4.6], ['t', 12, 158, 7.1, 5.7], ['l', 5, 246, 9.2, 7.2],
   ] as const) {
     for (let n = 1; n <= count; n++) {
       const y = top + (n - 1) * step;
-      const id = letter + n;
-      path(id, 'M' + (160 - radius) + ' ' + y
-        + ' Q160 ' + (y - 3.2) + ' ' + (160 + radius) + ' ' + y
-        + ' L' + (160 + radius + 1.2) + ' ' + (y + 4)
-        + ' Q160 ' + (y + 7.8) + ' ' + (160 - radius - 1.2) + ' ' + (y + 4) + ' Z');
+      const widening = letter === 'l' ? n * 0.32 : 0;
+      const r = radius + widening + (letter === 'c' && n === 1 ? 1.7 : 0);
+      const d = 'M' + (160 - r) + ' ' + y
+        + ' Q160 ' + (y - 2.5) + ' ' + (160 + r) + ' ' + y
+        + ' L' + (160 + r + 1.5) + ' ' + (y + 3)
+        + ' Q' + (160 + r) + ' ' + (y + 6.4) + ' 160 ' + (y + 7)
+        + ' Q' + (160 - r) + ' ' + (y + 6.4) + ' ' + (160 - r - 1.5)
+        + ' ' + (y + 3) + ' Z';
+      path(letter + n, d);
     }
   }
-  path('sacrum', 'M150 292 Q160 285 170 292 L167 319 L160 331 L153 319 Z');
-  path('coccyx', 'M157 333 L163 333 L161 344 L159 344 Z');
-  path('sternum', 'M156 141 Q160 137 164 141 L165 152 L166 187 L160 204 L154 187 L155 152 Z');
+  path('sacrum', 'M148 291 Q160 285 172 291 L169 309 '
+    + 'Q167 323 160 333 Q153 323 151 309 Z');
+  path('coccyx', 'M158 333 Q160 336 162 333 L162 341 L160 346 L158 341 Z');
+  path('sternum', 'M155 147 Q160 142 165 147 L166 158 L165 176 '
+    + 'L164 190 L160 204 L156 190 L155 176 Z');
 
-  // Each of the twelve rib pairs has its own path and ID. First ribs short,
-  // lower ribs taper inward; the last two remain floating.
+  // Anatomical rib cage: paired arcs emerge from the thoracic vertebrae
+  // and sweep laterally/forward. The first seven pairs reach the anterior
+  // cartilage; pairs 8–10 join the costal margin, and 11–12 float.
+  // Cartilage is *not* counted as bone or falsely given a selection ID.
   for (let n = 1; n <= 12; n++) {
-    const y = 151 + (n - 1) * 7.7;
-    const span = n <= 7 ? 33 + n * 3 : 58 - (n - 7) * 5;
-    const x = 155 - span;
-    const d = 'M155 ' + y + ' C139 ' + (y - 8) + ' ' + (x + 8) + ' ' + (y - 10)
-      + ' ' + x + ' ' + (y + 9) + ' Q' + (x - 2) + ' ' + (y + 15)
-      + ' ' + (x + 11) + ' ' + (y + 19);
+    const rootY = 153 + (n - 1) * 7.15;
+    const breadth = n <= 7 ? 25 + n * 3.35
+      : n <= 10 ? 48 - (n - 7) * 3.5 : 34 - (n - 10) * 3;
+    const lateralX = 157 - breadth;
+    const dip = n < 3 ? 6 : Math.min(24, 7 + n * 1.65);
+    // Mineralized rib ends stop before the sternum; intervening costal
+    // cartilage is shown separately and is not a bone.
+    const endX = n <= 7 ? 130 + n * 1.9
+      : n <= 10 ? 143 - (n - 7) * 5 : lateralX + 7;
+    const endY = rootY + (n <= 10 ? dip + 4 : dip * 0.7);
+    const d = facing === 'anterior'
+      ? 'M155 ' + rootY
+        + ' C' + (145 - breadth * 0.18) + ' ' + (rootY - 8)
+        + ' ' + (lateralX + 1) + ' ' + (rootY - 7)
+        + ' ' + lateralX + ' ' + (rootY + dip * 0.45)
+        + ' Q' + (lateralX - 2) + ' ' + (rootY + dip)
+        + ' ' + (endX < lateralX + 8 ? lateralX + 8 : endX)
+        + ' ' + endY
+      : 'M155 ' + rootY
+        + ' C' + (144 - breadth * 0.12) + ' ' + (rootY - 6)
+        + ' ' + (lateralX + 3) + ' ' + (rootY - 3)
+        + ' ' + lateralX + ' ' + (rootY + dip * 0.5)
+        + ' Q' + (lateralX + 1) + ' ' + (rootY + dip)
+        + ' ' + (lateralX + 14) + ' ' + (rootY + dip + 4);
     for (const side of ['left', 'right'] as const) path('rib-' + n, d, side, 'stroke');
+    if (facing === 'anterior' && n <= 7) {
+      // Costal cartilages are connective tissue; decorative etching only.
+      const cartilageY = 149 + n * 6.7;
+      for (const side of ['left', 'right'] as const) {
+        path('rib-' + n, 'M' + endX + ' ' + endY
+          + ' Q' + ((endX + 153) / 2) + ' ' + (cartilageY + 4)
+          + ' 154 ' + cartilageY, side, 'etch');
+      }
+    }
   }
 
-  // Shoulder girdle and pelvis. Each hip bone is counted once in the adult.
-  both('clavicle', 'M155 140 Q135 135 121 138 Q111 138 103 150 L107 154 Q120 144 136 147 Q147 143 155 147 Z');
-  both('scapula', 'M110 149 Q120 142 134 153 L143 174 L134 206 Q116 193 111 171 Z');
-  both('hip-bone', 'M150 284 Q130 272 118 280 Q106 288 103 310 Q100 324 111 331 Q122 340 140 319 L157 310 L153 296 Z');
-  // A small negative-space highlight demonstrates the obturator foramen but
-  // belongs to the corresponding hip bone, not a fictional 207th structure.
-  both('hip-bone', 'M114 311 Q123 303 138 311 L134 327 Q122 335 115 326 Z', 'cutout');
+  // Shoulder/pelvic girdles: clavicles are slender S-curves on the front;
+  // scapulae are broad triangular plates with a spine in the back. Each
+  // adult os coxae is one fused bone with a real obturator opening.
+  both('clavicle', 'M157 147 Q146 141 137 141 Q125 138 114 149 '
+    + 'L107 156 Q119 147 132 148 Q146 148 156 153 Z');
+  both('scapula', facing === 'posterior'
+    ? 'M111 151 Q120 143 135 151 L144 168 Q139 188 129 212 '
+      + 'Q115 201 109 179 Z'
+    : 'M111 152 Q125 145 138 161 L141 182 L128 204 '
+      + 'Q113 189 111 171 Z');
+  if (facing === 'posterior') {
+    both('scapula', 'M111 167 Q127 164 141 174', 'etch');
+  }
+  both('hip-bone', 'M155 293 Q144 283 128 281 Q113 279 104 295 '
+    + 'Q100 304 101 315 Q101 327 113 330 L121 341 '
+    + 'Q131 350 140 332 L152 327 Q158 328 160 329 '
+    + 'L157 315 Q153 309 155 293 Z');
+  both('hip-bone', 'M121 316 Q131 309 144 319 L140 332 '
+    + 'Q134 341 128 335 Q121 332 121 316 Z', 'cutout');
+  both('hip-bone', 'M106 299 Q118 289 137 295', 'etch');
 
   // Arm shafts and the individual wrist/hand bones are proportioned to the
   // arm's total length; no enormous phalanges. Digit I has no middle phalanx.
