@@ -44,7 +44,7 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'anatomy', label: 'Anatomy', path: '/anatomy/', icon: 'anatomy',
     group: 'tools',
-    version: '0.12.1',
+    version: '0.12.2',
     image: 'assets/app-icons/anatomy.png',
     description: 'Explore selectable skeletal, muscular, nervous, endocrine and cardiovascular systems in an offline 2D atlas.',
     metadata: {

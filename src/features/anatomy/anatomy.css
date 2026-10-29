@@ -569,6 +569,7 @@
   inset: 0;
   z-index: 4;
   overflow: auto;
+  overscroll-behavior: contain;
   padding: clamp(14px, 3vw, 28px);
   color: var(--text-color);
   background: var(--page-background);
@@ -614,11 +615,43 @@
   gap: 10px;
 }
 .anatomy-identification-section {
+  position: relative;
   min-width: 0;
   padding: 12px;
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
   background: var(--surface-workspace);
+  cursor: pointer;
+}
+.anatomy-identification-section:hover,
+.anatomy-identification-section:focus-within {
+  border-color: var(--brand);
+}
+.anatomy-identification-card-action {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+.anatomy-identification-card-action:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: -3px;
+}
+.anatomy-identification-section > :not(.anatomy-identification-card-action) {
+  position: relative;
+  pointer-events: none;
+}
+/* History is interactive independently of the full-card Study action. */
+.anatomy-identification-section > .anatomy-identification-history {
+  z-index: 2;
+  pointer-events: auto;
 }
 .anatomy-identification-section-line {
   display: flex;
@@ -643,13 +676,6 @@
   color: var(--text-secondary);
 }
 .anatomy-identification-untried { margin: 7px 0 0; }
-.anatomy-identification-study {
-  flex: 0 0 auto;
-  font-weight: 600;
-  border-color: var(--brand);
-  color: var(--brand-text);
-  background: var(--brand-tint);
-}
 .anatomy-identification-section-stats {
   display: flex;
   flex-wrap: wrap;
@@ -660,6 +686,7 @@
   font-variant-numeric: tabular-nums;
 }
 .anatomy-identification-history {
+  cursor: auto;
   margin-top: 10px;
   border-top: 1px solid var(--border-color);
   padding-top: 8px;
@@ -695,12 +722,13 @@
 @media (max-width: 700px) {
   .anatomy-identification-selection { padding: 12px; }
   .anatomy-identification-section-grid { grid-template-columns: minmax(0, 1fr); }
-  .anatomy-identification-study { min-height: 44px; }
+  .anatomy-identification-card-action { min-height: 44px; }
 }
 
 .anatomy-identification-results {
   position: absolute;
   z-index: 3;
+  overscroll-behavior: contain;
   top: 50%;
   left: 50%;
   width: min(580px, calc(100% - 36px));

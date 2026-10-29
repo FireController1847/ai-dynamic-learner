@@ -190,8 +190,11 @@ export const AnatomyViewer = defineComponent({
       drag = null;
     }
     function wheel(event: WheelEvent) {
-      if (!svg.value || event.target instanceof Element
-        && event.target.closest('.anatomy-selected-inspector')) return;
+      // Only the *actual drawing* owns wheel input. Scrollable overlays,
+      // result popups, text fields and the floating inspector live alongside
+      // the SVG and must receive native scrolling before the camera does.
+      if (!svg.value || !(event.target instanceof Element)
+        || !svg.value.contains(event.target)) return;
       // Wheel scrolls through the scene, as a native page scroll would.
       // Ctrl+wheel zooms about the cursor and Shift+wheel pans horizontally.
       event.preventDefault();
@@ -354,9 +357,10 @@ export const AnatomyViewer = defineComponent({
             onClick: reset }, 'Fit'),
         ]),
       ]),
-      h('div', { class: 'anatomy-diagram-stage', onWheel: wheel }, [
+      h('div', { class: 'anatomy-diagram-stage' }, [
         h('svg', {
           ref: svg,
+          onWheel: wheel,
           class: ['anatomy-diagram', { 'is-scrubbing': zHeld.value, 'is-dragging': drag?.moved }],
           viewBox: viewport.value.join(' '),
           preserveAspectRatio: 'xMidYMid meet',

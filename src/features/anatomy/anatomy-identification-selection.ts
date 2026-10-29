@@ -79,15 +79,21 @@ export const AnatomyIdentificationSelection = defineComponent({
             const best = history.length ? Math.max(...history.map(item => item.score / item.total)) : null;
             const resetKey = 'section:' + section.id;
             return h('article', { class: 'anatomy-identification-section', key: section.id }, [
+              // A full-card button keeps the entire card mouse/touch/keyboard
+              // accessible without nesting the history/reset controls inside
+              // an interactive button (invalid HTML and confusing focus).
+              h('button', {
+                type: 'button',
+                class: 'anatomy-identification-card-action',
+                'aria-label': 'Study ' + section.title + ', ' + section.count
+                  + (section.count === 1 ? ' structure' : ' structures'),
+                onClick: () => { pendingReset.value = ''; emit('start', section.id); },
+              }),
               h('div', { class: 'anatomy-identification-section-line' }, [
                 h('div', { class: 'anatomy-identification-section-title' }, [
                   h('strong', section.title),
                   h('span', section.count + (section.count === 1 ? ' structure' : ' structures')),
                 ]),
-                h('button', {
-                  type: 'button', class: 'quiet-button anatomy-identification-study',
-                  onClick: () => { pendingReset.value = ''; emit('start', section.id); },
-                }, 'Study'),
               ]),
               latest ? h('div', { class: 'anatomy-identification-section-stats' }, [
                 h('span', 'Last ' + latest.score + '/' + latest.total),

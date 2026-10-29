@@ -471,11 +471,24 @@ with no visible structures do not appear.
 The selection screen groups these choices under their anatomical systems
 (e.g. Axial skeleton and Appendicular skeleton), each showing a count
 of study items, last score, best percentage, and number of completed
-attempts. A **Study** button launches the chosen section only. Prompts
-remain paginated in groups of at most six, using the established blank
-inputs and leader lines that follow bones during pan, zoom and resize.
+attempts. The **entire section card** starts its quiz by click, touch,
+Enter or Space; there is no redundant Study button. Its separately
+focusable **Previous results** disclosure and reset/remove controls
+are independent of the card's study action. Prompts remain paginated
+in groups of at most six, using the established blank inputs and leader
+lines that follow bones during pan, zoom and resize.
 No names are disclosed through ordinary figure selection or SVG tooltips
 during the assessment.
+
+Scroll events belong to the element beneath the pointer. The atlas
+camera binds its wheel handler **only to the SVG**—not the encompassing
+diagram stage. Thus the study-section picker, results dialog, previous
+attempt history, answer inputs and floating inspector can receive native
+scrolling without moving the anatomical figure underneath. The scrollable
+picker/results overlays use contained overscroll to avoid chaining to
+the page when their edges are reached. When the pointer is directly on
+the SVG, normal wheel pan, Ctrl+wheel zoom and Shift+wheel pan work
+as before.
 
 ### Results and storage
 
@@ -514,6 +527,14 @@ numbers, rib numbers and vertebral levels still need correct identity.
 - Skeletal Whole body / Both: entering Fill in the Blanks should show
   about 28 options (27 anatomical sections + All visible bones), **not**
   immediately show blank prompts.
+- Click anywhere on a study card (title, count or blank area) to start
+  its quiz; focus the card with Tab and use Enter/Space too. Verify the
+  history disclosure, Remove and Reset controls **never** start a quiz.
+- Scroll with the pointer over the study-selection list and over a
+  long results popup: each must scroll itself, without moving the SVG.
+  Also check wheeling over history, the floating inspector, and input
+  fields, and normal wheel-pan/zoom with the pointer directly on the
+  diagram. Check that scrolling at a popup's edge does not move the page.
 - Choose Cervical vertebrae and verify the quiz contains exactly the
   seven visible cervical vertebrae, with Previous, Skip, Check, Next,
   and connected line prompts. Repeat with Ribs 1–6 and Hand phalanges.
