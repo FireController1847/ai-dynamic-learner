@@ -19,6 +19,9 @@ test('source-backed clinical paths reference valid canonical bones', () => {
 test('206 existing IDs are preserved; missing source geometry is not fabricated', () => {
  assert.equal(skeletalStructures.length, 206);
  assert.ok(SOURCE_MAPPED_BONE_IDS.size >= 170);
+ assert.ok(!SOURCE_MAPPED_BONE_IDS.has('skeletal.left.foot-middle-1'));
+ assert.ok(!SOURCE_MAPPED_BONE_IDS.has('skeletal.right.foot-middle-1'));
+
  assert.equal(SOURCE_UNMAPPED_BONE_IDS.length, 206 - SOURCE_MAPPED_BONE_IDS.size);
  for (const face of ['anterior','posterior'])
   assert.ok(new Set(skeletalShapes.filter(s => s.layerId.endsWith(face)).map(s => s.structureId)).size >= 165);

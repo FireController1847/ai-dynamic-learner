@@ -19,7 +19,7 @@ self-contained view crops; extract exact authored paths as transparent
 selection/quiz targets. Coordinates and rendered contour shapes are unchanged.
 All source assets are bundled in the repository, without runtime downloads.
 
-**Important incompleteness:** This medical illustration maps 182
+**Important incompleteness:** This medical illustration maps 180
 unique canonical bones (out of 206) in at least one view. Some deep skull and
 auditory structures lack independent contours; named but unmapped bones are not
 rendered or treated as selectable and remain in the saved semantic catalogue.
