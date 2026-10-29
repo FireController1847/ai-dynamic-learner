@@ -1,0 +1,50 @@
+.sig-create-choice { display: grid; align-content: start; gap: 22px; width: min(860px, 100%); margin: auto; padding: clamp(20px, 4vw, 42px); }
+.sig-create-heading { display: grid; gap: 12px; }
+.sig-create-heading > .quiet-button { justify-self: start; display: inline-flex; align-items: center; gap: 8px; }
+.sig-create-heading h2, .sig-create-name h2 { margin: 0; font-size: clamp(22px, 3vw, 28px); }
+.sig-create-heading p, .sig-create-name > p { margin: 0; color: var(--text-secondary); line-height: 1.55; }
+.sig-create-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.sig-create-option { display: grid; align-content: start; justify-items: start; gap: 12px; min-height: 230px; padding: 22px; border: 1px solid var(--control-border); border-radius: var(--radius-dialog); background: var(--page-background); color: var(--text-color); font: inherit; text-align: left; cursor: pointer; transition: border-color 180ms ease, background-color 180ms ease; }
+.sig-create-option:hover { border-color: var(--brand); background: var(--surface-hover); }
+.sig-create-option:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
+.sig-create-option-icon { display: grid; place-items: center; width: 46px; height: 46px; background: var(--brand-tint); color: var(--brand-text); border-radius: 12px; }
+.sig-create-option-icon .ui-icon { width: 24px; height: 24px; }
+.sig-create-option strong { font-size: 19px; }
+.sig-create-option > span:not(.sig-create-option-icon) { line-height: 1.5; }
+.sig-create-option small { color: var(--text-secondary); line-height: 1.5; }
+.sig-create-name { width: min(520px, 100%); gap: 20px; }
+.sig-create-name > .quiet-button { justify-self: start; display: inline-flex; align-items: center; gap: 8px; }
+.sig-create-name-field { display: grid; gap: 8px; font-size: 13px; font-weight: 600; }
+.sig-create-name-field input { box-sizing: border-box; width: 100%; min-height: 44px; padding: 10px 12px; font: inherit; font-weight: 400; color: var(--text-color); border: 1px solid var(--control-border); border-radius: 8px; background: var(--page-background); }
+.sig-create-name > .card-primary-button { justify-self: start; min-height: 44px; }
+.sig-immediate { display: grid; align-content: start; gap: 24px; width: min(900px, 100%); margin: auto; padding: clamp(18px, 3vw, 36px); animation: sig-immediate-enter 220ms ease-out both; }
+.sig-immediate-heading { display: grid; justify-items: start; gap: 10px; }
+.sig-immediate-symbol { display: grid; place-items: center; width: 45px; height: 45px; border-radius: 12px; background: var(--brand-tint); color: var(--brand-text); }
+.sig-immediate-symbol .ui-icon { width: 25px; height: 25px; }
+.sig-immediate-heading h3 { margin: 0; font-size: clamp(23px, 3vw, 29px); }
+.sig-immediate-heading p { margin: 0; color: var(--text-secondary); line-height: 1.6; max-width: 62ch; }
+.sig-immediate-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.sig-immediate-field { display: grid; align-content: start; gap: 9px; min-width: 0; padding: 18px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--page-background); }
+.sig-immediate-fires { grid-column: 1; grid-row: 1; }
+.sig-immediate-passive-fun { grid-column: 2; grid-row: 2; }
+.sig-immediate-shoulds-oughts { grid-column: 1; grid-row: 2; }
+.sig-immediate-stimulated-fun { grid-column: 2; grid-row: 1; }
+.sig-immediate-field-title { display: inline-flex; align-items: center; gap: 9px; }
+.sig-immediate-field-title > .ui-icon { width: 20px; height: 20px; color: var(--text-secondary); }
+.sig-immediate-description { font-size: 12px; line-height: 1.5; color: var(--text-secondary); min-height: 36px; }
+.sig-immediate-field textarea { box-sizing: border-box; width: 100%; min-height: 72px; padding: 10px 12px; resize: vertical; border: 1px solid var(--control-border); border-radius: 8px; background: var(--surface-workspace); color: var(--text-color); font: inherit; line-height: 1.45; }
+.sig-immediate-field textarea:focus-visible, .sig-create-name-field input:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.sig-immediate-actions { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+.sig-immediate-actions p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--text-secondary); }
+.sig-immediate-actions .card-primary-button { min-height: 46px; display: inline-flex; align-items: center; gap: 8px; }
+.sig-immediate-actions .card-primary-button .ui-icon { width: 18px; height: 18px; }
+.sig-immediate-actions .card-primary-button:disabled { opacity: .5; cursor: default; }
+@keyframes sig-immediate-enter { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: none; } }
+@container solve-it-grid (max-width: 660px) {
+  .sig-create-options, .sig-immediate-fields { grid-template-columns: 1fr; }
+  .sig-immediate-field { grid-column: auto; grid-row: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sig-create-option { transition: none; }
+  .sig-immediate { animation: none; }
+}

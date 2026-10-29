@@ -1,6 +1,7 @@
 import { defineComponent, h, ref, Transition, type PropType } from 'vue';
 import { Icon } from '../../components/icon.ts';
 import { CHECK_IN_MINUTES, type ActiveCheckIn, type CheckInMode } from './library-model.ts';
+import { MAX_RESUME_NOTE_LENGTH } from './task-model.ts';
 import { previewCheckInNotification } from './check-in-notifications.ts';
 
 export const TaskCheckIn = defineComponent({
@@ -11,6 +12,7 @@ export const TaskCheckIn = defineComponent({
     focus: { type: Object as PropType<ActiveCheckIn | null>, default: null },
     now: { type: Number, required: true },
     completed: { type: Boolean, default: false },
+    resumeNote: { type: String, default: '' },
   },
   emits: {
     back: () => true,
@@ -18,6 +20,7 @@ export const TaskCheckIn = defineComponent({
     continue: () => true,
     moveOn: () => true,
     done: () => true,
+    noteChange: (_text: string) => true,
   },
   setup(props, { emit }) {
     const mode = ref<CheckInMode>('both');
@@ -55,6 +58,33 @@ export const TaskCheckIn = defineComponent({
       }, [
         h(Icon, { name: 'check' }),
         h('span', 'I’m finished'),
+      ]);
+    }
+    function reflection(count: number) {
+      if (count === 0) return null;
+      const more = count >= 2;
+      return h('div', { class: 'sig-work-reflection', role: 'status' }, [
+        h('span', { class: 'sig-work-reflection-count' },
+          `Kept going ${count} ${count === 1 ? 'time' : 'times'}`),
+        h('p', more
+          ? 'You’ve chosen to keep going a few times. What feels important about continuing right now?'
+          : 'You’ve chosen to keep going. What would you like more time for?'),
+        h('p', 'This unfinished item WILL remain available to resume later. Switching activities won’t mark it complete.'),
+        h('p', 'A quick note about where you stopped can make picking it up again easier.'),
+      ]);
+    }
+    function resumeNoteField() {
+      return h('div', { class: 'sig-work-resume-note' }, [
+        h('label', { for: 'sig-resume-note' }, 'Where I left off (optional)'),
+        h('textarea', {
+          id: 'sig-resume-note', rows: 2, maxlength: MAX_RESUME_NOTE_LENGTH,
+          value: props.resumeNote,
+          placeholder: 'A thought, next move, or anything worth remembering…',
+          onInput: (event: Event) => {
+            if (event.target instanceof HTMLTextAreaElement) emit('noteChange', event.target.value);
+          },
+        }),
+        h('small', 'Saved with this item in this browser, so it’s here when you return. Save any work in other apps separately.'),
       ]);
     }
     const modes: { id: CheckInMode; label: string; detail: string }[] = [
@@ -121,6 +151,7 @@ export const TaskCheckIn = defineComponent({
             h(Icon, { name: 'heart' }),
             h('h4', 'How are you feeling about what you are doing?'),
             h('p', 'You have spent some time here. Nothing has to be finished now.'),
+            !previewing && focus ? reflection(focus.keepGoingCount ?? 0) : null,
             h('div', { class: 'sig-work-choices' }, [
               h('button', { type: 'button', class: 'sig-work-option',
                 onClick: () => { if (previewing) closePreview(); else emit('continue'); } },
@@ -137,6 +168,7 @@ export const TaskCheckIn = defineComponent({
               ? 'We will gently check in after an hour.'
               : `We will gently check in after ${focus?.minutes ?? minutes.value} minutes.`),
             h('small', 'There is no deadline to finish.'),
+            focus ? reflection(focus.keepGoingCount ?? 0) : null,
             h('div', { class: 'sig-work-actions' }, [
               doneButton(),
               h('button', { type: 'button', class: 'quiet-button sig-work-switch-button',
@@ -145,6 +177,7 @@ export const TaskCheckIn = defineComponent({
             ]),
           ]),
           }),
+          !previewing && (focus || props.resumeNote) ? resumeNoteField() : null,
           h('p', { class: 'sig-work-footnote' }, 'You can move on without finishing. This item will remain available later.'),
         ]),
       ]);

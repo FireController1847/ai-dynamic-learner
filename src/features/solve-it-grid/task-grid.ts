@@ -1,10 +1,12 @@
 import { computed, defineComponent, h, nextTick, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref, watch, type PropType } from 'vue';
 import { Icon } from '../../components/icon.ts';
+import { createId } from '../../core/ids.ts';
 import { PopupDialog } from '../../components/popup-dialog.ts';
 import { GridConstruction } from './grid-construction.ts';
 import { TaskCheckIn } from './task-check-in.ts';
 import { MAX_ROUND_HISTORY, type TaskSet, type CheckInMode } from './library-model.ts';
-import { createRound, markCompleted, nextCategory, remainingCount, roundTask, slotState, TASK_CATEGORIES, taskAvailable, taskCount, undoCompleted, categoryValues, type TaskCategory, type GridRound } from './task-model.ts';
+import { ImmediateSetup } from './immediate-setup.ts';
+import { createRound, createImmediateRound, immediateLists, markCompleted, nextCategory, remainingCount, roundTask, slotState, TASK_CATEGORIES, taskAvailable, taskCount, undoCompleted, categoryValues, MAX_RESUME_NOTE_LENGTH, type TaskCategory, type GridRound } from './task-model.ts';
 
 type Phase = 'ready' | 'celebrating' | 'turning' | 'constructing' | 'revealing' | 'complete';
 const ROUND_HOLD_MS = 650;
@@ -17,8 +19,11 @@ export const TaskGrid = defineComponent({
   props: { item: { type: Object as PropType<TaskSet>, required: true } },
   emits: { edit: () => true },
   setup(props, { emit }) {
-    const lists = computed(() => props.item.lists!);
-    if (!props.item.round) props.item.round = createRound(lists.value);
+    const immediate = props.item.mode === 'immediate';
+    const lists = computed(() => immediate
+      ? immediateLists([...(props.item.history ?? []), ...(props.item.round ? [props.item.round] : [])])
+      : props.item.lists!);
+    if (!props.item.round) props.item.round = immediate ? createImmediateRound() : createRound(lists.value);
     const round = computed(() => props.item.round!);
     const history = computed(() => props.item.history ?? []);
     const viewing = ref<number | null>(null);
@@ -33,8 +38,8 @@ export const TaskGrid = defineComponent({
     const shownCurrent = computed(() => nextCategory(lists.value, shownRound.value));
     const shownLatestDone = computed(() => [...TASK_CATEGORIES].reverse()
       .find(category => slotState(lists.value, shownRound.value, category.id) === 'done')?.id ?? null);
-    const current = computed(() => nextCategory(lists.value, round.value));
-    const remaining = computed(() => remainingCount(lists.value));
+    const current = computed(() => immediate && !round.value.started ? null : nextCategory(lists.value, round.value));
+    const remaining = computed(() => immediate ? 1 : remainingCount(lists.value));
     const latestDone = computed(() => [...TASK_CATEGORIES].reverse()
       .find(category => slotState(lists.value, round.value, category.id) === 'done')?.id ?? null);
     const total = computed(() => taskCount(lists.value));
@@ -95,12 +100,18 @@ export const TaskGrid = defineComponent({
       else if (active && phase.value === 'complete') finishHeading.value?.focus();
     }
     function snapshot(value: GridRound): GridRound {
-      return { number: value.number, slots: categoryValues(category => ({ ...value.slots[category.id] })) };
+      return { number: value.number, slots: categoryValues(category => ({ ...value.slots[category.id] })),
+        ...(value.started ? { started: true as const } : {}) };
     }
     function showNewItems() {
       if (!active || phase.value !== 'constructing') return;
       // The mosaic also plays after a final completion with no tasks left.
       // Finish cleanly rather than attempting to reveal an empty round.
+      if (immediate && !round.value.started) {
+        phase.value = 'ready';
+        announcement.value = 'Choose one activity for each part of your grid.';
+        return;
+      }
       if (!current.value && !remaining.value) {
         phase.value = 'complete';
         announcement.value = 'Your grid is clear.';
@@ -117,7 +128,9 @@ export const TaskGrid = defineComponent({
       clearCheck();
       const previous = snapshot(round.value);
       props.item.history = [...history.value, previous].slice(-MAX_ROUND_HISTORY);
-      props.item.round = createRound(lists.value, Math.min(Number.MAX_SAFE_INTEGER, previous.number + 1));
+      props.item.round = immediate
+        ? createImmediateRound(Math.min(Number.MAX_SAFE_INTEGER, previous.number + 1))
+        : createRound(lists.value, Math.min(Number.MAX_SAFE_INTEGER, previous.number + 1));
       if (reduced.matches) {
         phase.value = 'ready';
         announceCurrent();
@@ -157,17 +170,17 @@ export const TaskGrid = defineComponent({
       if (!current.value && !remaining.value) phase.value = 'complete';
       else {
         phase.value = 'ready';
-        if (!current.value) cycle();
+        if (!current.value && (!immediate || round.value.started)) cycle();
         else {
           announceCurrent();
         }
       }
     }
     watch(() => props.item.round, value => {
-      if (!value && props.item.lists) {
+      if (!value && (props.item.lists || immediate)) {
         clearTimer(); clearCheck(); viewing.value = null;
         working.value = null; delete props.item.checkIn;
-        props.item.round = createRound(props.item.lists);
+        props.item.round = immediate ? createImmediateRound() : createRound(lists.value);
         phase.value = 'ready';
         if (active) announceCurrent();
       }
@@ -305,6 +318,18 @@ export const TaskGrid = defineComponent({
       working.value = category;
       announcement.value = `Work on: ${roundTask(lists.value, round.value, category)?.text ?? ''}`;
     }
+    function startImmediate() {
+      if (!immediate || round.value.started || viewing.value !== null || phase.value !== 'ready') return;
+      if (TASK_CATEGORIES.some(category => !round.value.slots[category.id].text?.trim())) return;
+      for (const category of TASK_CATEGORIES) {
+        const slot = round.value.slots[category.id];
+        slot.text = slot.text!.trim();
+        slot.taskId = createId();
+      }
+      round.value.started = true;
+      announceCurrent();
+      void focusCurrent();
+    }
     function startWorking(mode: CheckInMode, minutes: number) {
       const category = working.value;
       if (!category || viewing.value !== null || phase.value !== 'ready') return;
@@ -320,11 +345,25 @@ export const TaskGrid = defineComponent({
       const state = activeCheckIn.value;
       if (!state) return;
       const time = Date.now();
-      const renewed = { ...state, remindAt: time + state.minutes * 60000 };
+      const renewed = { ...state,
+        keepGoingCount: Math.min((state.keepGoingCount ?? 0) + 1, 1000000),
+        remindAt: time + state.minutes * 60000 };
       delete renewed.notifiedAt;
       props.item.checkIn = renewed;
       now.value = time;
       announcement.value = 'We will check in with you again later.';
+    }
+    function saveResumeNote(value: string) {
+      const category = working.value;
+      if (!category || viewing.value !== null || phase.value !== 'ready') return;
+      const task = roundTask(lists.value, round.value, category);
+      if (!task || slotState(lists.value, round.value, category) !== 'ready') return;
+      const note = value.slice(0, MAX_RESUME_NOTE_LENGTH);
+      if (immediate) {
+        if (note) round.value.slots[category].resumeNote = note;
+        else delete round.value.slots[category].resumeNote;
+      } else if (note) task.resumeNote = note;
+      else delete task.resumeNote;
     }
     function moveOn() {
       const category = working.value;
@@ -378,20 +417,25 @@ export const TaskGrid = defineComponent({
     function reset() {
       stopWorkFinish(); delete props.item.checkIn; working.value = null;
       clearTimer(); clearCheck(); clearFlash();
-      for (const category of TASK_CATEGORIES) for (const task of lists.value[category.id]) {
+      if (!immediate) for (const category of TASK_CATEGORIES) for (const task of lists.value[category.id]) {
         delete task.completed; delete task.timesCompleted;
       }
-      props.item.round = createRound(lists.value);
+      props.item.round = immediate ? createImmediateRound() : createRound(lists.value);
       delete props.item.history;
       viewing.value = null;
       phase.value = 'ready'; resetOpen.value = false; announceCurrent(); void focusCurrent();
     }
     return () => h('div', { class: 'sig-play' }, [
-      working.value !== null && viewing.value === null && phase.value === 'ready'
+      immediate && !round.value.started && viewing.value === null && phase.value === 'ready'
+        ? h(ImmediateSetup, { round: round.value, onStart: startImmediate })
+        : working.value !== null && viewing.value === null && phase.value === 'ready'
         ? h(TaskCheckIn, {
           key: `${round.value.number}-${working.value}`,
           categoryLabel: TASK_CATEGORIES.find(category => category.id === working.value)?.label ?? '',
           taskText: roundTask(lists.value, round.value, working.value)?.text ?? '',
+          resumeNote: immediate ? (round.value.slots[working.value].resumeNote ?? '')
+            : (roundTask(lists.value, round.value, working.value)?.resumeNote ?? ''),
+          onNoteChange: saveResumeNote,
           focus: activeCheckIn.value, now: now.value,
           completed: workFinishing.value,
           onBack: returnToGrid, onStart: startWorking,
@@ -465,7 +509,7 @@ export const TaskGrid = defineComponent({
        working.value === null && phase.value === 'complete' ? h('section', { class: 'sig-completion' }, [
         h('h3', { ref: finishHeading, tabindex: -1 }, total.value ? 'Clear for now.' : 'Your lists are empty.'),
         h('div', { class: 'sig-play-actions' }, [
-          h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('edit') }, 'Edit lists'),
+          !immediate ? h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('edit') }, 'Edit lists') : null,
           total.value ? h('button', { type: 'button', class: 'quiet-button', onClick: () => { resetOpen.value = true; } }, 'Start again') : null,
         ]),
       ]) : working.value === null && phase.value === 'ready' && viewing.value === null && !current.value && remaining.value ? h('div', { class: 'sig-play-actions' }, [

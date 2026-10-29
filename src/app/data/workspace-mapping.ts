@@ -49,11 +49,13 @@ export function workspaceRows(workspaceId: string, workspace: Workspace): DataRo
         library(app, item.children as Record<string, unknown>[], id);
         return;
       }
-      if (app === 'solve-it-grid' && Object.hasOwn(item, 'lists')) {
+      if (app === 'solve-it-grid' && (Object.hasOwn(item, 'lists') || item.mode === 'immediate')) {
         scoped('solveItTaskSets', [workspaceId, id], { id, configured: true,
+          ...(item.mode === 'immediate' ? { mode: 'immediate' } : {}),
           ...(Object.hasOwn(item, 'round') ? { round: copy(item.round) } : {}),
            ...(Object.hasOwn(item, 'history') ? { history: copy(item.history) } : {}),
            ...(Object.hasOwn(item, 'checkIn') ? { checkIn: copy(item.checkIn) } : {}) });
+        if (item.mode !== 'immediate') {
         const lists = item.lists as Record<string, Record<string, unknown>[]>;
         for (const category of TASK_CATEGORIES) {
           const tasks = lists[category.id]!;
@@ -63,6 +65,7 @@ export function workspaceRows(workspaceId: string, workspace: Workspace): DataRo
           tasks.forEach((task, taskPosition) => scoped('solveItTasks', [workspaceId, id, String(task.id)], {
             setId: id, category: category.id, ...copy(task), position: taskPosition,
           }));
+        }
         }
       } else if (app === 'notebook') {
         scoped('notebookDocuments', [workspaceId, id], {
@@ -232,7 +235,8 @@ export async function hydrateWorkspace(store: Pick<IndexedDataStore, 'all'> & Pa
         const body = value<Stored>(solveItSets, id);
         if (body) {
           if (body.configured !== true) throw new Error('A saved task set configuration is invalid.');
-          item.lists = Object.fromEntries(TASK_CATEGORIES.map(category => [category.id,
+          if (body.mode === 'immediate') item.mode = 'immediate';
+          else item.lists = Object.fromEntries(TASK_CATEGORIES.map(category => [category.id,
             getRows('solveItTasks').filter(task => task.setId === id && task.category === category.id)
               .sort(ordering).map(task => unwrap(task, ['setId', 'category', 'position'])),
           ]));
@@ -386,6 +390,7 @@ export async function hydrateWorkspace(store: Pick<IndexedDataStore, 'all'> & Pa
       getRows('reviewQuestions').filter(q => q.setId === row.id).sort(ordering).map(q => q.id!));
   }
   for (const row of getRows('solveItTaskSets')) {
+    if (row.mode === 'immediate') continue;
     for (const category of TASK_CATEGORIES) recordOrder('solve-it-grid:tasks', row.id! + '/' + category.id,
       getRows('solveItTasks').filter(task => task.setId === row.id && task.category === category.id).sort(ordering).map(task => task.id!));
   }

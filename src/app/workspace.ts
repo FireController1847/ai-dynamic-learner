@@ -3,6 +3,7 @@ import { emptyWorkspace, parseWorkspace, validateWorkspaceValue, MAX_BACKUP_BYTE
 import { downloadText } from '../core/file-download.ts';
 import { useBackupReminders } from './backup-reminders.ts';
 import { WorkspaceDataApi } from './data/data-api.ts';
+import type { WorkspaceCompatibility } from './data/workspace-compatibility.ts';
 import { observeWorkspace } from './data/workspace-observer.ts';
 import { applyWorkspaceSnapshot } from './data/workspace-live-merge.ts';
 import { subscribeStudySessions } from '../core/study-activity.ts';
@@ -26,6 +27,7 @@ function errorMessage(error: unknown): string {
 export function useWorkspace() {
   const state = ref<Workspace>(emptyWorkspace());
   const ready = ref(false);
+  const compatibility = ref<WorkspaceCompatibility | null>(null);
   const storageProblem = ref('');
   const needsReconcile = ref(false);
   const revision = ref(0);
@@ -61,7 +63,8 @@ export function useWorkspace() {
   };
 
   async function startObserver(records: Awaited<ReturnType<WorkspaceDataApi['initialSnapshot']>>['records']) {
-    observer = await observeWorkspace(state, api, savingProblem, updateBackup, records);
+    observer = compatibility.value?.readOnly ? null
+      : await observeWorkspace(state, api, savingProblem, updateBackup, records);
   }
 
   async function syncOtherTabs() {
@@ -134,6 +137,7 @@ export function useWorkspace() {
       lastSequence = snapshot.revisions.commitSequence;
       remotePending = false;
       needsReconcile.value = false;
+      compatibility.value = snapshot.compatibility;
       await startObserver(snapshot.records);
       backup.workspaceChanged(api.workspaceIdentity(), snapshot.revisions.authoredRevision, populated(snapshot.workspace));
       storageProblem.value = '';
@@ -174,6 +178,7 @@ export function useWorkspace() {
       const snapshot = await api.initialSnapshot();
       state.value = snapshot.workspace;
       lastSequence = snapshot.revisions.commitSequence;
+      compatibility.value = snapshot.compatibility;
       await startObserver(snapshot.records);
       if (disposed) return;
       let legacyPresent = false;
@@ -196,6 +201,9 @@ export function useWorkspace() {
   }
 
   async function replaceWorkspace(value: unknown): Promise<void> {
+    if (compatibility.value?.mode !== 'normal' && compatibility.value !== null) {
+      throw new Error('Restoring a partial workspace would hide unsupported content. Use a compatible build first.');
+    }
     if (!ready.value && !storageProblem.value) throw new Error('The workspace is still loading.');
     const replacement = validateWorkspaceValue(value);
     ready.value = false; // Unmount editors before asynchronous staging begins.
@@ -209,6 +217,7 @@ export function useWorkspace() {
       state.value = snapshot.workspace;
       revision.value += 1;
       lastSequence = snapshot.revisions.commitSequence;
+      compatibility.value = snapshot.compatibility;
       await startObserver(snapshot.records);
       backup.workspaceRestored(api.workspaceIdentity(), snapshot.revisions.authoredRevision, populated(snapshot.workspace));
       storageProblem.value = '';
@@ -230,6 +239,9 @@ export function useWorkspace() {
    * repopulate the new workspace. UI preferences are left alone.
    */
   async function clearWorkspace(): Promise<void> {
+    if (compatibility.value?.mode !== 'normal' && compatibility.value !== null) {
+      throw new Error('Clearing data is disabled while this build cannot interpret the complete workspace.');
+    }
     if (disposed || (!ready.value && !storageProblem.value)) {
       throw new Error('The workspace is not available for clearing yet.');
     }
@@ -247,6 +259,7 @@ export function useWorkspace() {
       lastSequence = snapshot.revisions.commitSequence;
       remotePending = false;
       needsReconcile.value = false;
+      compatibility.value = snapshot.compatibility;
       await startObserver(snapshot.records);
       backup.workspaceCleared(api.workspaceIdentity());
       storageProblem.value = '';
@@ -305,6 +318,7 @@ export function useWorkspace() {
       revision.value++;
       lastSequence = snapshot.revisions.commitSequence;
       remotePending = false;
+      compatibility.value = snapshot.compatibility;
       await startObserver(snapshot.records);
       backup.workspaceChanged(api.workspaceIdentity(), snapshot.revisions.authoredRevision, populated(snapshot.workspace));
       storageProblem.value = '';
@@ -319,7 +333,19 @@ export function useWorkspace() {
     }
   }
 
+  async function downloadRawRescue(): Promise<void> {
+    const filename = `dynamic-learner-INDEXEDDB-RESCUE-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+    const json = await api.exportRawRescue();
+    await downloadText(filename, json, 'application/json', { deferPaint: false });
+  }
+
   async function downloadBackup(): Promise<void> {
+    // A portable v1 backup contains only supported features. Never pretend
+    // this is a full backup when unknown records have been preserved in IDB.
+    if (compatibility.value && compatibility.value.mode !== 'normal') {
+      await downloadRawRescue();
+      return;
+    }
     const filename = `dynamic-learner-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
     if (!ready.value && needsReconcile.value) {
       await downloadLocalDraft();
@@ -402,6 +428,7 @@ export function useWorkspace() {
     window.removeEventListener('pagehide', flushOnHide);
   });
 
-  return { state, ready, revision, storageProblem, needsReconcile,
-    readBackup, replaceWorkspace, clearWorkspace, downloadBackup, downloadLocalDraft, reloadSavedWorkspace, backup };
+  return { state, ready, revision, compatibility, storageProblem, needsReconcile,
+    readBackup, replaceWorkspace, clearWorkspace, downloadBackup, downloadRawRescue,
+    downloadLocalDraft, reloadSavedWorkspace, backup };
 }

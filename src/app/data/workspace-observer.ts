@@ -3,6 +3,7 @@ import type { Workspace } from '../workspace-format.ts';
 import { workspaceRows } from './workspace-mapping.ts';
 import { WorkspaceDataApi } from './data-api.ts';
 import { TASK_CATEGORIES } from '../../features/solve-it-grid/task-model.ts';
+import { rowIsUnknown } from './workspace-compatibility.ts';
 import type { DataOperation, DataStoreName, IndexedRow } from '../../core/data/indexeddb.ts';
 
 type Plain = Record<string, unknown>;
@@ -114,6 +115,10 @@ export async function observeWorkspace(
     if (removeMissing) {
       for (const [id, previous] of known) {
         if (desired.has(id) || (removedStores && !removedStores.has(previous.store))) continue;
+        // A prior build may have written a feature/collection/statistics scope
+        // this build does not understand. Absence in our Vue projection is
+        // never permission to delete those records.
+        if (rowIsUnknown(previous.store, asObject(JSON.parse(previous.serialized)))) continue;
         const op: DataOperation = { store: previous.store, type: 'delete', key: previous.key,
           expectedRevision: previous.revision };
         operations.push(op);
@@ -218,14 +223,16 @@ export async function observeWorkspace(
           library(app, item.children as Plain[], id);
           return;
         }
-        if (app === 'solve-it-grid' && Object.hasOwn(item, 'lists')) {
+        if (app === 'solve-it-grid' && (Object.hasOwn(item, 'lists') || item.mode === 'immediate')) {
           signature.push('solve-it-grid:' + id + ':configured');
           attach('solveItTaskSets', [workspaceId, id], item,
-            () => [item.round, item.history, item.checkIn],
+            () => [item.mode, item.round, item.history, item.checkIn],
             () => put('solveItTaskSets', [workspaceId, id], { id, configured: true,
+              ...(item.mode === 'immediate' ? { mode: 'immediate' } : {}),
               ...(Object.hasOwn(item, 'round') ? { round: item.round } : {}),
               ...(Object.hasOwn(item, 'history') ? { history: item.history } : {}),
               ...(Object.hasOwn(item, 'checkIn') ? { checkIn: item.checkIn } : {}) }), true, seen);
+          if (item.mode !== 'immediate') {
           const lists = asObject(item.lists);
           for (const category of TASK_CATEGORIES) {
             const tasks = lists[category.id] as Plain[];
@@ -235,6 +242,7 @@ export async function observeWorkspace(
               attach('solveItTasks', [workspaceId, id, taskId], task, () => task,
                 () => put('solveItTasks', [workspaceId, id, taskId], { setId: id, category: category.id, ...task, position: index }), true, seen);
             });
+          }
           }
         } else if (app === 'notebook') {
           attach('notebookDocuments', [workspaceId, id], item,

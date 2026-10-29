@@ -247,6 +247,16 @@ const App = defineComponent({
         catalog: tipsCatalog,
         storageKey: 'dynamic-learner.tips.v1',
       }) : null,
+      workspace.compatibility.value && workspace.compatibility.value.mode !== 'normal'
+        ? h('aside', { class: 'workspace-storage-warning', role: 'status',
+          'aria-label': 'Workspace compatibility' }, [
+          h('strong', workspace.compatibility.value.readOnly
+            ? 'Workspace recovery — read-only' : 'Compatibility mode — newer data preserved'),
+          ...workspace.compatibility.value.issues.map(issue => h('p', issue)),
+          h('p', workspace.compatibility.value.readOnly
+            ? 'Use a compatible build to edit this workspace. You can download a full raw rescue from Workspace.'
+            : 'Supported apps remain editable. Unsupported records are protected. Download a raw rescue before restoring or clearing data.'),
+        ]) : null,
       workspace.storageProblem.value ? h('p', {
         class: 'workspace-storage-warning', role: 'alert',
       }, workspace.storageProblem.value) : null,
@@ -296,6 +306,7 @@ const App = defineComponent({
             'app-content--workspace': ['notebook', 'todo-list', 'solve-it-grid', 'index-cards', 'word-search', 'crossword', 'guide', 'knowledge-check', 'anatomy'].includes(activeFeature.value?.id ?? ''),
           }],
           tabindex: -1,
+          inert: workspace.compatibility.value?.readOnly ?? false,
           'aria-busy': !workspace.ready.value && !workspace.storageProblem.value,
         }, [
           !workspace.ready.value

@@ -9,13 +9,52 @@ export const TASK_CATEGORIES = [
 ] as const;
 export type TaskCategory = typeof TASK_CATEGORIES[number]['id'];
 export type CategoryValues<T> = Record<TaskCategory, T>;
-export interface GridTask { id: string; text: string; completed?: true; repeat?: number; timesCompleted?: number }
+export interface GridTask { id: string; text: string; completed?: true; repeat?: number; timesCompleted?: number; resumeNote?: string }
 /** A positive repeat count is the number of extra completions after the first. -1 means unlimited. */
 export const REPEAT_OPTIONS = [-1, 1, 2, 3, 4, 5, 7, 10, 15, 20, 25, 50, 100] as const;
 export type TaskLists = CategoryValues<GridTask[]>;
-export interface RoundSlot { taskId: string | null; skipped?: true; completed?: true }
-export interface GridRound { number: number; slots: CategoryValues<RoundSlot> }
+export interface RoundSlot { taskId: string | null; skipped?: true; completed?: true; text?: string; resumeNote?: string }
+export interface GridRound { number: number; slots: CategoryValues<RoundSlot>; started?: true }
+/** Immediate-mode items live only in the current draw and its history, never in saved lists. */
+export function createImmediateRound(number = 1): GridRound {
+  return { number, slots: categoryValues(() => ({ taskId: null, text: '' })) };
+}
+export function immediateReady(round: GridRound): boolean {
+  return round.started === true;
+}
+export function immediateLists(rounds: readonly GridRound[]): TaskLists {
+  return categoryValues(category => rounds.flatMap(round => {
+    const slot = round.slots[category.id];
+    return slot.taskId && slot.text ? [{ id: slot.taskId, text: slot.text, ...(slot.resumeNote ? { resumeNote: slot.resumeNote } : {}) }] : [];
+  }));
+}
+export function validateImmediateRound(value: unknown): asserts value is GridRound {
+  if (!isRecord(value) || Object.keys(value).some(key => !['number', 'slots', 'started'].includes(key)) ||
+      typeof value.number !== 'number' || !Number.isSafeInteger(value.number) || value.number < 1 ||
+      (Object.hasOwn(value, 'started') && value.started !== true) ||
+      !isRecord(value.slots) || Object.keys(value.slots).length !== TASK_CATEGORIES.length ||
+      Object.keys(value.slots).some(key => !TASK_CATEGORIES.some(category => category.id === key))) {
+    throw new Error('An immediate grid has invalid saved data.');
+  }
+  const started = value.started === true;
+  const ids = new Set<string>();
+  for (const category of TASK_CATEGORIES) {
+    const slot = value.slots[category.id];
+    if (!isRecord(slot) || Object.keys(slot).some(key => !['taskId', 'text', 'skipped', 'completed', 'resumeNote'].includes(key)) ||
+        (typeof slot.text !== 'string' || slot.text.length > MAX_TASK_TEXT_LENGTH) ||
+        (Object.hasOwn(slot, 'resumeNote') && (typeof slot.resumeNote !== 'string' || slot.resumeNote.length > MAX_RESUME_NOTE_LENGTH)) ||
+        (started ? (!isValidId(slot.taskId) || ids.has(slot.taskId as string) || !slot.text.trim()) : slot.taskId !== null) ||
+        (!started && (Object.hasOwn(slot, 'skipped') || Object.hasOwn(slot, 'completed') || Object.hasOwn(slot, 'resumeNote'))) ||
+        (Object.hasOwn(slot, 'skipped') && (slot.skipped !== true || Object.hasOwn(slot, 'completed'))) ||
+        (Object.hasOwn(slot, 'completed') && slot.completed !== true)) {
+      throw new Error('An immediate grid item is invalid.');
+    }
+    if (started) ids.add(slot.taskId as string);
+  }
+}
+
 export const MAX_TASK_TEXT_LENGTH = 10000;
+export const MAX_RESUME_NOTE_LENGTH = 1200;
 
 export function categoryValues<T>(create: (category: typeof TASK_CATEGORIES[number]) => T): CategoryValues<T> {
   return Object.fromEntries(TASK_CATEGORIES.map(category => [category.id, create(category)])) as CategoryValues<T>;
@@ -82,9 +121,11 @@ export function validateTaskLists(value: unknown): asserts value is TaskLists {
     const tasks = value[category.id];
     if (!Array.isArray(tasks)) throw new Error('Each task list must be an array.');
     for (const task of tasks) {
-      if (!isRecord(task) || Object.keys(task).some(key => !['id', 'text', 'completed', 'repeat', 'timesCompleted'].includes(key)) ||
+      if (!isRecord(task) || Object.keys(task).some(key => !['id', 'text', 'completed', 'repeat', 'timesCompleted', 'resumeNote'].includes(key)) ||
           !isValidId(task.id) || ids.has(task.id) || typeof task.text !== 'string' || !task.text.trim() ||
-          task.text.length > MAX_TASK_TEXT_LENGTH || (Object.hasOwn(task, 'completed') && task.completed !== true) ||
+          task.text.length > MAX_TASK_TEXT_LENGTH ||
+          (Object.hasOwn(task, 'resumeNote') && (typeof task.resumeNote !== 'string' || task.resumeNote.length > MAX_RESUME_NOTE_LENGTH)) ||
+          (Object.hasOwn(task, 'completed') && task.completed !== true) ||
           (Object.hasOwn(task, 'repeat') && !REPEAT_OPTIONS.some(option => option === task.repeat)) ||
           (Object.hasOwn(task, 'timesCompleted') && (typeof task.timesCompleted !== 'number' ||
             !Number.isSafeInteger(task.timesCompleted) || task.timesCompleted < 1 || !Object.hasOwn(task, 'repeat') ||

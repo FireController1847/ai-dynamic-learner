@@ -8,7 +8,7 @@ import { PopupDialog } from '../../components/popup-dialog.ts';
 import { useLibrarySelection } from '../../components/use-library-selection.ts';
 import { usePersistedPanelResize } from '../../components/use-persisted-panel-resize.ts';
 import { defaultLibrarySettings, isArchived, orderedDatedItems } from '../../core/dated-library.ts';
-import { createTaskSet, MAX_NAME_LENGTH, MAX_TASK_SETS, type SolveItGridModel } from './library-model.ts';
+import { createImmediateTaskSet, createTaskSet, MAX_NAME_LENGTH, MAX_TASK_SETS, type SolveItGridModel } from './library-model.ts';
 import { TaskSetBuilder, type TaskSetBuilderHandle, type TaskSetDraft } from './task-set-builder.ts';
 import { TaskGrid } from './task-grid.ts';
 import { canAskForCheckInNotifications, requestCheckInNotifications } from './check-in-notifications.ts';
@@ -40,7 +40,8 @@ export const SolveItGrid = defineComponent({
     const notificationsOpen = ref(false);
     const notificationsBusy = ref(false);
     const message = ref('');
-    const builderMode = ref<'new' | 'edit' | null>(null);
+    const builderMode = ref<'choose' | 'new' | 'immediate' | 'edit' | null>(null);
+    const immediateName = ref('');
     const builderSequence = ref(0);
     const builder = ref<TaskSetBuilderHandle | null>(null);
     const creationError = ref('');
@@ -106,8 +107,26 @@ export const SolveItGrid = defineComponent({
     function create() {
       if (!canLeaveBuilder()) return;
       builderSequence.value++;
-      builderMode.value = 'new'; creationError.value = ''; message.value = '';
+      builderMode.value = 'choose'; creationError.value = ''; message.value = '';
+      const date = new Date();
+      immediateName.value = `Task set for ${date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}`;
       if (overlay.value) collapsed.value = true;
+    }
+    async function createImmediate() {
+      if (!immediateName.value.trim() || immediateName.value.length > MAX_NAME_LENGTH) {
+        creationError.value = 'Give your task set a short name.'; return;
+      }
+      try {
+        const item = createImmediateTaskSet(props.model.items, immediateName.value.trim());
+        refreshClock();
+        archiveOpen.value = isArchived(item, now.value, settings.value);
+        selectedId.value = item.id;
+        builderMode.value = null;
+        creationError.value = '';
+        message.value = 'Your immediate grid is ready.';
+        await nextTick();
+        if (canAskForCheckInNotifications()) notificationsOpen.value = true;
+      } catch (error) { creationError.value = error instanceof Error ? error.message : String(error); }
     }
     function edit() {
       if (!canLeaveBuilder()) return;
@@ -154,7 +173,7 @@ export const SolveItGrid = defineComponent({
       if (!canLeaveBuilder()) return;
       builderMode.value = null;
       const item = props.model.items.find(item => item.id === id);
-      if (item?.lists && taskCount(item.lists)) pendingDelete.value = id;
+      if ((item?.lists && taskCount(item.lists)) || item?.mode === 'immediate') pendingDelete.value = id;
       else void remove(id);
     }
     function rename(id: string, name: string) {
@@ -229,7 +248,48 @@ export const SolveItGrid = defineComponent({
         h('section', {
           ref: detail, class: 'solve-it-grid-detail', 'aria-label': selected.value?.name ?? 'Task set workspace',
           inert: overlay.value && !collapsed.value,
-        }, builderMode.value ? [
+        }, builderMode.value === 'choose' ? [
+          h('section', { class: 'sig-create-choice', 'aria-label': 'Choose how to begin' }, [
+            h('header', { class: 'sig-create-heading' }, [
+              h('button', { type: 'button', class: 'quiet-button', onClick: () => { builderMode.value = null; } },
+                [h(Icon, { name: 'arrow-left' }), 'Back']),
+              h('h2', 'How would you like to begin?'),
+              h('p', 'Both paths lead to the same Solve-It Grid. Choose what feels right today.'),
+            ]),
+            h('div', { class: 'sig-create-options' }, [
+              h('button', { type: 'button', class: 'sig-create-option',
+                onClick: () => { builderMode.value = 'immediate'; creationError.value = ''; } }, [
+                  h('span', { class: 'sig-create-option-icon' }, [h(Icon, { name: 'play' })]),
+                  h('strong', 'Immediate'),
+                  h('span', 'Avoid overwhelm. You don’t need to figure everything out now—choose each task as you approach it.'),
+                  h('small', 'Four things at a time. No lists to build.'),
+                ]),
+              h('button', { type: 'button', class: 'sig-create-option',
+                onClick: () => { builderSequence.value++; builderMode.value = 'new'; creationError.value = ''; } }, [
+                  h('span', { class: 'sig-create-option-icon' }, [h(Icon, { name: 'checklist' })]),
+                  h('strong', 'List-based'),
+                  h('span', 'Ready to get things done? Bring on the challenge—let’s get everything organized now!'),
+                  h('small', 'Plan your four lists, then let the grid guide you.'),
+                ]),
+            ]),
+          ]),
+        ] : builderMode.value === 'immediate' ? [
+          h('section', { class: 'sig-create-choice sig-create-name' }, [
+            h('button', { type: 'button', class: 'quiet-button', onClick: () => { builderMode.value = 'choose'; } },
+              [h(Icon, { name: 'arrow-left' }), 'Back']),
+            h('h2', 'Give your grid a name'),
+            h('p', 'That’s all the planning you need to do for now.'),
+            h('label', { class: 'sig-create-name-field' }, [
+              h('span', 'Name'),
+              h('input', { type: 'text', maxlength: MAX_NAME_LENGTH, value: immediateName.value,
+                onInput: (event: Event) => { if (event.target instanceof HTMLInputElement) immediateName.value = event.target.value; },
+                onKeydown: (event: KeyboardEvent) => { if (event.key === 'Enter') { event.preventDefault(); void createImmediate(); } } }),
+            ]),
+            creationError.value ? h('p', { role: 'alert' }, creationError.value) : null,
+            h('button', { type: 'button', class: 'card-primary-button', onClick: () => { void createImmediate(); } },
+              'Continue'),
+          ]),
+        ] : builderMode.value ? [
           h(TaskSetBuilder, {
             key: builderMode.value === 'new' ? `new-task-set-${builderSequence.value}` : selected.value?.id,
             ref: builder, item: builderMode.value === 'edit' ? selected.value : null, error: creationError.value,
@@ -244,7 +304,8 @@ export const SolveItGrid = defineComponent({
             h(Icon, { name: 'grid' }), h('h2', selected.value.name),
             selected.value.lists ? h('button', { type: 'button', class: 'quiet-button', onClick: edit }, [h(Icon, { name: 'pencil' }), 'Edit lists']) : null,
           ]),
-          selected.value.lists ? h(TaskGrid, { key: selected.value.id, item: selected.value, onEdit: edit }) : h(LibraryEmptyState, {
+          selected.value.lists || selected.value.mode === 'immediate'
+            ? h(TaskGrid, { key: selected.value.id, item: selected.value, onEdit: edit }) : h(LibraryEmptyState, {
             icon: 'grid', title: 'Give this task set its four lists',
             description: 'Build Fires, Passive Fun, Shoulds & Oughts, and Stimulating Fun, one list at a time.',
             actionLabel: 'Set up task set', onCreate: edit,
@@ -260,7 +321,7 @@ export const SolveItGrid = defineComponent({
       h('p', { class: 'visually-hidden', role: 'status' }, message.value),
       pendingDelete.value ? h(DeleteConfirmation, {
         itemName: props.model.items.find(item => item.id === pendingDelete.value)?.name ?? 'Task set',
-        itemLabel: 'task set', detail: 'Its four lists and saved progress will be removed.', confirmLabel: 'Delete task set',
+        itemLabel: 'task set', detail: 'Its saved items and progress will be removed.', confirmLabel: 'Delete task set',
         onCancel: () => { pendingDelete.value = null; },
         onConfirm: () => { const id = pendingDelete.value; pendingDelete.value = null; if (id) void remove(id); },
       }) : null,
