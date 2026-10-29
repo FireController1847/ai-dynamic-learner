@@ -137,14 +137,18 @@ function draw(facing: Facing): AtlasShape[] {
     // Tooth crowns are non-selectable dental landmarks rather than bones.
     // The dental arch is intentionally delicate so bone labels remain clear.
     for (const x of [145, 149, 153, 157, 161, 165, 169, 173, 177]) {
-      path('maxilla', 'M' + x + ' 98 L' + x + ' 102', undefined, 'etch');
+      // Each maxilla is a paired bone: keep dental etching attached to an
+      // existing side-specific structure ID (the lines are not selectable).
+      const side: Side = x < 160 ? 'right' : 'left';
+      const localX = side === 'left' ? 320 - x : x;
+      path('maxilla', 'M' + localX + ' 98 L' + localX + ' 102', side, 'etch');
       path('mandible', 'M' + x + ' 105 L' + x + ' 108', undefined, 'etch');
     }
     path('frontal', 'M137 63 Q145 60 153 65', undefined, 'etch');
     path('frontal', 'M167 65 Q175 60 183 63', undefined, 'etch');
   } else {
     // Posterior cranial sutures are visible landmarks on the skull vault.
-    path('parietal', 'M160 25 L160 53', undefined, 'etch');
+    // The sagittal suture belongs to the paired parietals, never a\n    // nonexistent unsided `skeletal.parietal` structure.\n    path('parietal', 'M160 25 L160 53', 'right', 'etch');
     path('occipital', 'M136 55 Q148 61 160 53 Q172 61 184 55',
       undefined, 'etch');
   }

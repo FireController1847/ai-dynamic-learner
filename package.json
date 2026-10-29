@@ -6,10 +6,11 @@
   "type": "module",
   "scripts": {
     "start": "webpack serve --config webpack.config.mts --disable-interpret --mode development",
-    "build": "npm run typecheck && webpack --config webpack.config.mts --disable-interpret --mode production",
+    "build": "npm run typecheck && npm run test:anatomy && webpack --config webpack.config.mts --disable-interpret --mode production",
     "pages:prepare": "npm run build",
     "typecheck": "tsc -p tsconfig.app.json && tsc -p tsconfig.node.json",
     "test:answer-matching": "node --test packages/@dynamic-learner/answer-matching/tests/*.test.mts",
+    "test:anatomy": "node --test tests/anatomy-atlas.test.mts",
     "test:fill-blank": "node --test tests/fill-blank.test.mts",
     "test:parameterized": "node --test tests/parameterized-template.test.mts"
   },
