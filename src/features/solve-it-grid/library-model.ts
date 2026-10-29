@@ -88,7 +88,10 @@ export function validateSolveItGrid(value: unknown): asserts value is SolveItGri
         if (immediate) {
           validateImmediateRound(previous);
           if (previous.started !== true) throw new Error('An unfinished immediate grid cannot be archived in history.');
-        } else validateRound(previous, item.lists);
+        } else {
+          validateTaskLists(item.lists);
+          validateRound(previous, item.lists);
+        }
         if (previous.number <= lastNumber || previous.number >= item.round.number) {
           throw new Error('Saved Solve-It Grid rounds must be in chronological order.');
         }
