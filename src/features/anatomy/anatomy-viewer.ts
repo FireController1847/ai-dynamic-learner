@@ -216,7 +216,8 @@ export const AnatomyViewer = defineComponent({
       }
     }
     function shapeNode(shape: AtlasShape, tabbable: boolean): VNode {
-      const transform = shape.mirrorX ? 'translate(' + props.view.width + ' 0) scale(-1 1)' : undefined;
+      const mirror = shape.mirrorX ? 'translate(' + props.view.width + ' 0) scale(-1 1)' : '';
+      const transform = [mirror, shape.transform].filter(Boolean).join(' ') || undefined;
       const geometry = shape.geometry.kind === 'path'
         ? { tag: 'path', attrs: { d: shape.geometry.d } }
         : { tag: 'ellipse', attrs: {
@@ -375,7 +376,10 @@ export const AnatomyViewer = defineComponent({
         }, [
           // A gentle non-interactive human silhouette grounds the skeleton
           // visually without changing any bone IDs or hit targets.
-          ...(['skeletal', 'muscular', 'nervous', 'endocrine', 'cardiovascular']
+          // The skeletal plate uses open negative space between bones like
+          // anatomical reference plates. A full skin-shaped background
+          // falsely merges rib openings and pelvic foramina.
+          ...(['muscular', 'nervous', 'endocrine', 'cardiovascular']
             .includes(props.view.systemId) ? [bodySilhouette()] : []),
           ...(props.shapes.length || !props.showPlaceholder ? [] : [placeholder()]),
           ...orderedShapes.value.map(shape => {

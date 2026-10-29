@@ -72,6 +72,9 @@ export interface AtlasShape {
   renderMode?: 'filled' | 'stroke' | 'etch' | 'cutout';
   // Mirror the original vector shape across the current view width.
   mirrorX?: boolean;
+  // Optional SVG transform for proportional educational plate adjustments.
+  // Applied inside mirrorX so left/right laterality remains stable.
+  transform?: string;
 }
 
 export interface AtlasDataset {

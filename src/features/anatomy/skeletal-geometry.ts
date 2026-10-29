@@ -18,6 +18,22 @@ function draw(facing: Facing): AtlasShape[] {
   const layerId = 'skeletal.bones.' + facing;
   // Anatomical right appears on the viewer's left when facing anterior.
   const reflected = (side: Side) => facing === 'anterior' ? side === 'left' : side === 'right';
+
+  // The original drawing put the shoulders, arms, thorax and legs too close
+  // to the midline. Adjust their whole anatomical assemblies about x=160
+  // instead of moving one bone at a time and breaking articulations.
+  // Left/right mirror remains an outer transform in the SVG renderer.
+  function widthTransform(id: string): string | undefined {
+    const shoulder = /^(clavicle|scapula)$/.test(id);
+    const thorax = id === 'sternum' || /^rib-\d+$/.test(id);
+    const pelvic = id === 'hip-bone';
+    const arm = /^(humerus|radius|ulna|scaphoid|lunate|triquetrum|pisiform|trapezium|trapezoid|capitate|hamate|metacarpal-\d+|hand-)/.test(id);
+    const leg = /^(femur|patella|tibia|fibula|talus|calcaneus|navicular|cuboid|medial-cuneiform|intermediate-cuneiform|lateral-cuneiform|metatarsal-\d+|foot-)/.test(id);
+    const factor = shoulder ? 1.4 : thorax ? 1.4 : pelvic ? 1.18
+      : arm ? 1.12 : leg ? 1.3 : 1;
+    return factor === 1 ? undefined
+      : 'translate(160 0) scale(' + factor + ' 1) translate(-160 0)';
+  }
   function shape(id: string, geometry: AtlasShape['geometry'], side?: Side,
     mode: AtlasShape['renderMode'] = 'filled') {
     shapes.push({
@@ -25,6 +41,7 @@ function draw(facing: Facing): AtlasShape[] {
       layerId,
       structureId: 'skeletal.' + (side ? side + '.' : '') + id,
       geometry, renderMode: mode, mirrorX: side ? reflected(side) : false,
+      transform: widthTransform(id),
     });
   }
   function path(id: string, d: string, side?: Side, mode: AtlasShape['renderMode'] = 'filled') {
@@ -115,6 +132,21 @@ function draw(facing: Facing): AtlasShape[] {
     }
     path('frontal', 'M156 77 Q160 72 164 77 L168 86 Q160 92 152 86 Z', undefined, 'cutout');
     path('mandible', 'M144 100 Q160 106 176 100', undefined, 'etch');
+  }
+  if (facing === 'anterior') {
+    // Tooth crowns are non-selectable dental landmarks rather than bones.
+    // The dental arch is intentionally delicate so bone labels remain clear.
+    for (const x of [145, 149, 153, 157, 161, 165, 169, 173, 177]) {
+      path('maxilla', 'M' + x + ' 98 L' + x + ' 102', undefined, 'etch');
+      path('mandible', 'M' + x + ' 105 L' + x + ' 108', undefined, 'etch');
+    }
+    path('frontal', 'M137 63 Q145 60 153 65', undefined, 'etch');
+    path('frontal', 'M167 65 Q175 60 183 63', undefined, 'etch');
+  } else {
+    // Posterior cranial sutures are visible landmarks on the skull vault.
+    path('parietal', 'M160 25 L160 53', undefined, 'etch');
+    path('occipital', 'M136 55 Q148 61 160 53 Q172 61 184 55',
+      undefined, 'etch');
   }
   for (const side of ['left', 'right'] as const) {
     // Deep middle-ear ossicles shown as enlarged markers in this teaching
@@ -214,12 +246,12 @@ function draw(facing: Facing): AtlasShape[] {
   // Arm shafts and the individual wrist/hand bones are proportioned to the
   // arm's total length; no enormous phalanges. Digit I has no middle phalanx.
   for (const side of ['left', 'right'] as const) {
-    shaft('humerus', 107, 155, 92, 241, 10, side);
+    shaft('humerus', 94, 154, 84, 244, 11.5, side);
     // In anatomical position the radius is lateral (thumb side) and
     // the ulna medial. Canonical left-screen coordinates are mirrored
     // for the anatomically left limb in the anterior projection.
-    shaft('radius', 89, 250, 72, 319, 5.6, side);
-    shaft('ulna', 99, 250, 84, 319, 6, side);
+    shaft('radius', 84, 249, 72, 319, 5.4, side);
+    shaft('ulna', 91, 249, 84, 319, 5.8, side);
     const wrist = [
       // Proximal row from radial to ulnar, then distal row.
       ['scaphoid', 68, 326], ['lunate', 73, 326], ['triquetrum', 78, 327],
@@ -246,10 +278,10 @@ function draw(facing: Facing): AtlasShape[] {
   }
 
   for (const side of ['left', 'right'] as const) {
-    shaft('femur', 133, 335, 130, 456, 14, side);
-    ellipse('patella', 128, 465, 7, 9, side);
-    shaft('tibia', 128, 480, 124, 597, 10.5, side);
-    shaft('fibula', 113, 483, 109, 601, 5, side);
+    shaft('femur', 131, 341, 128, 456, 14.8, side);
+    ellipse('patella', 127, 464, 6.3, 8, side);
+    shaft('tibia', 129, 480, 124, 597, 10.2, side);
+    shaft('fibula', 113, 485, 109, 601, 4.7, side);
 
     // Talus/calcaneus lie behind other tarsals in this 2D projection.
     const ankle = [

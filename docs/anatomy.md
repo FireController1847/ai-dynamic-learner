@@ -379,6 +379,46 @@ all 206 hand-authored projection shapes.
 - Check narrow screens and dark mode, including the floating inspector.
 - Switch back to Skeletal; bone counts and geometry must be unchanged.
 
+## Skeletal proportion and projection correction (v0.13.1)
+
+Using the supplied front/back full-body skeletal reference as a
+**proportional guide**, this revision addresses the previous stick-figure
+look without stretching the whole atlas indiscriminately:
+
+- A visibly broader shoulder girdle, thoracic cage and upper-pelvic width
+  relative to the unchanged skull size, keeping front/back bilateral
+  symmetry and anatomical left/right labels.
+- Wider proximal arm attachment and elbow alignment, but hands kept close
+  to their natural hanging position rather than moved excessively outward.
+- A wider bilateral femoral stance, lower-leg spacing and foot positions,
+  with a consistent knee-to-ankle relationship.
+- Wider dedicated camera crops for Whole body, Chest, Pelvis, Arms,
+  Hands, Legs and Feet, so zooming to a region doesn't clip the figure.
+- Delicate posterior sutures and anterior tooth/brow lines are decorative
+  only: **teeth are not bones**. The render engine now supports a
+  non-destructive per-shape SVG transform to maintain complete bone IDs,
+  accurate transformed hitboxes, and existing FitB leader positions.
+- Skeletal no longer draws the generic filled-body silhouette under the
+  bones; the rib gaps, pelvic foramina and limb spacing remain open,
+  resembling a skeletal anatomical plate rather than a skin silhouette.
+- Rib strokes are more legible and their separate touch hit areas remain
+  generous. All other systems retain their original visual treatment.
+
+This remains a hand-authored **2D educational schematic**, not a
+photorealistic or clinically validated 3D atlas. The provided reference
+is a visual proportion target, not an asset copied into the repository.
+Exact cranial sutures, bone morphology, depth and occlusion still require
+individually segmented medically reviewed anatomical source geometry;
+the 206 ID integrity guard does not prove anatomical fidelity.
+
+Manual QA: Compare head/shoulder/rib/pelvis and arm/leg width ratios
+against the supplied reference in Front and Back; check Whole-body Fit
+for clipped hands, toes or shoulders. Inspect every regional crop, left/
+right bone selection and popups. Zoom into skull/teeth and ribs: no
+decorative lines should create selectable extra bones. Complete a FitB
+section and verify leader endpoints track transformed bones during zoom,
+pan and resize. Switch to the other systems to verify no change.
+
 ## Skeletal anatomical geometry refinement (v0.13.0)
 
 The 320 × 700 anterior/posterior skeletal teaching plates have been revised
