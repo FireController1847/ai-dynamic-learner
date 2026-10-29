@@ -562,6 +562,142 @@
   border-color: var(--brand);
   font-weight: 600;
 }
+/* Identification becomes a dedicated, scrollable study-section launcher
+   while the drawing stays mounted underneath for instant quiz transitions. */
+.anatomy-identification-selection {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  overflow: auto;
+  padding: clamp(14px, 3vw, 28px);
+  color: var(--text-color);
+  background: var(--page-background);
+  scrollbar-gutter: stable;
+}
+.anatomy-identification-selection-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--border-color);
+}
+.anatomy-identification-selection-header h2 {
+  font-size: 20px;
+  line-height: 26px;
+  font-weight: 600;
+  margin: 0 0 5px;
+}
+.anatomy-identification-selection-header p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 18px;
+}
+.anatomy-identification-reset-all {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.anatomy-identification-selection-group { margin-top: 20px; }
+.anatomy-identification-selection-group h3 {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.anatomy-identification-section-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
+  align-items: start;
+  gap: 10px;
+}
+.anatomy-identification-section {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  background: var(--surface-workspace);
+}
+.anatomy-identification-section-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.anatomy-identification-section-title {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.anatomy-identification-section-title strong {
+  font-size: 13px;
+  line-height: 18px;
+  overflow-wrap: anywhere;
+}
+.anatomy-identification-section-title span,
+.anatomy-identification-untried {
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--text-secondary);
+}
+.anatomy-identification-untried { margin: 7px 0 0; }
+.anatomy-identification-study {
+  flex: 0 0 auto;
+  font-weight: 600;
+  border-color: var(--brand);
+  color: var(--brand-text);
+  background: var(--brand-tint);
+}
+.anatomy-identification-section-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.anatomy-identification-history {
+  margin-top: 10px;
+  border-top: 1px solid var(--border-color);
+  padding-top: 8px;
+}
+.anatomy-identification-history summary {
+  font-size: 11px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.anatomy-identification-history ul {
+  display: grid;
+  gap: 4px;
+  list-style: none;
+  padding: 0;
+  margin: 8px 0;
+}
+.anatomy-identification-history li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 11px;
+}
+.anatomy-identification-history li strong { font-variant-numeric: tabular-nums; }
+.anatomy-identification-delete-attempt { padding: 3px 6px; font-size: 11px; }
+.anatomy-identification-reset-section {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.anatomy-identification-reset-section .quiet-button { font-size: 11px; }
+@media (max-width: 700px) {
+  .anatomy-identification-selection { padding: 12px; }
+  .anatomy-identification-section-grid { grid-template-columns: minmax(0, 1fr); }
+  .anatomy-identification-study { min-height: 44px; }
+}
+
 .anatomy-identification-results {
   position: absolute;
   z-index: 3;

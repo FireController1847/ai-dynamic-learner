@@ -425,64 +425,92 @@ A real close (\`x\`) glyph is also registered for the quiz **Exit** action.
   motion. Confirm the FitB and Exit buttons have **visible icons**
   without wasted space ahead of their text.
 
-## Fill in the blanks · skeletal identification
+## Fill in the blanks · study workspace (Skeletal)
 
-Skeletal now has a **Fill in the blanks** practice mode (other anatomical
-systems are unchanged). Enter it from the compact atlas toolbar. Both
-sidebar panels are temporarily hidden without overwriting either stored
-collapsed preference, so the drawing gains the full horizontal workspace.
-The system, region, and Front/Back/Both orientation are locked until exit.
-The **Fill in the blanks** action (and **Exit** during a session) lives
-immediately to the left of the zoom controls; it no longer separates the
-system name from the region selector. Pan, zoom, Fit, Z scrub, and wheel
-navigation remain available.
+**Fill in the blanks** beside the zoom controls now turns on a distinct,
+full-width **study workspace** rather than immediately starting a 206-bone
+quiz. The sidebar panels disappear temporarily, and the system/region/
+orientation settings remain locked until the user presses the visible
+**Exit (×)** action. Normal pan, zoom, Fit, Z scrub and wheel controls
+continue working during an active quiz.
 
-The system-independent session builder in anatomy-identification.ts is
-controlled by a per-system opt-in registry. Only Skeletal is enabled today;
-a future atlas can use the same UI and grading when its data is ready.
-Questions derive from visible structure IDs at session start, not copied
-answer lists. Whole body + Both covers all 206 adult bones.
+### Choosing study sections
 
-Pages are grouped by classification (e.g., Axial skeleton / Cervical
-vertebrae and Appendicular skeleton / Pectoral girdle), with at most six
-numbered blanks per page. Each line sits beside the diagram and points
-to the corresponding bone via a leader line. Rather than alternating
-left/right by question number, each blank is positioned on the **same
-visible side as its bone**. Labels are sorted by their targets' screen
-height, spaced to avoid overlapping, and leader paths preserve the order
-so lines do not cross across the figure. The overlay measures each
-bone's real rendered SVG bounding box, so leaders remain attached during
-zoom, pan, resize, and navigation. Normal click-to-select and accessible
-bone-name labels are suppressed while practicing.
+Entering study mode displays a scrollable, compact selection screen.
+Sections come from the atlas's canonical classifications and currently
+visible SVG structure IDs. **Whole body / Both / Skeletal** produces
+**27 focused sections plus one All visible structures choice (28 total)**.
+The Axial and Appendicular groups include meaningful subdivisions:
+separate sternum, upper ribs (1–6) and lower ribs (7–12); humerus versus
+radius/ulna; femur/patella versus tibia/fibula; and proximal/middle/distal
+hand and toe phalanges. Other anatomical classifications stay together.
+Regional and Front/Back filters restrict the available choices and
+question counts to those visible when study mode is entered. Sections
+with no visible structures do not appear.
 
-**Enter** or **Check** marks entered responses without showing answers;
-**Previous** and **Next** navigate, and **Skip** advances unanswered
-blanks without revealing them. Responses persist between pages. **Finish**
-shows the score, missed names and any attempted answers. Users may review
-pages, restart or exit. Exit restores the previous atlas layout. Quiz
-progress stays in memory only, independent from IndexedDB.
+The selection screen groups these choices under their anatomical systems
+(e.g. Axial skeleton and Appendicular skeleton), each showing a count
+of study items, last score, best percentage, and number of completed
+attempts. A **Study** button launches the chosen section only. Prompts
+remain paginated in groups of at most six, using the established blank
+inputs and leader lines that follow bones during pan, zoom and resize.
+No names are disclosed through ordinary figure selection or SVG tooltips
+during the assessment.
+
+### Results and storage
+
+Completing the last quiz page records a **new attempt** with a unique
+ID, system, section, exact region/orientation scope, earned score,
+question count and completion timestamp. The full results screen is
+shown **before** returning to the section-selection screen; it displays
+the final score, skipped count and missed answers. Users can try that
+section again or return to the selection screen without exiting study
+mode. The close button exits to normal Anatomy viewing.
+
+Completed attempts are stored in the **existing workspace's
+\`featureState\` IndexedDB record**, through the common Vue workspace
+observer. They persist across app switches, reloads and browser sessions,
+participate in cross-tab synchronization, and are included in regular
+Dynamic Learner workspace JSON exports/restores. Importing an older
+workspace with no Anatomy field creates an empty results model; no
+IndexedDB schema upgrade is needed. In-progress responses are
+intentionally transient.
+
+Within each section's expandable **Previous results** panel, users may
+remove a single attempt or reset that section's history (two-step
+confirmation). **Reset all results** at the top of the selection screen
+also requires confirmation and clears all Anatomy attempt histories.
+Stored results are scoped by selected region/orientation to avoid
+comparing a short regional quiz with a full-body assessment. A later
+body-system pack can opt in through \`identificationPacks\` and reuse the
+section picker, attempts model, and grading flow.
 
 Answer checking accepts canonical bone names and aliases, optionally
 without left/right prefixes or generic "bone" / "vertebra" words. Digit
-numbers, rib numbers, and vertebral levels must still be identified.
+numbers, rib numbers and vertebral levels still need correct identity.
 
 ### Identification manual verification
 
-- Skeletal Whole body / Both: confirm 206 prompts in sensible grouped pages.
-- Both sidebar panels are hidden during quiz; prior collapse preferences
-  return on exit. System, region, view and other settings are unavailable.
-- Zoom/pan/Z scrub/resize on tiny cervical vertebrae, ribs, carpals and
-  phalanges; lines should remain attached to the right bone. Verify
-  paired bones put each label on its own side, and clustered bones keep
-  top-to-bottom leader order without crossing or overlapping blanks.
-- Confirm Fill in the blanks / Exit are next to the zoom cluster,
-  on narrow and wide widths, without arbitrary space between controls.
-- Check Enter, Check, Skip, Previous, Next, Finish, Review pages,
-  Try again and Exit. Answers persist when revisiting.
-- Before Finish no bone names leak from SVG focus, selection, tooltips
-  or the former Structures panel. Results reveal missed names at Finish.
-- Verify regional and front/back scopes, keyboard, touch, dark mode
-  and reduced motion. Other body systems do not offer this mode yet.
+- Skeletal Whole body / Both: entering Fill in the Blanks should show
+  about 28 options (27 anatomical sections + All visible bones), **not**
+  immediately show blank prompts.
+- Choose Cervical vertebrae and verify the quiz contains exactly the
+  seven visible cervical vertebrae, with Previous, Skip, Check, Next,
+  and connected line prompts. Repeat with Ribs 1–6 and Hand phalanges.
+- Complete a quiz; confirm Results displays before **Back to sections**.
+  Verify the section now shows Last, Best, Attempts and dated history.
+- Navigate to another app, return, and reload: attempt records persist.
+  Verify browser same-workspace tab sync and JSON backup/export/restore.
+  Import an old backup without an Anatomy field; it must open normally.
+- Remove one result and reset a whole section (confirmation required);
+  then reset all records, confirming unrelated study/content persists.
+- Test another orientation/region with a shorter visible structure
+  count: records must not be misattributed to the Whole body/Both scope.
+- Close study mode and confirm the normal anatomical panels, camera and
+  settings are restored. Study mode remains opt-in for Skeletal only.
+- Check light/dark, mobile/short windows, keyboard focus, reduced motion
+  and visible Exit icon.
+
 
 ## Viewer layout and camera guardrails
 

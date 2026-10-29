@@ -1,4 +1,4 @@
-import { computed, defineComponent, h, nextTick, ref } from 'vue';
+import { computed, defineComponent, h, nextTick, ref, type PropType } from 'vue';
 import { Icon } from '../../components/icon.ts';
 import { inputValue } from '../../core/dom.ts';
 import { readNumberPreference, writeNumberPreference } from '../../core/ui-preferences.ts';
@@ -12,8 +12,11 @@ import type { VesselView } from './cardiovascular-structures.ts';
 import type { GonadView } from './endocrine-structures.ts';
 import { AnatomyViewer } from './anatomy-viewer.ts';
 import { AnatomyStructureTree } from './anatomy-structure-tree.ts';
-import { createIdentificationSession, isIdentificationCorrect,
-  identificationPacks, type IdentificationSession } from './anatomy-identification.ts';
+import { createIdentificationSession, createIdentificationSections,
+  isIdentificationCorrect, identificationPacks,
+  type IdentificationSession, type IdentificationSection } from './anatomy-identification.ts';
+import { AnatomyIdentificationSelection } from './anatomy-identification-selection.ts';
+import { newAnatomyAttempt, type AnatomyModel } from './anatomy-history.ts';
 
 // Reference content is bundled locally, independent of workspace saves.
 const atlas = buildAtlasIndex(foundationAtlas);
@@ -30,7 +33,10 @@ function initialCollapsed(key: string) {
 
 export const Anatomy = defineComponent({
   name: 'Anatomy',
-  props: { title: { type: String, required: true } },
+  props: {
+    title: { type: String, required: true },
+    model: { type: Object as PropType<AnatomyModel>, required: true },
+  },
   setup(props) {
     const systemId = ref<AtlasSystemId>('skeletal');
     const facing = ref<AnatomyFacing>('both');
@@ -40,13 +46,21 @@ export const Anatomy = defineComponent({
     const vesselView = ref<VesselView>('all');
     const selectedId = ref<string | null>(null);
     const search = ref('');
+    const identificationMode = ref(false);
     const identification = ref<IdentificationSession | null>(null);
+    const identificationSection = ref<IdentificationSection | null>(null);
     const identificationIndex = ref(0);
     const identificationAnswers = ref<Record<string, string>>({});
     const identificationChecked = ref<string[]>([]);
     const identificationSkipped = ref<string[]>([]);
     const identificationFinished = ref(false);
-    const identifying = computed(() => identification.value !== null);
+    const identifying = computed(() => identificationMode.value);
+    const identificationScope = computed(() =>
+      systemId.value + '|' + regionId.value + '|' + facing.value);
+    const identificationSections = computed(() => createIdentificationSections(
+      systemId.value, [...atlas.structures.values()], shapes.value));
+    const identificationSelection = computed(() => identifying.value &&
+      !identification.value && !identificationFinished.value);
     const identificationPage = computed(() => identificationFinished.value ? null
       : identification.value?.pages[identificationIndex.value] ?? null);
     const identificationItems = computed(() => identification.value?.pages.flatMap(page => page.items) ?? []);
@@ -154,23 +168,64 @@ export const Anatomy = defineComponent({
             : systemId.value === 'cardiovascular' ? cardiovascularRegions
               : [{ id: 'whole-body', name: 'Whole body' }]);
 
-    function startIdentification() {
-      if (identifying.value || !identificationPacks[systemId.value]) return;
-      const session = createIdentificationSession(systemId.value,
-        [...atlas.structures.values()], shapes.value);
-      if (!session?.total) return;
-      identification.value = session;
+    function clearIdentificationSession() {
+      identification.value = null;
+      identificationSection.value = null;
       identificationIndex.value = 0;
       identificationAnswers.value = {};
       identificationChecked.value = [];
       identificationSkipped.value = [];
       identificationFinished.value = false;
+    }
+    function startIdentification() {
+      if (identifying.value || !identificationPacks[systemId.value]
+          || !identificationSections.value.length) return;
+      identificationMode.value = true;
+      clearIdentificationSession();
       selectedId.value = null;
     }
+    function beginIdentificationSection(id: string) {
+      if (!identificationSelection.value) return;
+      const section = identificationSections.value.find(item => item.id === id);
+      if (!section) return;
+      const session = createIdentificationSession(systemId.value,
+        [...atlas.structures.values()], shapes.value, new Set(section.itemIds));
+      if (!session?.total) return;
+      clearIdentificationSession();
+      identificationSection.value = section;
+      identification.value = session;
+    }
+    function returnToIdentificationSelection() {
+      if (!identifying.value) return;
+      clearIdentificationSession();
+    }
     function exitIdentification() {
-      identification.value = null;
-      identificationFinished.value = false;
+      clearIdentificationSession();
+      identificationMode.value = false;
       selectedId.value = null;
+    }
+    function deleteIdentificationAttempt(id: string) {
+      props.model.attempts = props.model.attempts.filter(item => item.id !== id);
+    }
+    function resetIdentificationSection(id: string) {
+      props.model.attempts = props.model.attempts.filter(item =>
+        !(item.systemId === systemId.value && item.scope === identificationScope.value &&
+          item.sectionId === id));
+    }
+    function resetAllIdentificationResults() {
+      props.model.attempts = [];
+    }
+    function finishIdentification() {
+      const section = identificationSection.value;
+      const session = identification.value;
+      if (!section || !session || identificationFinished.value) return;
+      // Save a completed outcome in the workspace model. The existing
+      // workspace observer writes the featureState revision to IndexedDB
+      // and includes it in backups and cross-tab synchronization.
+      props.model.attempts.push(newAnatomyAttempt(systemId.value,
+        section.id, section.title, identificationScope.value,
+        identificationCorrect.value, session.total));
+      identificationFinished.value = true;
     }
     function updateIdentificationAnswer(id: string, answer: string) {
       if (!identifying.value || identificationFinished.value) return;
@@ -194,7 +249,7 @@ export const Anatomy = defineComponent({
       if (identificationIndex.value < identification.value.pages.length - 1) {
         identificationIndex.value += 1;
       } else {
-        identificationFinished.value = true;
+        finishIdentification();
       }
     }
     function restartIdentification() {
@@ -209,11 +264,13 @@ export const Anatomy = defineComponent({
       const page = identificationPage.value;
       return [
         h('div', { class: 'anatomy-identification-heading' }, [
-          h('strong', 'Skeletal · Fill in the blanks'),
-          page
-            ? h('span', { class: 'anatomy-identification-group' },
-              page.category + ' / ' + page.group)
-            : h('span', 'Results'),
+          h('strong', (system.value?.name ?? 'Anatomy') + ' · Fill in the blanks'),
+          h('span', { class: 'anatomy-identification-group' },
+            identificationSelection.value ? 'Choose a study section'
+              : identificationFinished.value ? 'Results'
+                : (identificationSection.value?.title ?? 'Study') +
+                  (page ? ' · ' + (identificationIndex.value + 1)
+                    + '/' + (identification.value?.pages.length ?? 0) : '')),
         ]),
       ];
     }
@@ -225,11 +282,9 @@ export const Anatomy = defineComponent({
           h('span', { class: 'anatomy-identification-progress' }, 'Session complete'),
           h('div', { class: 'anatomy-identification-actions' }, [
             h('button', { type: 'button', class: 'quiet-button',
-              onClick: () => { identificationFinished.value = false; identificationIndex.value = 0; } }, 'Review pages'),
-            h('button', { type: 'button', class: 'quiet-button',
               onClick: restartIdentification }, 'Try again'),
-            h('button', { type: 'button', class: 'quiet-button',
-              onClick: exitIdentification }, 'Exit'),
+            h('button', { type: 'button', class: 'quiet-button anatomy-identification-next',
+              onClick: returnToIdentificationSelection }, 'Back to sections'),
           ]),
         ])];
       }
@@ -252,6 +307,17 @@ export const Anatomy = defineComponent({
         ]),
       ])];
     }
+    function identificationMenu() {
+      if (!identificationSelection.value) return [];
+      return [h(AnatomyIdentificationSelection, {
+        sections: identificationSections.value, attempts: props.model.attempts,
+        systemId: systemId.value, scope: identificationScope.value,
+        onStart: beginIdentificationSection,
+        onDeleteAttempt: deleteIdentificationAttempt,
+        onResetSection: resetIdentificationSection,
+        onResetAll: resetAllIdentificationResults,
+      })];
+    }
     function identificationResults() {
       const session = identification.value;
       if (!session || !identificationFinished.value) return [];
@@ -261,9 +327,10 @@ export const Anatomy = defineComponent({
         class: 'anatomy-identification-results',
         role: 'region', 'aria-label': 'Identification results',
       }, [
-        h('h2', 'Identification complete'),
+        h('h2', (identificationSection.value?.title ?? 'Identification') + ' · Results'),
         h('p', { class: 'anatomy-identification-score' },
           identificationCorrect.value + ' / ' + session.total + ' correct'),
+        h('p', 'This result was added to your local Anatomy history.'),
         h('p', identificationAttempted.value + ' attempted · '
           + (session.total - identificationAttempted.value) + ' left blank'
           + (identificationSkipped.value.length ? ' (' + identificationSkipped.value.length + ' skipped)' : '')),
@@ -462,6 +529,7 @@ export const Anatomy = defineComponent({
             zoomAction: viewerZoomAction,
             footer: identificationFooter,
             identificationResult: identificationResults,
+            identificationMenu,
           })
           : h('div', { class: 'anatomy-unavailable', role: 'status' }, [
             h('strong', system.value?.name ?? props.title),

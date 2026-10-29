@@ -210,7 +210,9 @@ export async function hydrateWorkspace(store: Pick<IndexedDataStore, 'all'> & Pa
   );
   const featureState = new Map(getRows('featureState').map(row => [row.app, unwrap(row, ['app'])]));
   const featureModels: Record<string, Item> = {};
-  for (const app of [...LIBRARY_APPS, 'todo-list']) featureModels[app] = { items: [], ...featureState.get(app) };
+  for (const app of [...LIBRARY_APPS, 'todo-list', 'anatomy']) {
+    featureModels[app] = { items: [], ...featureState.get(app) };
+  }
 
   const groups = getRows('libraryNodes');
   for (const app of LIBRARY_APPS) {

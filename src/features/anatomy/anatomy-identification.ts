@@ -27,10 +27,70 @@ export interface IdentificationSession {
   pages: readonly IdentificationPage[];
   total: number;
 }
+export interface IdentificationSection {
+  id: string;
+  title: string;
+  category: string;
+  itemIds: readonly string[];
+  count: number;
+}
+function skeletalSection(structure: AtlasStructure, group: string): string {
+  if (group === 'Thoracic cage') {
+    if (structure.id.endsWith('sternum')) return 'Sternum';
+    const rib = /rib-(\d+)$/.exec(structure.id);
+    return rib && Number(rib[1]) <= 6 ? 'Ribs 1–6' : 'Ribs 7–12';
+  }
+  if (group === 'Hand phalanges' || group === 'Toe phalanges') {
+    if (/-(?:proximal)-/.test(structure.id)) return 'Proximal phalanges';
+    if (/-(?:middle)-/.test(structure.id)) return 'Middle phalanges';
+    return 'Distal phalanges';
+  }
+  if (group === 'Upper limb') {
+    return structure.id.endsWith('humerus') ? 'Humerus' : 'Radius & ulna';
+  }
+  if (group === 'Lower limb') {
+    return /(?:femur|patella)$/.test(structure.id) ? 'Femur & patella' : 'Tibia & fibula';
+  }
+  return group;
+}
+
+/** Sections follow authored classifications, splitting only unusually broad
+ * skeletal classifications along anatomically meaningful subgroups. Whole
+ * body / Both currently yields 27 focused groups plus All visible bones. */
+export function createIdentificationSections(
+  systemId: AtlasSystemId, structures: readonly AtlasStructure[],
+  visibleShapes: readonly AtlasShape[],
+): readonly IdentificationSection[] {
+  if (!identificationPacks[systemId]) return [];
+  const visible = new Set(visibleShapes
+    .filter(shape => shape.renderMode !== 'etch' && shape.renderMode !== 'cutout')
+    .map(shape => shape.structureId));
+  const candidates = structures.filter(s => s.systemId === systemId && visible.has(s.id));
+  if (!candidates.length) return [];
+  const sections = new Map<string, { title: string; category: string; itemIds: string[] }>();
+  for (const structure of candidates) {
+    const parsed = parseAnatomyClassification(structure.classification);
+    const original = parsed.subgroup ?? parsed.category;
+    const title = systemId === 'skeletal' ? skeletalSection(structure, original) : original;
+    const key = structure.classification + '::' + title;
+    if (!sections.has(key)) {
+      sections.set(key, { title, category: parsed.category, itemIds: [] });
+    }
+    sections.get(key)!.itemIds.push(structure.id);
+  }
+  return [
+    { id: 'all', title: 'All visible structures', category: 'Complete review',
+      itemIds: candidates.map(item => item.id), count: candidates.length },
+    ...[...sections].map(([id, section]) => ({
+      id, title: section.title, category: section.category,
+      itemIds: section.itemIds, count: section.itemIds.length,
+    })),
+  ];
+}
 
 export function createIdentificationSession(
   systemId: AtlasSystemId, structures: readonly AtlasStructure[],
-  visibleShapes: readonly AtlasShape[],
+  visibleShapes: readonly AtlasShape[], selectedIds?: ReadonlySet<string>,
 ): IdentificationSession | null {
   const pack = identificationPacks[systemId];
   if (!pack) return null;
@@ -39,7 +99,8 @@ export function createIdentificationSession(
     .map(shape => shape.structureId));
   const groups = new Map<string, IdentificationItem[]>();
   for (const structure of structures) {
-    if (structure.systemId !== systemId || !visible.has(structure.id)) continue;
+    if (structure.systemId !== systemId || !visible.has(structure.id)
+        || (selectedIds && !selectedIds.has(structure.id))) continue;
     const group = structure.classification;
     if (!groups.has(group)) groups.set(group, []);
     groups.get(group)!.push({

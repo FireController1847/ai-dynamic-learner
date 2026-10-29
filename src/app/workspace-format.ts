@@ -8,12 +8,13 @@ import type { Crossword } from '../features/crossword/library-model.ts';
 import { validateTodoLists, type TodoLists } from '../features/todo-list/library-model.ts';
 import { emptyStatistics, validateStatistics, type StatisticsData } from '../core/statistics.ts';
 import { validateSolveItGrid, type SolveItGridModel } from '../features/solve-it-grid/library-model.ts';
+import { emptyAnatomy, validateAnatomy, type AnatomyModel } from '../features/anatomy/anatomy-history.ts';
 
 export interface Workspace {
   format: 'dynamic-learner';
   version: 1;
   statistics?: StatisticsData;
-  features: { notebook: Notebook; 'todo-list': TodoLists; 'solve-it-grid': SolveItGridModel; 'index-cards': IndexCards; 'word-search': WordSearch; crossword: Crossword; 'guide': GuideModel; 'knowledge-check': KnowledgeCheck };
+  features: { notebook: Notebook; 'todo-list': TodoLists; 'solve-it-grid': SolveItGridModel; 'index-cards': IndexCards; 'word-search': WordSearch; crossword: Crossword; 'guide': GuideModel; 'knowledge-check': KnowledgeCheck; anatomy: AnatomyModel };
 }
 
 import { validateNotebook } from '../features/notebook/library-model.ts';
@@ -38,6 +39,7 @@ export function emptyWorkspace(): Workspace {
       crossword: { items: [] },
       'guide': { items: [] },
       'knowledge-check': { items: [] },
+      anatomy: emptyAnatomy(),
     },
   };
 }
@@ -55,7 +57,7 @@ export function validateWorkspaceValue(value: unknown): Workspace {
   if (!isRecord(value) || value.format !== 'dynamic-learner' || value.version !== 1 ||
       Object.keys(value).some((key) => !['format', 'version', 'features', 'statistics'].includes(key)) ||
       !isRecord(value.features) || !value.features['index-cards'] ||
-      Object.keys(value.features).some((key) => !['notebook', 'todo-list', 'solve-it-grid', 'index-cards', 'word-search', 'crossword', 'guide', 'study-guide', 'knowledge-check'].includes(key))) {
+      Object.keys(value.features).some((key) => !['notebook', 'todo-list', 'solve-it-grid', 'index-cards', 'word-search', 'crossword', 'guide', 'study-guide', 'knowledge-check', 'anatomy'].includes(key))) {
     throw new Error('This is not a supported Dynamic Learner workspace backup (version 1).');
   }
   if (Object.hasOwn(value.features, 'guide') && Object.hasOwn(value.features, 'study-guide')) {
@@ -70,8 +72,12 @@ export function validateWorkspaceValue(value: unknown): Workspace {
   const guide = Object.hasOwn(value.features, 'guide') ? value.features['guide']
     : Object.hasOwn(value.features, 'study-guide') ? value.features['study-guide'] : { items: [] };
   const knowledgeCheck = Object.hasOwn(value.features, 'knowledge-check') ? value.features['knowledge-check'] : { items: [] };
+  // Old backups have no Anatomy key; importing them must preserve every other
+  // feature and initialize a clean results history without a schema bump.
+  const anatomy = Object.hasOwn(value.features, 'anatomy') ? value.features.anatomy : emptyAnatomy();
   validateGuide(guide);
   validateKnowledgeCheck(knowledgeCheck);
+  validateAnatomy(anatomy);
   validateNotebook(notebook);
   validateIndexCards(indexCards);
   validateWordSearch(wordSearch);
@@ -82,6 +88,6 @@ export function validateWorkspaceValue(value: unknown): Workspace {
   validateStatistics(statistics);
   return { format: 'dynamic-learner', version: 1,
     statistics,
-    features: { notebook, 'todo-list': todoLists, 'solve-it-grid': solveItGrid, 'index-cards': indexCards, 'word-search': wordSearch, crossword, 'guide': guide, 'knowledge-check': knowledgeCheck } };
+    features: { notebook, 'todo-list': todoLists, 'solve-it-grid': solveItGrid, 'index-cards': indexCards, 'word-search': wordSearch, crossword, 'guide': guide, 'knowledge-check': knowledgeCheck, anatomy } };
 
 }

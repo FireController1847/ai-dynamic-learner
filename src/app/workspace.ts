@@ -11,7 +11,8 @@ export type { Workspace } from './workspace-format.ts';
 export type WorkspaceController = ReturnType<typeof useWorkspace>;
 
 function populated(workspace: Workspace): boolean {
-  return Object.values(workspace.features).some(feature => feature.items.length > 0);
+  return Object.values(workspace.features).some(feature => feature.items.length > 0)
+    || workspace.features.anatomy.attempts.length > 0;
 }
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);

@@ -388,6 +388,7 @@ export const AnatomyViewer = defineComponent({
             onCheck: () => emit('identificationCheck'),
           }) : null,
         ...(!props.identificationPage ? (slots.identificationResult?.() ?? []) : []),
+        ...(slots.identificationMenu?.() ?? []),
         !props.shapes.length && !props.showPlaceholder
           ? h('p', { class: 'anatomy-no-visible-bones', role: 'status' },
             props.view.systemId === 'muscular'
