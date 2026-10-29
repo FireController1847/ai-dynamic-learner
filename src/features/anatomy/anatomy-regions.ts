@@ -12,17 +12,16 @@ export interface AnatomyRegion {
 }
 
 export const skeletalRegions: readonly AnatomyRegion[] = [
-  // Keep the entire widened silhouette and the distal phalanges inside Fit.
-  { id: 'whole-body', name: 'Whole body', x: 13, y: 12, width: 294, height: 660 },
-  { id: 'head-neck', name: 'Head & neck', x: 112, y: 15, width: 96, height: 152 },
-  { id: 'thorax', name: 'Chest & shoulders', x: 59, y: 128, width: 202, height: 148 },
-  { id: 'spine', name: 'Spine', x: 125, y: 109, width: 70, height: 245 },
-  { id: 'abdomen', name: 'Lower torso', x: 100, y: 233, width: 120, height: 110 },
-  { id: 'pelvis', name: 'Pelvis', x: 92, y: 276, width: 136, height: 107 },
-  { id: 'upper-limb', name: 'Arms', x: 14, y: 139, width: 292, height: 198 },
-  { id: 'hands-wrists', name: 'Hands & wrists', x: 11, y: 303, width: 298, height: 86 },
-  { id: 'lower-limb', name: 'Legs', x: 85, y: 326, width: 150, height: 285 },
-  { id: 'feet-ankles', name: 'Feet & ankles', x: 72, y: 585, width: 176, height: 89 },
+ { id: 'whole-body', name: 'Whole body', x: 0, y: 0, width: 539, height: 1275.6 },
+ { id: 'head-neck', name: 'Head & neck', x: 155, y: 0, width: 230, height: 260 },
+ { id: 'thorax', name: 'Chest & shoulders', x: 65, y: 225, width: 410, height: 350 },
+ { id: 'spine', name: 'Spine', x: 185, y: 185, width: 175, height: 525 },
+ { id: 'abdomen', name: 'Lower torso', x: 125, y: 450, width: 290, height: 245 },
+ { id: 'pelvis', name: 'Pelvis', x: 115, y: 530, width: 310, height: 220 },
+ { id: 'upper-limb', name: 'Arms', x: 0, y: 250, width: 539, height: 475 },
+ { id: 'hands-wrists', name: 'Hands & wrists', x: 0, y: 555, width: 539, height: 245 },
+ { id: 'lower-limb', name: 'Legs', x: 120, y: 620, width: 300, height: 520 },
+ { id: 'feet-ankles', name: 'Feet & ankles', x: 105, y: 1050, width: 330, height: 225 },
 ];
 
 // A bone may be relevant to several regional scopes; IDs are not duplicated.

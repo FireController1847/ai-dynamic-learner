@@ -75,6 +75,7 @@ export interface AtlasShape {
   // Optional SVG transform for proportional educational plate adjustments.
   // Applied inside mirrorX so left/right laterality remains stable.
   transform?: string;
+  sourceBacked?: boolean;
 }
 
 export interface AtlasDataset {

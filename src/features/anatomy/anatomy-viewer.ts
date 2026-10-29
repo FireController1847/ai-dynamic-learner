@@ -295,7 +295,8 @@ export const AnatomyViewer = defineComponent({
       }
       return h(geometry.tag, {
         ...geometry.attrs, ...interaction, key: shape.id, transform,
-        class: ['anatomy-shape', { 'is-selected': selected, 'is-occluded': behind,
+        class: ['anatomy-shape', { 'is-source-hit': shape.sourceBacked === true,
+          'is-selected': selected, 'is-occluded': behind,
           'is-central': central,
           'is-identification-target': quizTarget && props.identificationActive,
           'is-identification-muted': quizMuted, ...subtypes }],
@@ -381,6 +382,14 @@ export const AnatomyViewer = defineComponent({
           // falsely merges rib openings and pelvic foramina.
           ...(['muscular', 'nervous', 'endocrine', 'cardiovascular']
             .includes(props.view.systemId) ? [bodySilhouette()] : []),
+          ...(props.view.systemId === 'skeletal' ? [h('image', {
+            key: 'medical.' + props.view.orientation,
+            href: new URL('assets/anatomy/clinical-' +
+              (props.view.orientation === 'posterior' ? 'posterior' : 'anterior') +
+              '.svg', document.baseURI).href,
+            x: 0, y: 0, width: 539, height: 1275.6, preserveAspectRatio: 'none',
+            'aria-hidden': 'true', 'pointer-events': 'none',
+          })] : []),
           ...(props.shapes.length || !props.showPlaceholder ? [] : [placeholder()]),
           ...orderedShapes.value.map(shape => {
             const tabbable = !tabStops.has(shape.structureId);
@@ -435,6 +444,12 @@ export const AnatomyViewer = defineComponent({
           ]),
         ]) : null,
       ]),
+      ...(props.view.systemId === 'skeletal' ? [h('p', { class: 'anatomy-source-credits' }, [
+        'Medical illustration by Lukic et al. (CC BY 4.0). ',
+        h('a', { href: 'https://github.com/DigitalHealthZurich/open-pain-illustration',
+          target: '_blank', rel: 'noopener noreferrer' }, 'Source and attribution'),
+        '. Not all 206 adult bones have distinct artwork.',
+      ])] : []),
       ...(slots.footer?.() ?? []),
     ]);
     };

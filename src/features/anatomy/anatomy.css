@@ -1020,3 +1020,19 @@
 @media (prefers-reduced-motion: reduce) {
   .anatomy-shape, .anatomy-page { transition: none; }
 }
+
+/* Transparent hit paths align with the original medical-source contours. */
+.anatomy-viewer.is-skeletal .anatomy-shape.is-source-hit {
+  fill: rgba(229, 176, 83, .002);
+  stroke: transparent;
+  stroke-width: 0.5px;
+}
+.anatomy-viewer.is-skeletal .anatomy-shape.is-source-hit:hover,
+.anatomy-viewer.is-skeletal .anatomy-shape.is-source-hit.is-selected,
+.anatomy-viewer.is-skeletal .anatomy-shape.is-source-hit:focus-visible {
+  fill: rgba(229, 176, 83, .35);
+  stroke: #986a2d;
+  stroke-width: 1.1px;
+}
+.anatomy-source-credits { font-size: 11px; color: var(--text-secondary); text-align: center; padding: 4px 10px; }
+.anatomy-source-credits a { color: inherit; text-decoration: underline; }

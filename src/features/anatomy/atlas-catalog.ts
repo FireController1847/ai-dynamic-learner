@@ -1,6 +1,6 @@
 import type { AtlasDataset, AtlasOrientation, AtlasSystem, AtlasRegion } from './atlas-model.ts';
 import { skeletalStructures } from './skeletal-bones.ts';
-import { skeletalLayers, skeletalShapes } from './skeletal-geometry.ts';
+import { skeletalLayers, skeletalShapes } from './source-skeletal-geometry.ts';
 import { muscularStructures } from './muscular-structures.ts';
 import { muscularLayers, muscularShapes } from './muscular-geometry.ts';
 import { nervousStructures } from './nervous-structures.ts';
@@ -75,10 +75,10 @@ export const foundationAtlas: AtlasDataset = {
     regionId: 'whole-body',
     orientation: orientation.id,
     name: system.name + ' — ' + orientation.name,
-    width: 320,
+    width: system.id === 'skeletal' ? 539 : 320,
     // The skeletal artwork now extends through anatomically longer lower limbs.
     // Keep unillustrated system placeholders at their existing proportions.
-    height: ['skeletal', 'muscular', 'nervous', 'endocrine', 'cardiovascular'].includes(system.id) ? 700 : 560,
+    height: system.id === 'skeletal' ? 1275.6 : ['muscular', 'nervous', 'endocrine', 'cardiovascular'].includes(system.id) ? 700 : 560,
   }))),
   layers: [...skeletalLayers, ...muscularLayers, ...nervousLayers, ...endocrineLayers, ...cardiovascularLayers],
   shapes: [...skeletalShapes, ...muscularShapes, ...nervousShapes, ...endocrineShapes, ...cardiovascularShapes],
