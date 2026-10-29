@@ -379,6 +379,25 @@ all 206 hand-authored projection shapes.
 - Check narrow screens and dark mode, including the floating inspector.
 - Switch back to Skeletal; bone counts and geometry must be unchanged.
 
+## Skeletal hip and digit alignment (v0.13.2)
+
+- Replaced exaggerated, flared hip-bone plates with curved iliac crests,
+  acetabular transitions, smaller obturator openings, and a pubic arch.
+  Femoral heads and pelvic sockets now share a more natural bilateral stance.
+- Reduced the leg-wide scaling independently of the shoulders and rib cage;
+  the existing 206 selectable bone IDs and front/back mirroring remain intact.
+- Rebuilt metacarpal/phalange and metatarsal/phalange positions: the four
+  fingers stay closely parallel, the thumb points naturally laterally,
+  and toes form a compact, tapered foot rather than a wide fan.
+- Focus crops for Pelvis and Legs are adjusted to the new proportions.
+- Restored a posterior sagittal skull suture that a literal escaped newline
+  had inadvertently hidden inside a source comment.
+
+Manual QA: Review Front and Back full-body views at Fit, inspect hip joints,
+hands, feet and corresponding focused region controls, and test individual
+digit selection and FitB leader anchors at high zoom. This is still an original
+2D educational schematic, not a clinical anatomical reference plate.
+
 ## Skeletal proportion and projection correction (v0.13.1)
 
 Using the supplied front/back full-body skeletal reference as a

@@ -29,8 +29,8 @@ function draw(facing: Facing): AtlasShape[] {
     const pelvic = id === 'hip-bone';
     const arm = /^(humerus|radius|ulna|scaphoid|lunate|triquetrum|pisiform|trapezium|trapezoid|capitate|hamate|metacarpal-\d+|hand-)/.test(id);
     const leg = /^(femur|patella|tibia|fibula|talus|calcaneus|navicular|cuboid|medial-cuneiform|intermediate-cuneiform|lateral-cuneiform|metatarsal-\d+|foot-)/.test(id);
-    const factor = shoulder ? 1.4 : thorax ? 1.4 : pelvic ? 1.18
-      : arm ? 1.12 : leg ? 1.3 : 1;
+    const factor = shoulder ? 1.4 : thorax ? 1.4 : pelvic ? 1.05
+      : arm ? 1.12 : leg ? 1.1 : 1;
     return factor === 1 ? undefined
       : 'translate(160 0) scale(' + factor + ' 1) translate(-160 0)';
   }
@@ -148,7 +148,8 @@ function draw(facing: Facing): AtlasShape[] {
     path('frontal', 'M167 65 Q175 60 183 63', undefined, 'etch');
   } else {
     // Posterior cranial sutures are visible landmarks on the skull vault.
-    // The sagittal suture belongs to the paired parietals, never a\n    // nonexistent unsided `skeletal.parietal` structure.\n    path('parietal', 'M160 25 L160 53', 'right', 'etch');
+    // The sagittal suture belongs to a side-specific parietal record.
+    path('parietal', 'M160 25 L160 53', 'right', 'etch');
     path('occipital', 'M136 55 Q148 61 160 53 Q172 61 184 55',
       undefined, 'etch');
   }
@@ -239,13 +240,21 @@ function draw(facing: Facing): AtlasShape[] {
   if (facing === 'posterior') {
     both('scapula', 'M111 167 Q127 164 141 174', 'etch');
   }
-  both('hip-bone', 'M155 293 Q144 283 128 281 Q113 279 104 295 '
-    + 'Q100 304 101 315 Q101 327 113 330 L121 341 '
-    + 'Q131 350 140 332 L152 327 Q158 328 160 329 '
-    + 'L157 315 Q153 309 155 293 Z');
-  both('hip-bone', 'M121 316 Q131 309 144 319 L140 332 '
-    + 'Q134 341 128 335 Q121 332 121 316 Z', 'cutout');
-  both('hip-bone', 'M106 299 Q118 289 137 295', 'etch');
+  // Each hip bone is a continuous ilium/ischium/pubis complex. Keep the
+  // iliac crest broad but curved, taper toward the hip socket where the femur
+  // begins, and form a small pubic arch beside the sacrum. The older wide
+  // triangular plates hid the acetabula and made the pelvis look like a skirt.
+  both('hip-bone', 'M154 293 C144 287 137 285 128 286 '
+    + 'C116 284 110 290 111 301 Q112 309 121 316 '
+    + 'Q128 322 128 330 Q123 335 128 343 '
+    + 'Q132 349 140 339 L147 332 '
+    + 'Q151 329 155 338 L158 342 L158 328 '
+    + 'Q151 320 149 311 Q152 303 154 293 Z');
+  // Obturator foramina remain separate openings in the fused hip bones.
+  both('hip-bone', 'M132 324 Q139 320 145 327 '
+    + 'Q145 334 136 341 Q131 339 130 333 Z', 'cutout');
+  both('hip-bone', 'M115 301 Q127 289 144 297', 'etch');
+  both('hip-bone', 'M124 335 Q128 330 134 334', 'etch');
 
   // Arm shafts and the individual wrist/hand bones are proportioned to the
   // arm's total length; no enormous phalanges. Digit I has no middle phalanx.
@@ -263,21 +272,35 @@ function draw(facing: Facing): AtlasShape[] {
       ['capitate', 76, 334], ['hamate', 81, 335],
     ] as const;
     for (const [id, x, y] of wrist) ellipse(id, x, y, 2.4, 3, side);
+    // Digits 2–5 descend nearly parallel from one compact palm. The thumb
+    // angles away at the radial edge, not between the other fingers.
+    // Different phalanx lengths give a natural, gently rounded fingertip row.
+    const fingerLengths = [7.5, 9.4, 8.6, 6.7];
     for (let digit = 1; digit <= 5; digit++) {
-      // Anatomical digit I (thumb) is the radial/lateral digit.
-      const x = digit === 1 ? 65 : 70 + (digit - 2) * 5.3;
-      const baseY = digit === 1 ? 339 : 341;
-      const lateral = digit === 1 ? -7 : (.4 * (digit - 2));
-      shaft('metacarpal-' + digit, x, baseY, x + lateral, baseY + (digit === 1 ? 8 : 11), 2.3, side);
-      const firstX = x + lateral, firstY = baseY + (digit === 1 ? 10 : 14);
-      shaft('hand-proximal-' + digit, firstX, firstY, firstX + (digit === 1 ? 4 : -1),
-        firstY + (digit === 1 ? 6 : 7), 1.7, side);
-      if (digit !== 1) {
-        shaft('hand-middle-' + digit, firstX - 1, firstY + 9, firstX - 1.5, firstY + 15, 1.5, side);
-        shaft('hand-distal-' + digit, firstX - 1.5, firstY + 17, firstX - 2, firstY + 21, 1.3, side);
-      } else {
-        shaft('hand-distal-' + digit, firstX + 5, firstY + 8, firstX + 7, firstY + 13, 1.5, side);
+      if (digit === 1) {
+        shaft('metacarpal-1', 67.5, 338, 63.5, 347, 2.4, side);
+        shaft('hand-proximal-1', 63.5, 347.5, 60.7, 353.3, 1.9, side);
+        shaft('hand-distal-1', 60.5, 354, 59, 359, 1.6, side);
+        continue;
       }
+      const index = digit - 2;
+      const x = 72.5 + index * 3.05;
+      const tilt = [-0.4, -0.15, 0.15, 0.45][index]!;
+      const proximalLength = fingerLengths[index]!;
+      shaft('metacarpal-' + digit, x, 341, x + tilt, 351.8, 2.3, side);
+      const jointX = x + tilt;
+      const baseY = 353;
+      shaft('hand-proximal-' + digit, jointX, baseY,
+        jointX + tilt * 0.4, baseY + proximalLength, 1.75, side);
+      const middleY = baseY + proximalLength + 0.5;
+      const midX = jointX + tilt * 0.4;
+      const middleLength = proximalLength * 0.70;
+      shaft('hand-middle-' + digit, midX, middleY,
+        midX + tilt * 0.25, middleY + middleLength, 1.55, side);
+      const distalY = middleY + middleLength + 0.4;
+      const distalX = midX + tilt * 0.25;
+      shaft('hand-distal-' + digit, distalX, distalY,
+        distalX + tilt * 0.2, distalY + proximalLength * 0.48, 1.35, side);
     }
   }
 
@@ -296,16 +319,29 @@ function draw(facing: Facing): AtlasShape[] {
       ['lateral-cuneiform', 118, 627, 3.2, 4],
     ] as const;
     for (const [id, x, y, rx, ry] of ankle) ellipse(id, x, y, rx, ry, side);
+    // Keep the metatarsals and toes together as a foot instead of a fan.
+    // Toe lengths taper toward digit V and the great toe has two phalanges.
+    const toeLengths = [7.5, 8.2, 7.1, 6, 5.2];
     for (let digit = 1; digit <= 5; digit++) {
-      const x = 133 - (digit - 1) * 6.1;
-      shaft('metatarsal-' + digit, x, 634, x - (digit - 1), 645, 2.6, side);
-      const phX = x - (digit - 1);
-      shaft('foot-proximal-' + digit, phX, 648, phX - .6, 654, 2, side);
-      if (digit !== 1) {
-        shaft('foot-middle-' + digit, phX - .6, 656, phX - .8, 659.2, 1.7, side);
-        shaft('foot-distal-' + digit, phX - .8, 661, phX - 1, 665, 1.5, side);
+      const index = digit - 1;
+      const x = 132 - index * 3.05;
+      const tilt = index * 0.22;
+      const tipX = x - tilt;
+      shaft('metatarsal-' + digit, x, 634, tipX, 645 - index * 0.45, 2.7, side);
+      const startY = 646 - index * 0.45;
+      const proximalLength = toeLengths[index]!;
+      shaft('foot-proximal-' + digit, tipX, startY,
+        tipX - 0.2, startY + proximalLength, digit === 1 ? 2.5 : 2, side);
+      if (digit === 1) {
+        shaft('foot-distal-1', tipX - 0.2, startY + proximalLength + 0.5,
+          tipX - 0.45, startY + proximalLength + 6.4, 2.25, side);
       } else {
-        shaft('foot-distal-' + digit, phX - .6, 656, phX - .8, 665, 2, side);
+        const middleY = startY + proximalLength + 0.4;
+        const middleLength = proximalLength * 0.48;
+        shaft('foot-middle-' + digit, tipX - 0.2, middleY,
+          tipX - 0.35, middleY + middleLength, 1.65, side);
+        shaft('foot-distal-' + digit, tipX - 0.35, middleY + middleLength + 0.35,
+          tipX - 0.5, middleY + middleLength + 2.6, 1.45, side);
       }
     }
   }

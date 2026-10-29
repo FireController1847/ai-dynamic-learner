@@ -18,10 +18,10 @@ export const skeletalRegions: readonly AnatomyRegion[] = [
   { id: 'thorax', name: 'Chest & shoulders', x: 59, y: 128, width: 202, height: 148 },
   { id: 'spine', name: 'Spine', x: 125, y: 109, width: 70, height: 245 },
   { id: 'abdomen', name: 'Lower torso', x: 100, y: 233, width: 120, height: 110 },
-  { id: 'pelvis', name: 'Pelvis', x: 83, y: 278, width: 154, height: 102 },
+  { id: 'pelvis', name: 'Pelvis', x: 92, y: 276, width: 136, height: 107 },
   { id: 'upper-limb', name: 'Arms', x: 14, y: 139, width: 292, height: 198 },
   { id: 'hands-wrists', name: 'Hands & wrists', x: 11, y: 303, width: 298, height: 86 },
-  { id: 'lower-limb', name: 'Legs', x: 76, y: 326, width: 168, height: 285 },
+  { id: 'lower-limb', name: 'Legs', x: 85, y: 326, width: 150, height: 285 },
   { id: 'feet-ankles', name: 'Feet & ankles', x: 72, y: 585, width: 176, height: 89 },
 ];
 
