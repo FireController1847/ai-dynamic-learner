@@ -379,6 +379,26 @@ all 206 hand-authored projection shapes.
 - Check narrow screens and dark mode, including the floating inspector.
 - Switch back to Skeletal; bone counts and geometry must be unchanged.
 
+## Anatomy history compatibility (v0.12.1)
+
+Anatomy's first saved-results release required `attempts: []` while
+IndexedDB workspaces predating Anatomy often lacked the corresponding
+`featureState` row. The hydrator incorrectly synthesized only
+`{ items: [] }`, which failed validation and prevented the **entire
+workspace** from opening with the message "Saved Anatomy results have
+an invalid structure." Version 0.12.1 supplies `emptyAnatomy()`
+during hydration and normalizes a missing `attempts` field in
+older backups. Actual saved attempt arrays must still validate:
+**malformed present results are never silently cleared**.
+
+Manual verification: load a pre-Anatomy IndexedDB workspace without
+an Anatomy feature-state row and confirm all apps/data open normally.
+Import a backup without `features.anatomy` or with
+`anatomy: { items: [] }`; both should migrate without deleting
+other content. Verify a valid populated Anatomy attempt history
+survives reload/export/restore, while a present invalid `attempts`
+value still blocks unsafe loading. No database reset or schema bump.
+
 ## Structures hierarchy
 
 The right-hand **Structures** index groups visible anatomical records

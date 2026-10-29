@@ -1,6 +1,7 @@
 import type { Workspace } from '../workspace-format.ts';
 import { validateWorkspaceValue } from '../workspace-format.ts';
 import { TASK_CATEGORIES } from '../../features/solve-it-grid/task-model.ts';
+import { emptyAnatomy } from '../../features/anatomy/anatomy-history.ts';
 import type { DataOperation, DataStoreName, IndexedRow, IndexedDataStore } from '../../core/data/indexeddb.ts';
 
 /**
@@ -210,9 +211,13 @@ export async function hydrateWorkspace(store: Pick<IndexedDataStore, 'all'> & Pa
   );
   const featureState = new Map(getRows('featureState').map(row => [row.app, unwrap(row, ['app'])]));
   const featureModels: Record<string, Item> = {};
-  for (const app of [...LIBRARY_APPS, 'todo-list', 'anatomy']) {
+  for (const app of [...LIBRARY_APPS, 'todo-list']) {
     featureModels[app] = { items: [], ...featureState.get(app) };
   }
+  // Pre-Anatomy workspaces do not have an Anatomy featureState row.
+  // Supply the *complete* empty model before applying any saved fields.
+  // Never fabricate or replace an existing attempts array.
+  featureModels.anatomy = { ...emptyAnatomy(), ...featureState.get('anatomy') };
 
   const groups = getRows('libraryNodes');
   for (const app of LIBRARY_APPS) {

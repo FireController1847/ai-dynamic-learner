@@ -58,3 +58,17 @@ export function validateAnatomy(value: unknown): asserts value is AnatomyModel {
     ids.add(attempt.id);
   }
 }
+
+/** Backward-compatible boundary for pre-history Anatomy model shapes.
+ * Missing history means no attempts have been recorded yet; a malformed
+ * *present* history still fails validation and is never silently discarded.
+ */
+export function normalizeAnatomy(value: unknown): AnatomyModel {
+  if (isRecord(value) && !Object.hasOwn(value, 'attempts')) {
+    const migrated = { ...value, attempts: [] };
+    validateAnatomy(migrated);
+    return migrated;
+  }
+  validateAnatomy(value);
+  return value;
+}

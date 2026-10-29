@@ -8,7 +8,7 @@ import type { Crossword } from '../features/crossword/library-model.ts';
 import { validateTodoLists, type TodoLists } from '../features/todo-list/library-model.ts';
 import { emptyStatistics, validateStatistics, type StatisticsData } from '../core/statistics.ts';
 import { validateSolveItGrid, type SolveItGridModel } from '../features/solve-it-grid/library-model.ts';
-import { emptyAnatomy, validateAnatomy, type AnatomyModel } from '../features/anatomy/anatomy-history.ts';
+import { emptyAnatomy, normalizeAnatomy, type AnatomyModel } from '../features/anatomy/anatomy-history.ts';
 
 export interface Workspace {
   format: 'dynamic-learner';
@@ -74,10 +74,10 @@ export function validateWorkspaceValue(value: unknown): Workspace {
   const knowledgeCheck = Object.hasOwn(value.features, 'knowledge-check') ? value.features['knowledge-check'] : { items: [] };
   // Old backups have no Anatomy key; importing them must preserve every other
   // feature and initialize a clean results history without a schema bump.
-  const anatomy = Object.hasOwn(value.features, 'anatomy') ? value.features.anatomy : emptyAnatomy();
+  const anatomy = normalizeAnatomy(
+    Object.hasOwn(value.features, 'anatomy') ? value.features.anatomy : emptyAnatomy());
   validateGuide(guide);
   validateKnowledgeCheck(knowledgeCheck);
-  validateAnatomy(anatomy);
   validateNotebook(notebook);
   validateIndexCards(indexCards);
   validateWordSearch(wordSearch);

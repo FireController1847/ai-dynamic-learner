@@ -20,6 +20,7 @@ interface Workspace {
     crossword: Crossword;
     'guide': GuideModel;
     'knowledge-check': KnowledgeCheck;
+    anatomy: AnatomyModel;
   };
 }
 ```
@@ -30,7 +31,7 @@ The legacy browser-local key `dynamic-learner.workspace.v1` is used only as a re
 
 Uploaded or persisted data is untrusted: parse as `unknown`, reject unsupported top-level fields/version/format, then delegate to feature validators before replacing live state. Invalid replacement never partially mutates the current workspace.
 
-For version-1 compatibility, missing Notebook, Todo List, Solve-It Grid, Word Search, Crossword, Guide, or Review payloads normalize to empty models. Index Cards remains required because it existed in the original v1 contract. Unknown feature keys are rejected.
+For version-1 compatibility, missing Notebook, Todo List, Solve-It Grid, Word Search, Crossword, Guide, Review, or Anatomy payloads normalize to empty models. Index Cards remains required because it existed in the original v1 contract. Unknown feature keys are rejected.
 
 ## Feature ownership
 
@@ -43,6 +44,7 @@ Each feature owns its saved model and runtime validation:
 - Word Search: `src/features/word-search/library-model.ts` plus puzzle/game/display models.
 - Crossword: `src/features/crossword/library-model.ts` plus puzzle/game/display models.
 - Guide: `src/features/guide/library-model.ts`. Each Map guide can optionally save a resumable adventure with the current stop, opened/completed/skipped stop IDs, per-stop revealed bullet counts, and paused status. This progress travels with workspace backups; old maps without it start fresh.
+- Anatomy: `src/features/anatomy/anatomy-history.ts` validates completed anatomical identification attempts. The optional feature was added after many IndexedDB workspaces existed. An absent `featureState[anatomy]` row, an omitted Anatomy backup entry, or a legacy Anatomy model lacking the `attempts` field normalizes to an empty history. When `attempts` **is present**, it must pass full validation; invalid arrays or records are never discarded to bypass corruption safeguards. All other saved content remains unchanged. Results persist in `featureState` and normal JSON workspace backups.
 - Review: `src/features/knowledge-check/library-model.ts`, question/options models. Statement items persist in the same ordered question array but carry only display text and are non-scorable. Review set options persist separate Quiz/Test presentation (all questions or one at a time) and one-at-a-time backward-navigation preferences, defaulting to scrolling for existing sets. Review set options persist independent Short Answer and Fill-in-the-Blanks strictness levels, shared assessment defaults (question order and multiple-choice choice shuffling), independent Quiz/Study and Test question limits, Quiz attempts per question, and Test-only time/result settings. Older saved sets normalize missing strictness fields to level 4 and other missing fields to compatible defaults. The previous `assessmentQuestionLimit` field migrates to both `quizQuestionLimit` and `testQuestionLimit`, preserving its existing value (including unlimited), and is dropped from normalized saved sets; missing independent limits default to 25.
   - Completed Quiz/Test history stores materialized generated-question snapshots (without original authoring rules) plus validated generated variants. Validation permits missing parameterization only in completed history, not authored questions; variants may accompany generated Multiple Choice, True/False, Fill-in-the-Blanks, and Dropdown snapshots.
 
