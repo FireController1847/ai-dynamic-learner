@@ -299,8 +299,13 @@ export const GuideMapEditor = defineComponent({
                 ]);
               })) : h('p', { class: 'guide-topic-help' }, 'No paths yet. Use Connect, then choose another topic.'),
             ]),
-            h('p', { class: 'guide-topic-help' }, 'This stop has its own mini guide.'),
-            h(GuideListEditor, { data: selectedTopic.guide, compact: true }),
+            selectedTopic.lesson
+              ? h('p', { class: 'guide-topic-teaching-note' },
+                  'This stop contains Teaching Blocks. Lesson authoring is not enabled yet; the lesson content is read-only. You can still edit the map and stop details.')
+              : [
+                  h('p', { class: 'guide-topic-help' }, 'Notes are shown together as a full lesson, without point-by-point reveals.'),
+                  h(GuideListEditor, { data: selectedTopic.guide, compact: true }),
+                ],
           ] : [
             h('div', { class: 'guide-topic-panel-empty' }, [h('p', 'Add a topic to start building the map.')]),
           ]),
