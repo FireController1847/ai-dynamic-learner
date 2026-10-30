@@ -52,11 +52,12 @@ New AI maps target a **64px minimum clear gap** between topic rectangles. Sugges
 
 ## AI authoring flow
 
-1. Start **Create guide with AI** from the Guide library and select Map mode (List mode retains its classic notes workflow).
-2. In the instructions stage, choose coverage and teaching depth. Select **Let AI choose** or a **Custom weighted mix** across all nine block kinds. Weights total 100%; the target count is guidance rather than filler quota.
-3. Supply source material, copy the generated instructions to the AI conversation and return the resulting JSON.
-4. Upload the JSON file or paste it, check the response, review the topic/block outline, and confirm source coverage before importing.
-5. Imported v2 maps contain real `TeachingLesson` objects and render offline immediately. Original v1 section-based JSON continues to import.
+1. Start **Create guide with AI** from the Guide library and select Map mode (List mode retains its classic notes workflow). The secondary **Import an AI response** shortcut sits in the builder action row, as in Review.
+2. Select **Overall subject** or **Choose a category**, using Review's shared scope selection and saved-category picker. Selecting a category scopes the AI instructions to that category's source material and skips repeating the source handoff.
+3. In the instructions stage, choose coverage and teaching depth. Select **Let AI choose** or a **Custom weighted mix** across all nine block kinds. Weights total 100%; the target count is guidance rather than filler quota.
+4. Supply source material, copy the generated instructions to the AI conversation and return the resulting JSON.
+5. Upload the JSON file or paste it, check the response, review the topic/block outline, and confirm source coverage before importing.
+6. Imported v2 maps contain real `TeachingLesson` objects and render offline immediately. Original v1 section-based JSON continues to import.
 
 ## Verification
 
