@@ -13,7 +13,7 @@ import { canMove,createSection,findItem,firstEntry,groupOptions,insertGuide,move
 import { GuideModePicker } from './mode-picker.ts';
 import { GuideListEditor } from './list-editor.ts';
 import { GuideMapEditor } from './map-editor.ts';
-import { layoutMapTopics } from './map-graph.ts';
+import { layoutSpacedAiMap } from './ai-map-layout.ts';
 import { GuideMapStudy } from './map-study.ts';
 import { createTeachingBlocksDemo } from './teaching-debug.ts';
 
@@ -29,17 +29,17 @@ function importedMapData(value:SimpleMapGuideImport):MapGuideData{
     if(!from||!to)throw new Error('The imported Guide has an invalid topic connection.');
     return{id:createId(),from,to};
   });
-  const generatedPositions=layoutMapTopics([...ids.values()],connections,startTopicId);
   const useSuggestedPositions=value.topics.every(topic=>topic.position!==undefined);
+  const generatedPositions=layoutSpacedAiMap([...ids.values()],connections,startTopicId,
+    useSuggestedPositions ? value.topics.map(topic=>({x:topic.position![0],y:topic.position![1]})) : undefined);
   const topics=value.topics.map(source=>{
     const id=ids.get(source.key);
     if(!id)throw new Error('The imported Guide has an invalid topic.');
-    const position=useSuggestedPositions&&source.position
-      ?{x:source.position[0],y:source.position[1]}
-      :generatedPositions.get(id)??{x:0,y:0};
+    const position=generatedPositions.get(id)??{x:0,y:0};
     return{
       id,title:source.title,x:position.x,y:position.y,
       ...(source.description ? { description: source.description } : {}),
+      ...(source.lesson?{lesson:source.lesson}:{}),
       guide:{sections:source.sections.map(section=>{
         const result=createSection();result.title=section.title;result.bullets=[...section.bullets];return result;
       })}
