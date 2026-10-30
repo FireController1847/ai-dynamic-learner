@@ -27,6 +27,15 @@ export function createTeachingBlocksDemo(): MapGuideData {
     withId({ kind: 'comparison', title: 'Two very different situations',
       left: { label: 'Waiting', description: 'A process pauses until a resource is available.', points: ['May resolve naturally', 'Does not necessarily form a cycle'] },
       right: { label: 'Deadlock', description: 'A set of processes are blocked waiting on one another.', points: ['No process in the cycle can progress', 'Needs prevention, avoidance, detection, or recovery'] } }),
+    withId({ kind: 'table', title: 'Four conditions of deadlock',
+      caption: 'An overview table alongside the interactive examples.',
+      headers: ['Condition', 'Meaning'],
+      rows: [
+        ['Mutual exclusion', 'At least one resource is non-shareable.'],
+        ['Hold and wait', 'A process holds resources while requesting others.'],
+        ['No preemption', 'A held resource cannot be forcibly taken.'],
+        ['Circular wait', 'Each process waits for a resource held by another in a cycle.'],
+      ] }),
     withId({ kind: 'sequence', title: 'How circular wait forms',
       intro: 'Select a stage to inspect it. You can jump to any stage without unlocking the previous one.',
       steps: [
@@ -85,19 +94,67 @@ export function createTeachingBlocksDemo(): MapGuideData {
   const last = practice.blocks[1];
   if (last.kind === 'check') last.correctId = last.options[0].id;
 
+  const formatting = lesson([
+    withId({ kind: "explanation", title: "Markdown: more than plain bullet points",
+      body: "## Markdown typography\n\n**Bold** draws attention, *italics* add emphasis, and ~~strikethrough~~ marks revisions. Inline code such as `Process.wait()` stays monospace.\n\n### Lists and nested ideas\n\n- First principle: describe what happens.\n- Second principle: show a **worked example**.\n  - Give the learner context.\n  - Explain why the outcome matters.\n\n> Blockquotes provide a visual way to set apart a key insight.\n\nA horizontal rule separates topics:\n\n---\n\n[Visit Dynamic Learner](https://dynlearn.org) demonstrates a hyperlink, and fenced code is displayed below.\n\n```text\nAcquire(Lock1)\nAcquire(Lock2)\nRelease(Lock2)\nRelease(Lock1)\n```", highlights: ["**Bold** is Markdown","$x^2$ is LaTeX"] }),
+    withId({ kind: "explanation", title: "Markdown tables inside explanations",
+      body: "Markdown tables work inside any long-form field, including an explanation:\n\n| Concept | Notation | Result |\n| :--- | :---: | ---: |\n| **Inline math** | $x^2$ | *Typeset* |\n| Code | `wait()` | Monospace |\n| Strong emphasis | **important** | Visible |" }),
+    withId({ kind: "explanation", title: "LaTeX: inline and displayed mathematics",
+      body: "LaTeX works in **long explanations** and in shorter labels.\n\nInline expressions: $x^2+y^2=z^2$ or \\(\\alpha+\\beta=\\gamma\\).\n\nDisplayed equation:\n\n$\n\\int_0^1 x^2\\,dx=\\frac{1}{3}\n$\n\nThe alternate display syntax also works:\n\n\\[\n\\sum_{i=1}^{n} i = \\frac{n(n+1)}{2}\n\\]", highlights: ["$\\alpha$","$E=mc^2$"] }),
+    withId({
+      "kind": "table",
+      "title": "A structured table with Markdown and LaTeX",
+      "caption": "Unlike a Markdown table, this table has dedicated editors for its columns and rows.",
+      "headers": [
+        "Expression",
+        "Interpretation",
+        "Complexity"
+      ],
+      "rows": [
+        [
+          "$O(1)$",
+          "Constant time — **one step**",
+          "Useful for array indexing"
+        ],
+        [
+          "$O(\\log n)$",
+          "Logarithmic time; binary search",
+          "Halving the search space"
+        ],
+        [
+          "$O(n)$",
+          "Linear time — *one pass*",
+          "Visiting every element"
+        ],
+        [
+          "$O(n^2)$",
+          "Quadratic time",
+          "Common with nested loops"
+        ]
+      ]
+    }),
+    withId({ kind: 'connection', title: 'Pick the right tool',
+      body: 'Use a **Markdown table** when the grid is one piece of a larger explanation. Use a dedicated **Table block** when the comparison itself is what you are teaching. Both can contain mathematical notation.',
+      next: 'Return to any other map stop to see how these formats combine with interactive questions and diagrams.' }),
+  ] as TeachingBlock[]);
+
   const topics: MapTopic[] = [
-    { id: createId(), title: 'Teaching Blocks Gallery', description: 'All eight teaching blocks in one interactive lesson.', x: 96, y: 384,
+    { id: createId(), title: 'Teaching Blocks Gallery', description: 'All nine teaching blocks in one interactive lesson.', x: 96, y: 384,
       guide: { sections: [] }, lesson: introduction },
     { id: createId(), title: 'Visual Prevention', description: 'Explore a short explanation and interactive resource flow.', x: 480, y: 224,
       guide: { sections: [] }, lesson: prevention },
     { id: createId(), title: 'Try It Yourself', description: 'Learn from an example and a gentle understanding check.', x: 480, y: 576,
       guide: { sections: [] }, lesson: practice },
+    { id: createId(), title: 'Markdown & LaTeX Showcase', description: 'Explore rich Markdown, math, Markdown tables, and the dedicated Table block.', x: 896, y: 384,
+      guide: { sections: [] }, lesson: formatting },
   ];
   return {
     topics,
     connections: [
       { id: createId(), from: topics[0].id, to: topics[1].id },
       { id: createId(), from: topics[0].id, to: topics[2].id },
+      { id: createId(), from: topics[1].id, to: topics[3].id },
+      { id: createId(), from: topics[2].id, to: topics[3].id },
     ],
     startTopicId: topics[0].id,
   };
