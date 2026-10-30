@@ -6,6 +6,9 @@ import { copyTeachingBlock, newTeachingBlock, TEACHING_BLOCK_KINDS } from '../sr
 import { reactive, ref } from 'vue';
 import { validateGuide } from '../src/features/guide/library-model.ts';
 import { tokenizeTeachingMath, renderTeachingMath } from '../src/features/guide/teaching-text.ts';
+import { parseGuideAiImport } from '../src/features/guide/ai-import.ts';
+import { layoutSpacedAiMap, stopsAreSpaced, GUIDE_AI_STOP_GAP } from '../src/features/guide/ai-map-layout.ts';
+import { allocateTeachingBlocks, rebalanceTeachingWeights, DEFAULT_TEACHING_WEIGHTS, TEACHING_TYPES } from '../src/features/guide/ai-teaching-mix.ts';
 
 function demoModel() {
   const data = createTeachingBlocksDemo();
@@ -164,4 +167,77 @@ test('table authoring enforces dimensions without rejecting intentionally blank 
   assert.doesNotThrow(() => validateTeachingLesson({ version: 1, blocks: [table] }, new Set()));
   table.rows = Array.from({ length: 21 }, () => ['', '', '']);
   assert.throws(() => validateTeachingLesson({ version: 1, blocks: [table] }, new Set()), /Table must contain/);
+});
+
+test('v2 AI map import produces validated teaching lessons and local IDs', () => {
+  const payload = {
+    format: 'dynamic-learner-guide-map', version: 2, title: 'Generated Guide', startTopic: 'intro',
+    coverage: [{ subject: 'Scheduling', itemNumbers: [1, 2] }],
+    topics: [
+      { key: 'intro', title: 'Foundations', position: [0, 0],
+        lesson: { version: 1, blocks: [
+          { kind: 'explanation', title: 'Processes', body: '**Processes** run programs. $x^2$' },
+          { kind: 'check', title: 'Check understanding', question: 'A process has?',
+            options: [{ label: 'An address space', explanation: 'Correct.' },
+              { label: 'No memory', explanation: 'Not correct.' }], correctIndex: 0 },
+        ] } },
+      { key: 'next', title: 'Scheduling', position: [224, 128],
+        lesson: { version: 1, blocks: [
+          { kind: 'table', title: 'Compare policies', headers: ['Policy', 'Behavior'],
+            rows: [['First come first served', 'FIFO'], ['Round robin', 'Time slices']] },
+        ] } },
+    ],
+    connections: [['intro', 'next']],
+  };
+  const parsed = parseGuideAiImport(JSON.stringify(payload), 'map');
+  assert.equal(parsed.mode, 'map');
+  if (parsed.mode !== 'map') return;
+  assert.equal(parsed.topics[0].sections.length, 0);
+  assert.equal(parsed.topics[0].lesson?.blocks.length, 2);
+  const check = parsed.topics[0].lesson?.blocks[1];
+  assert.ok(check?.kind === 'check');
+  assert.equal(check.options.length, 2);
+  assert.equal(check.correctId, check.options[0].id);
+  assert.equal(parsed.topics[1].lesson?.blocks[0].kind, 'table');
+  assert.equal(parsed.topics[1].position?.[0], 224);
+});
+
+test('AI map parser repairs touching coordinates without rejecting content', () => {
+  const v2 = {
+    format: 'dynamic-learner-guide-map', version: 2, title: 'T', startTopic: 'a',
+    topics: [
+      { key: 'a', title: 'A', position: [0, 0],
+        lesson: { version: 1, blocks: [{ kind: 'explanation', title: 'First', body: 'A lesson.' }] } },
+      { key: 'b', title: 'B', position: [160, 0],
+        lesson: { version: 1, blocks: [{ kind: 'explanation', title: 'Second', body: 'Another lesson.' }] } },
+    ],
+    connections: [['a', 'b']],
+  };
+  const parsed = parseGuideAiImport(JSON.stringify(v2), 'map');
+  if (parsed.mode !== 'map') throw new Error('Expected map');
+  assert.ok(parsed.topics.every(topic => topic.position === undefined));
+  const layout = layoutSpacedAiMap(['a', 'b'], parsed.connections, 'a');
+  assert.ok(stopsAreSpaced([...layout.values()], GUIDE_AI_STOP_GAP));
+});
+
+test('AI map rejects malformed teaching blocks and invalid zero-based answers', () => {
+  const map = {
+    format: 'dynamic-learner-guide-map', version: 2, title: 'T', startTopic: 'a',
+    topics: [{ key: 'a', title: 'A',
+      lesson: { version: 1, blocks: [{ kind: 'check', title: 'Q', question: 'Why?',
+        options: [{ label: 'Yes', explanation: 'Because.' },
+          { label: 'No', explanation: 'Incorrect.' }], correctIndex: 3 }] } }],
+    connections: [],
+  };
+  assert.throws(() => parseGuideAiImport(JSON.stringify(map), 'map'), /correctIndex/);
+  (map.topics[0].lesson.blocks[0] as { correctIndex: number }).correctIndex = 1;
+  assert.doesNotThrow(() => parseGuideAiImport(JSON.stringify(map), 'map'));
+});
+
+test('Review-style teaching mix stays at 100% and allocates meaningful targets', () => {
+  const weights = rebalanceTeachingWeights(DEFAULT_TEACHING_WEIGHTS, 'table', 22);
+  assert.equal(weights.table, 22);
+  assert.equal(TEACHING_TYPES.reduce((sum, type) => sum + weights[type], 0), 100);
+  const counts = allocateTeachingBlocks(weights, 30);
+  assert.equal(TEACHING_TYPES.reduce((sum, type) => sum + counts[type], 0), 30);
 });
