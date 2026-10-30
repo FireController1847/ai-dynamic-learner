@@ -242,3 +242,33 @@
 .guide-lesson-math-inline .katex,.guide-lesson-math-display .katex{color:inherit}
 .guide-lesson-block-header h4,.guide-lesson-highlight,.guide-lesson-choice,
 .guide-lesson-diagram-node,.guide-lesson-step-tab{overflow-wrap:anywhere}
+
+
+/* Structured table teaching block: accessible table layout with horizontal scrolling. */
+.guide-lesson-table-scroll{max-width:100%;overflow-x:auto;overscroll-behavior-inline:contain;border:1px solid var(--border-color);border-radius:12px}
+.guide-lesson-table-scroll:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.guide-lesson-data-table{width:100%;min-width:max-content;border-collapse:separate;border-spacing:0;font-size:14px;line-height:1.55}
+.guide-lesson-data-table :is(th,td){min-width:120px;max-width:440px;padding:12px 15px;vertical-align:top;text-align:left;overflow-wrap:anywhere;border-right:1px solid var(--border-color);border-bottom:1px solid var(--border-color)}
+.guide-lesson-data-table tr>:last-child{border-right:0}
+.guide-lesson-data-table tbody tr:last-child>*{border-bottom:0}
+.guide-lesson-data-table thead th{background:var(--surface-subtle);font-weight:700;white-space:normal}
+.guide-lesson-data-table tbody th{font-weight:650}
+.guide-lesson-data-table tbody tr:nth-child(even){background:color-mix(in srgb,var(--surface-subtle) 65%,var(--page-background))}
+.guide-lesson-data-table .guide-lesson-rich{line-height:1.5;font-size:inherit}
+.guide-lesson-data-table .guide-lesson-rich>p{margin:0}
+.guide-teach-table-editor{min-width:0}
+.guide-teach-table-columns,.guide-teach-table-rows{display:grid;gap:10px;min-width:0}
+.guide-teach-table-column{display:flex;align-items:end;gap:8px;min-width:0}
+.guide-teach-table-column>.guide-teach-field{min-width:0}
+.guide-teach-table-column>.quiet-button{height:42px;min-height:42px;flex:0 0 auto;align-self:end;white-space:nowrap}
+.guide-teach-table-row{display:grid;gap:10px;min-width:0;margin:0;padding:12px;border:1px solid var(--border-color);border-radius:10px}
+.guide-teach-table-row legend{font-size:12px;font-weight:700;padding:0 5px}
+.guide-teach-table-cells{display:flex;gap:10px;max-width:100%;overflow-x:auto;scrollbar-gutter:stable;padding:2px 0 8px}
+.guide-teach-table-cell{flex:1 0 175px;min-width:175px}
+.guide-teach-table-cell textarea{min-height:72px}
+.guide-teach-table-row>.quiet-button{justify-self:start;align-self:start;min-height:36px}
+@media(max-width:600px){
+  .guide-teach-table-column{flex-wrap:wrap}
+  .guide-teach-table-column>.quiet-button{align-self:start}
+  .guide-lesson-data-table :is(th,td){padding:10px 12px}
+}
