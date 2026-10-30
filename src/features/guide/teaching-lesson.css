@@ -56,3 +56,51 @@
 
 .guide-debug-launch{padding:8px 12px;border-bottom:1px solid var(--border-color)}
 .guide-debug-create{width:100%;min-height:36px;justify-content:center;font-size:12px}
+
+
+/* Authoring lives in the map's right-hand stop panel and remains scrollable. */
+.guide-teach-editor{display:grid;min-width:0;gap:12px;margin:16px 0 24px;padding-top:14px;border-top:1px solid var(--border-color)}
+.guide-teach-heading{display:grid;gap:6px}
+.guide-teach-heading h3{margin:0;font-size:18px}
+.guide-teach-heading p,.guide-teach-convert p,.guide-teach-hint{margin:0;color:var(--text-secondary);font-size:12px;line-height:1.55}
+.guide-teach-convert{display:grid;justify-items:start;gap:12px;padding:16px;border-radius:12px;background:var(--brand-tint)}
+.guide-teach-create{display:flex;align-items:end;gap:8px;flex-wrap:wrap}
+.guide-teach-create>.guide-teach-field{flex:1 1 150px}
+.guide-teach-create>.card-primary-button{min-height:40px}
+.guide-teach-field{display:grid;gap:6px;min-width:0;flex:1}
+.guide-teach-field>span{color:var(--text-secondary);font-size:12px;font-weight:600}
+.guide-teach-field input,.guide-teach-field select,.guide-teach-field textarea{width:100%;min-width:0;border:1px solid var(--control-border);border-radius:8px;background:var(--page-background);color:var(--text-color);padding:10px;font:inherit;font-size:14px;line-height:1.5}
+.guide-teach-field textarea{min-height:92px;resize:vertical}
+.guide-teach-outline{display:grid;gap:6px;list-style:none;margin:0;padding:0}
+.guide-teach-outline-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;align-items:center;padding:7px;border:1px solid var(--border-color);border-radius:10px;background:var(--page-background)}
+.guide-teach-outline-row.is-selected{border-color:var(--brand)}
+.guide-teach-outline-select{display:grid;gap:3px;min-width:0;border:0;background:transparent;color:var(--text-color);text-align:left;cursor:pointer}
+.guide-teach-outline-select strong{font-size:13px;overflow-wrap:anywhere}
+.guide-teach-outline-kind{font-size:10px;text-transform:capitalize;letter-spacing:.04em;color:var(--brand-text)}
+.guide-teach-outline-actions{display:flex;gap:2px}
+.guide-teach-outline-actions .icon-button{width:28px;min-width:28px;height:30px;font-size:17px}
+.guide-teach-delete-confirm{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:12px}
+.guide-teach-delete-confirm .quiet-button{min-height:32px}
+.guide-teach-tabbar{display:flex;gap:6px;padding-bottom:8px;border-bottom:1px solid var(--border-color)}
+.guide-teach-tabbar button[aria-pressed=true]{border-color:var(--brand);color:var(--brand-text);background:var(--brand-tint)}
+.guide-teach-form{display:grid;gap:14px;min-width:0;padding:14px;border:1px solid var(--border-color);border-radius:12px;background:var(--page-background)}
+.guide-teach-form-heading{display:grid;gap:3px}
+.guide-teach-form-heading strong{text-transform:capitalize}
+.guide-teach-form-heading span{font-size:11px;color:var(--text-secondary)}
+.guide-teach-collection{display:grid;min-width:0;gap:10px;padding:12px;border:1px solid var(--border-color);border-radius:10px}
+.guide-teach-collection legend{padding-inline:5px;font-size:12px;font-weight:700}
+.guide-teach-list-row,.guide-teach-list-card{display:grid;gap:8px;min-width:0}
+.guide-teach-list-card{padding:12px;border:1px solid var(--border-color);border-radius:9px;background:var(--surface-subtle)}
+.guide-teach-list-card strong{font-size:12px}
+.guide-teach-list-row>.quiet-button,.guide-teach-list-card>.quiet-button{justify-self:start}
+.guide-teach-correct{display:flex;gap:7px;align-items:center;font-size:12px}
+.guide-teach-form-actions{display:flex;flex-wrap:wrap;gap:8px}
+.guide-teach-error{margin:0;color:var(--danger);font-size:12px}
+.guide-teach-empty{margin:0;padding:12px;border:1px dashed var(--border-color);border-radius:10px;color:var(--text-secondary);font-size:12px}
+.guide-teach-preview{min-width:0}
+.guide-teach-preview .guide-teaching-lesson{gap:12px}
+.guide-teach-preview .guide-lesson-block{padding:14px}
+.guide-legacy-notes{border-top:1px solid var(--border-color);padding-top:10px}
+.guide-legacy-notes summary{cursor:pointer;font-weight:600}
+.guide-legacy-notes .guide-list-editor{margin-top:12px}
+@media(max-width:900px){.guide-teach-field input,.guide-teach-field select,.guide-teach-field textarea{font-size:16px}}
