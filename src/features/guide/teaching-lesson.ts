@@ -50,7 +50,7 @@ export const TeachingLessonView = defineComponent({
     function answer(id: string, value: string) { emit('answer', id, value); }
 
     function renderBlock(block: TeachingBlock) {
-      let body: VNode | VNode[] | null = null;
+      let body: VNode | (VNode | null)[] | null = null;
       let name: string = block.kind;
       switch (block.kind) {
         case 'explanation':
