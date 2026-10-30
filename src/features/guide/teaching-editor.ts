@@ -2,7 +2,7 @@ import { defineComponent, h, ref, type PropType, type VNode } from 'vue';
 import { createId } from '../../core/ids.ts';
 import { inputValue } from '../../core/dom.ts';
 import type { MapTopic } from './library-model.ts';
-import { lessonForTopic, MAX_TEACHING_BLOCKS, validateTeachingLesson,
+import { lessonForTopic, MAX_TEACHING_BLOCKS, MAX_TABLE_COLUMNS, MAX_TABLE_ROWS, validateTeachingLesson,
   type TeachingBlock, type TeachingChoice, type TeachingSide, type TeachingStep, type TeachingNode } from './teaching-blocks.ts';
 import { copyTeachingBlock, newTeachingBlock, newTeachingChoice, TEACHING_BLOCK_KINDS, type TeachingBlockKind } from './teaching-block-factory.ts';
 import { TeachingLessonView } from './teaching-lesson.ts';
@@ -185,6 +185,49 @@ export const TeachingBlocksEditor = defineComponent({
           onClick: () => { choices.push(newTeachingChoice()); } }, '+ Add option'),
       ]);
     }
+    function tableFields(block: Extract<TeachingBlock, { kind: 'table' }>): VNode {
+      const { headers, rows } = block;
+      const addColumn = () => {
+        if (headers.length >= MAX_TABLE_COLUMNS) return;
+        headers.push('New column');
+        rows.forEach(row => row.push(''));
+      };
+      const removeColumn = (index: number) => {
+        if (headers.length <= 2) return;
+        headers.splice(index, 1);
+        rows.forEach(row => row.splice(index, 1));
+      };
+      return h('fieldset', { class: 'guide-teach-collection guide-teach-table-editor' }, [
+        h('legend', 'Table columns and rows'),
+        h('p', { class: 'guide-teach-hint' },
+          'Headers accept LaTeX. Table cells accept Markdown and LaTeX. Scroll across for wider tables.'),
+        h('div', { class: 'guide-teach-table-columns' }, headers.map((header, index) =>
+          h('div', { key: index, class: 'guide-teach-table-column' }, [
+            field('Column ' + (index + 1), header, value => { headers[index] = value; }),
+            h('button', {
+              type: 'button', class: 'quiet-button', disabled: headers.length <= 2,
+              'aria-label': 'Remove column ' + (index + 1),
+              onClick: () => removeColumn(index),
+            }, 'Remove column'),
+          ]))),
+        h('button', { type: 'button', class: 'quiet-button',
+          disabled: headers.length >= MAX_TABLE_COLUMNS, onClick: addColumn }, '+ Add column'),
+        h('div', { class: 'guide-teach-table-rows' }, rows.map((row, index) =>
+          h('fieldset', { key: index, class: 'guide-teach-table-row' }, [
+            h('legend', 'Row ' + (index + 1)),
+            h('div', { class: 'guide-teach-table-cells' },
+              row.map((value, column) => h('div', { key: column, class: 'guide-teach-table-cell' },
+                [field(headers[column] || 'Column ' + (column + 1), value,
+                  next => { row[column] = next; }, 2)]))),
+            h('button', { type: 'button', class: 'quiet-button',
+              disabled: rows.length <= 1, onClick: () => rows.splice(index, 1) }, 'Remove row'),
+          ]))),
+        h('button', { type: 'button', class: 'quiet-button',
+          disabled: rows.length >= MAX_TABLE_ROWS,
+          onClick: () => rows.push(headers.map(() => '')) }, '+ Add row'),
+      ]);
+    }
+
     function fields(block: TeachingBlock): (VNode | null)[] {
       const parts: (VNode | null)[] = [
         field('Block title', block.title, value => { block.title = value; }),
@@ -201,6 +244,10 @@ export const TeachingBlocksEditor = defineComponent({
           break;
         case 'comparison':
           parts.push(sideFields(block.left, 'First side'), sideFields(block.right, 'Second side'));
+          break;
+        case 'table':
+          parts.push(field('Table caption (optional)', block.caption,
+            value => { block.caption = value; }, true), tableFields(block));
           break;
         case 'sequence':
           parts.push(field('Introduction (optional)', block.intro, value => { block.intro = value; }, true),
