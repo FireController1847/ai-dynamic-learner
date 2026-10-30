@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createTeachingBlocksDemo } from '../src/features/guide/teaching-debug.ts';
-import { lessonForTopic } from '../src/features/guide/teaching-blocks.ts';
+import { lessonForTopic, validateTeachingLesson } from '../src/features/guide/teaching-blocks.ts';
+import { newTeachingBlock, TEACHING_BLOCK_KINDS } from '../src/features/guide/teaching-block-factory.ts';
 import { validateGuide } from '../src/features/guide/library-model.ts';
 
 function demoModel() {
@@ -75,4 +76,22 @@ test('duplicate nested ids are rejected by the lesson validator', () => {
   assert.ok(blocks && blocks.length > 1);
   blocks[1].id = blocks[0].id;
   assert.throws(() => validateGuide(model), /duplicated/);
+});
+
+test('all Teaching Block authoring templates start valid and use unique IDs', () => {
+  const blocks = TEACHING_BLOCK_KINDS.map(item => newTeachingBlock(item.kind));
+  assert.doesNotThrow(() => validateTeachingLesson({ version: 1, blocks }, new Set<string>()));
+  assert.equal(blocks.length, 8);
+  assert.equal(new Set(blocks.map(block => block.id)).size, blocks.length);
+});
+
+test('invalid intermediate draft changes can be rejected before replacing saved blocks', () => {
+  const original = newTeachingBlock('explanation');
+  const edited = structuredClone(original);
+  if (edited.kind === 'explanation') edited.body = '';
+  assert.throws(() =>
+    validateTeachingLesson({ version: 1, blocks: [edited] }, new Set<string>()),
+    /must contain valid text/);
+  assert.doesNotThrow(() =>
+    validateTeachingLesson({ version: 1, blocks: [original] }, new Set<string>()));
 });
