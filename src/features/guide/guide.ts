@@ -143,8 +143,8 @@ export const Guide=defineComponent({
 
     function detail(){
       if(aiTarget.value&&aiStage.value==='choose')return h('section',{class:'guide-detail guide-builder-detail',inert:overlay.value&&!collapsed.value},[
-        h(GuideModePicker,{destination:aiTarget.value.parentName,onCreate:chooseAiMode,onCancel:cancelAi}),
-        h('button',{type:'button',class:'quiet-button',onClick:importExistingAi},'Import an AI response'),
+        h(GuideModePicker,{destination:aiTarget.value.parentName,allowAiResponseImport:true,
+          onCreate:chooseAiMode,onImportAiResponse:importExistingAi,onCancel:cancelAi}),
         h('p',{class:'visually-hidden',role:'status'},message.value)
       ]);
       if(aiTarget.value&&aiStage.value==='import'&&aiMode.value)return h('section',{'data-ai-scroll-region':'',class:'guide-detail guide-builder-detail',inert:overlay.value&&!collapsed.value},[
