@@ -11,6 +11,7 @@ export type TeachingBlock =
   | { id: string; kind: 'explanation'; title: string; body: string; highlights?: string[] }
   | { id: string; kind: 'example'; title: string; scenario: string; steps: string[]; takeaway: string }
   | { id: string; kind: 'comparison'; title: string; left: TeachingSide; right: TeachingSide }
+  | { id: string; kind: 'table'; title: string; caption?: string; headers: string[]; rows: string[][] }
   | { id: string; kind: 'sequence'; title: string; intro?: string; steps: TeachingStep[] }
   | { id: string; kind: 'diagram'; title: string; caption?: string; nodes: TeachingNode[] }
   | { id: string; kind: 'exploration'; title: string; prompt: string; choices: TeachingChoice[] }
@@ -24,6 +25,9 @@ export interface TeachingChoice { id: string; label: string; explanation: string
 export interface TeachingLesson { version: 1; blocks: TeachingBlock[] }
 
 export const MAX_TEACHING_BLOCKS = 80;
+export const MAX_TABLE_COLUMNS = 8;
+export const MAX_TABLE_ROWS = 20;
+export const MAX_TABLE_CELL_LENGTH = 2000;
 const MAX_LESSON_TEXT = 10000;
 
 function strictKeys(value: Record<string, unknown>, allowed: string[], label: string) {
@@ -96,6 +100,18 @@ export function validateTeachingLesson(value: unknown, ids: Set<string>): assert
         strictKeys(block, ['id','kind','title','left','right'], 'Comparison');
         side(block.left, 'Comparison left');
         side(block.right, 'Comparison right');
+        break;
+      case 'table':
+        strictKeys(block, ['id','kind','title','caption','headers','rows'], 'Table');
+        optionalText(block.caption, 'Table caption');
+        strings(block.headers, MAX_TABLE_COLUMNS, 'Table headers', 2);
+        if (!Array.isArray(block.rows) || block.rows.length < 1 || block.rows.length > MAX_TABLE_ROWS)
+          throw new Error('Table must contain between 1 and ' + MAX_TABLE_ROWS + ' rows.');
+        block.rows.forEach((row, index) => {
+          if (!Array.isArray(row) || row.length !== block.headers.length ||
+              row.some(cell => typeof cell !== 'string' || cell.length > MAX_TABLE_CELL_LENGTH))
+            throw new Error('Table row ' + (index + 1) + ' must match the headers and use valid text.');
+        });
         break;
       case 'sequence':
         strictKeys(block, ['id','kind','title','intro','steps'], 'Sequence');
