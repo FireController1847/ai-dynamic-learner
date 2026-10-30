@@ -108,8 +108,6 @@ export const TeachingBlocksEditor = defineComponent({
         h('span', label),
         multiline ? h('textarea', { ...control, rows: typeof multiline === 'number' ? multiline : 3 })
           : h('input', { ...control, type: 'text' }),
-        multiline ? h('small', { class: 'guide-teach-format-hint' },
-          'Markdown and LaTeX supported. Use $…$ or \\(…\\) for inline math, $…$ for display math.') : null,
       ]);
     }
     function stringList(title: string, entries: string[], max: number,
