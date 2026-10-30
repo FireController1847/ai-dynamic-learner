@@ -1,6 +1,6 @@
 # Guide Teaching Blocks (v1 preview)
 
-Map navigation remains unchanged. A map stop optionally stores `lesson: { version: 1, blocks: [...] }` alongside its preexisting `guide.sections` data. The `lesson` field is declarative and strictly validated by `validateTeachingLesson` before persistence. It does **not** accept HTML, script, arbitrary URLs, or JSX.
+Map navigation remains unchanged. A map stop optionally stores `lesson: { version: 1, blocks: [...] }` alongside its preexisting `guide.sections` data. The `lesson` field is declarative and strictly validated by `validateTeachingLesson` before persistence. User-authored text may use Markdown and LaTeX, but never directly executes HTML or script. Rich content is sanitized before rendering.
 
 ## Block catalog
 
