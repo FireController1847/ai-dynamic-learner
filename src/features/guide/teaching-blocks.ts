@@ -3,8 +3,9 @@ import { isRecord } from '../../core/validation.ts';
 import type { MapTopic } from './library-model.ts';
 
 /**
- * Declarative, offline-safe lesson content. All strings render as text, never HTML.
- * AI import may eventually produce this schema; no arbitrary scripts or URLs.
+ * Declarative, offline-safe lesson data. Longer text is rendered as sanitized
+ * Markdown with KaTeX; short labels render text and trusted-disabled KaTeX only.
+ * The schema contains no executable HTML, scripts, or arbitrary renderers.
  */
 export type TeachingBlock =
   | { id: string; kind: 'explanation'; title: string; body: string; highlights?: string[] }
