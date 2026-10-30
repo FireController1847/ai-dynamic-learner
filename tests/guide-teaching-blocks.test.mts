@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createTeachingBlocksDemo } from '../src/features/guide/teaching-debug.ts';
 import { lessonForTopic, validateTeachingLesson } from '../src/features/guide/teaching-blocks.ts';
-import { newTeachingBlock, TEACHING_BLOCK_KINDS } from '../src/features/guide/teaching-block-factory.ts';
+import { copyTeachingBlock, newTeachingBlock, TEACHING_BLOCK_KINDS } from '../src/features/guide/teaching-block-factory.ts';
+import { reactive, ref } from 'vue';
 import { validateGuide } from '../src/features/guide/library-model.ts';
 
 function demoModel() {
@@ -94,4 +95,18 @@ test('invalid intermediate draft changes can be rejected before replacing saved 
     /must contain valid text/);
   assert.doesNotThrow(() =>
     validateTeachingLesson({ version: 1, blocks: [original] }, new Set<string>()));
+});
+
+test('authoring can edit and save Vue-proxied Teaching Blocks', () => {
+  const source = reactive(newTeachingBlock('diagram'));
+  const draft = ref(copyTeachingBlock(source));
+  assert.equal(draft.value.kind, 'diagram');
+  if (draft.value.kind !== 'diagram') throw new Error('Expected diagram block');
+  draft.value.nodes[0].label = 'Updated concept';
+  const saved = copyTeachingBlock(draft.value);
+  assert.equal(saved.kind, 'diagram');
+  if (saved.kind !== 'diagram' || source.kind !== 'diagram') throw new Error('Expected diagram block');
+  assert.equal(saved.nodes[0].label, 'Updated concept');
+  assert.notEqual(source.nodes[0].label, saved.nodes[0].label);
+  assert.doesNotThrow(() => validateTeachingLesson({ version: 1, blocks: [saved] }, new Set()));
 });
