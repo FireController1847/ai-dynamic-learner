@@ -23,9 +23,9 @@ The renderer is `teaching-lesson.ts`; the associated CSS is `teaching-lesson.css
 
 - Long-form fields (explanations, scenarios, walkthroughs, descriptions, process details, captions, question prompts, choice explanations, and connections) support **Markdown**: paragraphs, emphasis, headings, lists, code, links, and tables.
 - Every short field (block titles, key ideas, step names, diagram labels, answer labels, and comparison points) supports **LaTeX** without treating ordinary Markdown punctuation as formatting.
-- LaTeX works in long and short fields using \`$x^2$\` or \`\\(x^2\\)\` for inline expressions; use \`$$\\frac{a}{b}$$\` or \`\\[ ... \\]\` for displayed expressions.
+- LaTeX works in long and short fields using `$x^2$` or `\(x^2\)` for inline expressions; use `$$\frac{a}{b}$$` or `\[ ... \]` for displayed expressions.
 - Fields retain their original strings; the formatted result appears in **Preview** or **Both** and in the learner's lesson. No migration is necessary for existing plain-text guides.
-- Long-form content uses the application's shared Marked + DOMPurify + KaTeX renderer. Short fields use text nodes and the same KaTeX renderer with \`trust: false\`. Arbitrary user-authored HTML is never inserted directly into the component tree.
+- Long-form content uses the application's shared Marked + DOMPurify + KaTeX renderer. Short fields use text nodes and the same KaTeX renderer with `trust: false`. Arbitrary user-authored HTML is never inserted directly into the component tree.
 
 ## Source compatibility
 
