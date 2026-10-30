@@ -2,17 +2,14 @@ import { useStudySession } from '../../components/use-study-session.ts';
 import { useStatistics } from '../../components/statistics-context.ts';
 import { computed, defineComponent, h, nextTick, onBeforeUnmount, onDeactivated, ref, type PropType } from 'vue';
 import { GuideTypeIcon } from './guide-type-icon.ts';
+import { TeachingLessonView } from './teaching-lesson.ts';
+import { lessonForTopic } from './teaching-blocks.ts';
 import { connectedTopicIds, mapStudyProblem, startTopic, topicById } from './map-graph.ts';
 import { MAP_CANVAS_HEIGHT, MAP_CANVAS_WIDTH, MAP_PADDING } from './map-presentation.ts';
 import {
-  MAP_HEIGHT, MAP_TOPIC_HEIGHT, MAP_TOPIC_WIDTH, MAP_WIDTH, type GuideSection,
+  MAP_HEIGHT, MAP_TOPIC_HEIGHT, MAP_TOPIC_WIDTH, MAP_WIDTH,
   type MapGuideData, type MapStudySession, type MapTopic,
 } from './library-model.ts';
-
-interface StudyPoint {
-  sectionId: string;
-  bullet: string;
-}
 
 export const GuideMapStudy = defineComponent({
   name: 'GuideMapStudy',
@@ -31,10 +28,9 @@ export const GuideMapStudy = defineComponent({
     const visited = ref(new Set(saved?.visitedIds ?? []));
     const opened = ref(new Set(saved?.openedIds ?? []));
     const skipped = ref(new Set(saved?.skippedIds ?? []));
-    const revealedByTopic = ref<Record<string, number>>({ ...saved?.revealed });
     const currentId = ref<string | null>(saved?.currentId ?? null);
     const path = ref<string[]>([]);
-    const revealedCount = ref(currentId.value ? revealedByTopic.value[currentId.value] ?? 0 : 0);
+    const responsesByTopic = ref<Record<string, Record<string, string>>>({ ...saved?.responses });
     const travelling = ref(false);
     const arriving = ref(false);
     const focused = ref(false);
@@ -59,19 +55,31 @@ export const GuideMapStudy = defineComponent({
       return started.value && !arriving.value && first !== null && !opened.value.has(first.id);
     });
 
-    function points(topic: MapTopic | null): StudyPoint[] {
-      if (!topic) return [];
-      const result: StudyPoint[] = [];
-      for (const section of topic.guide.sections) {
-        for (const bullet of section.bullets) {
-          if (!bullet.trim()) continue;
-          result.push({ sectionId: section.id, bullet });
-        }
-      }
-      return result;
+    const currentLesson = computed(() => current.value ? lessonForTopic(current.value) : null);
+    const currentResponses = computed(() => currentId.value ? responsesByTopic.value[currentId.value] ?? {} : {});
+    function answerBlock(blockId: string, response: string) {
+      if (!currentId.value) return;
+      responsesByTopic.value = {
+        ...responsesByTopic.value,
+        [currentId.value]: { ...currentResponses.value, [blockId]: response },
+      };
+      saveSession();
+    }
+    function resetLessonInteractions() {
+      if (!currentId.value) return;
+      const next = { ...responsesByTopic.value };
+      delete next[currentId.value];
+      responsesByTopic.value = next;
+      saveSession();
+      nextTick(() => { topicHeading.value?.focus({ preventScroll: true }); });
+    }
+    function finishLesson() {
+      if (!currentId.value || travelling.value || arriving.value) return;
+      skipped.value = new Set([...skipped.value].filter(id => id !== currentId.value));
+      markVisited(currentId.value);
+      saveSession();
     }
 
-    const currentPoints = computed(() => points(current.value));
     const available = computed(() => currentId.value
       ? connectedTopicIds(props.data, currentId.value).filter(id => !visited.value.has(id))
       : []);
@@ -116,7 +124,8 @@ export const GuideMapStudy = defineComponent({
         openedIds: [...opened.value],
         visitedIds: [...visited.value],
         skippedIds: [...skipped.value],
-        revealed: { ...revealedByTopic.value },
+        revealed: { ...saved?.revealed },
+        responses: { ...responsesByTopic.value },
       };
       props.data.session = session;
     }
@@ -185,40 +194,7 @@ export const GuideMapStudy = defineComponent({
     function prepareCurrent() {
       const topic = current.value;
       if (!topic) return;
-      revealedCount.value = revealedByTopic.value[topic.id] ?? 0;
       topicPanel.value?.scrollTo({ top: 0, behavior: 'instant' });
-      if (!points(topic).length) markVisited(topic.id);
-    }
-
-    function followRevealedPoint() {
-      nextTick(() => {
-        window.requestAnimationFrame(() => {
-          const panel = topicPanel.value;
-          if (!panel || !focused.value || travelling.value) return;
-          const bullets = panel.querySelectorAll<HTMLElement>('.guide-study-bullet');
-          const latest = bullets.item(bullets.length - 1);
-          if (!latest) return;
-
-          const viewport = panel.getBoundingClientRect();
-          const point = latest.getBoundingClientRect();
-          // Keep the freshly revealed point readable; include the next action
-          // when it fits, so learners can continue without manual scrolling.
-          const action = panel.querySelector<HTMLElement>(
-            '.guide-study-reveal-actions button, .guide-study-branch button, ' +
-            '.guide-study-backtrack button, .guide-study-finished button',
-          );
-          const actionBottom = action?.getBoundingClientRect().bottom ?? point.bottom;
-          const bottomOverflow = Math.max(0, Math.max(point.bottom, actionBottom) - (viewport.bottom - 24));
-          const keepPointVisible = Math.max(0, point.top - viewport.top - 20);
-          const delta = Math.min(bottomOverflow, keepPointVisible);
-          if (delta > 0) {
-            panel.scrollTo({
-              top: panel.scrollTop + delta,
-              behavior: reducedMotion.matches ? 'instant' : 'smooth',
-            });
-          }
-        });
-      });
     }
 
     function start(animate = true) {
@@ -231,12 +207,11 @@ export const GuideMapStudy = defineComponent({
       visited.value = new Set();
       opened.value = new Set();
       skipped.value = new Set();
-      revealedByTopic.value = {};
       focused.value = false;
       arriving.value = animate && !reducedMotion.matches;
       currentId.value = first.id;
       path.value = [first.id];
-      revealedCount.value = 0;
+      responsesByTopic.value = {};
       started.value = true;
       prepareCurrent();
       saveSession();
@@ -302,27 +277,6 @@ export const GuideMapStudy = defineComponent({
       focused.value = false;
       started.value = false;
       saveSession();
-    }
-
-    function revealNext() {
-      const topic = current.value;
-      if (!topic || skipped.value.has(topic.id)) return;
-      const count = currentPoints.value.length;
-      if (revealedCount.value < count) revealedCount.value += 1;
-      revealedByTopic.value = { ...revealedByTopic.value, [topic.id]: revealedCount.value };
-      if (revealedCount.value >= count) markVisited(topic.id);
-      saveSession();
-      followRevealedPoint();
-    }
-
-    function resetRevealedPoints() {
-      const topic = current.value;
-      if (!topic || revealedCount.value === 0) return;
-      revealedCount.value = 0;
-      revealedByTopic.value = { ...revealedByTopic.value, [topic.id]: 0 };
-      topicPanel.value?.scrollTo({ top: 0, behavior: 'instant' });
-      saveSession();
-      nextTick(() => { topicHeading.value?.focus({ preventScroll: true }); });
     }
 
     function skipSection() {
@@ -420,7 +374,6 @@ export const GuideMapStudy = defineComponent({
           path.value = path.value.slice(0, path.value.indexOf(ancestorId) + 1);
           travelTargetId.value = null;
           travelling.value = false;
-          revealedCount.value = points(topicById(props.data, ancestorId)).length;
           topicPanel.value?.scrollTo({ top: 0, behavior: 'instant' });
           // A single remaining trail is not a choice: follow it without
           // reopening the already studied stop or requiring another click.
@@ -455,27 +408,6 @@ export const GuideMapStudy = defineComponent({
         y2: to.y + MAP_TOPIC_HEIGHT / 2,
         class: { 'is-travelling': active },
       });
-    }
-
-    function revealedContent(topic: MapTopic) {
-      const shown = currentPoints.value.slice(0, revealedCount.value);
-      const bySection = new Map<string, { section: GuideSection | undefined; bullets: string[] }>();
-      for (const point of shown) {
-        const entry = bySection.get(point.sectionId) ?? {
-          section: topic.guide.sections.find(section => section.id === point.sectionId),
-          bullets: [],
-        };
-        entry.bullets.push(point.bullet);
-        bySection.set(point.sectionId, entry);
-      }
-      return [...bySection.entries()].map(([sectionId, entry]) => h('section', {
-        key: sectionId, class: 'guide-study-section',
-      }, [
-        entry.section?.title ? h('h4', entry.section.title) : null,
-        h('ul', entry.bullets.map((bullet, index) => h('li', {
-          key: index, class: 'guide-study-bullet',
-        }, bullet))),
-      ]));
     }
 
     function routeControls(topic: MapTopic) {
@@ -538,8 +470,8 @@ export const GuideMapStudy = defineComponent({
               h('p', { class: 'guide-study-kicker' }, paused ? 'Your adventure is waiting' : 'Ready to explore?'),
               h('h3', props.guideName),
               h('p', paused
-                ? 'Pick up right where you left off, with your opened stops and revealed notes intact.'
-                : 'Discover the trail, select unlocked stops, and reveal what you learn along the way.'),
+                ? 'Pick up right where you left off, with your opened stops and completed stops and interactions intact.'
+                : 'Discover the trail, explore interactive mini-lessons, and learn at your own pace.'),
             ]),
           ]),
           h('div', { class: 'guide-study-pills', 'aria-label': 'Session details' }, [
@@ -549,7 +481,7 @@ export const GuideMapStudy = defineComponent({
           ]),
           h('div', { class: 'guide-study-expect' }, [
             h('h4', 'What to expect'),
-            h('p', 'Click an unlocked stop on the map to open its notes. Reveal the points one at a time or skip the rest; completed stops unlock new paths. Revisit opened stops whenever you like—progress is saved with this guide.'),
+            h('p', 'Open any unlocked stop to explore its teaching blocks. Complete a lesson when you feel ready to move forward, or skip it and return later. The map remembers your progress and choices.'),
           ]),
           studyProblem.value ? h('p', { class: 'guide-map-status', role: 'status' }, studyProblem.value) : null,
           h('div', { class: 'guide-study-actions' }, [
@@ -591,7 +523,7 @@ export const GuideMapStudy = defineComponent({
                 if (focused.value) closeTopic();
                 else if (currentId.value) openStop(currentId.value);
               },
-            }, focused.value ? 'View map' : 'View points'),
+            }, focused.value ? 'View map' : 'View lesson'),
             h('button', {
               type: 'button', class: 'quiet-button',
               title: 'Leave the adventure. Your progress is saved.',
@@ -664,22 +596,21 @@ export const GuideMapStudy = defineComponent({
           !focused.value ? h('p', { class: 'guide-study-map-hint', role: 'status' },
             arriving.value ? 'Finding your starting point…'
               : travelling.value ? 'Following the route…'
-              : complete.value ? 'Map complete! Select any unlocked stop to revisit its notes.'
-              : 'Select an unlocked stop to open its points.') : null,
+              : complete.value ? 'Map complete! Select any unlocked stop to revisit its lesson.'
+              : 'Select an unlocked stop to explore its lesson.') : null,
           h('section', {
             ref: topicPanel,
             class: ['guide-study-topic', { 'is-visible': focused.value && !travelling.value }],
             'aria-hidden': !focused.value || travelling.value,
             inert: !focused.value || travelling.value,
-            'aria-label': 'Current topic study points',
-            'aria-live': 'polite',
+            'aria-label': 'Current topic lesson',
           }, [
             h('div', { class: 'guide-study-close-row' }, [
               h('button', {
                 type: 'button',
                 class: 'icon-button guide-study-close',
                 title: 'View map',
-                'aria-label': 'Close topic points and view map',
+                'aria-label': 'Close lesson and view map',
                 onClick: closeTopic,
               }, '×'),
             ]),
@@ -695,38 +626,26 @@ export const GuideMapStudy = defineComponent({
                   ? h('p', { class: 'guide-study-topic-description' }, topic.description.trim())
                   : null,
               ]),
-              currentPoints.value.length
-                ? h('div', { class: 'guide-study-points' }, [
-                    ...revealedContent(topic),
-                    (!skipped.value.has(topic.id) && revealedCount.value < currentPoints.value.length) ||
-                    revealedCount.value > 0 ||
-                    (!currentVisited && !skipped.value.has(topic.id))
-                      ? h('div', { class: 'guide-study-reveal-actions' }, [
-                          !skipped.value.has(topic.id) && revealedCount.value < currentPoints.value.length ? h('button', {
-                            type: 'button', class: 'quiet-button guide-study-action guide-study-reveal',
-                            onClick: revealNext,
-                          }, revealedCount.value ? 'Reveal next point →' : 'Reveal first point →') : null,
-                          revealedCount.value > 0 ? h('button', {
-                            type: 'button', class: 'quiet-button guide-study-action guide-study-reset',
-                            onClick: resetRevealedPoints,
-                          }, 'Reset revealed points') : null,
-                          !currentVisited && !skipped.value.has(topic.id) ? h('button', {
-                            type: 'button', class: 'quiet-button guide-study-action guide-study-skip',
-                            onClick: skipSection,
-                          }, 'Skip section') : null,
-                        ])
-                      : null,
-                  ])
-                : h('p', { class: 'guide-study-empty-topic' }, 'This topic has no bullet points. It counts as visited when you arrive.'),
-              skipped.value.has(topic.id) ? h('button', {
-                type: 'button', class: 'quiet-button guide-study-action guide-study-skip',
-                onClick: resumeSkippedStop,
-              }, 'Study remaining points') : null,
-              currentVisited && !complete.value ? h('p', {
-                class: 'guide-study-visited-note',
-              }, skipped.value.has(topic.id)
-                ? 'Section skipped. You can return to the remaining points later.'
-                : 'All points revealed. This stop is visited.') : null,
+              currentLesson.value ? h(TeachingLessonView, {
+                key: topic.id, lesson: currentLesson.value, responses: currentResponses.value, onAnswer: answerBlock,
+              }) : null,
+              h('div', { class: 'guide-lesson-footer' }, [
+                !currentVisited && !skipped.value.has(topic.id) ? h('button', {
+                  type: 'button', class: 'card-primary-button', onClick: finishLesson,
+                }, 'Finish lesson') : null,
+                !currentVisited && !skipped.value.has(topic.id) ? h('button', {
+                  type: 'button', class: 'quiet-button guide-study-skip', onClick: skipSection,
+                }, 'Skip this lesson') : null,
+                skipped.value.has(topic.id) ? h('button', {
+                  type: 'button', class: 'quiet-button', onClick: resumeSkippedStop,
+                }, 'Return to this lesson') : null,
+                Object.keys(currentResponses.value).length ? h('button', {
+                  type: 'button', class: 'quiet-button guide-study-reset', onClick: resetLessonInteractions,
+                }, 'Reset lesson interactions') : null,
+                currentVisited && !skipped.value.has(topic.id) ? h('p', {
+                  class: 'guide-study-visited-note', role: 'status',
+                }, 'Lesson completed. You can return and explore it again any time.') : null,
+              ]),
               routeControls(topic),
             ],
             ]),
