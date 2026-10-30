@@ -1,5 +1,8 @@
 import { computed, defineComponent, h, ref, type PropType } from 'vue';
-import { AiPromptExchange } from '../../components/ai-prompt-exchange.ts';
+import { AiPromptExchange, type AiPromptExchangeHandle } from '../../components/ai-prompt-exchange.ts';
+import { AiScopeChoices } from '../../components/ai-scope-choices.ts';
+import { AiCategoryPicker } from '../../components/ai-category-picker.ts';
+import { categoryScopedPrompt, type AiCardScope, type AiCardCategories } from '../../core/ai-study-categories.ts';
 import { MAX_AI_IMPORT_LENGTH } from '../../core/ai-json.ts';
 import { AiCoverageAcceptance } from '../../components/ai-coverage-acceptance.ts';
 import { AI_COMPLETE_COVERAGE_PROMPT, parseAiSubjectCoverage, type AiSubjectCoverage } from '../../core/ai-subject-coverage.ts';
@@ -168,8 +171,13 @@ function mapPrompt(options: GuideAiPromptOptions): string {
 export function guideAiPrompt(
   options: GuideAiPromptOptions = DEFAULT_PROMPT_OPTIONS,
   mode: GuideMode = 'list',
+  scope: AiCardScope | null = null,
 ): string {
-  return mode === 'map' ? mapPrompt(options) : listPrompt(options);
+  const generated = mode === 'map' ? mapPrompt(options) : listPrompt(options);
+  // Reuse Review's established category scoping. The original source stays
+  // authoritative, while the selected category strictly limits new content.
+  return scope ? categoryScopedPrompt(generated, scope,
+    mode === 'map' ? 'an interactive Guide topic map and Teaching Blocks' : 'a List-mode Guide') : generated;
 }
 
 function parseImportBullet(
@@ -391,6 +399,17 @@ export const GuideAiImportWorkspace = defineComponent({
   },
   emits: { back: () => true, cancel: () => true, import: (_value: SimpleGuideImport) => true },
   setup(props, { emit }) {
+    const stage = ref<'scope' | 'categories' | 'exchange'>(props.direct ? 'exchange' : 'scope');
+    const chosenScope = ref<AiCardScope | null>(null);
+    const categoryList = ref<AiCardCategories | null>(null);
+    const exchangeRef = ref<AiPromptExchangeHandle | null>(null);
+    function back() {
+      if (stage.value === 'exchange') {
+        if (exchangeRef.value?.goBack()) return;
+        stage.value = chosenScope.value ? 'categories' : 'scope';
+      } else if (stage.value === 'categories') stage.value = 'scope';
+      else emit('back');
+    }
     const detail = ref<PromptDetail>(DEFAULT_PROMPT_OPTIONS.detail);
     const coverage = ref<PromptCoverage>(DEFAULT_PROMPT_OPTIONS.coverage);
     const bulletStyle = ref<PromptBulletStyle>(DEFAULT_PROMPT_OPTIONS.bulletStyle);
@@ -406,7 +425,7 @@ export const GuideAiImportWorkspace = defineComponent({
     const prompt = computed(() => mixError.value ? '' : guideAiPrompt({
       detail: detail.value, coverage: coverage.value, bulletStyle: bulletStyle.value,
       mixMode: mixMode.value, targetBlocks: targetBlocks.value, weights: weights.value,
-    }, props.mode));
+    }, props.mode, chosenScope.value));
     function preview() {
       if (mixError.value && !props.direct) { problem.value = mixError.value; return; }
       coverageAccepted.value = false;
@@ -473,20 +492,30 @@ export const GuideAiImportWorkspace = defineComponent({
       ];
     }
 
-    return () => h('section', { class: 'guide-ai-workspace', 'aria-labelledby': 'guide-ai-title' }, [
+    return () => stage.value === 'categories' ? h(AiCategoryPicker, {
+      key: 'guide-categories', label: 'Guide', destination: props.destination,
+      initialCategories: categoryList.value, onBack: () => { stage.value = 'scope'; },
+      onCancel: () => emit('cancel'),
+      onSelect: (selected: AiCardScope, list: AiCardCategories) => {
+        chosenScope.value = selected; categoryList.value = list; stage.value = 'exchange';
+      },
+    }) : h('section', { class: 'guide-ai-workspace', 'aria-labelledby': 'guide-ai-title' }, [
       h('header', { class: 'guide-ai-header' }, [
         h('div', { class: 'guide-ai-heading' }, [
           h('span', { class: 'guide-ai-kicker' }, `${props.direct ? 'Existing AI response' : props.mode === 'map' ? 'Map mode' : 'List mode'} · Saved in ${props.destination}`),
-          h('h2', { id: 'guide-ai-title' }, 'Create with AI'),
-          h('p', props.direct ? 'Paste an existing AI response to create a Guide.' : 'Prepare a Guide from your source material with AI.'),
+          h('h2', { id: 'guide-ai-title' }, stage.value === 'scope' ? 'Choose what to teach' : chosenScope.value?.category.title ?? 'Create with AI'),
+          h('p', props.direct ? 'Import an existing AI response.' : stage.value === 'scope' ? 'Choose between the overall subject and a specific category, just like Review.' : chosenScope.value?.category.description ?? 'Prepare a Guide from your source material with AI.'),
         ]),
         h('div', { class: 'guide-ai-actions' }, [
-          h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('back') }, 'Back'),
+          h('button', { type: 'button', class: 'quiet-button', onClick: back }, 'Back'),
           h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel') }, 'Cancel'),
         ]),
       ]),
-      h(AiPromptExchange, {
-        idPrefix: 'guide-ai', label: 'Guide', prompt: prompt.value, json: json.value, problem: problem.value, startInImport: props.direct, importOnly: props.direct,
+      stage.value === 'scope' ? h(AiScopeChoices, {
+        onOverall: () => { chosenScope.value = null; stage.value = 'exchange'; },
+        onCategory: () => { stage.value = 'categories'; },
+      }) : h(AiPromptExchange, {
+        ref: exchangeRef, idPrefix: 'guide-ai', label: 'Guide', prompt: prompt.value, json: json.value, problem: problem.value, startInImport: props.direct, importOnly: props.direct,
         hasPreview: candidate.value !== null, showReviewStep: true,
         preferFileImport: true, maxLength: MAX_AI_IMPORT_LENGTH,
         promptHelp: 'Create a guided interactive lesson from your source, using Teaching Blocks and an exploratory map.',
