@@ -7,8 +7,10 @@ import { lessonForTopic, MAX_TEACHING_BLOCKS, validateTeachingLesson,
 import { copyTeachingBlock, newTeachingBlock, newTeachingChoice, TEACHING_BLOCK_KINDS, type TeachingBlockKind } from './teaching-block-factory.ts';
 import { TeachingLessonView } from './teaching-lesson.ts';
 import { PopupDialog } from '../../components/popup-dialog.ts';
+import { Icon } from '../../components/icon.ts';
 
 const LIMIT = 10000;
+type EditorView = 'edit' | 'preview' | 'both';
 
 export const TeachingBlocksEditor = defineComponent({
   name: 'TeachingBlocksEditor',
@@ -18,6 +20,8 @@ export const TeachingBlocksEditor = defineComponent({
     const draft = ref<TeachingBlock | null>(null);
     const kind = ref<TeachingBlockKind>('explanation');
     const editing = ref(false);
+    const editorView = ref<EditorView>('both');
+    const editPreviewAnswers = ref<Record<string, string>>({});
     const preview = ref(false);
     const error = ref('');
     const deleteId = ref<string | null>(null);
@@ -28,6 +32,7 @@ export const TeachingBlocksEditor = defineComponent({
       draft.value = copyTeachingBlock(block);
       editing.value = true;
       preview.value = false;
+      editPreviewAnswers.value = {};
       deleteId.value = null;
       error.value = '';
     }
@@ -250,9 +255,7 @@ export const TeachingBlocksEditor = defineComponent({
             onClick: () => { previewAnswers.value = {}; preview.value = true; } }, 'Preview entire lesson'),
           blocks.length ? h('ol', { class: 'guide-teach-outline', 'aria-label': 'Lesson outline' }, blocks.map((block, index) =>
             h('li', { key: block.id, class: ['guide-teach-outline-row', { 'is-selected': selectedId.value === block.id }] }, [
-              h('button', { type: 'button', class: 'guide-teach-outline-select',
-                'aria-pressed': selectedId.value === block.id,
-                onClick: () => startEdit(block) }, [
+              h('div', { class: 'guide-teach-outline-label' }, [
                 h('span', { class: 'guide-teach-outline-kind' }, block.kind),
                 h('strong', block.title),
               ]),
@@ -261,6 +264,9 @@ export const TeachingBlocksEditor = defineComponent({
                   'aria-label': 'Move ' + block.title + ' up', onClick: () => move(block.id, -1) }, '↑'),
                 h('button', { type: 'button', class: 'icon-button', disabled: index === blocks.length - 1,
                   'aria-label': 'Move ' + block.title + ' down', onClick: () => move(block.id, 1) }, '↓'),
+                h('button', { type: 'button', class: 'icon-button guide-teach-edit-button',
+                  title: 'Edit ' + block.title, 'aria-label': 'Edit ' + block.title,
+                  onClick: () => startEdit(block) }, [h(Icon, { name: 'pencil' })]),
                 h('button', { type: 'button', class: 'icon-button',
                   'aria-label': 'Remove ' + block.title, onClick: () => remove(block.id) }, '×'),
               ]),
@@ -274,14 +280,51 @@ export const TeachingBlocksEditor = defineComponent({
             'Select a block above to edit it in a spacious window. Preview the entire lesson separately.'),
           editing.value && selected && draft.value?.id === selected.id
             ? h(PopupDialog, {
-              key: 'edit-' + selected.id, title: 'Edit ' + selected.kind + ' block',
-              headingId: 'guide-teach-modal-heading', width: 940, onClose: cancelEdit,
+              key: 'edit-' + selected.id,
+              class: 'guide-teach-edit-dialog',
+              title: 'Edit ' + selected.kind + ' block',
+              headingId: 'guide-teach-modal-heading', width: 1220, onClose: cancelEdit,
             }, {
-              default: () => h('div', { class: 'guide-teach-modal-content' }, [
-                h('p', { class: 'guide-teach-modal-intro' },
-                  'Edit this teaching block. Save to keep your changes; closing without saving discards this draft.'),
-                h('div', { class: 'guide-teach-form', key: selected.id }, [
-                  ...fields(draft.value!),
+              default: () => h('div', { class: 'guide-teach-edit-workspace' }, [
+                h('div', { class: 'guide-teach-edit-toolbar' }, [
+                  h('p', { class: 'guide-teach-modal-intro' },
+                    'Live preview of this block. Only Save block changes the stored lesson.'),
+                  h('div', { class: 'guide-teach-view-switch', role: 'group', 'aria-label': 'Teaching block editor layout' },
+                    ([
+                      ['edit', 'Edit'],
+                      ['preview', 'Preview'],
+                      ['both', 'Both'],
+                    ] as const).map(([value, label]) => h('button', {
+                      key: value, type: 'button',
+                      class: ['quiet-button', { 'is-active': editorView.value === value }],
+                      'aria-pressed': editorView.value === value,
+                      onClick: () => { editorView.value = value; },
+                    }, label))),
+                ]),
+                h('div', {
+                  class: ['guide-teach-edit-panes', 'is-' + editorView.value],
+                }, [
+                  editorView.value !== 'preview' ? h('section', {
+                    class: 'guide-teach-edit-pane guide-teach-edit-fields',
+                    'aria-label': 'Teaching block fields',
+                  }, [
+                    h('div', { class: 'guide-teach-form', key: selected.id }, fields(draft.value!)),
+                  ]) : null,
+                  editorView.value !== 'edit' ? h('section', {
+                    class: 'guide-teach-edit-pane guide-teach-live-preview',
+                    'aria-label': 'Live teaching block preview',
+                  }, [
+                    h('p', { class: 'guide-teach-preview-label' }, 'Live preview'),
+                    h(TeachingLessonView, {
+                      lesson: { version: 1, blocks: [draft.value!] },
+                      responses: editPreviewAnswers.value,
+                      onAnswer: (id: string, response: string) => {
+                        editPreviewAnswers.value = { ...editPreviewAnswers.value, [id]: response };
+                      },
+                    }),
+                  ]) : null,
+                ]),
+                h('footer', { class: 'guide-teach-dialog-footer' }, [
                   error.value ? h('p', { class: 'guide-teach-error', role: 'alert' }, error.value) : null,
                   h('div', { class: 'guide-teach-form-actions' }, [
                     h('button', { type: 'button', class: 'card-primary-button', onClick: saveBlock }, 'Save block'),
@@ -291,7 +334,7 @@ export const TeachingBlocksEditor = defineComponent({
               ]),
             }) : null,
           preview.value ? h(PopupDialog, {
-            key: 'lesson-preview', title: 'Lesson preview: ' + props.topic.title,
+            key: 'lesson-preview', class: 'guide-teach-lesson-preview-dialog', title: 'Lesson preview: ' + props.topic.title,
             headingId: 'guide-teach-preview-heading', width: 1060,
             onClose: () => { preview.value = false; },
           }, {
