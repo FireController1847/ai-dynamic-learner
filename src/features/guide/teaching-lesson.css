@@ -74,8 +74,7 @@
 .guide-teach-outline{display:grid;gap:6px;list-style:none;margin:0;padding:0}
 .guide-teach-outline-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;align-items:center;padding:7px;border:1px solid var(--border-color);border-radius:10px;background:var(--page-background)}
 .guide-teach-outline-row.is-selected{border-color:var(--brand)}
-.guide-teach-outline-select{display:grid;gap:3px;min-width:0;border:0;background:transparent;color:var(--text-color);text-align:left;cursor:pointer}
-.guide-teach-outline-select strong{font-size:13px;overflow-wrap:anywhere}
+.guide-teach-outline-label{display:grid;gap:3px;min-width:0;color:var(--text-color);text-align:left}.guide-teach-outline-label strong{font-size:13px;overflow-wrap:anywhere}
 .guide-teach-outline-kind{font-size:10px;text-transform:capitalize;letter-spacing:.04em;color:var(--brand-text)}
 .guide-teach-outline-actions{display:flex;gap:2px}
 .guide-teach-outline-actions .icon-button{width:28px;min-width:28px;height:30px;font-size:17px}
@@ -128,4 +127,61 @@
   .guide-teach-modal-content .guide-teach-collection{padding:10px}
   .guide-teach-modal-content .guide-teach-list-row{grid-template-columns:minmax(0,1fr)}
   .guide-teach-modal-content .guide-teach-list-row>.quiet-button{justify-self:start}
+}
+
+/* The editor and preview use independent scrolling regions, not a sticky footer
+   over one long sidebar-sized form. No content can appear beneath the dialog. */
+.guide-teach-edit-dialog .popup-card{
+  display:flex;
+  flex-direction:column;
+  height:min(92dvh,980px);
+  max-height:calc(100dvh - 24px);
+  min-height:0;
+  overflow:hidden;
+  padding:0;
+}
+.guide-teach-edit-dialog .popup-header{
+  flex:0 0 auto;
+  min-width:0;
+  padding:18px 24px 14px;
+  border-bottom:1px solid var(--border-color);
+}
+.guide-teach-edit-dialog .popup-header h2{min-width:0;overflow-wrap:anywhere}
+.guide-teach-edit-workspace{display:flex;flex:1 1 auto;flex-direction:column;min-height:0;min-width:0;overflow:hidden}
+.guide-teach-edit-toolbar{display:flex;flex:0 0 auto;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:12px 24px;border-bottom:1px solid var(--border-color)}
+.guide-teach-edit-toolbar .guide-teach-modal-intro{flex:1 1 240px;font-size:12px}
+.guide-teach-view-switch{display:flex;align-items:center;gap:4px}
+.guide-teach-view-switch .quiet-button{min-width:76px}
+.guide-teach-view-switch .quiet-button.is-active{border-color:var(--brand);background:var(--brand-tint);color:var(--brand-text)}
+.guide-teach-edit-panes{display:grid;grid-template-columns:minmax(0,1fr);flex:1 1 auto;min-height:0;min-width:0;overflow:hidden}
+.guide-teach-edit-panes.is-both{grid-template-columns:repeat(2,minmax(0,1fr))}
+.guide-teach-edit-pane{min-width:0;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable;padding:20px 24px;background:var(--page-background)}
+.guide-teach-live-preview{border-left:1px solid var(--border-color);background:var(--surface-subtle)}
+.guide-teach-live-preview .guide-teaching-lesson{gap:16px;padding:8px 0 20px}
+.guide-teach-live-preview .guide-lesson-block{padding:18px}
+.guide-teach-preview-label{margin:0;font-size:12px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;color:var(--text-secondary)}
+.guide-teach-edit-fields .guide-teach-form{padding:0;border:0;border-radius:0;background:transparent}
+.guide-teach-edit-fields .guide-teach-field textarea{min-height:125px}
+.guide-teach-edit-fields .guide-teach-list-row{grid-template-columns:minmax(0,1fr) auto}
+.guide-teach-edit-fields .guide-teach-collection{padding:14px;gap:14px}
+.guide-teach-edit-fields .guide-teach-list-card{padding:14px;gap:12px}
+.guide-teach-dialog-footer{display:flex;flex:0 0 auto;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:14px 24px max(14px,env(safe-area-inset-bottom));border-top:1px solid var(--border-color);background:var(--page-background)}
+.guide-teach-dialog-footer .guide-teach-form-actions{position:static;margin:0;padding:0;border:0;display:flex;gap:8px;background:transparent}
+.guide-teach-dialog-footer .guide-teach-error{flex:1 1 220px}
+.guide-teach-edit-button{color:var(--text-secondary)}
+.guide-teach-edit-button:hover{color:var(--brand-text)}
+@media(max-width:780px){
+  .guide-teach-edit-dialog .popup-header{padding:14px 16px 10px}
+  .guide-teach-edit-toolbar{padding:10px 16px}
+  .guide-teach-edit-panes.is-both{grid-template-columns:minmax(0,1fr);grid-template-rows:repeat(2,minmax(0,1fr))}
+  .guide-teach-live-preview{border-left:0;border-top:1px solid var(--border-color)}
+  .guide-teach-edit-pane{padding:14px 16px}
+  .guide-teach-dialog-footer{padding:12px 16px max(12px,env(safe-area-inset-bottom))}
+  .guide-teach-edit-fields .guide-teach-list-row{grid-template-columns:minmax(0,1fr)}
+  .guide-teach-edit-dialog .popup-card{height:calc(100dvh - 20px);max-height:calc(100dvh - 20px)}
+}
+@media(max-height:520px){
+  .guide-teach-edit-dialog .popup-card{height:calc(100dvh - 16px);max-height:calc(100dvh - 16px)}
+  .guide-teach-edit-toolbar{padding-block:6px}
+  .guide-teach-dialog-footer{padding-block:8px}
 }
