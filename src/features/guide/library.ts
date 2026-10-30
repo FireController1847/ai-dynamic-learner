@@ -9,7 +9,7 @@ import { countGuides,countItems,createGroup,deleteItem,findItem,firstEntry,guide
 export const GuideLibrary=defineComponent({
   name:'GuideLibrary',
   props:{items:{type:Array as PropType<LibraryItem[]>,required:true},selectedId:{type:String as PropType<string|null>,default:null},collapsed:Boolean},
-  emits:{select:(_id:string|null)=>true,'open-item':()=>true,'toggle-library':()=>true,'new-guide':()=>true,'open-ai-import':()=>true},
+  emits:{select:(_id:string|null)=>true,'open-item':()=>true,'toggle-library':()=>true,'new-guide':()=>true,'open-ai-import':()=>true,'create-debug-guide':()=>true},
   setup(props,{emit,expose}){
     const expanded=ref(new Set<string>()),editingId=ref<string|null>(null),draft=ref(''),input=ref<HTMLInputElement|null>(null);
     const labels=new Map<string|null,HTMLElement>();const collapseButton=ref<HTMLButtonElement|null>(null),newGuideButton=ref<HTMLButtonElement|null>(null);
@@ -37,7 +37,8 @@ export const GuideLibrary=defineComponent({
     ]);}
     return ()=>h('aside',{id:'guide-library',class:'directory-panel',inert:props.collapsed,'aria-hidden':props.collapsed,'aria-label':'Guide library'},[
       h('div',{class:'directory-toolbar'},[h('h3','Library'),h('div',{class:'directory-create-actions'},[
-        h('button',{type:'button',class:'icon-button',title:'Create guide with AI','aria-label':'Create guide with AI',onClick:()=>emit('open-ai-import')},[h(Icon,{name:'ai'})]),
+        h('button',{type:'button',class:'icon-button',disabled:true,title:'AI Guide import temporarily unavailable while Teaching Blocks are in development','aria-label':'AI Guide import temporarily unavailable'},[h(Icon,{name:'ai'})]),
+        h('button',{type:'button',class:'quiet-button guide-debug-create',title:'Create a demo map containing every Teaching Block',onClick:()=>emit('create-debug-guide')},'Demo'),
         h('button',{type:'button',class:'icon-button',title:'New group','aria-label':'New group',onClick:addGroup},[h(Icon,{name:'folder'})]),
         h('button',{ref:newGuideButton,type:'button',class:'icon-button',title:'New guide','aria-label':'New guide',onClick:()=>emit('new-guide')},[h(Icon,{name:'document'})]),
         h('button',{ref:collapseButton,type:'button',class:'icon-button',title:'Minimize library','aria-label':'Minimize library','aria-expanded':true,'aria-controls':'guide-library',onClick:()=>emit('toggle-library')},[h(Icon,{name:'panel-close'})])
