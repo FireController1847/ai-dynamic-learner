@@ -13,8 +13,9 @@ export const GuideModePicker = defineComponent({
     destination: { type: String, required: true },
     disabledModes: { type: Array as PropType<GuideMode[]>, default: () => [] },
     comingSoonModes: { type: Array as PropType<GuideMode[]>, default: () => [] },
+    allowAiResponseImport: Boolean,
   },
-  emits: { create: (_mode: GuideMode) => true, cancel: () => true },
+  emits: { create: (_mode: GuideMode) => true, cancel: () => true, importAiResponse: () => true },
   setup(props, { emit }) {
     return () => h('section', { class: 'guide-builder', 'aria-labelledby': 'guide-builder-title' }, [
       h('header', { class: 'guide-builder-intro' }, [
@@ -40,6 +41,10 @@ export const GuideModePicker = defineComponent({
         ]);
       })),
       h('div', { class: 'guide-builder-actions' }, [
+        props.allowAiResponseImport ? h('button', {
+          type: 'button', class: 'quiet-button outline-button guide-import-ai-response',
+          onClick: () => emit('importAiResponse'),
+        }, 'Import an AI response') : null,
         h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel') }, 'Cancel'),
       ]),
     ]);
