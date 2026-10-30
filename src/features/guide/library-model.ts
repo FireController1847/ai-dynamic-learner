@@ -218,10 +218,14 @@ function mapData(value: unknown, ids: Set<string>): asserts value is MapGuideDat
         .map(([id, count]) => {
           return [id, Math.min(count as number, topicBulletCounts.get(id) ?? 0)];
         }));
+      // All map topics and their lesson blocks were validated above. Capture the
+      // typed array before entering the callback: TypeScript does not retain a
+      // narrowed record property across nested function boundaries.
+      const validatedTopics = value.topics as MapTopic[];
       const responses = isRecord(session.responses) ? Object.fromEntries(Object.entries(session.responses)
         .filter(([id]) => topicIds.has(id))
         .map(([id, entries]) => {
-          const topic = value.topics.find(topic => topic.id === id);
+          const topic = validatedTopics.find(topic => topic.id === id);
           const validBlocks = new Set(topic?.lesson?.blocks.map(block => block.id) ?? []);
           return [id, Object.fromEntries(Object.entries(isRecord(entries) ? entries : {})
             .filter(([blockId]) => validBlocks.has(blockId)))];
