@@ -303,8 +303,6 @@ const App = defineComponent({
           ]),
           h('div', { class: 'workspace-compatibility-actions' }, [
             h('button', { type: 'button', class: 'quiet-button',
-              onClick: () => dismissCompatibility(false) }, 'Dismiss'),
-            h('button', { type: 'button', class: 'quiet-button',
               title: 'Remember this compatibility condition in this browser. A different warning will still appear.',
               onClick: () => dismissCompatibility(true) }, 'Ignore this warning'),
             h('button', { type: 'button', class: 'icon-button',
