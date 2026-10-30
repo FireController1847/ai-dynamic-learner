@@ -15,6 +15,7 @@ import { GuideListEditor } from './list-editor.ts';
 import { GuideMapEditor } from './map-editor.ts';
 import { layoutMapTopics } from './map-graph.ts';
 import { GuideMapStudy } from './map-study.ts';
+import { createTeachingBlocksDemo } from './teaching-debug.ts';
 
 const MIN_LIBRARY_WIDTH=248, LIBRARY_WIDTH_KEY='dynamic-learner.ui.guide.library-width';
 const LEGACY_LIBRARY_WIDTH_KEY='dynamic-learner.ui.study-guide.library-width';
@@ -87,6 +88,19 @@ export const Guide=defineComponent({
     async function cancel(){creationTarget.value=null;await nextTick();if(collapsed.value)showLibrary.value?.focus();else library.value?.focusNewGuide();}
     function create(mode:GuideMode){if(!creationTarget.value)return;try{const item=insertGuide(props.model.items,creationTarget.value,mode);selectedId.value=item.id;editingMapId.value=null;creationTarget.value=null;library.value?.reveal(item.id);message.value='Created '+item.name+'.';nextTick(()=>library.value?.beginRename(item.id));}catch(error){message.value=error instanceof Error?error.message:String(error);}}
 
+    function createDebugGuide(){
+      try {
+        const item=insertGuide(props.model.items,target(),'map');
+        if(item.mode!=='map')throw new Error('The debug guide could not be created.');
+        item.name='Teaching Blocks — Demo';
+        item.data=createTeachingBlocksDemo();
+        selectedId.value=item.id;editingMapId.value=null;creationTarget.value=null;
+        aiTarget.value=null;aiStage.value=null;aiMode.value=null;
+        library.value?.reveal(item.id);message.value='Created '+item.name+'.';
+        if(overlay.value)collapsed.value=true;
+      }catch(error){message.value=error instanceof Error?error.message:String(error);}
+    }
+
     function beginAi(){creationTarget.value=null;aiTarget.value=target();aiStage.value='choose';aiMode.value=null;aiDirect.value=false;message.value='';if(overlay.value)collapsed.value=true;}
     function cancelAi(){aiTarget.value=null;aiStage.value=null;aiMode.value=null;message.value='';}
     function chooseAiMode(mode:GuideMode){if(!aiTarget.value)return;aiDirect.value=false;aiMode.value=mode;aiStage.value='import';}
@@ -154,7 +168,7 @@ export const Guide=defineComponent({
       h('div',{ref:layout,class:['guide-layout',{'library-collapsed':collapsed.value,'library-resizing':panel.resizing.value}],style:panel.width.value===null?null:{'--library-width':panel.width.value+'px'}},[
         collapsed.value?h('button',{ref:showLibrary,type:'button',class:'icon-button library-floating-toggle',title:'Show library','aria-label':'Show library','aria-expanded':false,'aria-controls':'guide-library',onClick:()=>setCollapsed(false)},[h(Icon,{name:'panel-open'})]):null,
         overlay.value&&!collapsed.value?h('button',{type:'button',class:'library-scrim','aria-label':'Close library',onClick:()=>setCollapsed(true)}):null,
-        h(GuideLibrary,{ref:library,items:props.model.items,selectedId:selectedId.value,collapsed:collapsed.value,onSelect:select,onOpenItem:()=>{if(overlay.value)void setCollapsed(true);},onToggleLibrary:()=>setCollapsed(true),onNewGuide:begin,onOpenAiImport:beginAi}),
+        h(GuideLibrary,{ref:library,items:props.model.items,selectedId:selectedId.value,collapsed:collapsed.value,onSelect:select,onOpenItem:()=>{if(overlay.value)void setCollapsed(true);},onToggleLibrary:()=>setCollapsed(true),onNewGuide:begin,onOpenAiImport:beginAi,onCreateDebugGuide:createDebugGuide}),
         !overlay.value&&!collapsed.value?h('div',{class:'library-resizer',role:'separator',tabindex:0,'aria-label':'Resize library','aria-orientation':'vertical','aria-valuemin':MIN_LIBRARY_WIDTH,'aria-valuemax':panel.maxWidth(),'aria-valuenow':Math.round(panel.currentWidth()),onPointerdown:panel.beginResize,onPointermove:panel.resizeFromPointer,onPointerup:panel.endResize,onPointercancel:panel.endResize,onKeydown:panel.resizeFromKeyboard,onDblclick:panel.resetWidth}):null,
         detail()
       ])
