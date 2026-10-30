@@ -43,6 +43,7 @@ export const GuideModePicker = defineComponent({
       h('div', { class: 'guide-builder-actions' }, [
         props.allowAiResponseImport ? h('button', {
           type: 'button', class: 'quiet-button outline-button guide-import-ai-response',
+          style: { width: 'auto', flex: '0 0 auto' },
           onClick: () => emit('importAiResponse'),
         }, 'Import an AI response') : null,
         h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel') }, 'Cancel'),
