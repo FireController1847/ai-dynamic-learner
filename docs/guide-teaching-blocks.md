@@ -22,7 +22,7 @@ The renderer is `teaching-lesson.ts`; the associated CSS is `teaching-lesson.css
 ## Source compatibility
 
 - Existing maps with only `guide.sections` are automatically presented as whole explanation blocks. No migration or AI call is needed.
-- The existing list editor remains the authoring path for legacy map stops. Stops with a `lesson` are read-only in the map editor for now (topic metadata and map navigation remain editable).
+- The map editor includes **Teaching Blocks** authoring for all eight block types. Existing map stops offer **Enable Teaching Blocks**, which copies their original bullet sections into editable explanation blocks and retains the originals separately. Draft edits are validated before replacing the saved block. The editor provides an outline with reordering, block deletion, and an interactive preview.
 - Map adventures now unlock routes via **Finish lesson** (explicit and ungraded) or **Skip this lesson**. Reading does not implicitly mark a lesson as visited.
 - `session.responses` holds interaction choices by map-topic ID and block ID; previous visited, skipped, opened, and paused state remains unchanged. Resetting choices does not unvisit a stop. Older `session.revealed` data remains accepted for compatibility.
 - Map edits may remove a topic or blocks; validation prunes stale saved interaction references.
@@ -39,3 +39,7 @@ The first `diagram` implementation is a selectable conceptual flow, **not** a ge
 ## Verification
 
 Run `npm run test:guide`. CI also runs the existing TypeScript check and production build.
+
+## Compatibility notice during development
+
+The app shell can dismiss the workspace compatibility banner for the current visit, or **Ignore this warning** to remember the exact mode, database version, read-only status, and issue list in local browser preferences. Another compatibility condition shows the warning again. When hidden, a compact header indicator reopens the details. **This affects notification visibility only:** read-only recovery remains enforced, unknown data stays protected, and restricted backup/restore/clear operations remain restricted.
