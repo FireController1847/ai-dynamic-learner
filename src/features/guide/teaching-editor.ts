@@ -8,6 +8,7 @@ import { copyTeachingBlock, newTeachingBlock, newTeachingChoice, TEACHING_BLOCK_
 import { TeachingLessonView } from './teaching-lesson.ts';
 import { PopupDialog } from '../../components/popup-dialog.ts';
 import { Icon } from '../../components/icon.ts';
+import { renderTeachingMath } from './teaching-text.ts';
 
 const LIMIT = 10000;
 type EditorView = 'edit' | 'preview' | 'both';
@@ -107,6 +108,8 @@ export const TeachingBlocksEditor = defineComponent({
         h('span', label),
         multiline ? h('textarea', { ...control, rows: typeof multiline === 'number' ? multiline : 3 })
           : h('input', { ...control, type: 'text' }),
+        multiline ? h('small', { class: 'guide-teach-format-hint' },
+          'Markdown and LaTeX supported. Use $…$ or \\(…\\) for inline math, $…$ for display math.') : null,
       ]);
     }
     function stringList(title: string, entries: string[], max: number,
@@ -259,7 +262,7 @@ export const TeachingBlocksEditor = defineComponent({
             h('li', { key: block.id, class: ['guide-teach-outline-row', { 'is-selected': selectedId.value === block.id }] }, [
               h('div', { class: 'guide-teach-outline-label' }, [
                 h('span', { class: 'guide-teach-outline-kind' }, block.kind),
-                h('strong', block.title),
+                h('strong', renderTeachingMath(block.title)),
               ]),
               h('div', { class: 'guide-teach-outline-actions' }, [
                 h('button', { type: 'button', class: 'icon-button', disabled: index === 0,
@@ -290,7 +293,7 @@ export const TeachingBlocksEditor = defineComponent({
               default: () => h('div', { class: 'guide-teach-edit-workspace' }, [
                 h('div', { class: 'guide-teach-edit-toolbar' }, [
                   h('p', { class: 'guide-teach-modal-intro' },
-                    'Live preview of this block. Only Save block changes the stored lesson.'),
+                    'Long fields support Markdown and LaTeX; titles and short labels support LaTeX. Preview updates live. Only Save block changes the stored lesson.'),
                   h('div', { class: 'guide-teach-view-switch', role: 'group', 'aria-label': 'Teaching block editor layout' },
                     ([
                       ['edit', 'Edit'],
