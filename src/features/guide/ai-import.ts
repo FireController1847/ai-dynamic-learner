@@ -406,6 +406,7 @@ export const GuideAiImportWorkspace = defineComponent({
     function back() {
       if (stage.value === 'exchange') {
         if (exchangeRef.value?.goBack()) return;
+        if (props.direct) { emit('back'); return; }
         stage.value = chosenScope.value ? 'categories' : 'scope';
       } else if (stage.value === 'categories') stage.value = 'scope';
       else emit('back');
