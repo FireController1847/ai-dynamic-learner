@@ -105,10 +105,11 @@ export function validateTeachingLesson(value: unknown, ids: Set<string>): assert
         strictKeys(block, ['id','kind','title','caption','headers','rows'], 'Table');
         optionalText(block.caption, 'Table caption');
         strings(block.headers, MAX_TABLE_COLUMNS, 'Table headers', 2);
+        const tableHeaders = block.headers as string[];
         if (!Array.isArray(block.rows) || block.rows.length < 1 || block.rows.length > MAX_TABLE_ROWS)
           throw new Error('Table must contain between 1 and ' + MAX_TABLE_ROWS + ' rows.');
         block.rows.forEach((row, index) => {
-          if (!Array.isArray(row) || row.length !== block.headers.length ||
+          if (!Array.isArray(row) || row.length !== tableHeaders.length ||
               row.some(cell => typeof cell !== 'string' || cell.length > MAX_TABLE_CELL_LENGTH))
             throw new Error('Table row ' + (index + 1) + ' must match the headers and use valid text.');
         });
