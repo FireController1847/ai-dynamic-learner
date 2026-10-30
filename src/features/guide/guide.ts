@@ -36,8 +36,9 @@ function importedMapData(value:SimpleMapGuideImport):MapGuideData{
   // Preserve legacy v1 imports which could exceed the number of comfortably
   // spaced stops. New AI v2 maps are bounded and always use the safe layout.
   const generatedPositions=value.topics.length>GUIDE_AI_MAX_SPACED_TOPICS
-    ? new Map([...ids.values()].map((id,index)=>[id,
-        suggested?.[index]??layoutMapTopics([...ids.values()],connections,startTopicId).get(id)??{x:0,y:0}]))
+    ? (suggested
+      ? new Map([...ids.values()].map((id,index)=>[id,suggested[index]] as const))
+      : layoutMapTopics([...ids.values()],connections,startTopicId))
     : layoutSpacedAiMap([...ids.values()],connections,startTopicId,suggested);
   const topics=value.topics.map(source=>{
     const id=ids.get(source.key);
