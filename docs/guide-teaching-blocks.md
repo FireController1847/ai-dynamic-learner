@@ -40,7 +40,7 @@ The renderer is `teaching-lesson.ts`; the associated CSS is `teaching-lesson.css
 
 ## Preview and eventual AI import
 
-The **Demo** button in the Guide library creates a persistent four-stop map using `createTeachingBlocksDemo`. The first stop demonstrates all nine Teaching Block kinds. A dedicated **Markdown & LaTeX Showcase** stop demonstrates headings, emphasis, lists, quotes, code, links, Markdown tables, inline/display LaTeX, and the new Table block. The showcase is reachable from either of the two intermediary branches. Existing demo sets are not modified; create another demo to see the newest examples. Delete it through the ordinary library controls.
+The **Demo** button in the Guide library creates a persistent four-stop map using `createTeachingBlocksDemo`. The first stop demonstrates all nine Teaching Block kinds. A dedicated **Markdown & LaTeX Showcase** stop demonstrates headings, emphasis, lists, quotes, code, links, Markdown tables, inline/display LaTeX, and the new Table block. The showcase is connected to the Visual Prevention branch; the demo stays a cycle-free tree. Existing demo sets are not modified; create another demo to see the newest examples. Delete it through the ordinary library controls.
 
 AI Guide import is temporarily disabled in the library toolbar. The old import code is retained for rework. Future import should return structured, bounded content that passes `validateTeachingLesson`, preferably with citations/coverage review as a separate layer. The current renderer does not require or execute AI-generated HTML and does not claim source verification.
 
