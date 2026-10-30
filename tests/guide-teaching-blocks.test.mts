@@ -12,15 +12,18 @@ function demoModel() {
   return { items: [{ id: 'test-guide', kind: 'guide', name: 'Teaching demo', mode: 'map', data }] };
 }
 
-test('the demo creates a connected, valid map and demonstrates all eight teaching blocks', () => {
+test('the demo creates a connected, valid map and demonstrates all nine teaching blocks', () => {
   const model = demoModel();
   assert.doesNotThrow(() => validateGuide(model));
   const guide = model.items[0];
-  assert.equal(guide.data.topics.length, 3);
-  assert.equal(guide.data.connections.length, 2);
+  assert.equal(guide.data.topics.length, 4);
+  assert.equal(guide.data.connections.length, 4);
+  assert.equal(guide.data.topics[3].title, 'Markdown & LaTeX Showcase');
+  assert.ok(guide.data.topics[3].lesson?.blocks.some(block => block.kind === 'table'));
+  assert.ok(guide.data.topics[3].lesson?.blocks.some(block => block.kind === 'explanation' && block.body.includes('| :---')));
   assert.deepEqual(
     guide.data.topics[0].lesson?.blocks.map(block => block.kind),
-    ['explanation', 'example', 'comparison', 'sequence', 'diagram', 'exploration', 'check', 'connection'],
+    ['explanation', 'example', 'comparison', 'table', 'sequence', 'diagram', 'exploration', 'check', 'connection'],
   );
 });
 
@@ -83,7 +86,7 @@ test('duplicate nested ids are rejected by the lesson validator', () => {
 test('all Teaching Block authoring templates start valid and use unique IDs', () => {
   const blocks = TEACHING_BLOCK_KINDS.map(item => newTeachingBlock(item.kind));
   assert.doesNotThrow(() => validateTeachingLesson({ version: 1, blocks }, new Set<string>()));
-  assert.equal(blocks.length, 8);
+  assert.equal(blocks.length, 9);
   assert.equal(new Set(blocks.map(block => block.id)).size, blocks.length);
 });
 
@@ -133,4 +136,32 @@ test('malformed or oversized math keeps the original text', () => {
   ]);
   const enormous = '$' + 'a'.repeat(4001) + '$';
   assert.deepEqual(tokenizeTeachingMath(enormous), [{ kind: 'text', value: enormous }]);
+});
+
+test('table blocks preserve Markdown and math, and validate aligned rectangular cells', () => {
+  const model = demoModel();
+  const map = model.items[0].data;
+  const table = map.topics[3].lesson?.blocks.find(block => block.kind === 'table');
+  assert.ok(table && table.kind === 'table');
+  assert.equal(table.headers.length, 3);
+  assert.ok(table.rows.some(row => row.some(cell => cell.includes('**'))));
+  assert.ok(table.rows.some(row => row.some(cell => cell.includes('$O('))));
+  assert.doesNotThrow(() => validateGuide(model));
+
+  table.rows[0].pop();
+  assert.throws(() => validateGuide(model), /Table row 1/);
+});
+
+test('table authoring enforces dimensions without rejecting intentionally blank cells', () => {
+  const table = newTeachingBlock('table');
+  assert.equal(table.kind, 'table');
+  if (table.kind !== 'table') return;
+  table.rows[0][1] = '';
+  assert.doesNotThrow(() => validateTeachingLesson({ version: 1, blocks: [table] }, new Set()));
+  table.headers.push('Third heading');
+  assert.throws(() => validateTeachingLesson({ version: 1, blocks: [table] }, new Set()), /Table row/);
+  table.rows.forEach(row => row.push(''));
+  assert.doesNotThrow(() => validateTeachingLesson({ version: 1, blocks: [table] }, new Set()));
+  table.rows = Array.from({ length: 21 }, () => ['', '', '']);
+  assert.throws(() => validateTeachingLesson({ version: 1, blocks: [table] }, new Set()), /Table must contain/);
 });
