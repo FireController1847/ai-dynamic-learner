@@ -255,3 +255,22 @@
   .guide-ai-workspace input:not([type='checkbox']):not([type='radio']),
   .guide-ai-workspace select, .guide-ai-workspace textarea { font-size: 16px; }
 }
+
+
+/* AI Guide now uses the same "Let AI choose" / weighted customization idea as Review. */
+.guide-ai-teaching-settings{display:grid;gap:12px;grid-column:1/-1;min-width:0;padding:16px;border:1px solid var(--border-color);border-radius:14px;background:var(--page-background)}
+.guide-ai-teaching-settings h3{margin:0;font-size:17px}
+.guide-ai-teaching-settings p{margin:0;line-height:1.55}
+.guide-ai-mix-modes{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.guide-ai-mix-modes .quiet-button{min-height:40px}
+.guide-ai-mix-modes button[aria-pressed='true']{border-color:var(--brand);color:var(--brand-text);background:var(--brand-tint)}
+.guide-ai-teaching-settings .guide-ai-option{max-width:320px}
+.guide-ai-teaching-settings input[type='number']{box-sizing:border-box;max-width:128px;min-height:38px;padding:7px 10px;border:1px solid var(--control-border);border-radius:8px;background:var(--page-background);color:var(--text-color);font:inherit}
+.guide-ai-weight-list{display:grid;gap:0;min-width:0;border:1px solid var(--border-color);border-radius:10px;overflow:hidden}
+.guide-ai-weight-row{display:grid;grid-template-columns:minmax(0,1fr) 84px 20px 64px;align-items:center;gap:8px;padding:9px 12px;font-size:13px;border-bottom:1px solid var(--border-color)}
+.guide-ai-weight-row:last-child{border-bottom:0}
+.guide-ai-weight-row>span:first-child{text-transform:capitalize;font-weight:600}
+.guide-ai-weight-row input[type='number']{width:84px;min-width:0;max-width:84px;text-align:right}
+.guide-ai-weight-row small{color:var(--text-secondary);text-align:right}
+.guide-ai-mix-error{color:var(--danger);font-size:13px}
+@media(max-width:520px){.guide-ai-teaching-settings{padding:12px}.guide-ai-weight-row{grid-template-columns:minmax(0,1fr) 64px 15px 48px;gap:5px;padding:8px}.guide-ai-weight-row input[type='number']{width:64px;max-width:64px}}
