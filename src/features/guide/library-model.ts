@@ -218,12 +218,12 @@ function mapData(value: unknown, ids: Set<string>): asserts value is MapGuideDat
         .map(([id, count]) => {
           return [id, Math.min(count as number, topicBulletCounts.get(id) ?? 0)];
         }));
-      const responses = session.responses ? Object.fromEntries(Object.entries(session.responses)
+      const responses = isRecord(session.responses) ? Object.fromEntries(Object.entries(session.responses)
         .filter(([id]) => topicIds.has(id))
         .map(([id, entries]) => {
           const topic = value.topics.find(topic => topic.id === id);
           const validBlocks = new Set(topic?.lesson?.blocks.map(block => block.id) ?? []);
-          return [id, Object.fromEntries(Object.entries(entries)
+          return [id, Object.fromEntries(Object.entries(isRecord(entries) ? entries : {})
             .filter(([blockId]) => validBlocks.has(blockId)))];
         })) : undefined;
       value.session = { paused: session.paused, currentId, openedIds, visitedIds, skippedIds, revealed,
