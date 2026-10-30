@@ -98,14 +98,15 @@ export const TeachingBlocksEditor = defineComponent({
     }
 
     function field(label: string, value: string | undefined, update: (value: string) => void,
-      multiline = false): VNode {
+      multiline: boolean | number = false): VNode {
       const control = {
         value: value ?? '', maxlength: LIMIT, 'aria-label': label,
         onInput: (event: Event) => { update(inputValue(event)); error.value = ''; },
       };
       return h('label', { class: 'guide-teach-field' }, [
         h('span', label),
-        multiline ? h('textarea', { ...control, rows: 3 }) : h('input', { ...control, type: 'text' }),
+        multiline ? h('textarea', { ...control, rows: typeof multiline === 'number' ? multiline : 3 })
+          : h('input', { ...control, type: 'text' }),
       ]);
     }
     function stringList(title: string, entries: string[], max: number,
@@ -113,7 +114,8 @@ export const TeachingBlocksEditor = defineComponent({
       return h('fieldset', { class: 'guide-teach-collection' }, [
         h('legend', title),
         ...entries.map((entry, index) => h('div', { key: index, class: 'guide-teach-list-row' }, [
-          field(title + ' ' + (index + 1), entry, value => { entries[index] = value; }, true),
+          field(title + ' ' + (index + 1), entry, value => { entries[index] = value; },
+            title === 'Walkthrough step' ? 2 : false),
           h('button', { type: 'button', class: 'quiet-button', disabled: entries.length <= minimum,
             'aria-label': 'Remove ' + title + ' ' + (index + 1),
             onClick: () => { entries.splice(index, 1); } }, 'Remove'),
