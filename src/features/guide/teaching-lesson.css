@@ -219,3 +219,26 @@
   .guide-teach-edit-toolbar{padding-block:6px}
   .guide-teach-dialog-footer{padding-block:8px}
 }
+
+
+/* Teaching prose reuses the shared Markdown sanitizer and KaTeX styling. */
+.guide-lesson-rich{min-width:0;font-size:inherit;line-height:1.75;overflow-wrap:anywhere}
+.guide-lesson-rich > :first-child{margin-top:0}
+.guide-lesson-rich > :last-child{margin-bottom:0}
+.guide-lesson-rich :is(pre,table,.markdown-latex-block){max-width:100%;overflow-x:auto}
+.guide-lesson-rich :is(h1,h2,h3,h4,h5,h6){font-size:1.12em}
+.guide-lesson-rich p,.guide-lesson-rich li{white-space:normal}
+.guide-lesson-question>.guide-lesson-rich>p{margin:0;font-weight:inherit}
+.guide-lesson-takeaway>.guide-lesson-rich{margin-top:4px}
+.guide-lesson-takeaway>.guide-lesson-rich>p{margin:0}
+.guide-lesson-scenario>.guide-lesson-rich>p{margin:0}
+.guide-lesson-step-detail>.guide-lesson-rich>p{margin:0}
+.guide-lesson-side>.guide-lesson-rich>p{margin:0}
+.guide-lesson-diagram-detail>.guide-lesson-rich>p{margin:0}
+.guide-lesson-feedback>.guide-lesson-rich>p{margin:0}
+.guide-lesson-caption>.guide-lesson-rich{color:var(--text-secondary);font-size:13px}
+.guide-lesson-math-inline{display:inline;white-space:nowrap;overflow-wrap:normal}
+.guide-lesson-math-display{display:inline-block;max-width:100%;vertical-align:middle;overflow-x:auto;overflow-y:hidden}
+.guide-lesson-math-inline .katex,.guide-lesson-math-display .katex{color:inherit}
+.guide-lesson-block-header h4,.guide-lesson-highlight,.guide-lesson-choice,
+.guide-lesson-diagram-node,.guide-lesson-step-tab{overflow-wrap:anywhere}
