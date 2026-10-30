@@ -3,6 +3,14 @@ import type { TeachingBlock, TeachingChoice } from './teaching-blocks.ts';
 
 export type TeachingBlockKind = TeachingBlock['kind'];
 
+/**
+ * Teaching Blocks contain only JSON data. JSON round-tripping copies nested Vue
+ * reactive proxies safely (structuredClone throws DataCloneError on proxies).
+ */
+export function copyTeachingBlock<T extends TeachingBlock>(block: T): T {
+  return JSON.parse(JSON.stringify(block)) as T;
+}
+
 export const TEACHING_BLOCK_KINDS: readonly { kind: TeachingBlockKind; label: string; help: string }[] = [
   { kind: 'explanation', label: 'Explanation', help: 'Teach an idea in readable paragraphs.' },
   { kind: 'example', label: 'Worked example', help: 'Present a situation, walk through it, then connect the result.' },
