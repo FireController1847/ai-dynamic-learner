@@ -53,3 +53,6 @@
 .guide-topic-teaching-note{margin:12px 0;padding:12px;border-left:3px solid var(--brand);background:var(--brand-tint);font-size:12px;line-height:1.6}
 @media(max-width:600px){.guide-teaching-lesson{gap:14px;padding-top:16px}.guide-lesson-block{padding:16px;border-radius:14px}.guide-lesson-comparison{grid-template-columns:1fr}.guide-lesson-diagram-node{flex-basis:132px}.guide-lesson-step-tab{flex-basis:110px}}
 @media(prefers-reduced-motion:reduce){.guide-lesson-block,.guide-lesson-choice,.guide-lesson-step-tab{scroll-behavior:auto}}
+
+.guide-debug-launch{padding:8px 12px;border-bottom:1px solid var(--border-color)}
+.guide-debug-create{width:100%;min-height:36px;justify-content:center;font-size:12px}
