@@ -84,6 +84,25 @@ export const TeachingLessonView = defineComponent({
           name = 'Compare';
           body = h('div', { class: 'guide-lesson-comparison' }, [side(block.left), side(block.right)]);
           break;
+        case 'table':
+          name = 'Table';
+          body = [
+            h('div', { class: 'guide-lesson-table-scroll', role: 'region',
+              'aria-label': block.title + ' table', tabindex: 0 }, [
+              h('table', { class: 'guide-lesson-data-table' }, [
+                h('thead', [h('tr',
+                  block.headers.map((header, column) => h('th', {
+                    key: column, scope: 'col',
+                  }, math(header))))]),
+                h('tbody', block.rows.map((row, rowIndex) => h('tr', { key: rowIndex },
+                  row.map((cell, column) => h(column === 0 ? 'th' : 'td', {
+                    key: column, ...(column === 0 ? { scope: 'row' } : {}),
+                  }, rich(cell))))),
+              ]),
+            ]),
+            caption(block.caption),
+          ];
+          break;
         case 'sequence': {
           name = 'Step by step';
           const selected = Math.max(0, Math.min(block.steps.length - 1, Number(props.responses[block.id] ?? 0) || 0));
