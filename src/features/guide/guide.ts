@@ -13,7 +13,8 @@ import { canMove,createSection,findItem,firstEntry,groupOptions,insertGuide,move
 import { GuideModePicker } from './mode-picker.ts';
 import { GuideListEditor } from './list-editor.ts';
 import { GuideMapEditor } from './map-editor.ts';
-import { layoutSpacedAiMap } from './ai-map-layout.ts';
+import { layoutSpacedAiMap, GUIDE_AI_MAX_SPACED_TOPICS } from './ai-map-layout.ts';
+import { layoutMapTopics } from './map-graph.ts';
 import { GuideMapStudy } from './map-study.ts';
 import { createTeachingBlocksDemo } from './teaching-debug.ts';
 
@@ -30,8 +31,14 @@ function importedMapData(value:SimpleMapGuideImport):MapGuideData{
     return{id:createId(),from,to};
   });
   const useSuggestedPositions=value.topics.every(topic=>topic.position!==undefined);
-  const generatedPositions=layoutSpacedAiMap([...ids.values()],connections,startTopicId,
-    useSuggestedPositions ? value.topics.map(topic=>({x:topic.position![0],y:topic.position![1]})) : undefined);
+  const suggested=useSuggestedPositions
+    ? value.topics.map(topic=>({x:topic.position![0],y:topic.position![1]})) : undefined;
+  // Preserve legacy v1 imports which could exceed the number of comfortably
+  // spaced stops. New AI v2 maps are bounded and always use the safe layout.
+  const generatedPositions=value.topics.length>GUIDE_AI_MAX_SPACED_TOPICS
+    ? new Map([...ids.values()].map((id,index)=>[id,
+        suggested?.[index]??layoutMapTopics([...ids.values()],connections,startTopicId).get(id)??{x:0,y:0}]))
+    : layoutSpacedAiMap([...ids.values()],connections,startTopicId,suggested);
   const topics=value.topics.map(source=>{
     const id=ids.get(source.key);
     if(!id)throw new Error('The imported Guide has an invalid topic.');
