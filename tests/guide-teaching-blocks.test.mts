@@ -269,3 +269,19 @@ test('v1 AI Map imports still accept legacy sections without Teaching Blocks', (
     assert.deepEqual(result.topics[0].sections[0].bullets, ['A note.']);
   }
 });
+
+test('Guide category scoping reuses Review category contract and constrains its teaching prompt', () => {
+  const scope = {
+    subject: 'Operating Systems',
+    category: { key: 'deadlock', title: 'Deadlock and prevention', description: 'Circular wait, resource allocation and recovery' },
+  };
+  const prompt = guideAiPrompt({
+    detail: 'balanced', coverage: 'balanced', bulletStyle: 'thoughts',
+    mixMode: 'ai', targetBlocks: 16, weights: DEFAULT_TEACHING_WEIGHTS,
+  }, 'map', scope);
+  assert.match(prompt, /STEP 2 of our study-content workflow/);
+  assert.match(prompt, /Deadlock and prevention/);
+  assert.match(prompt, /ONLY for this category/);
+  assert.match(prompt, /Teaching Blocks/);
+  assert.match(prompt, /Let AI choose/);
+});
