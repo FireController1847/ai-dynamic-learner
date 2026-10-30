@@ -4,7 +4,7 @@ import { inputValue } from '../../core/dom.ts';
 import type { MapTopic } from './library-model.ts';
 import { lessonForTopic, MAX_TEACHING_BLOCKS, validateTeachingLesson,
   type TeachingBlock, type TeachingChoice, type TeachingSide, type TeachingStep, type TeachingNode } from './teaching-blocks.ts';
-import { newTeachingBlock, newTeachingChoice, TEACHING_BLOCK_KINDS, type TeachingBlockKind } from './teaching-block-factory.ts';
+import { copyTeachingBlock, newTeachingBlock, newTeachingChoice, TEACHING_BLOCK_KINDS, type TeachingBlockKind } from './teaching-block-factory.ts';
 import { TeachingLessonView } from './teaching-lesson.ts';
 
 type EditableListItem = TeachingStep | TeachingNode | TeachingChoice;
@@ -25,7 +25,7 @@ export const TeachingBlocksEditor = defineComponent({
 
     function startEdit(block: TeachingBlock) {
       selectedId.value = block.id;
-      draft.value = structuredClone(block);
+      draft.value = copyTeachingBlock(block);
       editing.value = true;
       preview.value = false;
       deleteId.value = null;
@@ -75,7 +75,7 @@ export const TeachingBlocksEditor = defineComponent({
       try {
         // Validate the complete candidate before mutating any persisted content.
         validateTeachingLesson(updated, new Set<string>());
-        current.blocks[index] = structuredClone(candidate);
+        current.blocks[index] = copyTeachingBlock(candidate);
         error.value = '';
         cancelEdit();
       } catch (cause) {
