@@ -1,26 +1,23 @@
 import { defineComponent, h, ref, type PropType, type VNode } from 'vue';
+import { renderTeachingMath as math, renderTeachingRich as rich } from './teaching-text.ts';
 import type { TeachingBlock, TeachingChoice, TeachingLesson, TeachingSide } from './teaching-blocks.ts';
 
-function paragraph(text: string, className = 'guide-lesson-prose'): VNode[] {
-  return text.split(/\n\s*\n/).filter(Boolean).map((part, index) =>
-    h('p', { key: index, class: className }, part));
-}
 function caption(value: string | undefined) {
-  return value ? h('p', { class: 'guide-lesson-caption' }, value) : null;
+  return value ? h('div', { class: 'guide-lesson-caption' }, rich(value)) : null;
 }
 function list(values: string[]) {
   return values.length ? h('ul', { class: 'guide-lesson-list' },
-    values.map((value, index) => h('li', { key: index }, value))) : null;
+    values.map((value, index) => h('li', { key: index }, math(value)))) : null;
 }
 function side(value: TeachingSide) {
   return h('div', { class: 'guide-lesson-side' }, [
-    h('h5', value.label), h('p', value.description), list(value.points),
+    h('h5', math(value.label)), rich(value.description), list(value.points),
   ]);
 }
 function blockHeading(block: TeachingBlock, label: string) {
   return h('header', { class: 'guide-lesson-block-header' }, [
     h('span', { class: 'guide-lesson-block-kind' }, label),
-    h('h4', block.title),
+    h('h4', math(block.title)),
   ]);
 }
 function optionButtons(
@@ -31,7 +28,7 @@ function optionButtons(
       key: choice.id, type: 'button', class: ['guide-lesson-choice', { 'is-selected': selected === choice.id }],
       'aria-pressed': selected === choice.id,
       onClick: () => onChoose(choice.id),
-    }, [h('span', { class: 'guide-lesson-choice-index' }, String.fromCharCode(65 + index)), h('span', choice.label)])));
+    }, [h('span', { class: 'guide-lesson-choice-index' }, String.fromCharCode(65 + index)), h('span', math(choice.label))])));
 }
 export const TeachingLessonView = defineComponent({
   name: 'TeachingLessonView',
@@ -56,10 +53,10 @@ export const TeachingLessonView = defineComponent({
         case 'explanation':
           name = 'Learn';
           body = [
-            ...paragraph(block.body),
+            rich(block.body),
             block.highlights?.length ? h('div', { class: 'guide-lesson-highlights' }, [
               h('span', { class: 'guide-lesson-small-label' }, 'Key ideas'),
-              ...block.highlights.map(word => h('span', { key: word, class: 'guide-lesson-highlight' }, word)),
+              ...block.highlights.map((word, index) => h('span', { key: index, class: 'guide-lesson-highlight' }, math(word))),
             ]) : null,
           ];
           break;
@@ -69,16 +66,16 @@ export const TeachingLessonView = defineComponent({
           body = [
             h('div', { class: 'guide-lesson-scenario' }, [
               h('span', { class: 'guide-lesson-small-label' }, 'Consider this'),
-              ...paragraph(block.scenario),
+              rich(block.scenario),
             ]),
             h('button', {
               type: 'button', class: 'quiet-button guide-lesson-toggle',
               'aria-expanded': expanded, onClick: () => toggleWalkthrough(block.id),
             }, expanded ? 'Hide walkthrough' : 'Explore the walkthrough'),
             expanded ? h('ol', { class: 'guide-lesson-walkthrough' },
-              block.steps.map((step, index) => h('li', { key: index }, step))) : null,
-            h('p', { class: 'guide-lesson-takeaway' }, [
-              h('strong', 'Takeaway  '), block.takeaway,
+              block.steps.map((step, index) => h('li', { key: index }, rich(step)))) : null,
+            h('div', { class: 'guide-lesson-takeaway' }, [
+              h('strong', 'Takeaway'), rich(block.takeaway),
             ]),
           ];
           break;
@@ -96,10 +93,10 @@ export const TeachingLessonView = defineComponent({
               block.steps.map((step, index) => h('button', {
                 key: index, type: 'button', class: ['guide-lesson-step-tab', { 'is-selected': selected === index }],
                 'aria-pressed': selected === index, onClick: () => answer(block.id, String(index)),
-              }, [h('span', String(index + 1)), step.title]))),
+              }, [h('span', String(index + 1)), math(step.title)]))),
             h('div', { class: 'guide-lesson-step-detail' }, [
               h('span', { class: 'guide-lesson-small-label' }, 'Step ' + (selected + 1) + ' of ' + block.steps.length),
-              h('h5', block.steps[selected].title), ...paragraph(block.steps[selected].body),
+              h('h5', math(block.steps[selected].title)), rich(block.steps[selected].body),
               h('div', { class: 'guide-lesson-step-actions' }, [
                 h('button', { type: 'button', class: 'quiet-button', disabled: selected === 0,
                   onClick: () => answer(block.id, String(selected - 1)) }, 'Previous'),
@@ -120,10 +117,10 @@ export const TeachingLessonView = defineComponent({
                 h('button', { key: node.id, type: 'button', class: ['guide-lesson-diagram-node', { 'is-selected': selected.id === node.id }],
                   'aria-pressed': selected.id === node.id,
                   onClick: () => answer(block.id, node.id),
-                }, [h('span', { class: 'guide-lesson-diagram-dot' }, String(index + 1)), node.label]),
+                }, [h('span', { class: 'guide-lesson-diagram-dot' }, String(index + 1)), math(node.label)]),
               ])),
             h('div', { class: 'guide-lesson-diagram-detail', role: 'status' }, [
-              h('strong', selected.label), ...paragraph(selected.detail),
+              h('strong', math(selected.label)), rich(selected.detail),
             ]),
             caption(block.caption),
           ];
@@ -133,10 +130,10 @@ export const TeachingLessonView = defineComponent({
           name = 'Explore';
           const selected = block.choices.find(choice => choice.id === props.responses[block.id]);
           body = [
-            h('p', { class: 'guide-lesson-question' }, block.prompt),
+            h('div', { class: 'guide-lesson-question' }, rich(block.prompt)),
             optionButtons(block.choices, selected?.id, id => answer(block.id, id)),
             selected ? h('div', { class: 'guide-lesson-feedback', role: 'status' }, [
-              h('strong', selected.label), ...paragraph(selected.explanation),
+              h('strong', math(selected.label)), rich(selected.explanation),
             ]) : h('p', { class: 'guide-lesson-prompt' }, 'Choose an option to explore what happens. You can try every option.'),
           ];
           break;
@@ -147,12 +144,14 @@ export const TeachingLessonView = defineComponent({
           const correct = selected?.id === block.correctId;
           const correctOption = block.options.find(option => option.id === block.correctId);
           body = [
-            h('p', { class: 'guide-lesson-question' }, block.question),
+            h('div', { class: 'guide-lesson-question' }, rich(block.question)),
             optionButtons(block.options, selected?.id, id => answer(block.id, id)),
             selected ? h('div', { class: ['guide-lesson-feedback', { 'is-correct': correct }], role: 'status' }, [
               h('strong', correct ? 'That’s it!' : 'Not quite — here’s why.'),
-              ...paragraph(selected.explanation),
-              !correct && correctOption ? h('p', ['The key is: ', h('strong', correctOption.label), '. ', correctOption.explanation]) : null,
+              rich(selected.explanation),
+              !correct && correctOption ? h('div', [
+                'The key is: ', h('strong', math(correctOption.label)), '. ', rich(correctOption.explanation),
+              ]) : null,
             ]) : h('p', { class: 'guide-lesson-prompt' }, 'No score or penalty. Make a prediction, then read the explanation.'),
           ];
           break;
@@ -160,10 +159,10 @@ export const TeachingLessonView = defineComponent({
         case 'connection':
           name = 'Make the connection';
           body = [
-            ...paragraph(block.body),
+            rich(block.body),
             block.next ? h('div', { class: 'guide-lesson-next' }, [
               h('span', { class: 'guide-lesson-small-label' }, 'Coming up'),
-              h('p', block.next),
+              rich(block.next),
             ]) : null,
           ];
           break;
