@@ -6,8 +6,8 @@ import { lessonForTopic, MAX_TEACHING_BLOCKS, validateTeachingLesson,
   type TeachingBlock, type TeachingChoice, type TeachingSide, type TeachingStep, type TeachingNode } from './teaching-blocks.ts';
 import { copyTeachingBlock, newTeachingBlock, newTeachingChoice, TEACHING_BLOCK_KINDS, type TeachingBlockKind } from './teaching-block-factory.ts';
 import { TeachingLessonView } from './teaching-lesson.ts';
+import { PopupDialog } from '../../components/popup-dialog.ts';
 
-type EditableListItem = TeachingStep | TeachingNode | TeachingChoice;
 const LIMIT = 10000;
 
 export const TeachingBlocksEditor = defineComponent({
@@ -268,33 +268,41 @@ export const TeachingBlocksEditor = defineComponent({
                 h('button', { type: 'button', class: 'quiet-button', onClick: () => { deleteId.value = null; } }, 'Cancel'),
               ]) : null,
             ]))) : h('p', { class: 'guide-teach-empty' }, 'No blocks yet. Add one to begin your lesson.'),
-          h('div', { class: 'guide-teach-tabbar' }, [
-            h('button', { type: 'button', class: 'quiet-button',
-              'aria-pressed': !preview.value, onClick: () => { preview.value = false; } }, 'Edit'),
-            h('button', { type: 'button', class: 'quiet-button',
-              'aria-pressed': preview.value, onClick: () => { preview.value = true; } }, 'Preview lesson'),
-          ]),
-          preview.value
-            ? h('div', { class: 'guide-teach-preview' }, [
+          h('button', { type: 'button', class: 'quiet-button guide-teach-preview-launch',
+            onClick: () => { previewAnswers.value = {}; preview.value = true; } }, 'Preview entire lesson'),
+          h('p', { class: 'guide-teach-hint' },
+            'Select a block above to edit it in a spacious window. Preview the entire lesson separately.'),
+          editing.value && selected && draft.value?.id === selected.id
+            ? h(PopupDialog, {
+              key: 'edit-' + selected.id, title: 'Edit ' + selected.kind + ': ' + selected.title,
+              headingId: 'guide-teach-modal-heading', width: 940, onClose: cancelEdit,
+            }, {
+              default: () => h('div', { class: 'guide-teach-modal-content' }, [
+                h('p', { class: 'guide-teach-modal-intro' },
+                  'Edit this teaching block. Save to keep your changes; closing without saving discards this draft.'),
+                h('div', { class: 'guide-teach-form', key: selected.id }, [
+                  ...fields(draft.value!),
+                  error.value ? h('p', { class: 'guide-teach-error', role: 'alert' }, error.value) : null,
+                  h('div', { class: 'guide-teach-form-actions' }, [
+                    h('button', { type: 'button', class: 'card-primary-button', onClick: saveBlock }, 'Save block'),
+                    h('button', { type: 'button', class: 'quiet-button', onClick: cancelEdit }, 'Cancel changes'),
+                  ]),
+                ]),
+              ]),
+            }) : null,
+          preview.value ? h(PopupDialog, {
+            key: 'lesson-preview', title: 'Lesson preview: ' + props.topic.title,
+            headingId: 'guide-teach-preview-heading', width: 1060,
+            onClose: () => { preview.value = false; },
+          }, {
+            default: () => h('div', { class: 'guide-teach-preview guide-teach-modal-content' }, [
+              h('p', { class: 'guide-teach-modal-intro' },
+                'This is the learner view. Your choices here are just a preview and are not saved as study progress.'),
               h(TeachingLessonView, { lesson: current, responses: previewAnswers.value,
                 onAnswer: (id: string, response: string) =>
                   { previewAnswers.value = { ...previewAnswers.value, [id]: response }; } }),
-            ])
-            : editing.value && selected && draft.value?.id === selected.id
-              ? h('div', { class: 'guide-teach-form', key: selected.id }, [
-                h('div', { class: 'guide-teach-form-heading' }, [
-                  h('strong', 'Edit ' + selected.kind),
-                  h('span', 'Draft changes are saved only when valid.'),
-                ]),
-                ...fields(draft.value),
-                error.value ? h('p', { class: 'guide-teach-error', role: 'alert' }, error.value) : null,
-                h('div', { class: 'guide-teach-form-actions' }, [
-                  h('button', { type: 'button', class: 'card-primary-button', onClick: saveBlock }, 'Save block'),
-                  h('button', { type: 'button', class: 'quiet-button', onClick: cancelEdit }, 'Cancel changes'),
-                ]),
-              ])
-              : h('p', { class: 'guide-teach-hint' },
-                'Select a block in the outline to edit it, or open the lesson preview.'),
+            ]),
+          }) : null,
         ],
       ]);
     };
