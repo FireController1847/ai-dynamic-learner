@@ -97,7 +97,7 @@ export const TeachingLessonView = defineComponent({
                 h('tbody', block.rows.map((row, rowIndex) => h('tr', { key: rowIndex },
                   row.map((cell, column) => h(column === 0 ? 'th' : 'td', {
                     key: column, ...(column === 0 ? { scope: 'row' } : {}),
-                  }, rich(cell))))),
+                  }, rich(cell)))))),
               ]),
             ]),
             caption(block.caption),
