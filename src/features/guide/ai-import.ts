@@ -5,6 +5,11 @@ import { AI_COMPLETE_COVERAGE_PROMPT, parseAiSubjectCoverage, type AiSubjectCove
 import { inputValue } from '../../core/dom.ts';
 import { isRecord } from '../../core/validation.ts';
 import { AI_PLAIN_TEXT_ONLY_GUIDANCE } from '../../core/ai-formatting-guidance.ts';
+import { parseAiTeachingLesson } from './ai-teaching-schema.ts';
+import { guideAiTeachingPrompt } from './ai-teaching-prompt.ts';
+import { DEFAULT_TEACHING_WEIGHTS, teachingMixProblem, allocateTeachingBlocks, TEACHING_TYPES, rebalanceTeachingWeights, type TeachingMixMode, type TeachingWeights } from './ai-teaching-mix.ts';
+import { GUIDE_AI_MAX_SPACED_TOPICS, stopsAreSpaced } from './ai-map-layout.ts';
+import type { TeachingLesson } from './teaching-blocks.ts';
 import {
   MAP_GRID, MAP_MAX_X, MAP_MAX_Y, MAP_TOPIC_HEIGHT, MAP_TOPIC_WIDTH,
   MAX_BULLETS, MAX_NAME_LENGTH, MAX_SECTIONS, MAX_TEXT_LENGTH, MAX_TOPICS, type GuideMode,
@@ -15,6 +20,7 @@ const MAP_IMPORT_FORMAT = 'dynamic-learner-guide-map';
 const LEGACY_LIST_IMPORT_FORMAT = 'dynamic-learner-study-guide';
 const LEGACY_MAP_IMPORT_FORMAT = 'dynamic-learner-study-guide-map';
 const IMPORT_VERSION = 1;
+const TEACHING_IMPORT_VERSION = 2;
 const MAX_IMPORT_BULLET_DEPTH = 7;
 const JSON_FENCE = '```';
 
@@ -26,6 +32,9 @@ export interface GuideAiPromptOptions {
   detail: PromptDetail;
   coverage: PromptCoverage;
   bulletStyle: PromptBulletStyle;
+  mixMode?: TeachingMixMode;
+  targetBlocks?: number;
+  weights?: TeachingWeights;
 }
 
 export interface SimpleGuideImportSection {
@@ -46,6 +55,7 @@ export interface SimpleMapGuideImportTopic {
   description?: string;
   position?: readonly [number, number];
   sections: SimpleGuideImportSection[];
+  lesson?: TeachingLesson;
 }
 
 export interface SimpleMapGuideImport {
@@ -151,150 +161,7 @@ Limits:
 }
 
 function mapPrompt(options: GuideAiPromptOptions): string {
-  return `${promptIntro(options, 'map')}
-
-Create a connected topic map that feels like an adventurous path the learner can explore, not a plain outline drawn as boxes. Each topic is a study stop with its own small list-style guide and an optional short introduction. Put the topics in a useful learning order so one stop naturally leads to the next.
-
-Shape the route like a small exploration tree:
-- build a clear main path through most of the material;
-- for a medium or large map, usually add one or two meaningful branch points when the content supports them instead of forcing everything into one straight chain;
-- keep side branches short, usually one or two stops and only occasionally three, so the learner can explore them and naturally backtrack to the main route;
-- a branch may go above or below the main path and should feel like a short optional trail;
-- avoid both extremes: do not make every topic a single unbranched line, and do not make a hub-and-spoke map where one broad topic connects to most other topics;
-- most topics should have one or two connections; three is appropriate at a genuine fork;
-- connect concepts according to prerequisite, chronology, process, increasing depth, or another natural learning progression.
-
-Make the visual layout creative and predominantly horizontal, like an adventure-map trail:
-- place the starting topic toward the left and let the main route generally progress toward the right;
-- let the route gently wander up and down instead of putting every stop on one row;
-- place short branches above or below the main route;
-- do not form a vertical line or a vertical tree;
-- avoid overlapping topic boxes and leave breathing room between nearby stops;
-- every topic must include a suggested "position": [x, y]. x and y are snapped map coordinates, not semantic data.
-
-The map must still be one connected tree: every topic is reachable from the starting topic, there are no loops/cycles, no duplicate connections, and a topic is never connected to itself. With N topics, use exactly N-1 connections.
-
-Return ONLY one fenced JSON code block, starting with ${JSON_FENCE}json and ending with ${JSON_FENCE}.
-
-Use this structure:
-${JSON_FENCE}json
-{
-  "format": "${MAP_IMPORT_FORMAT}",
-  "version": ${IMPORT_VERSION},
-  "title": "Short guide title",
-  "startTopic": "foundations",
-  "coverage": [{ "subject": "Specific source topic", "itemNumbers": [1] }],
-  "topics": [
-    {
-      "key": "foundations",
-      "description": "Begin with the core ideas that make the rest of the journey easier to understand.",
-      "title": "Foundations",
-      "position": [64, 384],
-      "sections": [
-        {
-          "title": "Core ideas",
-          "bullets": [
-            {
-              "text": "Key idea",
-              "children": [
-                { "text": "Supporting detail" }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "key": "core-process",
-      "description": "Now explore how those foundations connect and work together in practice.",
-      "title": "Core Process",
-      "position": [288, 288],
-      "sections": [
-        {
-          "title": "How it works",
-          "bullets": [
-            { "text": "Core process point" }
-          ]
-        }
-      ]
-    },
-    {
-      "key": "applications",
-      "description": "See why the earlier concepts matter when they are put to use.",
-      "title": "Applications",
-      "position": [608, 352],
-      "sections": [
-        {
-          "title": "Using the ideas",
-          "bullets": [
-            { "text": "Application point" }
-          ]
-        }
-      ]
-    },
-    {
-      "key": "case-study",
-      "description": "Take an optional detour to see these ideas through one concrete example.",
-      "title": "Case Study",
-      "position": [608, 544],
-      "sections": [
-        {
-          "title": "Explore a side trail",
-          "bullets": [
-            { "text": "Short branch point" }
-          ]
-        }
-      ]
-    },
-    {
-      "key": "advanced-topics",
-      "title": "Advanced Topics",
-      "position": [960, 288],
-      "sections": [
-        {
-          "title": "Going deeper",
-          "bullets": [
-            { "text": "Advanced point" }
-          ]
-        }
-      ]
-    }
-  ],
-  "connections": [
-    ["foundations", "core-process"],
-    ["core-process", "applications"],
-    ["applications", "advanced-topics"],
-    ["applications", "case-study"]
-  ]
-}
-${JSON_FENCE}
-
-Map rules:
-- "key" is a short unique local reference used only by this JSON response;
-- "startTopic" must match one topic key;
-- each connection is exactly [fromTopicKey, toTopicKey];
-- order connections to reflect the intended exploration route from the starting topic outward;
-- make the longest useful learning path pass through most of the material, while allowing one or two short side trails when useful;
-- prefer a horizontal main route with occasional small forks; avoid both a perfectly straight chain and a wide hub-and-spoke structure;
-- "position" is [x, y] on Dynamic Learner's 1440×896 map canvas;
-- position x must be a multiple of ${MAP_GRID} from 0–${MAP_MAX_X}; position y must be a multiple of ${MAP_GRID} from 0–${MAP_MAX_Y};
-- each topic occupies about ${MAP_TOPIC_WIDTH}×${MAP_TOPIC_HEIGHT}; keep topic rectangles from overlapping;
-- use position creatively to make the route visually wander while still reading primarily left-to-right;
-- every topic should represent a meaningful conceptual stop, not a single trivia fact;
-- usually include a short "description" for each topic: one or two plain-text sentences explaining why this stop belongs on the journey and what kind of ideas will be revealed;
-- descriptions should set context and curiosity, not merely repeat the title, list the forthcoming bullets, or spoil the entire content; omit the description when it would be filler;
-- each topic's sections and nested bullets use the same note structure as List mode;
-- preserve important terminology and factual accuracy;
-- do not invent unsupported information.
-
-Limits:
-- title: 1–${MAX_NAME_LENGTH} characters;
-- 1–${MAX_TOPICS} topics;
-- each topic supports up to ${MAX_SECTIONS} sections and ${MAX_BULLETS} bullets/sub-bullets;
-- topic titles, section titles, bullet text, and topic keys must be non-empty plain text no longer than ${MAX_TEXT_LENGTH} characters;
-- optional topic descriptions must be plain text no longer than ${MAX_TEXT_LENGTH} characters (normally just 1–2 short sentences);
-- at most ${MAX_IMPORT_BULLET_DEPTH + 1} bullet levels;
-- do not generate Dynamic Learner IDs, groups, or other application fields. Dynamic Learner validates suggested positions and owns the stored map data.`;
+  return guideAiTeachingPrompt(options);
 }
 
 export function guideAiPrompt(
@@ -398,7 +265,8 @@ function parseListImport(value: unknown): SimpleListGuideImport {
 function parseMapImport(value: unknown): SimpleMapGuideImport {
   if (!isRecord(value) ||
       Object.keys(value).some((key) => !['format', 'version', 'title', 'startTopic', 'topics', 'connections', 'coverage'].includes(key)) ||
-      (value.format !== MAP_IMPORT_FORMAT && value.format !== LEGACY_MAP_IMPORT_FORMAT) || value.version !== IMPORT_VERSION ||
+      (value.format !== MAP_IMPORT_FORMAT && value.format !== LEGACY_MAP_IMPORT_FORMAT) ||
+      (value.version !== IMPORT_VERSION && value.version !== TEACHING_IMPORT_VERSION) ||
       typeof value.title !== 'string' || !value.title.trim() || value.title.trim().length > MAX_NAME_LENGTH ||
       typeof value.startTopic !== 'string' || !value.startTopic.trim() ||
       !Array.isArray(value.topics) || !value.topics.length || value.topics.length > MAX_TOPICS ||
@@ -406,10 +274,12 @@ function parseMapImport(value: unknown): SimpleMapGuideImport {
     throw new Error('This is not a supported Map-mode Guide import.');
   }
 
+  if (value.topics.length > GUIDE_AI_MAX_SPACED_TOPICS && value.version === TEACHING_IMPORT_VERSION)
+    throw new Error('For separated map stops, generate at most ' + GUIDE_AI_MAX_SPACED_TOPICS + ' topics.');
   const keys = new Set<string>();
   const topics = value.topics.map((topic, topicIndex): SimpleMapGuideImportTopic => {
     if (!isRecord(topic) ||
-        Object.keys(topic).some((key) => !['key', 'title', 'description', 'position', 'sections'].includes(key)) ||
+        Object.keys(topic).some((key) => !['key', 'title', 'description', 'position', 'sections', 'lesson'].includes(key)) ||
         typeof topic.key !== 'string' || !topic.key.trim() || topic.key.trim().length > MAX_TEXT_LENGTH ||
         typeof topic.title !== 'string' || !topic.title.trim() || topic.title.trim().length > MAX_TEXT_LENGTH ||
         (Object.hasOwn(topic, 'description') && (typeof topic.description !== 'string' || topic.description.length > MAX_TEXT_LENGTH)) ||
@@ -424,6 +294,10 @@ function parseMapImport(value: unknown): SimpleMapGuideImport {
     const key = topic.key.trim();
     if (keys.has(key)) throw new Error(`Topic key "${key}" is duplicated.`);
     keys.add(key);
+    if (topic.lesson === undefined && topic.sections === undefined)
+      throw new Error('Topic ' + (topicIndex + 1) + ' needs Teaching Blocks or sections.');
+    if (value.version === TEACHING_IMPORT_VERSION && topic.lesson === undefined)
+      throw new Error('Topic ' + (topicIndex + 1) + ' is missing its Teaching Blocks lesson.');
     const position = Array.isArray(topic.position)
       ? [topic.position[0] as number, topic.position[1] as number] as const
       : undefined;
@@ -432,7 +306,8 @@ function parseMapImport(value: unknown): SimpleMapGuideImport {
       title: topic.title.trim(),
       ...(typeof topic.description === 'string' && topic.description.trim() ? { description: topic.description.trim() } : {}),
       position,
-      sections: parseImportSections(topic.sections, { count: 0 }, `Topic ${topicIndex + 1}`),
+      sections: topic.sections === undefined ? [] : parseImportSections(topic.sections, { count: 0 }, `Topic ${topicIndex + 1}`),
+      ...(topic.lesson === undefined ? {} : { lesson: parseAiTeachingLesson(topic.lesson) }),
     };
   });
 
@@ -440,20 +315,10 @@ function parseMapImport(value: unknown): SimpleMapGuideImport {
   if (positionedTopics.length !== 0 && positionedTopics.length !== topics.length) {
     throw new Error('Map-mode AI positions must be provided for every topic or omitted for every topic.');
   }
-  for (let firstIndex = 0; firstIndex < positionedTopics.length; firstIndex += 1) {
-    const first = positionedTopics[firstIndex];
-    if (!first?.position) continue;
-    for (let secondIndex = firstIndex + 1; secondIndex < positionedTopics.length; secondIndex += 1) {
-      const second = positionedTopics[secondIndex];
-      if (!second?.position) continue;
-      const overlaps =
-        first.position[0] < second.position[0] + MAP_TOPIC_WIDTH &&
-        first.position[0] + MAP_TOPIC_WIDTH > second.position[0] &&
-        first.position[1] < second.position[1] + MAP_TOPIC_HEIGHT &&
-        first.position[1] + MAP_TOPIC_HEIGHT > second.position[1];
-      if (overlaps) throw new Error(`Map topics "${first.title}" and "${second.title}" overlap.`);
-    }
-  }
+  // Discard cramped AI suggestions and let the import layout engine repair them.
+  const allSpaced = positionedTopics.length === topics.length &&
+    stopsAreSpaced(positionedTopics.map(topic => ({ x: topic.position![0], y: topic.position![1] })));
+  if (!allSpaced) topics.forEach(topic => { topic.position = undefined; });
 
   const startTopic = value.startTopic.trim();
   if (!keys.has(startTopic)) throw new Error('The starting topic does not match a topic key.');
