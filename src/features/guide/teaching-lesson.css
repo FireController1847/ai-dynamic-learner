@@ -104,3 +104,28 @@
 .guide-legacy-notes summary{cursor:pointer;font-weight:600}
 .guide-legacy-notes .guide-list-editor{margin-top:12px}
 @media(max-width:900px){.guide-teach-field input,.guide-teach-field select,.guide-teach-field textarea{font-size:16px}}
+
+
+/* Full-screen top-layer dialogs keep authoring and preview outside the narrow map sidebar. */
+.guide-teach-preview-launch{width:100%;min-height:42px;justify-content:center}
+.guide-teach-modal-content{display:grid;gap:16px;min-width:0;padding:4px 6px 8px}
+.guide-teach-modal-intro{margin:0;color:var(--text-secondary);font-size:14px;line-height:1.65}
+.guide-teach-modal-content .guide-teach-form{padding:20px;gap:20px;border-radius:14px}
+.guide-teach-modal-content .guide-teach-field input,
+.guide-teach-modal-content .guide-teach-field select,
+.guide-teach-modal-content .guide-teach-field textarea{font-size:15px}
+.guide-teach-modal-content .guide-teach-field textarea{min-height:140px}
+.guide-teach-modal-content .guide-teach-list-row{grid-template-columns:minmax(0,1fr) auto;align-items:end}
+.guide-teach-modal-content .guide-teach-collection{padding:16px;gap:16px}
+.guide-teach-modal-content .guide-teach-list-card{padding:16px;gap:12px}
+.guide-teach-modal-content .guide-teach-form-actions{position:sticky;bottom:-4px;z-index:1;padding:12px 0 0;border-top:1px solid var(--border-color);background:var(--page-background)}
+.guide-teach-modal-content.guide-teach-preview{padding-inline:clamp(6px,3vw,30px)}
+.guide-teach-modal-content.guide-teach-preview .guide-teaching-lesson{width:min(820px,100%);margin-inline:auto;gap:20px}
+.guide-teach-modal-content.guide-teach-preview .guide-lesson-block{padding:clamp(18px,3vw,28px)}
+@media(max-width:600px){
+  .guide-teach-modal-content{padding-inline:0}
+  .guide-teach-modal-content .guide-teach-form{padding:12px;gap:14px}
+  .guide-teach-modal-content .guide-teach-collection{padding:10px}
+  .guide-teach-modal-content .guide-teach-list-row{grid-template-columns:minmax(0,1fr)}
+  .guide-teach-modal-content .guide-teach-list-row>.quiet-button{justify-self:start}
+}
