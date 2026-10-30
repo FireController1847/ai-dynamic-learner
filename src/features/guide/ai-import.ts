@@ -516,7 +516,8 @@ export const GuideAiImportWorkspace = defineComponent({
         onCategory: () => { stage.value = 'categories'; },
       }) : h(AiPromptExchange, {
         ref: exchangeRef, idPrefix: 'guide-ai', label: 'Guide', prompt: prompt.value, json: json.value, problem: problem.value, startInImport: props.direct, importOnly: props.direct,
-        hasPreview: candidate.value !== null, showReviewStep: true,
+        hasPreview: candidate.value !== null, showReviewStep: !props.direct,
+        skipSource: Boolean(chosenScope.value),
         preferFileImport: true, maxLength: MAX_AI_IMPORT_LENGTH,
         promptHelp: 'Create a guided interactive lesson from your source, using Teaching Blocks and an exploratory map.',
         importHelp: 'Upload the AI-generated JSON file or paste the response. We validate lessons, coverage and map layout before importing.',
