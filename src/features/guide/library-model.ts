@@ -1,11 +1,12 @@
 import { createId, isValidId } from '../../core/ids.ts';
 import { createTreeOperations, type TreeMovePosition } from '../../core/tree.ts';
 import { isRecord } from '../../core/validation.ts';
+import { validateTeachingLesson, type TeachingLesson } from './teaching-blocks.ts';
 
 export type GuideMode = 'list' | 'map';
 export interface GuideSection { id: string; title: string; bullets: string[] }
 export interface ListGuideData { sections: GuideSection[] }
-export interface MapTopic { id: string; title: string; description?: string; x: number; y: number; guide: ListGuideData }
+export interface MapTopic { id: string; title: string; description?: string; x: number; y: number; guide: ListGuideData; lesson?: TeachingLesson }
 export interface MapConnection { id: string; from: string; to: string }
 export interface MapStudySession {
   paused: boolean;
@@ -14,6 +15,8 @@ export interface MapStudySession {
   visitedIds: string[];
   skippedIds: string[];
   revealed: Record<string, number>;
+  /** Optional persisted interaction choices, keyed by topic ID then block ID. */
+  responses?: Record<string, Record<string, string>>;
 }
 export interface MapGuideData {
   topics: MapTopic[];
@@ -109,13 +112,14 @@ function mapData(value: unknown, ids: Set<string>): asserts value is MapGuideDat
   const topicBulletCounts = new Map<string, number>();
   for (const topic of value.topics) {
     if (!isRecord(topic) || !isValidId(topic.id) || ids.has(topic.id) ||
-        Object.keys(topic).some(key => !['id','title','description','x','y','guide'].includes(key)) ||
+        Object.keys(topic).some(key => !['id','title','description','x','y','guide','lesson'].includes(key)) ||
         typeof topic.x !== 'number' || !Number.isInteger(topic.x) || topic.x < 0 || topic.x > MAP_MAX_X || topic.x % MAP_GRID !== 0 ||
         typeof topic.y !== 'number' || !Number.isInteger(topic.y) || topic.y < 0 || topic.y > MAP_MAX_Y || topic.y % MAP_GRID !== 0)
       throw new Error('A Guide map topic is invalid.');
     ids.add(topic.id); topicIds.add(topic.id); text(topic.title, 'Topic title');
     if (Object.hasOwn(topic, 'description')) text(topic.description, 'Topic description');
     listData(topic.guide, ids);
+    if (Object.hasOwn(topic, 'lesson')) validateTeachingLesson(topic.lesson, ids);
     topicBulletCounts.set(topic.id, topic.guide.sections.reduce((sum, section) =>
       sum + section.bullets.filter(bullet => bullet.trim()).length, 0));
   }
@@ -170,7 +174,7 @@ function mapData(value: unknown, ids: Set<string>): asserts value is MapGuideDat
   if (Object.hasOwn(value, 'session')) {
     const session = value.session;
     if (!isRecord(session) ||
-        Object.keys(session).some(key => !['paused', 'currentId', 'openedIds', 'visitedIds', 'skippedIds', 'revealed'].includes(key)) ||
+        Object.keys(session).some(key => !['paused', 'currentId', 'openedIds', 'visitedIds', 'skippedIds', 'revealed', 'responses'].includes(key)) ||
         typeof session.paused !== 'boolean' ||
         !isValidId(session.currentId) ||
         !Array.isArray(session.openedIds) || !Array.isArray(session.visitedIds) || !Array.isArray(session.skippedIds) ||
@@ -188,6 +192,17 @@ function mapData(value: unknown, ids: Set<string>): asserts value is MapGuideDat
       throw new Error('The saved Guide map adventure has invalid reveal counts.');
     }
 
+    if (session.responses !== undefined) {
+      if (!isRecord(session.responses) || Object.keys(session.responses).length > MAX_TOPICS)
+        throw new Error('Saved Guide lesson responses are invalid.');
+      for (const [topicId, response] of Object.entries(session.responses)) {
+        if (!isValidId(topicId) || !isRecord(response) || Object.keys(response).length > 80 ||
+            Object.entries(response).some(([blockId, choice]) =>
+              !isValidId(blockId) || typeof choice !== 'string' || choice.length > 128))
+          throw new Error('Saved Guide lesson responses contain invalid choices.');
+      }
+    }
+
     // Authored maps can change after studying. Prune stale references without
     // making an otherwise valid backup unloadable when a topic was removed.
     if (!topicIds.size) {
@@ -203,7 +218,16 @@ function mapData(value: unknown, ids: Set<string>): asserts value is MapGuideDat
         .map(([id, count]) => {
           return [id, Math.min(count as number, topicBulletCounts.get(id) ?? 0)];
         }));
-      value.session = { paused: session.paused, currentId, openedIds, visitedIds, skippedIds, revealed };
+      const responses = session.responses ? Object.fromEntries(Object.entries(session.responses)
+        .filter(([id]) => topicIds.has(id))
+        .map(([id, entries]) => {
+          const topic = value.topics.find(topic => topic.id === id);
+          const validBlocks = new Set(topic?.lesson?.blocks.map(block => block.id) ?? []);
+          return [id, Object.fromEntries(Object.entries(entries)
+            .filter(([blockId]) => validBlocks.has(blockId)))];
+        })) : undefined;
+      value.session = { paused: session.paused, currentId, openedIds, visitedIds, skippedIds, revealed,
+        ...(responses ? { responses } : {}) };
     }
   }
 }
