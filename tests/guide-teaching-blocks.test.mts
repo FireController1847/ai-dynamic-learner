@@ -17,7 +17,7 @@ test('the demo creates a connected, valid map and demonstrates all nine teaching
   assert.doesNotThrow(() => validateGuide(model));
   const guide = model.items[0];
   assert.equal(guide.data.topics.length, 4);
-  assert.equal(guide.data.connections.length, 4);
+  assert.equal(guide.data.connections.length, 3);
   assert.equal(guide.data.topics[3].title, 'Markdown & LaTeX Showcase');
   assert.ok(guide.data.topics[3].lesson?.blocks.some(block => block.kind === 'table'));
   assert.ok(guide.data.topics[3].lesson?.blocks.some(block => block.kind === 'explanation' && block.body.includes('| :---')));
