@@ -55,8 +55,8 @@ export function createTeachingBlocksDemo(): MapGuideData {
 
   const prevention = lesson([
     withId({ kind: 'explanation', title: 'Preventing circular wait',
-      body: 'One common strategy is to impose a global ordering on resource acquisition. All processes request locks in the same order. This removes the possibility of a circular ordering of resource dependencies.',
-      highlights: ['Lock ordering', 'Prevention'] }),
+      body: 'One common **prevention strategy** is to impose a global ordering on resource acquisition. All processes request locks in the same order.\n\nFor example, request $L_1$ before $L_2$. This removes the possibility of a circular ordering of resource dependencies.',
+      highlights: ['Lock ordering', '$L_1$ before $L_2$'] }),
     withId({ kind: 'diagram', title: 'Consistent lock order',
       nodes: [
         { id: createId(), label: 'Request Lock 1', detail: 'Every process follows the same first lock order.' },
