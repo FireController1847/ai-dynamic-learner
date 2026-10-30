@@ -124,7 +124,7 @@ export const GuideMapStudy = defineComponent({
         openedIds: [...opened.value],
         visitedIds: [...visited.value],
         skippedIds: [...skipped.value],
-        revealed: { ...saved?.revealed },
+        revealed: {},
         responses: { ...responsesByTopic.value },
       };
       props.data.session = session;
@@ -470,7 +470,7 @@ export const GuideMapStudy = defineComponent({
               h('p', { class: 'guide-study-kicker' }, paused ? 'Your adventure is waiting' : 'Ready to explore?'),
               h('h3', props.guideName),
               h('p', paused
-                ? 'Pick up right where you left off, with your opened stops and completed stops and interactions intact.'
+                ? 'Pick up right where you left off, with your completed stops and interactive choices intact.'
                 : 'Discover the trail, explore interactive mini-lessons, and learn at your own pace.'),
             ]),
           ]),
