@@ -15,6 +15,7 @@ export const TEACHING_BLOCK_KINDS: readonly { kind: TeachingBlockKind; label: st
   { kind: 'explanation', label: 'Explanation', help: 'Teach an idea in readable paragraphs.' },
   { kind: 'example', label: 'Worked example', help: 'Present a situation, walk through it, then connect the result.' },
   { kind: 'comparison', label: 'Comparison', help: 'Place two related ideas side by side.' },
+  { kind: 'table', label: 'Table', help: 'Compare multiple concepts in a structured, editable table with Markdown and math.' },
   { kind: 'sequence', label: 'Step by step', help: 'Let learners inspect the stages of a process.' },
   { kind: 'diagram', label: 'Visual model', help: 'Connect selectable concepts in a visual flow.' },
   { kind: 'exploration', label: 'Exploration', help: 'Let learners try different choices and discover consequences.' },
@@ -36,6 +37,11 @@ export function newTeachingBlock(kind: TeachingBlockKind): TeachingBlock {
     case 'comparison': return { id, kind, title: 'Compare two ideas',
       left: { label: 'First idea', description: 'Explain the first idea.', points: [] },
       right: { label: 'Second idea', description: 'Explain the second idea.', points: [] } };
+    case 'table': return { id, kind, title: 'Compare at a glance',
+      caption: 'Use this table to compare key ideas.',
+      headers: ['Concept', 'Description'],
+      rows: [['First concept', 'What makes it distinct'],
+        ['Second concept', 'How it differs']] };
     case 'sequence': return { id, kind, title: 'Explore the process',
       steps: [{ title: 'Step one', body: 'Explain the first step.' },
         { title: 'Step two', body: 'Explain the second step.' }] };
