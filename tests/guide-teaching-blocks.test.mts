@@ -6,7 +6,7 @@ import { copyTeachingBlock, newTeachingBlock, TEACHING_BLOCK_KINDS } from '../sr
 import { reactive, ref } from 'vue';
 import { validateGuide } from '../src/features/guide/library-model.ts';
 import { tokenizeTeachingMath, renderTeachingMath } from '../src/features/guide/teaching-text.ts';
-import { parseGuideAiImport } from '../src/features/guide/ai-import.ts';
+import { parseGuideAiImport, guideAiPrompt } from '../src/features/guide/ai-import.ts';
 import { layoutSpacedAiMap, stopsAreSpaced, GUIDE_AI_STOP_GAP } from '../src/features/guide/ai-map-layout.ts';
 import { allocateTeachingBlocks, rebalanceTeachingWeights, DEFAULT_TEACHING_WEIGHTS, TEACHING_TYPES } from '../src/features/guide/ai-teaching-mix.ts';
 
@@ -240,4 +240,32 @@ test('Review-style teaching mix stays at 100% and allocates meaningful targets',
   assert.equal(TEACHING_TYPES.reduce((sum, type) => sum + weights[type], 0), 100);
   const counts = allocateTeachingBlocks(weights, 30);
   assert.equal(TEACHING_TYPES.reduce((sum, type) => sum + counts[type], 0), 30);
+});
+
+test('AI Guide prompt teaches with v2 blocks and creative, spacious coordinates', () => {
+  const prompt = guideAiPrompt({
+    detail: 'balanced', coverage: 'comprehensive', bulletStyle: 'thoughts',
+    mixMode: 'custom', targetBlocks: 20, weights: DEFAULT_TEACHING_WEIGHTS,
+  }, 'map');
+  assert.match(prompt, /version": 2/);
+  assert.match(prompt, /64 px CLEAR SPACE/);
+  assert.match(prompt, /Custom teaching mix/);
+  assert.match(prompt, /correctIndex/);
+  assert.match(prompt, /Markdown/);
+  assert.doesNotMatch(prompt, /This is a guide, not a rewritten textbook/);
+});
+
+test('v1 AI Map imports still accept legacy sections without Teaching Blocks', () => {
+  const legacy = {
+    format: 'dynamic-learner-guide-map', version: 1, title: 'Original', startTopic: 'a',
+    topics: [{ key: 'a', title: 'Legacy notes',
+      sections: [{ title: 'Notes', bullets: [{ text: 'A note.' }] }] }],
+    connections: [],
+  };
+  const result = parseGuideAiImport(JSON.stringify(legacy), 'map');
+  assert.equal(result.mode, 'map');
+  if (result.mode === 'map') {
+    assert.equal(result.topics[0].lesson, undefined);
+    assert.deepEqual(result.topics[0].sections[0].bullets, ['A note.']);
+  }
 });
