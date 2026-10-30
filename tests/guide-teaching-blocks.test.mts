@@ -5,6 +5,7 @@ import { lessonForTopic, validateTeachingLesson } from '../src/features/guide/te
 import { copyTeachingBlock, newTeachingBlock, TEACHING_BLOCK_KINDS } from '../src/features/guide/teaching-block-factory.ts';
 import { reactive, ref } from 'vue';
 import { validateGuide } from '../src/features/guide/library-model.ts';
+import { tokenizeTeachingMath, renderTeachingMath } from '../src/features/guide/teaching-text.ts';
 
 function demoModel() {
   const data = createTeachingBlocksDemo();
@@ -109,4 +110,27 @@ test('authoring can edit and save Vue-proxied Teaching Blocks', () => {
   assert.equal(saved.nodes[0].label, 'Updated concept');
   assert.notEqual(source.nodes[0].label, saved.nodes[0].label);
   assert.doesNotThrow(() => validateTeachingLesson({ version: 1, blocks: [saved] }, new Set()));
+});
+
+test('short teaching labels preserve plain punctuation and currency', () => {
+  const source = 'Costs $5 and $10; C++_variable_ remains literal';
+  assert.deepEqual(tokenizeTeachingMath(source), [{ kind: 'text', value: source }]);
+});
+
+test('short teaching labels support LaTeX delimiters without requiring Markdown', () => {
+  const sample = String.raw\`Compute \\(a+b\\), then $x^2$, then \\[x=y\\], then $$\\frac{a}{b}$$\`;
+  const pieces = tokenizeTeachingMath(sample);
+  assert.deepEqual(pieces.filter(part => part.kind !== 'text').map(part => [part.kind, part.value]), [
+    ['inline', 'a+b'], ['inline', 'x^2'], ['display', 'x=y'], ['display', String.raw\`\\frac{a}{b}\`],
+  ]);
+  // The KaTeX renderer handles the math without requiring a browser DOM.
+  assert.ok(renderTeachingMath(sample).length > 4);
+});
+
+test('malformed or oversized math keeps the original text', () => {
+  assert.deepEqual(tokenizeTeachingMath(String.raw\`Unclosed \\(x+y\`), [
+    { kind: 'text', value: String.raw\`Unclosed \\(x+y\` },
+  ]);
+  const enormous = '$' + 'a'.repeat(4001) + '$';
+  assert.deepEqual(tokenizeTeachingMath(enormous), [{ kind: 'text', value: enormous }]);
 });
