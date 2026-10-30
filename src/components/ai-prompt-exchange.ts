@@ -35,6 +35,10 @@ export const AiPromptExchange = defineComponent({
     const uploadedFile = ref('');
     const fileProblem = ref('');
     const uploading = ref(false);
+    const draggingFile = ref(false);
+    const pasteExpanded = ref(false);
+    const fileInput = ref<HTMLInputElement | null>(null);
+    const fileButton = ref<HTMLButtonElement | null>(null);
     const input = ref<HTMLTextAreaElement | null>(null);
     const stepHeading = ref<HTMLElement | null>(null);
     const promptText = ref<HTMLTextAreaElement | null>(null);
@@ -43,6 +47,7 @@ export const AiPromptExchange = defineComponent({
     let focusResponse = false;
     let copyTimer: ReturnType<typeof setTimeout> | undefined;
     let copyAttempt = 0;
+    let fileAttempt = 0;
     function cancelCopy() {
       clearTimeout(copyTimer);
       copyTimer = undefined;
@@ -53,15 +58,19 @@ export const AiPromptExchange = defineComponent({
       cancelCopy();
       if (stage.value === 'instructions') copied.value = false;
     }, { flush: 'sync' });
-    onBeforeUnmount(() => { disposed = true; cancelCopy(); });
+    onBeforeUnmount(() => { disposed = true; fileAttempt++; cancelCopy(); });
 
-    async function loadJsonFile(event: Event) {
-      const file = (event.target as HTMLInputElement).files?.[0];
+    async function acceptJsonFile(file: File | undefined) {
       if (!file) return;
-      uploadedFile.value = '';
+      const attempt = ++fileAttempt;
+      draggingFile.value = false;
       fileProblem.value = '';
+      uploadedFile.value = '';
+      // Never allow an earlier, previously selected file to be validated
+      // after the user deliberately chooses a new one.
+      emit('update-json', '');
       if (!file.name.toLowerCase().endsWith('.json')) {
-        fileProblem.value = 'Choose a .json file downloaded from your AI chat.';
+        fileProblem.value = 'Choose a .json file from your AI conversation.';
         return;
       }
       if (props.maxLength !== undefined && file.size > props.maxLength * 4) {
@@ -71,24 +80,59 @@ export const AiPromptExchange = defineComponent({
       uploading.value = true;
       try {
         const contents = await file.text();
-        if (props.maxLength !== undefined && contents.length > props.maxLength)
+        if (props.maxLength !== undefined && contents.length > props.maxLength) {
           throw new Error('The JSON exceeds the supported import size.');
-        JSON.parse(contents);
-        if (disposed) return;
+        }
+        try { JSON.parse(contents); }
+        catch { throw new Error('This file does not contain valid JSON.'); }
+        if (disposed || attempt !== fileAttempt) return;
         uploadedFile.value = file.name;
+        pasteExpanded.value = false;
         emit('update-json', contents);
       } catch (error) {
-        if (disposed) return;
+        if (disposed || attempt !== fileAttempt) return;
         fileProblem.value = error instanceof Error ? error.message : 'Could not read this JSON file.';
-        emit('update-json', '');
       } finally {
-        uploading.value = false;
+        if (attempt === fileAttempt) uploading.value = false;
       }
     }
+
+    function loadJsonFile(event: Event) {
+      const target = event.target;
+      if (!(target instanceof HTMLInputElement)) return;
+      const file = target.files?.[0];
+      target.value = ''; // Reselecting the same file must work after a correction.
+      void acceptJsonFile(file);
+    }
+
+    function dropJsonFile(event: DragEvent) {
+      event.preventDefault();
+      draggingFile.value = false;
+      if (uploading.value) return;
+      void acceptJsonFile(event.dataTransfer?.files[0]);
+    }
+
+    function clearJsonFile() {
+      fileAttempt++;
+      uploading.value = false;
+      uploadedFile.value = '';
+      fileProblem.value = '';
+      emit('update-json', '');
+      if (fileInput.value) fileInput.value.value = '';
+      nextTick(() => fileButton.value?.focus({ preventScroll: true }));
+    }
+
+    function updatePastedJson(event: Event) {
+      fileAttempt++;
+      uploading.value = false;
+      uploadedFile.value = '';
+      fileProblem.value = '';
+      emit('update-json', inputValue(event));
+    }
+
     function selectResponse() {
       focusResponse = true;
       stage.value = 'response';
-      if (stage.value === 'response') nextTick(() => input.value?.focus({ preventScroll: true }));
     }
     function selectInstructions() {
       if (props.importOnly) return;
@@ -149,7 +193,8 @@ export const AiPromptExchange = defineComponent({
     function afterStepEnter() {
       if (focusResponse && stage.value === 'response') {
         focusResponse = false;
-        input.value?.focus({ preventScroll: true });
+        if (props.preferFileImport) fileButton.value?.focus({ preventScroll: true });
+        else input.value?.focus({ preventScroll: true });
       } else stepHeading.value?.focus({ preventScroll: true });
     }
 
@@ -240,7 +285,7 @@ export const AiPromptExchange = defineComponent({
           ] : [
             h('div', { class: 'ai-exchange-step-heading' }, [
               h('h3', { id: props.idPrefix + '-step-title' },
-                props.hasPreview ? 'Review your generated content' : props.preferFileImport ? 'Upload your AI’s JSON file' : 'Paste your AI’s reply here'),
+                props.hasPreview ? 'Review your generated content' : props.preferFileImport ? 'Bring your AI response back' : 'Paste your AI’s reply here'),
               h('p', { class: 'ai-exchange-help' }, props.importHelp),
             ]),
             !props.hasPreview && !props.preferFileImport ? h('div', { class: 'ai-response-path', 'aria-label': 'Final import steps' }, [
@@ -248,18 +293,94 @@ export const AiPromptExchange = defineComponent({
               h(Icon, { name: 'chevron' }),
               h('span', [h(Icon, { name: 'check' }), '2. Check and preview it']),
             ]) : null,
-            props.preferFileImport ? h('div', { class: 'ai-exchange-file-import' }, [
-              h('label', { class: 'ai-exchange-field-label', for: props.idPrefix + '-file' }, 'Choose a JSON file'),
-              h('input', { id: props.idPrefix + '-file', type: 'file', accept: '.json,application/json',
-                onChange: loadJsonFile }),
-              uploadedFile.value ? h('p', { role: 'status' }, 'Loaded ' + uploadedFile.value) : null,
+            props.preferFileImport ? h('div', { class: 'ai-json-return' }, [
+              h('input', {
+                ref: fileInput, id: props.idPrefix + '-file',
+                type: 'file', accept: '.json,application/json',
+                class: 'ai-json-file-input', tabindex: -1, 'aria-hidden': 'true',
+                onChange: loadJsonFile,
+              }),
+              h('div', {
+                class: ['ai-json-dropzone', {
+                  'is-dragging': draggingFile.value,
+                  'has-file': Boolean(uploadedFile.value || props.json.trim()),
+                }],
+                role: 'group', 'aria-label': 'Choose a JSON file',
+                onDragenter: (event: DragEvent) => {
+                  event.preventDefault();
+                  draggingFile.value = true;
+                },
+                onDragover: (event: DragEvent) => {
+                  event.preventDefault();
+                  if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
+                  draggingFile.value = true;
+                },
+                onDragleave: (event: DragEvent) => {
+                  const target = event.currentTarget;
+                  if (target instanceof HTMLElement &&
+                      event.relatedTarget instanceof Node && target.contains(event.relatedTarget)) return;
+                  draggingFile.value = false;
+                },
+                onDrop: dropJsonFile,
+              }, [
+                h('span', { class: 'ai-json-upload-mark', 'aria-hidden': 'true' }, [
+                  h(Icon, { name: uploadedFile.value || props.json.trim() ? 'check' : 'upload' }),
+                ]),
+                h('div', { class: 'ai-json-upload-copy' }, [
+                  h('strong', uploading.value ? 'Reading your file…'
+                    : uploadedFile.value || (props.json.trim() ? 'JSON response ready' : 'Add your JSON file')),
+                  h('p', { class: 'ai-exchange-help' },
+                    uploading.value ? 'Checking the file format locally.'
+                      : uploadedFile.value || props.json.trim()
+                        ? 'Ready to validate and move on.'
+                        : 'Drop a .json file here, or select one from your device.'),
+                ]),
+                h('div', { class: 'ai-json-upload-actions' }, [
+                  h('button', {
+                    ref: fileButton, type: 'button', class: 'quiet-button ai-json-choose-button',
+                    disabled: uploading.value, onClick: () => fileInput.value?.click(),
+                  }, [h(Icon, { name: 'upload' }),
+                    uploadedFile.value || props.json.trim() ? 'Replace file' : 'Choose JSON file']),
+                  uploadedFile.value || props.json.trim() ? h('button', {
+                    type: 'button', class: 'quiet-button ai-json-clear-button',
+                    'aria-label': 'Clear selected JSON response', disabled: uploading.value,
+                    onClick: clearJsonFile,
+                  }, [h(Icon, { name: 'trash' }), 'Clear']) : null,
+                ]),
+              ]),
               fileProblem.value ? h('p', { class: 'ai-exchange-error', role: 'alert' }, fileProblem.value) : null,
-              h('p', { class: 'ai-exchange-help' }, 'Download the .json file attached by your AI, then select it here. Nothing is uploaded to a server.'),
-              h('details', { class: 'ai-exchange-format-help' }, [
-                h('summary', 'No downloadable JSON file? Paste JSON instead'),
-                h('textarea', { ref: input, id: props.idPrefix + '-response', value: props.json,
-                  rows: 6, maxlength: props.maxLength, placeholder: 'Paste raw JSON as a fallback',
-                  onInput: (event: Event) => { uploadedFile.value = ''; emit('update-json', inputValue(event)); } }),
+              h('p', { class: 'ai-json-privacy' }, [
+                h(Icon, { name: 'check' }), 'Read locally in your browser. Nothing is sent to a server.',
+              ]),
+              h('div', { class: 'ai-json-fallback' }, [
+                h('button', {
+                  type: 'button', class: 'ai-exchange-link ai-json-paste-toggle',
+                  'aria-expanded': pasteExpanded.value,
+                  'aria-controls': props.idPrefix + '-paste-panel',
+                  onClick: () => {
+                    pasteExpanded.value = !pasteExpanded.value;
+                    if (pasteExpanded.value) void nextTick(() => input.value?.focus({ preventScroll: true }));
+                  },
+                }, [
+                  h(Icon, { name: pasteExpanded.value ? 'chevron-up' : 'chevron-down' }),
+                  pasteExpanded.value ? 'Hide JSON editor' : 'No file? Paste JSON instead',
+                ]),
+                h(Transition, { name: 'ai-exchange-reveal' }, {
+                  default: () => pasteExpanded.value ? h('div', {
+                    class: 'ai-json-paste-panel', id: props.idPrefix + '-paste-panel',
+                  }, [
+                    h('label', { class: 'ai-exchange-field-label', for: props.idPrefix + '-response' },
+                      'Paste your AI response'),
+                    h('textarea', {
+                      ref: input, id: props.idPrefix + '-response', value: props.json,
+                      rows: 6, maxlength: props.maxLength,
+                      placeholder: 'Paste the complete JSON response here',
+                      'aria-invalid': props.problem ? 'true' : undefined,
+                      'aria-describedby': props.problem ? props.idPrefix + '-error' : undefined,
+                      onInput: updatePastedJson,
+                    }),
+                  ]) : null,
+                }),
               ]),
             ]) : null,
             !props.preferFileImport ? h('label', { class: 'ai-exchange-field-label', for: props.idPrefix + '-response' }, 'AI response') : null,
@@ -277,11 +398,13 @@ export const AiPromptExchange = defineComponent({
             h('div', { class: 'ai-exchange-actions' }, [
               h('button', { type: 'button', class: 'card-primary-button', disabled: !props.json.trim() || uploading.value, onClick: () => emit('validate') },
                 props.hasPreview ? 'Check again' : props.validateLabel),
-              !props.importOnly ? h('button', { type: 'button', class: 'quiet-button', onClick: () => { stage.value = 'send'; } }, 'Back to AI chat step') : null,
+              !props.importOnly && !props.preferFileImport ? h('button', { type: 'button', class: 'quiet-button', onClick: () => { stage.value = 'send'; } }, 'Back to AI chat step') : null,
             ]),
             h('details', { class: 'ai-exchange-format-help' }, [
               h('summary', 'Having trouble with the response?'),
-              h('p', 'Ask your AI to return only the requested response format, without extra explanation. Dynamic Learner reads structured data (JSON) behind the scenes; you only need to copy and paste it.'),
+              h('p', props.preferFileImport
+                  ? 'Ask your AI for a downloadable .json file containing only the requested JSON. If it responds with text, use the paste option above instead.'
+                  : 'Ask your AI to return only the requested response format, without extra explanation. Dynamic Learner reads structured data (JSON) behind the scenes; you only need to copy and paste it.'),
             ]),
             h(Transition, { name: 'ai-exchange-reveal', onAfterEnter: () => preview.value?.focus({ preventScroll: false }) }, {
               default: () => props.hasPreview ? h('div', {

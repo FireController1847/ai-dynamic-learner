@@ -377,8 +377,8 @@ export const ReviewAiCreation = defineComponent({
           promptHelp: stage.value === 'direct' ? 'Import an existing Review knowledge set.' : scope.value
             ? `Create questions for the selected category ${preferences.value.mixMode === 'ai' ? 'with AI-selected question types' : 'using your percentages'}.`
             : `Create questions covering the overall subject ${preferences.value.mixMode === 'ai' ? 'with an appropriate mix of question types' : 'using your percentages'}.`,
-          validateLabel: 'Validate file · Continue to Step 5',
-          importHelp: 'Download the JSON file from your AI conversation and select it below. Dynamic Learner will validate it before Step 5.',
+          validateLabel: 'Validate & continue',
+          importHelp: 'Choose the .json file from your AI conversation, or paste its response instead.',
           onUpdateJson: (value: string) => { json.value = value; candidate.value = null; problem.value = ''; correctionMessage.value = ''; correctionFallback.value = false; },
           onValidate: validate,
         }),
