@@ -118,18 +118,18 @@ test('short teaching labels preserve plain punctuation and currency', () => {
 });
 
 test('short teaching labels support LaTeX delimiters without requiring Markdown', () => {
-  const sample = String.raw\`Compute \\(a+b\\), then $x^2$, then \\[x=y\\], then $$\\frac{a}{b}$$\`;
+  const sample = String.raw`Compute \(a+b\), then $x^2$, then \[x=y\], then $$\frac{a}{b}$$`;
   const pieces = tokenizeTeachingMath(sample);
   assert.deepEqual(pieces.filter(part => part.kind !== 'text').map(part => [part.kind, part.value]), [
-    ['inline', 'a+b'], ['inline', 'x^2'], ['display', 'x=y'], ['display', String.raw\`\\frac{a}{b}\`],
+    ['inline', 'a+b'], ['inline', 'x^2'], ['display', 'x=y'], ['display', String.raw`\frac{a}{b}`],
   ]);
   // The KaTeX renderer handles the math without requiring a browser DOM.
   assert.ok(renderTeachingMath(sample).length > 4);
 });
 
 test('malformed or oversized math keeps the original text', () => {
-  assert.deepEqual(tokenizeTeachingMath(String.raw\`Unclosed \\(x+y\`), [
-    { kind: 'text', value: String.raw\`Unclosed \\(x+y\` },
+  assert.deepEqual(tokenizeTeachingMath(String.raw`Unclosed \(x+y`), [
+    { kind: 'text', value: String.raw`Unclosed \(x+y` },
   ]);
   const enormous = '$' + 'a'.repeat(4001) + '$';
   assert.deepEqual(tokenizeTeachingMath(enormous), [{ kind: 'text', value: enormous }]);
