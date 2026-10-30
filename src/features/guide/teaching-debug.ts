@@ -154,7 +154,6 @@ export function createTeachingBlocksDemo(): MapGuideData {
       { id: createId(), from: topics[0].id, to: topics[1].id },
       { id: createId(), from: topics[0].id, to: topics[2].id },
       { id: createId(), from: topics[1].id, to: topics[3].id },
-      { id: createId(), from: topics[2].id, to: topics[3].id },
     ],
     startTopicId: topics[0].id,
   };
