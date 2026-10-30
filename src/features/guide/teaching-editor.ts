@@ -246,6 +246,8 @@ export const TeachingBlocksEditor = defineComponent({
           ]),
           h('p', { class: 'guide-teach-hint' },
             TEACHING_BLOCK_KINDS.find(item => item.kind === kind.value)?.help ?? ''),
+          h('button', { type: 'button', class: 'quiet-button guide-teach-preview-launch',
+            onClick: () => { previewAnswers.value = {}; preview.value = true; } }, 'Preview entire lesson'),
           blocks.length ? h('ol', { class: 'guide-teach-outline', 'aria-label': 'Lesson outline' }, blocks.map((block, index) =>
             h('li', { key: block.id, class: ['guide-teach-outline-row', { 'is-selected': selectedId.value === block.id }] }, [
               h('button', { type: 'button', class: 'guide-teach-outline-select',
@@ -268,13 +270,11 @@ export const TeachingBlocksEditor = defineComponent({
                 h('button', { type: 'button', class: 'quiet-button', onClick: () => { deleteId.value = null; } }, 'Cancel'),
               ]) : null,
             ]))) : h('p', { class: 'guide-teach-empty' }, 'No blocks yet. Add one to begin your lesson.'),
-          h('button', { type: 'button', class: 'quiet-button guide-teach-preview-launch',
-            onClick: () => { previewAnswers.value = {}; preview.value = true; } }, 'Preview entire lesson'),
           h('p', { class: 'guide-teach-hint' },
             'Select a block above to edit it in a spacious window. Preview the entire lesson separately.'),
           editing.value && selected && draft.value?.id === selected.id
             ? h(PopupDialog, {
-              key: 'edit-' + selected.id, title: 'Edit ' + selected.kind + ': ' + selected.title,
+              key: 'edit-' + selected.id, title: 'Edit ' + selected.kind + ' block',
               headingId: 'guide-teach-modal-heading', width: 940, onClose: cancelEdit,
             }, {
               default: () => h('div', { class: 'guide-teach-modal-content' }, [
