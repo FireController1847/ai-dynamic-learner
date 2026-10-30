@@ -51,6 +51,12 @@ export function renderTeachingMath(text: string): VNodeChild[] {
 
 /** Full Markdown including lists, emphasis, code, and inline/display LaTeX. */
 export function renderTeachingRich(text: string): VNode {
-  return h('div', { class: 'markdown-content guide-lesson-rich' },
-    renderMarkdown(text, [], 'guide-teaching-heading'));
+  if (!text.trim()) return h('div', { class: 'markdown-content guide-lesson-rich' });
+  try {
+    return h('div', { class: 'markdown-content guide-lesson-rich' },
+      renderMarkdown(text, [], 'guide-teaching-heading'));
+  } catch {
+    // Invalid in-progress markup must never make a lesson or live editor crash.
+    return h('div', { class: 'markdown-content guide-lesson-rich' }, text);
+  }
 }
