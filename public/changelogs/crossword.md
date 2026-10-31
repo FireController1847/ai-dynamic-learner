@@ -3,9 +3,10 @@
 <small data-utc="2026-10-26T05:10:42Z">October 25, 2026 at 11:10 PM MDT</small>
 
 - **Interface:** Reduced excess header spacing while preserving responsive controls.
+- **AI Import:** Improved file uploads, copy confirmations, and return navigation.
 
 <details>
-<summary>View 4 commits</summary>
+<summary>View 3 commits</summary>
 <ol>
 <li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/273390291a8790b8a3f0abcb6ea472b008321fa9">27339029</a> — Expose AI exchange step-back navigation to parent workflow</li>
 <li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/f7bfd3d45efa008e418b0e23a0e5532042194b3f">f7bfd3d4</a> — Add opt-in JSON file selection to shared AI response step</li>
@@ -35,7 +36,7 @@
 
 <small data-utc="2026-10-23T00:57:53Z">October 22, 2026 at 6:57 PM MDT</small>
 
-- **AI Feedback:** Clarified generated item counts and offered easier acceptance or retry.
+- **AI Guidance:** Added clearer category explanations and AI chat handoff instructions.
 
 <details>
 <summary>View 4 commits</summary>
@@ -94,9 +95,8 @@
 - **Navigation:** Improved the step-by-step generation experience.
 
 <details>
-<summary>View 12 commits</summary>
+<summary>View 11 commits</summary>
 <ol>
-<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/28113c46ea18a935686e512e804b4ec0ddbeba9a">28113c46</a> — Clarify Word Search AI pool refresh is per new grid</li>
 <li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/080b778162c7f3b6646a5cab8cfee50781fbe748">080b7781</a> — Polish AI scope screens with secondary JSON import action</li>
 <li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/052a48151ec613b67b2d03f00cf0824236063db1">052a4815</a> — Place compact secondary AI actions at opposite footer corners</li>
 <li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/bb15233210a1aa0b75f8da37ff17817aba8e976b">bb152332</a> — Make AI JSON import buttons transparently outlined</li>
@@ -119,14 +119,10 @@
 - **Generation Scope:** Improved choices between overall-subject and category-specific puzzles.
 
 <details>
-<summary>View 10 commits</summary>
+<summary>View 6 commits</summary>
 <ol>
-<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/31de2948afec9d4986ed22394210f183f140356f">31de2948</a> — Teach Word Search AI prompts and imports about random word pools</li>
-<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/005a5892f04dbd2ffc85465657e51e41b8906d1a">005a5892</a> — Add Word Search random range to AI creation preferences</li>
-<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/33cf41cfa745d422397f1493127107fe33be4d17">33cf41cf</a> — Remove unused AI Word Search import</li>
 <li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/8bb0637e620d34f369e28a08af867a777fa49ecd">8bb0637e</a> — Style AI word-pool range settings</li>
 <li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/d0df9c5ada38dc7ceeedf88b8473860a34787c52">d0df9c5a</a> — Keep AI range updates strictly typed</li>
-<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/a237b5388d799a000b007eed7dc57dde5fa0839b">a237b538</a> — Default AI-generated Word Search layouts to 5–7 words</li>
 <li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/647ca4575ef2956a1c1536b78f1dc90ac38172ff">647ca457</a> — Allow overall-subject and category-scoped puzzle AI JSON</li>
 <li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/bb676830bf13b52ca89f7b3a5729e1189fb6df47">bb676830</a> — Unify puzzle AI overall/category scope and enable direct JSON imports</li>
 <li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/05722f8ea0a6f379bf2e807c258d323118741dcf">05722f8e</a> — Fix typed puzzle AI selection state</li>
@@ -182,7 +178,6 @@
 <details>
 <summary>View 4 commits</summary>
 <ol>
-<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/19f8c04417f00598224fad07e84f664823b1fec0">19f8c044</a> — Track word search attempts and solved words</li>
 <li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/8b24e775c074ca9484bfffea0256273c02060927">8b24e775</a> — Revert non-Guide AI features (#25)</li>
 <li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/d5ff44c01fd08b3c051c39dd57157630b12d5f7d">d5ff44c0</a> — Restore category-based AI workflows across learning apps</li>
 <li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/5e454cd464e611ddfa8ab68e0030fa6ed0a11935">5e454cd4</a> — Clarify Markdown and KaTeX capabilities across all AI prompts</li>
@@ -198,15 +193,13 @@
 - **Answer Quality:** Strengthened word validation while preserving manual puzzle creation.
 
 <details>
-<summary>View 20 commits</summary>
+<summary>View 18 commits</summary>
 <ol>
 <li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/08cab446ed7892900ca4c041b48a3404e8cdf614">08cab446</a> — Add category-scoped Word Search and Crossword AI import formats</li>
 <li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/54505f76132b5d4729b06ec74c841f3da207742d">54505f76</a> — Correct category AI format string literals and answer parser</li>
 <li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/964472bd24da22aa37ab1086f95c458d0dc697a8">964472bd</a> — Remove duplicate invalid crossword answer guard</li>
 <li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/3cde68f1d4f63257b8a8419f163d9086089f4341">3cde68f1</a> — Create shared category-based puzzle AI workflow</li>
-<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/973530889c2904be62f0b027466ce13b8261906a">97353088</a> — Add category AI creation action to WordSearch library</li>
 <li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/09f59f70f036d566c8837b2dfa3d136db5530958">09f59f70</a> — Add category AI creation action to Crossword library</li>
-<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/f354527bb3559905e8a654a7fb6d481f58ff9a6c">f354527b</a> — Integrate category AI creation in WordSearch</li>
 <li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/198ea220192ba6c7d7b18bc1801dad808b40e41e">198ea220</a> — Integrate category AI creation in Crossword</li>
 <li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/fa5aac0b20340589572d31104af842e58e142640">fa5aac0b</a> — Include shared category puzzle AI styles</li>
 <li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/9480cf7629fda70f112d55181b0a30ef473126bc">9480cf76</a> — Bump Word Search 1.7.0 and Crossword 1.3.0 for AI creation</li>
