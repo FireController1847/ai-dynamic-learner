@@ -1,3 +1,17 @@
+## v2.9.0
+
+<small data-utc="2026-10-31T03:45:57Z">October 30, 2026</small>
+
+- **AI Maps:** Let the AI choose a background that suits each generated guide, with encouragement to vary between Fireflies, Water, Constellations, Flow, and Contours.
+- **Import Preview:** Show the selected background before creating the guide and preserve it when importing; older files retain their existing default.
+
+<details>
+<summary>View 1 commit</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/986d9e4ad2c4718f04686c4d1d436c9fa21ed0f9">986d9e4a</a> — feat(guide): AI generated maps select varied ambient backgrounds (v2.9.0)</li>
+</ol>
+</details>
+
 ## v2.8.0
 
 <small data-utc="2026-10-31T03:43:11Z">October 30, 2026 at 9:43 PM MDT</small>
