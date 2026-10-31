@@ -78,7 +78,7 @@ export function drawProgrammingHudBase(ctx:CanvasRenderingContext2D):void {
 }
 
 export function drawProgrammingHudMotion(ctx:CanvasRenderingContext2D,seconds:number):void{
-  ctx.save();ctx.strokeStyle=ctx.strokeStyle;ctx.fillStyle=ctx.strokeStyle;
+  ctx.save();ctx.fillStyle=ctx.strokeStyle;
   ctx.font='12px ui-monospace, SFMono-Regular, Consolas, monospace';
   ctx.lineWidth=1.3;
   // CPU activity indicators pulse inside boxes, not just changing letters.

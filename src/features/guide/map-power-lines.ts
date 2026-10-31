@@ -144,7 +144,7 @@ function drawTrain(ctx: CanvasRenderingContext2D, seconds: number) {
     ctx.strokeRect(center.x - width / 2, center.y - height, width, height);
     ctx.globalAlpha = 0.095;
     ctx.fillRect(center.x - width / 2, center.y - height, width, height);
-    ctx.clearRect; // No scenery erasure: cars remain a translucent line drawing.
+    // Cars remain translucent; never erase the scenery behind them.
     ctx.globalAlpha = 0.26;
     ctx.strokeRect(center.x - width * 0.34, center.y - height * 0.82,
       width * 0.68, height * 0.33);
