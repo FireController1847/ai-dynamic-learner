@@ -11,7 +11,8 @@ import { inputValue } from '../../core/dom.ts';
 import { parseFillBlankTemplate } from '../../core/fill-blank.ts';
 import { parseReviewAiImport, reviewAiPrompt, type ReviewAiImport, type ReviewAiPreferences } from './ai-import-format.ts';
 
-import { REVIEW_AI_FOCUSES } from './ai-focus.ts';
+import { REVIEW_AI_FOCUSES, type ReviewAiFocus } from './ai-focus.ts';
+import { AiFocusChoices } from '../../components/ai-focus-choices.ts';
 import { AI_QUESTION_TYPES, allocateQuestions, DEFAULT_AI_WEIGHTS, equalizeQuestionWeights, normalizeQuestionWeights, questionCountProblem, questionMixProblem, questionTypeLabel, rebalanceQuestionWeights, type QuestionWeights, type AiQuestionType } from './ai-question-mix.ts';
 import { MAX_QUESTIONS, questionDisplayPrompt, type Question } from './question-model.ts';
 
@@ -216,23 +217,12 @@ export const ReviewAiCreation = defineComponent({
                 h('span', 'AI chooses the types, prioritizing generated numeric questions and clear, reliably checked answers.')]),
             ]),
           ]),
-          preferences.value.mixMode === 'ai' ? h('fieldset', { class: 'review-ai-focus' }, [
-            h('legend', 'AI focus'),
-            h('div', { class: 'review-ai-focus-options' }, REVIEW_AI_FOCUSES.map(option => h('label', {
-              class: 'review-ai-focus-option', key: option.id,
-            }, [
-              h('input', {
-                type: 'radio', name: 'review-ai-focus', value: option.id,
-                checked: (preferences.value.aiFocus ?? 'default') === option.id,
-                onChange: () => { preferences.value.aiFocus = option.id; },
-              }),
-              h(Icon, { name: option.icon }),
-              h('span', { class: 'review-ai-focus-copy' }, [
-                h('strong', option.label),
-                h('span', option.description),
-              ]),
-            ]))),
-          ]) : null,
+          preferences.value.mixMode === 'ai' ? h(AiFocusChoices, {
+            options: REVIEW_AI_FOCUSES,
+            value: preferences.value.aiFocus ?? 'default',
+            name: 'review-ai-focus',
+            onSelect: (id: string) => { preferences.value.aiFocus = id as ReviewAiFocus; },
+          }) : null,
           preferences.value.mixMode === 'custom' ? h('fieldset', { class: 'review-ai-mix' }, [
             h('legend', editingMix.value ? 'Set the whole mix using relative weights' : 'Question type percentages'),
             ...AI_QUESTION_TYPES.map(type => h('label', { class: 'review-ai-weight', key: type }, [
