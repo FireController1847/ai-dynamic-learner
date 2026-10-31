@@ -116,9 +116,9 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'guide', label: 'Guide', path: '/guide/', icon: 'document',
     group: 'master',
-    version: '1.12.1',
+    version: '2.0.0',
     image: 'assets/app-icons/guide.png',
-    description: 'Build simple bullet lists or connected topic maps, then study a map one stop at a time.',
+    description: 'Teach and explore ideas through interactive map lessons, Teaching Blocks, or simple lists.',
     metadata: {
       keywords: ['guide', 'study notes', 'learning', 'revision'],
       socialImage: {
