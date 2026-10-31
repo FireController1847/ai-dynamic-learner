@@ -69,10 +69,9 @@
 - **AI Workflow:** Separated source sharing, generation settings, and import into clearer stages.
 
 <details>
-<summary>View 2 commits</summary>
+<summary>View 1 commit</summary>
 <ol>
 <li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/244100c502a416b1951257644b9ba26ef0c1fd6d">244100c5</a> — Restructure AI UX into distinct source, settings, and import steps</li>
-<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/244100c502a416b1951257644b9ba26ef0c1fd6">244100c5</a> — Release Index Cards 1.21.0</li>
 </ol>
 </details>
 
