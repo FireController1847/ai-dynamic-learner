@@ -7,8 +7,11 @@
 - **Prompt Accuracy:** Updated count planning, map block allocation, final self-checks, and preview messaging to match each scope without encouraging filler or extra map stops.
 
 <details>
-<summary>View 1 commit</summary>
-<ol><li>Release commit link pending.</li></ol>
+<summary>View 2 commits</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/2039b12aff3017f7a06f381b20e4bdbdf6856d50">2039b12a</a> — fix(guide): avoid contradictory exact wording in overall AI prompt</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/f3f1e827531d715df456c8936d68f2fa1699ec1c">f3f1e827</a> — fix(guide): scope-aware AI teaching block targets and count guidance (v2.12.1)</li>
+</ol>
 </details>
 
 ## v2.12.0
