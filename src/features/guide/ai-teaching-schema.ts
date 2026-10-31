@@ -1,6 +1,8 @@
 import { createId } from '../../core/ids.ts';
 import { isRecord } from '../../core/validation.ts';
 import { validateGenerationRules } from '../../core/parameterized/template.ts';
+import { resolveAiParameters } from '../knowledge-check/ai-parameterized-format.ts';
+import type { SolverPackage } from '../../core/parameterized/solver-package.ts';
 import { validateTeachingLesson, type TeachingBlock, type TeachingLesson, type TeachingChoice } from './teaching-blocks.ts';
 
 /** AI interchange intentionally uses no persisted IDs; only local index references. */
@@ -36,7 +38,7 @@ function choices(value: unknown, label: string): TeachingChoice[] {
       explanation: text(choice.explanation, label + ' explanation') };
   });
 }
-function blocks(raw: unknown): TeachingBlock[] {
+function blocks(raw: unknown, solvers: readonly SolverPackage[]): TeachingBlock[] {
   const sources = array(raw, 'Teaching blocks');
   if (!sources.length || sources.length > 80) throw new Error('A lesson needs 1–80 teaching blocks.');
   return sources.map((source, index): TeachingBlock => {
@@ -55,15 +57,15 @@ function blocks(raw: unknown): TeachingBlock[] {
       case 'parameterized':
         keys(value, ['kind','title','prompt','steps','takeaway','rules'], label);
         validateGenerationRules(value.rules);
-        // Generated instructional data may provide expression rules but never
-        // executable uploaded solver packages. Trusted registry solvers remain app-owned.
-        if (value.rules.solver?.package)
-          throw new Error(label + ' cannot import an executable solver package from AI.');
+        // Resolve uploaded references through the SAME validation pathway as
+        // Review. The source is stored with the block but executes exclusively
+        // inside Review's sandboxed worker runner, never the application page.
+        const resolved = resolveAiParameters({ presentation: 'fields', rules: value.rules }, [...solvers]);
         return { id, kind: 'parameterized', title,
           prompt: text(value.prompt, label + ' prompt'),
           steps: words(value.steps, label + ' steps'),
           takeaway: text(value.takeaway, label + ' takeaway'),
-          rules: value.rules };
+          rules: resolved.rules };
       case 'comparison': {
         keys(value, ['kind','title','left','right'], label);
         function side(source: unknown, name: string) {
@@ -122,11 +124,11 @@ function blocks(raw: unknown): TeachingBlock[] {
   });
 }
 
-export function parseAiTeachingLesson(value: unknown): TeachingLesson {
+export function parseAiTeachingLesson(value: unknown, solvers: readonly SolverPackage[] = []): TeachingLesson {
   const input = record(value, 'Teaching lesson');
   keys(input, ['version', 'blocks'], 'Teaching lesson');
   if (input.version !== 1) throw new Error('A Teaching lesson must use version 1.');
-  const lesson: TeachingLesson = { version: 1, blocks: blocks(input.blocks) };
+  const lesson: TeachingLesson = { version: 1, blocks: blocks(input.blocks, solvers) };
   validateTeachingLesson(lesson, new Set<string>());
   return lesson;
 }

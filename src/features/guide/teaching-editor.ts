@@ -247,7 +247,7 @@ export const TeachingBlocksEditor = defineComponent({
         case 'parameterized':
           parts.push(
             h('p', { class: 'guide-teach-hint' },
-              'Review’s parameter engine computes each example. Write {{variable}} for generated values and {{answerKey}} for computed results. Markdown and LaTeX work in the learner view.'),
+              'Review’s parameter engine computes each example. Write {{variable}} for generated values and {{answerKey}} for computed results. For algorithms, add a validated solver package in Advanced rules; a solver trace becomes an interactive predict-and-reveal Algorithm lab. Markdown and LaTeX work in both walkthrough and trace.'),
             field('Generated prompt', block.prompt, value => { block.prompt = value; }, true),
             h(ParameterizedVariables, { rules: block.rules }),
             h('fieldset', { class: 'guide-teach-collection' }, [

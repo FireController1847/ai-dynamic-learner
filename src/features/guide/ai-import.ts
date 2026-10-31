@@ -10,6 +10,7 @@ import { inputValue } from '../../core/dom.ts';
 import { isRecord } from '../../core/validation.ts';
 import { AI_PLAIN_TEXT_ONLY_GUIDANCE } from '../../core/ai-formatting-guidance.ts';
 import { parseAiTeachingLesson } from './ai-teaching-schema.ts';
+import { parseAiSolvers } from '../knowledge-check/ai-parameterized-format.ts';
 import { guideAiTeachingPrompt } from './ai-teaching-prompt.ts';
 import { guideAiFileOutputInstructions } from './ai-file-output.ts';
 import { GUIDE_AI_FOCUSES, type GuideAiFocus } from './ai-focus.ts';
@@ -276,7 +277,7 @@ function parseListImport(value: unknown): SimpleListGuideImport {
 
 function parseMapImport(value: unknown): SimpleMapGuideImport {
   if (!isRecord(value) ||
-      Object.keys(value).some((key) => !['format', 'version', 'title', 'startTopic', 'topics', 'connections', 'coverage'].includes(key)) ||
+      Object.keys(value).some((key) => !['format', 'version', 'title', 'startTopic', 'topics', 'connections', 'coverage', 'solvers'].includes(key)) ||
       (value.format !== MAP_IMPORT_FORMAT && value.format !== LEGACY_MAP_IMPORT_FORMAT) ||
       (value.version !== IMPORT_VERSION && value.version !== TEACHING_IMPORT_VERSION) ||
       typeof value.title !== 'string' || !value.title.trim() || value.title.trim().length > MAX_NAME_LENGTH ||
@@ -286,6 +287,9 @@ function parseMapImport(value: unknown): SimpleMapGuideImport {
     throw new Error('This is not a supported Map-mode Guide import.');
   }
 
+  if (value.version !== TEACHING_IMPORT_VERSION && value.solvers !== undefined)
+    throw new Error('Algorithm solvers are supported only in version 2 Teaching Block maps.');
+  const solvers = parseAiSolvers(value.solvers);
   if (value.topics.length > GUIDE_AI_MAX_SPACED_TOPICS && value.version === TEACHING_IMPORT_VERSION)
     throw new Error('For separated map stops, generate at most ' + GUIDE_AI_MAX_SPACED_TOPICS + ' topics.');
   const keys = new Set<string>();
@@ -319,10 +323,16 @@ function parseMapImport(value: unknown): SimpleMapGuideImport {
       ...(typeof topic.description === 'string' && topic.description.trim() ? { description: topic.description.trim() } : {}),
       position,
       sections: topic.sections === undefined ? [] : parseImportSections(topic.sections, { count: 0 }, `Topic ${topicIndex + 1}`),
-      ...(topic.lesson === undefined ? {} : { lesson: parseAiTeachingLesson(topic.lesson) }),
+      ...(topic.lesson === undefined ? {} : { lesson: parseAiTeachingLesson(topic.lesson, solvers) }),
     };
   });
 
+  for (const pkg of solvers) {
+    const used = topics.some(topic => topic.lesson?.blocks.some(block =>
+      block.kind === 'parameterized' && block.rules.solver?.package?.id === pkg.id &&
+      block.rules.solver.package.solverVersion === pkg.solverVersion));
+    if (!used) throw new Error('Algorithm solver “' + pkg.label + '” is not referenced by any Teaching Block.');
+  }
   const positionedTopics = topics.filter(topic => topic.position !== undefined);
   if (positionedTopics.length !== 0 && positionedTopics.length !== topics.length) {
     throw new Error('Map-mode AI positions must be provided for every topic or omitted for every topic.');

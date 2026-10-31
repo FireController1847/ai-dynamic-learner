@@ -5,7 +5,7 @@ import { isRecord } from '../../core/validation.ts';
 export interface ParameterizedTeachingContent {
   prompt: string; steps: string[]; takeaway: string; rules: GenerationRules;
 }
-export interface TeachingVariantState { n: number; revealed: boolean; overrides: Record<string, number> }
+export interface TeachingVariantState { n: number; revealed: boolean; overrides: Record<string, number>; traceStep?: number; traceRevealed?: boolean }
 
 export const defaultTeachingContent = (): ParameterizedTeachingContent => ({
   prompt: 'What is {{a}} + {{b}}?',
@@ -51,7 +51,13 @@ export function readTeachingState(raw: string | undefined): TeachingVariantState
         Object.entries(value.overrides).some(([name, number]) =>
           !/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(name) || typeof number !== 'number' || !Number.isFinite(number)))
       return empty;
-    return { n: value.n as number, revealed: value.revealed, overrides: value.overrides as Record<string, number> };
+    return {
+      n: value.n as number, revealed: value.revealed,
+      overrides: value.overrides as Record<string, number>,
+      ...(Number.isInteger(value.traceStep) && Number(value.traceStep) >= 0 &&
+         Number(value.traceStep) < 1000 ? { traceStep: Number(value.traceStep) } : {}),
+      ...(typeof value.traceRevealed === 'boolean' ? { traceRevealed: value.traceRevealed } : {}),
+    };
   } catch { return empty; }
 }
 export function writeTeachingState(value: TeachingVariantState): string {

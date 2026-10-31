@@ -5,6 +5,7 @@ import type { TeachingBlock } from './teaching-blocks.ts';
 import { controlledTeachingTemplate, readTeachingState, teachingAnswerLines, writeTeachingState,
   type TeachingVariantState } from './parameterized-teaching.ts';
 import { renderTeachingRich as rich } from './teaching-text.ts';
+import { GuideAlgorithmTrace } from './algorithm-trace.ts';
 
 type ParameterizedBlock = Extract<TeachingBlock, { kind: 'parameterized' }>;
 
@@ -29,12 +30,12 @@ export const ParameterizedTeachingView = defineComponent({
     }
     function newExample() {
       const current = state();
-      persist({ n: (current.n + 1) % 1000001, revealed: false, overrides: {} });
+      persist({ n: (current.n + 1) % 1000001, revealed: false, overrides: {}, traceStep: 0, traceRevealed: false });
     }
     function changeVariable(name: string, value: number) {
       if (!Number.isFinite(value)) return;
       const current = state();
-      persist({ ...current, revealed: false, overrides: { ...current.overrides, [name]: value } });
+      persist({ ...current, revealed: false, overrides: { ...current.overrides, [name]: value }, traceStep: 0, traceRevealed: false });
     }
     // Toggling the solution should not re-run generation. Only a changed seed,
     // numeric override or authored template should generate another variant.
@@ -89,6 +90,13 @@ export const ParameterizedTeachingView = defineComponent({
               onClick: () => persist({ ...saved, revealed: !saved.revealed }) },
               saved.revealed ? 'Hide walkthrough' : 'Reveal walkthrough'),
           ]),
+          generated.trace.length ? h(GuideAlgorithmTrace, {
+            trace: generated.trace,
+            step: saved.traceStep ?? 0,
+            revealed: saved.traceRevealed ?? false,
+            onChange: (step: number, revealed: boolean) =>
+              persist({ ...state(), traceStep: step, traceRevealed: revealed }),
+          }) : null,
           saved.revealed ? h('section', { class: 'guide-parameterized-solution', 'aria-label': 'Worked solution' }, [
             h('h5', 'Step-by-step solution'),
             h('ol', props.block.steps.map((_, index) =>
@@ -104,10 +112,8 @@ export const ParameterizedTeachingView = defineComponent({
                 h('dt', name), h('dd', String(value)),
               ]) : []),
             ]),
-            generated.trace.length ? h('details', [
-              h('summary', 'Solver walkthrough'),
-              h('ol', generated.trace.map((line, index) => h('li', { key: index }, rich(line)))),
-            ]) : null,
+            generated.trace.length ? h('p', { class: 'guide-lesson-prompt' },
+              'Use the Algorithm lab above to work through the actual generated state transitions.') : null,
           ]) : h('p', { class: 'guide-lesson-prompt' },
             'Predict the result, adjust the values, then reveal the reasoning. Nothing is graded.'),
         ] : [

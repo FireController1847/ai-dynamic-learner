@@ -91,3 +91,13 @@ Run `npm run test:guide`. CI also runs the existing TypeScript check and product
 ## Compatibility notice during development
 
 The app shell can dismiss the workspace compatibility banner for the current visit, or **Ignore this warning** to remember the exact mode, database version, read-only status, and issue list in local browser preferences. Another compatibility condition shows the warning again. When hidden, a compact header indicator reopens the details. **This affects notification visibility only:** read-only recovery remains enforced, unknown data stays protected, and restricted backup/restore/clear operations remain restricted.
+
+## Guide v2.3.0: algorithm labs and procedural learning
+
+Guide's Parameterized Teaching Block now accepts the same validated solver-package format used by Review. AI Map v2 imports may include an optional top-level `solvers` array; each referenced package is resolved and embedded into the corresponding block's rules during import. Extraneous packages are rejected. Legacy maps and expression-only examples remain compatible.
+
+The existing Review sandbox (restricted iframe, dedicated Worker, CSP, timeout and bounded output validation) executes uploaded solver code; Guide does not register uploaded code as trusted application functionality. **Importing an AI solver is still importing executable untrusted code into an isolated runner**. An algorithm cannot be trusted correct simply because it generated successfully.
+
+A solver can return `trace:string[]` with intermediate scheduling, page-replacement or resource-allocation decisions. Guide presents those trace entries as an **Algorithm lab**, one action at a time, with a space for an optional prediction, a Reveal next step action, and previous/next navigation. Markdown tables in steps allow frame snapshots, Gantt segments and other readable state descriptions. The learner compares their prediction with the computed state; Guide does not automatically grade free-form explanations. Example number, revealed step and current trace position are preserved when resuming the same map.
+
+For manual verification, create or import a map with a source-backed solver (e.g. Round Robin, FIFO page replacement). Start the lesson, generate another input, reveal the trace one state at a time, navigate back, and resume the map. Check a tabular trace, reduced motion and keyboard access. Confirm malformed or unused solver packages are rejected. No automated tests were added or run.
