@@ -47,6 +47,7 @@ const paths: Record<string, string> = {
   'chevron-up': 'm5 15 7-7 7 7',
   'chevron-down': 'm5 9 7 7 7-7',
   grip: 'M9 5h.01M15 5h.01M9 12h.01M15 12h.01M9 19h.01M15 19h.01',
+  x: 'M18 6 6 18M6 6l12 12',
   maximize: 'M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5',
   minimize: 'M3 9h6V3M21 9h-6V3M3 15h6v6M21 15h-6v6',
   'panel-close': 'M3 3h18v18H3ZM8 3v18m9-14-4 5 4 5',

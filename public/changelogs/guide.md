@@ -1,3 +1,15 @@
+## v2.14.1
+
+<small data-utc="2026-10-31T23:20:34.029Z">October 31, 2026</small>
+
+- **Lesson Controls:** Moved the fullscreen/restore and close icons together into the lesson window's top-right corner, with consistent 10px edge spacing across normal and expanded modes.
+- **Alignment:** Matched button dimensions and SVG icon sizing for more balanced alignment, while retaining sticky placement during lesson scrolling.
+
+<details>
+<summary>View 1 commit</summary>
+<ol><li>Release commit link pending.</li></ol>
+</details>
+
 ## v2.14.0
 
 <small data-utc="2026-10-31T23:12:20.427Z">October 31, 2026</small>

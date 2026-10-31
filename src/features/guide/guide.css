@@ -163,8 +163,10 @@
   transition: left 520ms var(--ease-out), top 520ms var(--ease-out);
 }
 .guide-study-topic {
+  --guide-lesson-pad-x: clamp(20px, 4vw, 44px);
+  --guide-lesson-pad-y: clamp(28px, 5vw, 56px);
   position: absolute; z-index: 4; inset: clamp(12px, 3vw, 32px); min-width: 0; min-height: 0;
-  overflow: auto; padding: clamp(28px, 5vw, 56px) clamp(20px, 4vw, 44px) max(260px, 48vh);
+  overflow: auto; padding: var(--guide-lesson-pad-y) var(--guide-lesson-pad-x) max(260px, 48vh);
   border: 1px solid var(--border-color); border-radius: var(--radius-dialog);
   background: var(--page-background); box-shadow: var(--shadow-overlay);
   visibility: hidden; pointer-events: none; opacity: 0; transform: translateY(16px) scale(.96);
@@ -174,15 +176,19 @@
   visibility: visible; pointer-events: auto; opacity: 1; transform: translateY(0) scale(1);
 }
 .guide-study-close-row {
-  position: sticky; top: 0; z-index: 5; display: flex; justify-content: flex-end;
-  height: 0; pointer-events: none;
+  position: sticky; top: var(--guide-lesson-pad-y); z-index: 5;
+  display: flex; align-items: flex-start; justify-content: flex-end; gap: 4px;
+  height: 0; margin-right: calc(10px - var(--guide-lesson-pad-x));
+  transform: translateY(calc(10px - var(--guide-lesson-pad-y)));
+  pointer-events: none;
 }
 .guide-study-close {
-  position: relative; margin: -12px -12px 0 0; width: 44px; height: 44px;
+  position: relative; display: grid; place-items: center;
+  flex: 0 0 44px; width: 44px; height: 44px; margin: 0; padding: 0;
   border: 0; border-radius: 50%; background: transparent;
-  color: var(--text-secondary); opacity: .7;
-  font-size: 26px; font-weight: 400; line-height: 1; pointer-events: auto;
+  color: var(--text-secondary); opacity: .7; pointer-events: auto;
 }
+.guide-study-close .ui-icon { width: 20px; height: 20px; stroke-width: 2; }
 .guide-study-close:hover { color: var(--text-color); background: transparent; opacity: 1; }
 .guide-study-close:focus-visible { outline: 2px solid var(--brand); outline-offset: -3px; opacity: 1; }
 .guide-study-topic-inner { width: min(820px, 100%); margin-inline: auto; }
@@ -219,7 +225,7 @@
   to { opacity: 1; transform: translateY(0); }
 }
 @media (max-width: 900px) {
-  .guide-study-topic { inset: 12px; padding: 20px; }
+  .guide-study-topic { --guide-lesson-pad-x: 20px; --guide-lesson-pad-y: 20px; inset: 12px; padding: 20px; }
 }
 @media (max-width: 560px) {
   .guide-study-intro-header { align-items: flex-start; gap: 16px; }
@@ -229,7 +235,7 @@
   .guide-study-toolbar { flex-wrap: wrap; }
   .guide-study-toolbar-actions { width: 100%; }
   .guide-study-toolbar-actions > button { flex: 1; min-height: 44px; }
-  .guide-study-topic { padding: 24px 16px max(210px, 42vh); }
+  .guide-study-topic { --guide-lesson-pad-x: 16px; --guide-lesson-pad-y: 24px; padding: 24px 16px max(210px, 42vh); }
 }
 @media (prefers-reduced-motion: reduce) {
   .guide-traveler, .guide-study-route line, .guide-connection-prompt, .guide-study-topic, .guide-study-map.is-camera-zooming { transition: none; }
@@ -443,18 +449,19 @@
   background:var(--scrim);
 }
 .guide-study-topic.is-fullscreen{
+  --guide-lesson-pad-x:clamp(20px,4vw,48px);
+  --guide-lesson-pad-y:clamp(24px,4vw,48px);
   position:fixed;inset:clamp(12px,2.5vw,32px);z-index:9991;
   width:auto;height:auto;max-width:none;max-height:none;
-  padding:clamp(24px,4vw,48px) clamp(20px,4vw,48px) 96px;
+  padding:var(--guide-lesson-pad-y) var(--guide-lesson-pad-x) 96px;
   visibility:visible;pointer-events:auto;opacity:1;
   transform:none;transition:none;overscroll-behavior:contain;
 }
-.guide-study-close-row{gap:2px}
-.guide-study-expand{margin:-12px 0 0 0;font-size:initial}
-.guide-study-expand .ui-icon{width:20px;height:20px}
+/* Both actions share one button size and icon baseline, including fullscreen. */
 .guide-study-topic-heading{padding-right:96px}
 @media(max-width:560px){
   .guide-study-topic.is-fullscreen{
+    --guide-lesson-pad-x:16px;--guide-lesson-pad-y:20px;
     inset:8px;padding:20px 16px 72px;
   }
   .guide-study-topic-heading{padding-right:88px}

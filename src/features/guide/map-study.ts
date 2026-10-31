@@ -768,7 +768,7 @@ export const GuideMapStudy = defineComponent({
                   title: 'View map',
                   'aria-label': 'Close lesson and view map',
                   onClick: closeTopic,
-                }, '×'),
+                }, [h(Icon, { name: 'x' })]),
               ]),
             h('div', { class: 'guide-study-topic-inner' }, [
             travelling.value ? h('div', { class: 'guide-study-travelling' }, [
