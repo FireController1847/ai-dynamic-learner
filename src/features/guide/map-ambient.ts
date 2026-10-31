@@ -27,35 +27,53 @@ for (let row = 0; row < H / 48 + 1; row++) for (let col = 0; col < W / 76 + 1; c
   });
 }
 
-/** Render the foam and glow once, then reuse the tiny sprite for every crest. */
+/** A crisp, paired water crest with narrow foam highlights at the high points.
+ * Only the tips/crests brighten; no shadow blur, halo or gradient is applied. */
 export function createWaterFoamSprite(ink: string): HTMLCanvasElement {
   const sprite = document.createElement('canvas');
-  sprite.width = 64; sprite.height = 32;
+  // Pre-render at 2× resolution so small crests stay defined when composited.
+  sprite.width = 128; sprite.height = 64;
   const ctx = sprite.getContext('2d');
   if (!ctx) return sprite;
+  ctx.scale(2, 2);
   ctx.strokeStyle = ink;
   ctx.fillStyle = ink;
   ctx.lineCap = 'round';
-  ctx.shadowColor = ink;
-  ctx.shadowBlur = 5;
-  ctx.globalAlpha = 0.32;
-  ctx.lineWidth = 1.6;
-  // A single shallow foam lip, not the paired arches that resembled birds.
+  ctx.lineJoin = 'round';
+
+  // Restore the original two adjoining arcs instead of a single wide hump.
+  ctx.globalAlpha = 0.56;
+  ctx.lineWidth = 1.3;
   ctx.beginPath();
-  ctx.moveTo(7, 21);
-  ctx.quadraticCurveTo(31, 8, 57, 21);
+  ctx.moveTo(8, 23);
+  ctx.quadraticCurveTo(20, 9, 32, 23);
+  ctx.quadraticCurveTo(44, 12, 56, 23);
   ctx.stroke();
-  ctx.globalAlpha = 0.23;
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(16, 24);
-  ctx.quadraticCurveTo(29, 21, 40, 24);
-  ctx.stroke();
-  ctx.shadowBlur = 0;
-  ctx.globalAlpha = 0.22;
-  for (const [x, y] of [[21, 25], [39, 26], [48, 23]]) {
+
+  // Crisp foam glints trace just the tops of both arches. Compute these
+  // segments from the same quadratic curves so they follow the exact shape.
+  function foamAtCrest(x0: number, y0: number, cx: number, cy: number, x1: number, y1: number) {
     ctx.beginPath();
-    ctx.arc(x, y, 0.75, 0, TAU);
+    for (let i = 0; i <= 8; i++) {
+      const t = 0.34 + (i / 8) * 0.32;
+      const a = 1 - t;
+      const x = a * a * x0 + 2 * a * t * cx + t * t * x1;
+      const y = a * a * y0 + 2 * a * t * cy + t * t * y1;
+      if (i) ctx.lineTo(x, y);
+      else ctx.moveTo(x, y);
+    }
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 0.86;
+  ctx.lineWidth = 1.3;
+  foamAtCrest(8, 23, 20, 9, 32, 23);
+  foamAtCrest(32, 23, 44, 12, 56, 23);
+
+  // Only the outer tips get a tiny fleck, not a fuzzy whole-shape glow.
+  ctx.globalAlpha = 0.34;
+  for (const x of [9, 55]) {
+    ctx.beginPath();
+    ctx.arc(x, 22, 0.8, 0, TAU);
     ctx.fill();
   }
   return sprite;
@@ -117,16 +135,17 @@ export function drawGuideAmbient(ctx: CanvasRenderingContext2D,
       ctx.fill();
     }
   } else if (pattern === 'water') {
-    // Quiet swells continuously appear, foam briefly, then vanish as the next
-    // crest rolls in. Foam is a cached one-hump sprite, avoiding per-frame paths,
-    // shadows or gradients for hundreds of caps.
+    // Restore the original paired cap silhouette. Foam appears and fades
+    // along its upper ridges rather than blurring the entire wave with a halo.
     for (const crest of waterCrests) {
       const phase = seconds * crest.speed + crest.phase - crest.x * 0.006;
       const foam = (0.5 + 0.5 * Math.sin(phase)) ** 1.9;
       if (foam < 0.025) continue;
-      const x = crest.x + Math.cos(phase * 0.8) * 3.8;
-      let y = crest.y + Math.sin(phase) * 2.4;
-      let size = crest.size * (0.92 + foam * 0.12);
+      // Minimize sideways/up-and-down motion that made the paired crests
+      // look like flapping birds. Brightness changes do most of the work.
+      const x = crest.x + Math.cos(phase * 0.8) * 1.1;
+      let y = crest.y + Math.sin(phase) * 0.75;
+      let size = crest.size * (0.98 + foam * 0.04);
       for (const disturbance of disturbances) {
         const age = (seconds * 1000 - disturbance.start) / 1750;
         if (age < 0 || age >= 1 ||
@@ -146,8 +165,9 @@ export function drawGuideAmbient(ctx: CanvasRenderingContext2D,
       } else {
         ctx.lineWidth = 1.1;
         ctx.beginPath();
-        ctx.moveTo(x - 13 * size, y + 2);
-        ctx.quadraticCurveTo(x, y - 6 * size, x + 13 * size, y + 2);
+        ctx.moveTo(x - 24 * size, y + 2);
+        ctx.quadraticCurveTo(x - 12 * size, y - 12 * size, x, y + 2);
+        ctx.quadraticCurveTo(x + 12 * size, y - 9 * size, x + 24 * size, y + 2);
         ctx.stroke();
       }
     }
