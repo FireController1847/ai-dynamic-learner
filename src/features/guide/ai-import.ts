@@ -560,10 +560,10 @@ export const GuideAiImportWorkspace = defineComponent({
                   onSelect: (id: string) => { aiFocus.value = id as GuideAiFocus; },
                 }) : null,
                 h('label', { class: 'guide-ai-option' }, [
-                  h('span', 'Approximate total Teaching Blocks'),
+                  h('span', 'Target total Teaching Blocks'),
                   h('input', { type: 'number', min: 1, max: 80, step: 1, value: targetBlocks.value,
                     onInput: (event: Event) => { targetBlocks.value = Number(inputValue(event)); } }),
-                  h('small', 'A target, not a requirement. No filler to hit a count.'),
+                  h('small', 'AI aims for this exact total across 5–7 stops unless the source warrants an exception. No filler.'),
                 ]),
                 mixMode.value === 'custom' ? h('div', { class: 'guide-ai-weight-list' },
                   TEACHING_TYPES.map(kind => h('label', { class: 'guide-ai-weight-row', key: kind }, [
