@@ -11,6 +11,8 @@ import { isRecord } from '../../core/validation.ts';
 import { AI_PLAIN_TEXT_ONLY_GUIDANCE } from '../../core/ai-formatting-guidance.ts';
 import { parseAiTeachingLesson } from './ai-teaching-schema.ts';
 import { parseAiSolvers } from '../knowledge-check/ai-parameterized-format.ts';
+import { GUIDE_CONFIDENCE_PROMPT, GUIDE_CONFIDENCE_EXAMPLE, parseGuideConfidence, type GuideAiConfidence } from './ai-confidence.ts';
+import { GuideAiReview } from './ai-review.ts';
 import { guideAiTeachingPrompt } from './ai-teaching-prompt.ts';
 import { guideAiFileOutputInstructions } from './ai-file-output.ts';
 import { GUIDE_AI_FOCUSES, type GuideAiFocus } from './ai-focus.ts';
@@ -54,6 +56,7 @@ export interface SimpleListGuideImport {
   mode: 'list';
   title: string;
   coverage?: AiSubjectCoverage[];
+  confidence: GuideAiConfidence | null;
   sections: SimpleGuideImportSection[];
 }
 
@@ -70,6 +73,7 @@ export interface SimpleMapGuideImport {
   mode: 'map';
   title: string;
   coverage?: AiSubjectCoverage[];
+  confidence: GuideAiConfidence | null;
   startTopic: string;
   topics: SimpleMapGuideImportTopic[];
   connections: { from: string; to: string }[];
@@ -117,6 +121,7 @@ Selected preferences:
 
 Condense redundant wording, NEVER omit a source subject or subtopic. If the material exceeds application limits, ask for batches rather than silently dropping topics.
 ${AI_COMPLETE_COVERAGE_PROMPT}
+${GUIDE_CONFIDENCE_PROMPT}
 For Guide, coverage itemNumbers are 1-based section indices in List mode and 1-based topic indices in Map mode.
 
 ${AI_PLAIN_TEXT_ONLY_GUIDANCE}
@@ -136,6 +141,7 @@ ${JSON_FENCE}json
   "version": ${IMPORT_VERSION},
   "title": "Short guide title",
   "coverage": [{ "subject": "Specific source topic", "itemNumbers": [1] }],
+  "confidence": ${JSON.stringify(GUIDE_CONFIDENCE_EXAMPLE)},
   "sections": [
     {
       "title": "Major topic",
@@ -261,7 +267,7 @@ function parsedJson(text: string): unknown {
 
 function parseListImport(value: unknown): SimpleListGuideImport {
   if (!isRecord(value) ||
-      Object.keys(value).some((key) => !['format', 'version', 'title', 'sections', 'coverage'].includes(key)) ||
+      Object.keys(value).some((key) => !['format', 'version', 'title', 'sections', 'coverage', 'confidence'].includes(key)) ||
       (value.format !== LIST_IMPORT_FORMAT && value.format !== LEGACY_LIST_IMPORT_FORMAT) || value.version !== IMPORT_VERSION ||
       typeof value.title !== 'string' || !value.title.trim() || value.title.trim().length > MAX_NAME_LENGTH) {
     throw new Error('This is not a supported List-mode Guide import.');
@@ -271,13 +277,14 @@ function parseListImport(value: unknown): SimpleListGuideImport {
     mode: 'list',
     title: value.title.trim(),
     sections: parseImportSections(value.sections, state, 'Guide'),
+    confidence: parseGuideConfidence(value.confidence),
     coverage: value.coverage === undefined ? undefined : parseAiSubjectCoverage(value.coverage, Array.isArray(value.sections) ? value.sections.length : 0),
   };
 }
 
 function parseMapImport(value: unknown): SimpleMapGuideImport {
   if (!isRecord(value) ||
-      Object.keys(value).some((key) => !['format', 'version', 'title', 'startTopic', 'topics', 'connections', 'coverage', 'solvers'].includes(key)) ||
+      Object.keys(value).some((key) => !['format', 'version', 'title', 'startTopic', 'topics', 'connections', 'coverage', 'confidence', 'solvers'].includes(key)) ||
       (value.format !== MAP_IMPORT_FORMAT && value.format !== LEGACY_MAP_IMPORT_FORMAT) ||
       (value.version !== IMPORT_VERSION && value.version !== TEACHING_IMPORT_VERSION) ||
       typeof value.title !== 'string' || !value.title.trim() || value.title.trim().length > MAX_NAME_LENGTH ||
@@ -386,6 +393,7 @@ function parseMapImport(value: unknown): SimpleMapGuideImport {
   }
 
   return { mode: 'map', title: value.title.trim(), startTopic, topics, connections,
+    confidence: parseGuideConfidence(value.confidence),
     coverage: value.coverage === undefined ? undefined : parseAiSubjectCoverage(value.coverage, topics.length) };
 }
 
@@ -412,12 +420,15 @@ export const GuideAiImportWorkspace = defineComponent({
   },
   emits: { back: () => true, cancel: () => true, import: (_value: SimpleGuideImport) => true },
   setup(props, { emit }) {
-    const stage = ref<'scope' | 'categories' | 'exchange'>(props.direct ? 'exchange' : 'scope');
+    const stage = ref<'scope' | 'categories' | 'exchange' | 'review'>(props.direct ? 'exchange' : 'scope');
+    const candidate = ref<SimpleGuideImport | null>(null);
+    const returningFromReview = ref(false);
     const chosenScope = ref<AiCardScope | null>(null);
     const categoryList = ref<AiCardCategories | null>(null);
     const exchangeRef = ref<AiPromptExchangeHandle | null>(null);
     function back() {
-      if (stage.value === 'exchange') {
+      if (stage.value === 'review') { returningFromReview.value = true; stage.value = 'exchange'; }
+      else if (stage.value === 'exchange') {
         if (exchangeRef.value?.goBack()) return;
         if (props.direct) { emit('back'); return; }
         stage.value = chosenScope.value ? 'categories' : 'scope';
@@ -448,11 +459,13 @@ export const GuideAiImportWorkspace = defineComponent({
           try { imported = parseGuideAiImport(json.value, 'list'); }
           catch { imported = parseGuideAiImport(json.value, 'map'); }
         } else imported = parseGuideAiImport(json.value, props.mode);
-        // Keep validating the AI's claimed coverage inventory for new generated
-        // guides, but never force a second manual comparison/approval screen.
         if (!props.direct && !imported.coverage)
           throw new Error('The response is missing its source coverage inventory. Request corrected JSON.');
-        emit('import', imported);
+        if (!props.direct && !imported.confidence)
+          throw new Error('The response is missing its AI confidence estimates. Request corrected JSON with confidence.');
+        candidate.value = imported;
+        returningFromReview.value = false;
+        stage.value = 'review';
       } catch (error) {
         problem.value = error instanceof Error ? error.message : String(error);
       }
@@ -485,6 +498,11 @@ export const GuideAiImportWorkspace = defineComponent({
       onSelect: (selected: AiCardScope, list: AiCardCategories) => {
         chosenScope.value = selected; categoryList.value = list; stage.value = 'exchange';
       },
+    }) : stage.value === 'review' && candidate.value ? h(GuideAiReview, {
+      candidate: candidate.value, direct: props.direct,
+      targetBlocks: !props.direct && props.mode === 'map' ? targetBlocks.value : 0,
+      onBack: back, onCancel: () => emit('cancel'),
+      onCreate: () => { if (candidate.value) emit('import', candidate.value); },
     }) : h('section', { class: 'guide-ai-workspace', 'aria-labelledby': 'guide-ai-title' }, [
       h('header', { class: 'guide-ai-header' }, [
         h('div', { class: 'guide-ai-heading' }, [
@@ -501,14 +519,14 @@ export const GuideAiImportWorkspace = defineComponent({
         onOverall: () => { chosenScope.value = null; stage.value = 'exchange'; },
         onCategory: () => { stage.value = 'categories'; },
       }) : h(AiPromptExchange, {
-        ref: exchangeRef, idPrefix: 'guide-ai', label: 'Guide', prompt: prompt.value, json: json.value, problem: problem.value, startInImport: props.direct, importOnly: props.direct,
-        hasPreview: false, showReviewStep: false,
+        ref: exchangeRef, idPrefix: 'guide-ai', label: 'Guide', prompt: prompt.value, json: json.value, problem: problem.value, startInImport: props.direct || returningFromReview.value, importOnly: props.direct,
+        hasPreview: false, showReviewStep: !props.direct,
         skipSource: Boolean(chosenScope.value),
         preferFileImport: true, maxLength: MAX_AI_IMPORT_LENGTH,
         promptHelp: 'Create a guided interactive lesson from your source, using Teaching Blocks and an exploratory map.',
-        importHelp: 'Upload your AI-generated JSON file or paste the response. Selecting Import guide validates and imports it directly.',
-        validateLabel: 'Import guide',
-        onUpdateJson: (value: string) => { json.value = value; problem.value = ''; },
+        importHelp: 'Upload your AI-generated JSON file or paste the response, then preview the content and coverage estimates.',
+        validateLabel: 'Check & preview',
+        onUpdateJson: (value: string) => { json.value = value; candidate.value = null; problem.value = ''; },
         onValidate: importValidated,
       }, {
         options: () => h('div', { class: 'guide-ai-options' }, [

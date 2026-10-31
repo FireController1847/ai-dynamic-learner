@@ -1,6 +1,7 @@
 import { AI_COMPLETE_COVERAGE_PROMPT } from '../../core/ai-subject-coverage.ts';
 import { DEFAULT_TEACHING_WEIGHTS, TEACHING_TYPES } from './ai-teaching-mix.ts';
 import { guideAiFileOutputInstructions } from './ai-file-output.ts';
+import { GUIDE_CONFIDENCE_PROMPT, GUIDE_CONFIDENCE_EXAMPLE } from './ai-confidence.ts';
 import { guideAiFocusPrompt } from './ai-focus.ts';
 import { GUIDE_AI_STOP_GAP, GUIDE_AI_MAX_SPACED_TOPICS } from './ai-map-layout.ts';
 import { MAP_GRID, MAP_MAX_X, MAP_MAX_Y, MAP_TOPIC_HEIGHT, MAP_TOPIC_WIDTH } from './library-model.ts';
@@ -10,6 +11,7 @@ const EXAMPLE = {
   format: 'dynamic-learner-guide-map', version: 2,
   title: 'Understanding operating systems', startTopic: 'foundations',
   coverage: [{ subject: 'Core process concepts', itemNumbers: [1] }],
+  confidence: GUIDE_CONFIDENCE_EXAMPLE,
   topics: [
     { key: 'foundations', title: 'The foundations', position: [64, 384],
       description: 'Begin with a big-picture explanation and test a prediction.',
@@ -75,6 +77,7 @@ export function guideAiTeachingPrompt(options: GuideAiPromptOptions): string {
       'Keep full subject coverage and use only source-supported facts. The selected focus changes how material is taught, not which objectives may be omitted.',
     ] : []),
     AI_COMPLETE_COVERAGE_PROMPT,
+    GUIDE_CONFIDENCE_PROMPT,
     'Coverage itemNumbers are 1-based topic indices in the topics array. Be honest about source gaps.',
     '',
     'SUPPORTED TEACHING BLOCK KINDS (exact fields, no app-generated IDs):',
@@ -135,7 +138,7 @@ export function guideAiTeachingPrompt(options: GuideAiPromptOptions): string {
     '- Give meaningful 1–2 sentence descriptions to build curiosity. No filler stops. If uncertain about map positions, omit ALL position fields and let the app create a spaced route.',
     '',
     guideAiFileOutputInstructions('map'),
-    'The downloadable JSON file must use format "dynamic-learner-guide-map" and version 2, with title, startTopic, coverage, topics, connections and OPTIONAL solvers (only when a Parameterized block truly requires algorithm execution).',
+    'The downloadable JSON file must use format "dynamic-learner-guide-map" and version 2, with title, startTopic, coverage, confidence, topics, connections and OPTIONAL solvers (only when a Parameterized block truly requires algorithm execution).',
     'The following shows the JSON structure to write INTO THE FILE. It is an illustrative schema, not a code-block response or source material to reuse:',
     String.fromCharCode(96).repeat(3) + 'json',
     JSON.stringify(EXAMPLE, null, 2),

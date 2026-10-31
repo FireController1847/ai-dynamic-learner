@@ -57,7 +57,7 @@ Use this as a starting-file index, not a feature specification. Follow imports o
 | Crossword appearance | `display-options.ts`, `display-settings.ts`, `grid-sizing.ts` |
 | Guide library/modes | `src/features/guide/guide.ts`, `library.ts`, `library-model.ts`, `mode-picker.ts` |
 | Guide List | `list-editor.ts` |
-| Guide AI/JSON import | `ai-import.ts`, `guide.ts`, `library.ts` |
+| Guide AI/JSON import | `ai-import.ts`, `ai-review.ts`, `ai-confidence.ts`, `guide.ts`, `library.ts` |
 | Guide Map | `map-editor.ts`, `map-graph.ts`, `map-study.ts`, `map-presentation.ts`, `map-background.ts`, `guide.css` |
 | Review library/model | `src/features/knowledge-check/knowledge-check.ts`, `library.ts`, `library-model.ts` |
 | Review authoring | `check-builder.ts`, `question-model.ts`, `fill-blank-editor.ts`, `set-options*.ts` |

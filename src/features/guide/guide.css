@@ -351,3 +351,42 @@
 }
 @media(max-width:650px){.guide-map-pattern-picker{margin-left:0}}
 @media(prefers-reduced-motion:reduce){.guide-map-arrival-ring{animation:none;display:none}}
+
+/* Compact AI review and self-reported coverage estimates. */
+.guide-ai-review{gap:20px}
+.guide-ai-review-progress,.guide-ai-review-disclaimer{margin:0;color:var(--text-secondary);font-size:13px;line-height:1.6}
+.guide-ai-review-confidence{display:grid;grid-template-columns:minmax(150px,220px) minmax(0,1fr);gap:22px;align-items:center;padding:22px;border:1px solid var(--border-color);border-radius:var(--radius-dialog);background:var(--surface-subtle)}
+.guide-ai-review-ring{display:grid;place-items:center;width:min(100%,205px);aspect-ratio:1;margin:auto;border-radius:50%;background:conic-gradient(var(--brand) var(--coverage),var(--control-border) 0)}
+.guide-ai-review-ring>div{display:grid;place-content:center;gap:4px;width:79%;height:79%;border-radius:50%;background:var(--page-background);text-align:center}
+.guide-ai-review-ring strong{font-size:clamp(26px,4vw,38px);font-variant-numeric:tabular-nums}
+.guide-ai-review-ring span{font-size:12px;color:var(--text-secondary)}
+.guide-ai-review-metrics{display:grid;gap:15px;min-width:0}
+.guide-ai-review-metric{display:grid;gap:6px}
+.guide-ai-review-metric>div:first-child{display:flex;justify-content:space-between;gap:12px;font-size:13px}
+.guide-ai-review-metric>div:first-child span{font-weight:700;font-variant-numeric:tabular-nums}
+.guide-ai-review-metric p{margin:0;font-size:12px;color:var(--text-secondary);line-height:1.5}
+.guide-ai-review-meter{height:9px;border-radius:99px;overflow:hidden;background:var(--control-border)}
+.guide-ai-review-meter>span{display:block;height:100%;border-radius:inherit;background:var(--brand)}
+.guide-ai-review-notes{grid-column:1/-1;display:grid;gap:10px;font-size:13px;line-height:1.6}
+.guide-ai-review-notes p{margin:0}
+.guide-ai-review-notes ul{margin:5px 0 0;padding-left:22px}
+.guide-ai-review-improve{display:grid;justify-items:start;gap:10px;padding:16px;border:1px solid var(--border-color);border-radius:var(--radius-dialog)}
+.guide-ai-review-improve p{margin:0;color:var(--text-secondary);line-height:1.6}
+.guide-ai-review-improve textarea{box-sizing:border-box;width:100%;resize:vertical;padding:10px;background:var(--page-background);color:var(--text-color);font:inherit}
+.guide-ai-review-outline{display:grid;gap:14px;min-width:0}
+.guide-ai-review-outline h3{margin:0;font-size:20px;overflow-wrap:anywhere}
+.guide-ai-review-counts{display:flex;flex-wrap:wrap;gap:14px;padding:10px 0;border-bottom:1px solid var(--border-color)}
+.guide-ai-review-counts>div{display:grid;gap:3px;min-width:95px}
+.guide-ai-review-counts strong{font-size:22px;font-variant-numeric:tabular-nums}
+.guide-ai-review-counts span{font-size:12px;color:var(--text-secondary)}
+.guide-ai-review-details{min-width:0;padding:14px;border:1px solid var(--border-color);border-radius:12px;background:var(--page-background)}
+.guide-ai-review-details summary{cursor:pointer;font-weight:650}
+.guide-ai-review-details>p{font-size:13px;color:var(--text-secondary);line-height:1.55}
+.guide-ai-review-details ol{display:grid;gap:9px;max-height:370px;overflow:auto;margin:14px 0 0;padding-left:25px}
+.guide-ai-review-details li{overflow-wrap:anywhere}
+.guide-ai-review-details li>p{margin:4px 0 0;font-size:12px;color:var(--text-secondary);line-height:1.5}
+.guide-ai-review-subjects{display:grid;gap:8px;max-height:300px;overflow:auto;padding:0;margin:12px 0 0;list-style:none}
+.guide-ai-review-subjects li{display:grid;gap:3px;padding:9px;border:1px solid var(--border-color);border-radius:8px}
+.guide-ai-review-subjects li span{font-size:12px;color:var(--text-secondary)}
+.guide-ai-review-actions{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;padding-top:16px;border-top:1px solid var(--border-color)}
+@media(max-width:650px){.guide-ai-review-confidence{grid-template-columns:1fr;padding:16px}.guide-ai-review-actions button{min-height:44px}}
