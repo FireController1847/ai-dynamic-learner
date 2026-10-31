@@ -7,8 +7,11 @@
 - **Arrival Effects:** Highlighted the destination rather than leaving the prominent glow on the start or previous stop; stopped celebrating intermediate backtracking stops.
 
 <details>
-<summary>View 1 commit</summary>
-<ol><li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/66085ae5b85d1a87fe0f8295b0f6f46e32a9b089">66085ae5</a> — fix(guide): horizontal power lines and destination arrival timing (v2.11.1)</li></ol>
+<summary>View 2 commits</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/1e519615029f9a2f06380e35d3cb0a936e3bc6a2">1e519615</a> — fix(guide): clear old arrival during backtracking and respect motion pause</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/66085ae5b85d1a87fe0f8295b0f6f46e32a9b089">66085ae5</a> — fix(guide): horizontal power lines and destination arrival timing (v2.11.1)</li>
+</ol>
 </details>
 
 ## v2.11.0
