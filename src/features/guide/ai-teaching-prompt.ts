@@ -1,5 +1,6 @@
 import { AI_COMPLETE_COVERAGE_PROMPT } from '../../core/ai-subject-coverage.ts';
 import { DEFAULT_TEACHING_WEIGHTS, TEACHING_TYPES } from './ai-teaching-mix.ts';
+import { guideAiFileOutputInstructions } from './ai-file-output.ts';
 import { guideAiFocusPrompt } from './ai-focus.ts';
 import { GUIDE_AI_STOP_GAP, GUIDE_AI_MAX_SPACED_TOPICS } from './ai-map-layout.ts';
 import { MAP_GRID, MAP_MAX_X, MAP_MAX_Y, MAP_TOPIC_HEIGHT, MAP_TOPIC_WIDTH } from './library-model.ts';
@@ -97,8 +98,9 @@ export function guideAiTeachingPrompt(options: GuideAiPromptOptions): string {
     '- Maximum ' + GUIDE_AI_MAX_SPACED_TOPICS + ' topics (typically much fewer). N topics require exactly N-1 unique, acyclic [fromKey,toKey] connections. Each stop reachable from startTopic. Make learning progression coherent.',
     '- Give meaningful 1–2 sentence descriptions to build curiosity. No filler stops. If uncertain about map positions, omit ALL position fields and let the app create a spaced route.',
     '',
-    'Return ONLY a complete fenced JSON code block with format "dynamic-learner-guide-map" and version 2, with title, startTopic, coverage, topics and connections.',
-    'The following is a SCHEMA example, not source material to reuse:',
+    guideAiFileOutputInstructions('map'),
+    'The downloadable JSON file must use format "dynamic-learner-guide-map" and version 2, with title, startTopic, coverage, topics and connections.',
+    'The following shows the JSON structure to write INTO THE FILE. It is an illustrative schema, not a code-block response or source material to reuse:',
     String.fromCharCode(96).repeat(3) + 'json',
     JSON.stringify(EXAMPLE, null, 2),
     String.fromCharCode(96).repeat(3),
