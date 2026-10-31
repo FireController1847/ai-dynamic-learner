@@ -7,7 +7,7 @@
 
 <details>
 <summary>View 1 commit</summary>
-<ol><li>Release commit link pending.</li></ol>
+<ol><li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/6b13d424aa06a8888e0d54d6efeca47c07617663">6b13d424</a> — fix(guide): restore compact library footer reorder control (v2.12.3)</li></ol>
 </details>
 
 ## v2.12.2
