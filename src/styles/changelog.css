@@ -1,5 +1,5 @@
 .changelog-page {
-  width: min(100%, 1200px);
+  width: min(100%, 1080px);
   margin: 0 auto;
   padding: 0 0 32px;
   display: grid;
@@ -45,8 +45,8 @@
    One subdued divider separates releases instead of stacked Markdown rules. */
 .changelog-release {
   display: grid;
-  grid-template-columns: 188px minmax(0, 1fr);
-  gap: 24px;
+  grid-template-columns: 174px minmax(0, 1fr);
+  gap: 20px;
   align-items: start;
   padding: 16px 0;
 }
@@ -60,7 +60,7 @@
 .changelog-release-notes .markdown-content > ul { padding-left: 20px; margin: 0; }
 .changelog-release-notes .markdown-content > ul li { margin: 2px 0; }
 .changelog-release-notes .markdown-content > details {
-  margin: 8px 0 0;
+  margin: 8px 0 0 12px;
   color: var(--text-secondary);
   font-size: 12px;
   line-height: 1.55;

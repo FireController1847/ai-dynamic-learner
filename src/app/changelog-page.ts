@@ -27,8 +27,15 @@ function parseVersionedReleases(markdown: string): VersionedRelease[] | null {
     const end = headings[index + 1]?.index ?? source.length;
     let notes = source.slice(heading.index! + heading[0].length, end)
       .replace(/\n[ \t]*---[ \t]*\s*$/, '').trim();
-    const dateLine = /^<small>([^\n]*?)<\/small>\s*(?:\n|$)/.exec(notes);
-    const date = dateLine?.[1]?.trim() ?? null;
+    // Keep a human-readable date in the Markdown for repository readers;
+    // the UTC timestamp drives each viewer's own local date and time.
+    const dateLine = /^<small(?: data-utc="([^"]+)")?>([^\n]*?)<\/small>\s*(?:\n|$)/.exec(notes);
+    const timestamp = dateLine?.[1] ? new Date(dateLine[1]) : null;
+    const date = timestamp && !Number.isNaN(timestamp.getTime())
+      ? new Intl.DateTimeFormat(undefined, {
+        month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit',
+      }).format(timestamp)
+      : dateLine?.[2]?.trim() ?? null;
     if (dateLine) notes = notes.slice(dateLine[0].length).trim();
     return { version: heading[1], date, notes };
   });
@@ -138,7 +145,7 @@ export const ChangelogPage = defineComponent({
                 'aria-label': 'Version ' + release.version,
               }, [
                 h('div', { class: 'changelog-release-info' }, [
-                  h('h3', { class: 'changelog-release-version' }, release.version),
+                  h('h3', { class: 'changelog-release-version' }, 'v' + release.version.replace(/^v/, '')),
                   release.date ? h('span', { class: 'changelog-release-date' }, release.date) : null,
                 ]),
                 h('div', { class: 'changelog-release-notes' }, [

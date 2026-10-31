@@ -1,6 +1,6 @@
-## 2.7.5
+## v2.7.5
 
-<small>October 30, 2026 at 9:21 PM MDT</small>
+<small data-utc="2026-10-31T03:21:00Z">October 30, 2026 at 9:21 PM MDT</small>
 
 - **AI Generation:** Made Teaching Block totals more precise and favored five to seven map stops.
 - **Water:** Corrected the wave-highlight drawing helper.
@@ -13,11 +13,9 @@
 </ol>
 </details>
 
----
+## v2.7.4
 
-## 2.7.4
-
-<small>October 30, 2026 at 8:59 PM MDT</small>
+<small data-utc="2026-10-31T02:59:00Z">October 30, 2026 at 8:59 PM MDT</small>
 
 - **Water:** Restored crisp paired wave crests with restrained foam highlights.
 
@@ -28,11 +26,9 @@
 </ol>
 </details>
 
----
+## v2.7.3
 
-## 2.7.3
-
-<small>October 30, 2026 at 8:55 PM MDT</small>
+<small data-utc="2026-10-31T02:55:00Z">October 30, 2026 at 8:55 PM MDT</small>
 
 - **Playback:** Added a subtle pause/play control for decorative map animations.
 
@@ -43,11 +39,9 @@
 </ol>
 </details>
 
----
+## v2.7.2
 
-## 2.7.2
-
-<small>October 30, 2026 at 8:51 PM MDT</small>
+<small data-utc="2026-10-31T02:51:00Z">October 30, 2026 at 8:51 PM MDT</small>
 
 - **Animation:** Improved ripple smoothness and fading foam effects.
 - **Performance:** Improved rendering efficiency for animated maps.
@@ -59,11 +53,9 @@
 </ol>
 </details>
 
----
+## v2.7.1
 
-## 2.7.1
-
-<small>October 30, 2026 at 8:45 PM MDT</small>
+<small data-utc="2026-10-31T02:45:00Z">October 30, 2026 at 8:45 PM MDT</small>
 
 - **Water:** Added rolling wave crests that appear and fade naturally.
 - **Performance:** Reduced unnecessary map background redraws.
@@ -75,11 +67,9 @@
 </ol>
 </details>
 
----
+## v2.7.0
 
-## 2.7.0
-
-<small>October 30, 2026 at 8:41 PM MDT</small>
+<small data-utc="2026-10-31T02:41:00Z">October 30, 2026 at 8:41 PM MDT</small>
 
 - **Fireflies:** Added a glowing Fireflies map theme and ambient scenery.
 - **Lesson Layout:** Refined interactive lesson presentation and spacing.
@@ -91,11 +81,9 @@
 </ol>
 </details>
 
----
+## v2.6.2
 
-## 2.6.2
-
-<small>October 30, 2026 at 8:36 PM MDT</small>
+<small data-utc="2026-10-31T02:36:00Z">October 30, 2026 at 8:36 PM MDT</small>
 
 - **Visual Effects:** Improved distinct background textures and theme-specific arrival effects.
 
@@ -106,11 +94,9 @@
 </ol>
 </details>
 
----
+## v2.6.1
 
-## 2.6.1
-
-<small>October 30, 2026 at 8:32 PM MDT</small>
+<small data-utc="2026-10-31T02:32:00Z">October 30, 2026 at 8:32 PM MDT</small>
 
 - **Map Textures:** Refined subtle backgrounds and interactive water ripples.
 
@@ -121,11 +107,9 @@
 </ol>
 </details>
 
----
+## v2.6.0
 
-## 2.6.0
-
-<small>October 30, 2026 at 8:29 PM MDT</small>
+<small data-utc="2026-10-31T02:29:00Z">October 30, 2026 at 8:29 PM MDT</small>
 
 - **AI Preview:** Added a pre-import lesson outline and estimated confidence indicators.
 - **Coverage:** Displayed potential gaps and subject-coverage information.
@@ -137,11 +121,9 @@
 </ol>
 </details>
 
----
+## v2.5.0
 
-## 2.5.0
-
-<small>October 30, 2026 at 8:19 PM MDT</small>
+<small data-utc="2026-10-31T02:19:00Z">October 30, 2026 at 8:19 PM MDT</small>
 
 - **Map Backgrounds:** Added Water, Contours, Constellations, Flow, and Plain themes.
 - **Arrival Effects:** Added theme-aware ripples and visual accents.
@@ -153,11 +135,9 @@
 </ol>
 </details>
 
----
+## v2.4.0
 
-## 2.4.0
-
-<small>October 30, 2026 at 8:14 PM MDT</small>
+<small data-utc="2026-10-31T02:14:00Z">October 30, 2026 at 8:14 PM MDT</small>
 
 - **Guided Practice:** Added optional hints, supported exercises, and reflective prompts.
 - **Learning Journey:** Improved teaching-first progression and revisiting earlier ideas.
@@ -169,11 +149,9 @@
 </ol>
 </details>
 
----
+## v2.3.0
 
-## 2.3.0
-
-<small>October 30, 2026 at 8:09 PM MDT</small>
+<small data-utc="2026-10-31T02:09:00Z">October 30, 2026 at 8:09 PM MDT</small>
 
 - **Algorithms:** Added interactive, step-by-step walkthroughs and trace exploration.
 - **Examples:** Enabled Guide examples to reuse Review's computational solvers.
@@ -188,11 +166,9 @@
 </ol>
 </details>
 
----
+## v2.2.0
 
-## 2.2.0
-
-<small>October 30, 2026 at 8:00 PM MDT</small>
+<small data-utc="2026-10-31T02:00:00Z">October 30, 2026 at 8:00 PM MDT</small>
 
 - **Navigation:** Automatically opens a lesson after arriving at a map stop.
 - **Exploration:** Replaced quiz-like choices with clearer browsing tabs.
@@ -223,11 +199,9 @@
 </ol>
 </details>
 
----
+## v2.1.0
 
-## 2.1.0
-
-<small>October 30, 2026 at 7:44 PM MDT</small>
+<small data-utc="2026-10-31T01:44:00Z">October 30, 2026 at 7:44 PM MDT</small>
 
 - **Generated Examples:** Added adjustable practice examples with revealable worked solutions.
 - **AI Teaching:** Improved focus choices and generation of reusable numerical examples.
@@ -258,11 +232,9 @@
 </ol>
 </details>
 
----
+## v2.0.0
 
-## 2.0.0
-
-<small>October 30, 2026 at 7:36 PM MDT</small>
+<small data-utc="2026-10-31T01:36:00Z">October 30, 2026 at 7:36 PM MDT</small>
 
 - **Teaching Blocks:** Replaced basic map notes with interactive explanations, examples, diagrams, and tables.
 - **Lesson Editor:** Added live previews, richer formatting, and mathematical expressions.
@@ -374,11 +346,9 @@
 </ol>
 </details>
 
----
+## v1.12.1
 
-## 1.12.1
-
-<small>October 25, 2026 at 11:10 PM MDT</small>
+<small data-utc="2026-10-26T05:10:00Z">October 25, 2026 at 11:10 PM MDT</small>
 
 - **Layout:** Reduced excessive app and workspace header spacing.
 
@@ -389,11 +359,9 @@
 </ol>
 </details>
 
----
+## v1.12.0
 
-## 1.12.0
-
-<small>October 23, 2026 at 7:41 PM MDT</small>
+<small data-utc="2026-10-24T01:41:00Z">October 23, 2026 at 7:41 PM MDT</small>
 
 - **Coverage:** Added a fuller subject-coverage review before importing AI material.
 
@@ -407,11 +375,9 @@
 </ol>
 </details>
 
----
+## v1.11.0
 
-## 1.11.0
-
-<small>October 22, 2026 at 6:57 PM MDT</small>
+<small data-utc="2026-10-23T00:57:00Z">October 22, 2026 at 6:57 PM MDT</small>
 
 - **AI Guidance:** Improved explanations around generation counts and source coverage.
 
@@ -424,11 +390,9 @@
 </ol>
 </details>
 
----
+## v1.10.0
 
-## 1.10.0
-
-<small>October 22, 2026 at 2:17 PM MDT</small>
+<small data-utc="2026-10-22T20:17:00Z">October 22, 2026 at 2:17 PM MDT</small>
 
 - **AI Workflow:** Separated source sharing, generation settings, and importing into clearer steps.
 
@@ -439,11 +403,9 @@
 </ol>
 </details>
 
----
+## v1.9.1
 
-## 1.9.1
-
-<small>October 22, 2026 at 2:09 PM MDT</small>
+<small data-utc="2026-10-22T20:09:00Z">October 22, 2026 at 2:09 PM MDT</small>
 
 - **Source Sharing:** Added clearer guidance for providing study material to AI.
 
@@ -454,11 +416,9 @@
 </ol>
 </details>
 
----
+## v1.9.0
 
-## 1.9.0
-
-<small>October 22, 2026 at 2:02 PM MDT</small>
+<small data-utc="2026-10-22T20:02:00Z">October 22, 2026 at 2:02 PM MDT</small>
 
 - **AI Creation:** Simplified source selection, category browsing, and response import.
 - **Accessibility:** Improved responsive AI screens and keyboard navigation.
@@ -476,11 +436,9 @@
 </ol>
 </details>
 
----
+## v1.8.0
 
-## 1.8.0
-
-<small>October 19, 2026 at 8:38 PM MDT</small>
+<small data-utc="2026-10-20T02:38:00Z">October 19, 2026 at 8:38 PM MDT</small>
 
 - **AI Import:** Added direct JSON import options for both List and Map guides.
 
@@ -493,11 +451,9 @@
 </ol>
 </details>
 
----
+## v1.7.5
 
-## 1.7.5
-
-<small>October 19, 2026 at 3:02 PM MDT</small>
+<small data-utc="2026-10-19T21:02:00Z">October 19, 2026 at 3:02 PM MDT</small>
 
 - **Artwork:** Refined Guide icon assets and sharing imagery.
 
@@ -508,11 +464,9 @@
 </ol>
 </details>
 
----
+## v1.7.4
 
-## 1.7.4
-
-<small>October 19, 2026 at 2:40 PM MDT</small>
+<small data-utc="2026-10-19T20:40:00Z">October 19, 2026 at 2:40 PM MDT</small>
 
 - **Icons:** Unified app artwork colors and visual proportions.
 
@@ -523,11 +477,9 @@
 </ol>
 </details>
 
----
+## v1.7.3
 
-## 1.7.3
-
-<small>October 19, 2026 at 2:06 PM MDT</small>
+<small data-utc="2026-10-19T20:06:00Z">October 19, 2026 at 2:06 PM MDT</small>
 
 - **Branding:** Updated Guide's application artwork and presentation metadata.
 
@@ -538,11 +490,9 @@
 </ol>
 </details>
 
----
+## v1.7.2
 
-## 1.7.2
-
-<small>October 12, 2026 at 2:11 PM MDT</small>
+<small data-utc="2026-10-12T20:11:00Z">October 12, 2026 at 2:11 PM MDT</small>
 
 - **AI Formatting:** Clarified Markdown and mathematical notation support in generation prompts.
 
@@ -554,11 +504,9 @@
 </ol>
 </details>
 
----
+## v1.7.1
 
-## 1.7.1
-
-<small>October 12, 2026 at 10:00 AM MDT</small>
+<small data-utc="2026-10-12T16:00:00Z">October 12, 2026 at 10:00 AM MDT</small>
 
 - **Responsive Layout:** Improved Guide usability in narrow windows and on smaller screens.
 
@@ -570,11 +518,9 @@
 </ol>
 </details>
 
----
+## v1.7.0
 
-## 1.7.0
-
-<small>October 9, 2026 at 3:33 PM MDT</small>
+<small data-utc="2026-10-09T21:33:00Z">October 9, 2026 at 3:33 PM MDT</small>
 
 - **Study Controls:** Added the ability to reset revealed points without unvisiting a stop.
 
@@ -586,11 +532,9 @@
 </ol>
 </details>
 
----
+## v1.6.0
 
-## 1.6.0
-
-<small>October 8, 2026 at 8:49 PM MDT</small>
+<small data-utc="2026-10-09T02:49:00Z">October 8, 2026 at 8:49 PM MDT</small>
 
 - **Statistics:** Added Guide activity tracking and learning-progress information.
 
@@ -601,11 +545,9 @@
 </ol>
 </details>
 
----
+## v1.5.4
 
-## 1.5.4
-
-<small>October 8, 2026 at 1:20 PM MDT</small>
+<small data-utc="2026-10-08T19:20:00Z">October 8, 2026 at 1:20 PM MDT</small>
 
 - **AI Workflow:** Aligned Guide's prompt and import experience with shared AI controls.
 
@@ -616,11 +558,9 @@
 </ol>
 </details>
 
----
+## v1.5.3
 
-## 1.5.3
-
-<small>October 7, 2026 at 9:40 PM MDT</small>
+<small data-utc="2026-10-08T03:40:00Z">October 7, 2026 at 9:40 PM MDT</small>
 
 - **Session Flow:** Corrected how unopened adventures return to the starting screen.
 
@@ -632,11 +572,9 @@
 </ol>
 </details>
 
----
+## v1.5.2
 
-## 1.5.2
-
-<small>October 7, 2026 at 9:40 PM MDT</small>
+<small data-utc="2026-10-08T03:40:00Z">October 7, 2026 at 9:40 PM MDT</small>
 
 - **Restarting:** Restored the opening animation when restarting an adventure.
 
@@ -648,11 +586,9 @@
 </ol>
 </details>
 
----
+## v1.5.1
 
-## 1.5.1
-
-<small>October 7, 2026 at 9:37 PM MDT</small>
+<small data-utc="2026-10-08T03:37:00Z">October 7, 2026 at 9:37 PM MDT</small>
 
 - **Starting Point:** Improved the persistent start marker and its subtle animation.
 
@@ -669,11 +605,9 @@
 </ol>
 </details>
 
----
+## v1.5.0
 
-## 1.5.0
-
-<small>October 7, 2026 at 9:32 PM MDT</small>
+<small data-utc="2026-10-08T03:32:00Z">October 7, 2026 at 9:32 PM MDT</small>
 
 - **Saved Progress:** Added resumable map adventures and direct stop exploration.
 - **Navigation:** Distinguished completed, skipped, and unavailable destinations.
@@ -692,11 +626,9 @@
 </ol>
 </details>
 
----
+## v1.4.1
 
-## 1.4.1
-
-<small>October 7, 2026 at 9:28 PM MDT</small>
+<small data-utc="2026-10-08T03:28:00Z">October 7, 2026 at 9:28 PM MDT</small>
 
 - **Camera:** Added a cinematic arrival animation and starting-point highlight.
 
@@ -709,11 +641,9 @@
 </ol>
 </details>
 
----
+## v1.4.0
 
-## 1.4.0
-
-<small>October 7, 2026 at 9:23 PM MDT</small>
+<small data-utc="2026-10-08T03:23:00Z">October 7, 2026 at 9:23 PM MDT</small>
 
 - **Map Study:** Added optional section skipping and a pause before opening each stop.
 
@@ -726,11 +656,9 @@
 </ol>
 </details>
 
----
+## v1.3.0
 
-## 1.3.0
-
-<small>October 7, 2026 at 9:09 PM MDT</small>
+<small data-utc="2026-10-08T03:09:00Z">October 7, 2026 at 9:09 PM MDT</small>
 
 - **Renaming:** Renamed Study Guide to Guide and updated its navigation.
 - **Compatibility:** Preserved old guides and redirected previous bookmarks.
@@ -743,11 +671,9 @@
 </ol>
 </details>
 
----
+## v1.2.0
 
-## 1.2.0
-
-<small>October 7, 2026 at 2:36 PM MDT</small>
+<small data-utc="2026-10-07T20:36:00Z">October 7, 2026 at 2:36 PM MDT</small>
 
 - **AI Maps:** Added AI-generated connected maps and more natural branching routes.
 - **Study Flow:** Introduced immersive map travel, lesson sheets, and guided reveals.
@@ -792,11 +718,9 @@
 </ol>
 </details>
 
----
+## v1.1.1
 
-## 1.1.1
-
-<small>October 7, 2026 at 10:49 AM MDT</small>
+<small data-utc="2026-10-07T16:49:00Z">October 7, 2026 at 10:49 AM MDT</small>
 
 - **Accessibility:** Improved keyboard and screen-reader support for list editing.
 
@@ -807,11 +731,9 @@
 </ol>
 </details>
 
----
+## v1.1.0
 
-## 1.1.0
-
-<small>October 6, 2026 at 7:03 PM MDT</small>
+<small data-utc="2026-10-07T01:03:00Z">October 6, 2026 at 7:03 PM MDT</small>
 
 - **AI Creation:** Introduced source-based AI generation and JSON imports for List guides.
 - **Lists:** Added nested notes and improved editing shortcuts.
@@ -865,11 +787,9 @@
 </ol>
 </details>
 
----
+## v1.0.0
 
-## 1.0.0
-
-<small>October 5, 2026 at 7:02 PM MDT</small>
+<small data-utc="2026-10-06T01:02:00Z">October 5, 2026 at 7:02 PM MDT</small>
 
 - **Stable Release:** Completed List and Map creation, saving, and guided study.
 - **Navigation:** Improved route selection, progress, and map connections.
@@ -893,11 +813,9 @@
 </ol>
 </details>
 
----
+## v0.3.0
 
-## 0.3.0
-
-<small>October 5, 2026 at 6:21 PM MDT</small>
+<small data-utc="2026-10-06T00:21:00Z">October 5, 2026 at 6:21 PM MDT</small>
 
 - **Map Connections:** Added branching routes, connected topics, and guided map study.
 
@@ -919,11 +837,9 @@
 </ol>
 </details>
 
----
+## v0.2.0
 
-## 0.2.0
-
-<small>October 5, 2026 at 5:34 PM MDT</small>
+<small data-utc="2026-10-05T23:34:00Z">October 5, 2026 at 5:34 PM MDT</small>
 
 - **Guide Modes:** Added editable lists and connected topic maps.
 - **Library:** Added saved guides with organized study content.
@@ -937,11 +853,9 @@
 </ol>
 </details>
 
----
+## v0.1.0
 
-## 0.1.0
-
-<small>October 5, 2026 at 5:13 PM MDT</small>
+<small data-utc="2026-10-05T23:13:00Z">October 5, 2026 at 5:13 PM MDT</small>
 
 - **Launch:** Introduced the Study Guide foundation and application entry.
 
@@ -951,6 +865,4 @@
 <li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/82e83bd4c9542fa5f066ec63d7e961c53bdd901d">82e83bd4</a> — Add Study Guide app scaffold</li>
 </ol>
 </details>
-
----
 
