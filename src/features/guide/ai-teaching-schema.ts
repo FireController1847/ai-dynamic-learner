@@ -1,5 +1,6 @@
 import { createId } from '../../core/ids.ts';
 import { isRecord } from '../../core/validation.ts';
+import { validateGenerationRules } from '../../core/parameterized/template.ts';
 import { validateTeachingLesson, type TeachingBlock, type TeachingLesson, type TeachingChoice } from './teaching-blocks.ts';
 
 /** AI interchange intentionally uses no persisted IDs; only local index references. */
@@ -51,6 +52,18 @@ function blocks(raw: unknown): TeachingBlock[] {
         keys(value, ['kind','title','scenario','steps','takeaway'], label);
         return { id, kind: 'example', title, scenario: text(value.scenario, label + ' scenario'),
           steps: words(value.steps, label + ' steps'), takeaway: text(value.takeaway, label + ' takeaway') };
+      case 'parameterized':
+        keys(value, ['kind','title','prompt','steps','takeaway','rules'], label);
+        validateGenerationRules(value.rules);
+        // Generated instructional data may provide expression rules but never
+        // executable uploaded solver packages. Trusted registry solvers remain app-owned.
+        if (value.rules.solver?.package)
+          throw new Error(label + ' cannot import an executable solver package from AI.');
+        return { id, kind: 'parameterized', title,
+          prompt: text(value.prompt, label + ' prompt'),
+          steps: words(value.steps, label + ' steps'),
+          takeaway: text(value.takeaway, label + ' takeaway'),
+          rules: value.rules };
       case 'comparison': {
         keys(value, ['kind','title','left','right'], label);
         function side(source: unknown, name: string) {
