@@ -1,25 +1,10 @@
-# Maintenance rules
+# Agent maintenance rules
 
-- `README.md` is the public project overview. Do not use it as agent memory, a task journal, implementation history, or QA log.
-- Runtime: Node.js 24+, `npm ci`, `npm start` for webpack-dev-server, `npm run typecheck` for type checking, and `npm run build` for production output in ignored `dist/`. Source is strict TypeScript ES modules with plain Vue render-function components.
-- Read only the documentation relevant to the change:
-  - `docs/change-routing.md` to find ownership/files.
-  - `docs/architecture.md` for dependency, shared-system, or structural changes.
-  - `docs/design.md` for UI/presentation changes.
-  - `docs/workspace-data.md` for persistence, backup, or compatibility changes.
-  - `docs/graph-paper.md` only for Graph Paper behavior.
-  - `docs/github-pages.md` only for deployment/routing output.
-  - `docs/app-versions.md` when deciding an app version bump.
-- Start with the smallest relevant file set. Search by stable identifiers/exports/keys before opening broad directories.
-- Layering: `app` may depend on app/features/components/core; `features` on features/components/core; `components` on components/core; `core` on core only. Lower layers never import upward.
-- Keep shared data canonical. Prefer feature-neutral code in `core` or `components` when multiple features genuinely share behavior; do not create abstractions for one caller.
-- TypeScript stays strict. Treat external/persisted/uploaded data as `unknown` until runtime validation. Do not use `@ts-nocheck`, blanket `any`, or weakened strictness to claim completion.
-- Register features in `src/features/feature-definitions.ts` and `src/features/feature-registry.ts`. Keep build-consumed definitions browser-neutral.
-- Vue owns reactive state/rendering. Keep imperative browser work isolated in focused modules.
-- Keep per-app semantic versions canonical in `src/features/feature-definitions.ts`; follow `docs/app-versions.md`.
-- Prefer focused modules below ~400 lines and split by responsibility rather than arbitrary wrappers.
-- Make focused edits without unrelated formatting/refactors. Update `docs/change-routing.md` only when ownership changes.
-- UI changes follow `docs/design.md`: reuse shared controls/tokens/patterns and preserve keyboard, touch, reduced-motion, and theme behavior.
-- GitHub Pages builds from source with `.github/workflows/deploy-pages.yml`; never commit `dist/` or maintain a deployment branch.
-- `.github/workflows/verify-build.yml` automatically runs `npm ci`, strict type checking, and a production build on every pushed commit. Prefer checking that CI result over creating ad hoc build workflows or manually rebuilding solely for compile verification.
-- Behavioral verification remains manual unless the user explicitly requests additional automated checks. Do not run tests or browser automation unless asked. Give a focused manual-check list at handoff.
+- **Work narrowly:** Start with relevant files; search identifiers before broad reads. Use `docs/change-routing.md` for ownership, and consult `docs/architecture.md`, `docs/design.md`, `docs/workspace-data.md`, `docs/graph-paper.md`, or `docs/github-pages.md` only when applicable. Keep `README.md` a public overview, not an agent journal.
+- **Runtime:** Node.js 24+, `npm ci`, `npm start`, `npm run typecheck`, `npm run build`. Code uses strict TypeScript ES modules and Vue render functions.
+- **Dependencies:** `app → features/components/core`; `features → features/components/core`; `components → components/core`; `core → core`. Never import upward. Share behavior in `core`/`components` only when multiple callers need it.
+- **Data & UI:** Validate external, imported, and persisted values from `unknown`; never bypass strict typing with `@ts-nocheck` or blanket `any`. Vue owns reactive state; isolate imperative browser work. Follow shared design tokens/controls and preserve keyboard, touch, themes, and reduced motion.
+- **Implementation:** Register apps in `src/features/feature-definitions.ts` and `feature-registry.ts`; keep build-time definitions browser-neutral. Prefer responsibility-focused modules (roughly under 400 lines), targeted edits, and no unrelated formatting. Update change-routing documentation only when ownership changes.
+- **Versions + changelogs (required):** Evaluate app-facing changes against `docs/app-versions.md` and bump the affected app's canonical SemVer in `src/features/feature-definitions.ts` when warranted. **Every version bump must have a corresponding entry in `public/changelogs/<app-id>.md`** following `public/changelogs/README.md`: `## vX.Y.Z`, release timestamp, compact **Category:** bullets, and a collapsible list of relevant commits since the previous version. If the release commit hash is not yet available, follow with a docs-only changelog commit; do not bump again. Never put unrelated apps' updates in the entry.
+- **Build & verification:** GitHub Actions `verify-build.yml` runs `npm ci`, strict type checking, and production build for pushed commits. Prefer its result over redundant local builds. Behavioral checks are manual unless the user explicitly requests automated tests; provide a focused manual-check list.
+- **Deployment:** GitHub Pages builds from source via `deploy-pages.yml`. Never commit `dist/` or maintain a deployment branch.
