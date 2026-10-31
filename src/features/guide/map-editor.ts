@@ -12,6 +12,8 @@ import {
 import { GuideListEditor } from './list-editor.ts';
 import { TeachingBlocksEditor } from './teaching-editor.ts';
 import { MAP_CANVAS_HEIGHT, MAP_CANVAS_WIDTH, MAP_PADDING } from './map-presentation.ts';
+import { GUIDE_MAP_DEFAULT_PATTERN, type GuideMapPattern } from './library-model.ts';
+import { GUIDE_MAP_PATTERNS, GuideMapBackdrop } from './map-background.ts';
 
 const snap = (value: number) => Math.round(value / MAP_GRID) * MAP_GRID;
 const clamp = (value: number, max: number) => Math.max(0, Math.min(max, value));
@@ -172,6 +174,18 @@ export const GuideMapEditor = defineComponent({
               },
             }, connectingFromId.value ? 'Cancel connection' : 'Connect'),
           ]),
+
+          h('label', { class: 'guide-map-pattern-picker' }, [
+            h('span', 'Background'),
+            h('select', {
+              'aria-label': 'Map background pattern',
+              value: props.data.background ?? GUIDE_MAP_DEFAULT_PATTERN,
+              onChange: (event: Event) => {
+                props.data.background = inputValue(event) as GuideMapPattern;
+              },
+            }, GUIDE_MAP_PATTERNS.map(option =>
+              h('option', { key: option.value, value: option.value }, option.label))),
+          ]),
           h('div', { class: 'guide-map-toolbar-study' }, [
             studyProblem.value ? h('span', { class: 'guide-map-status' }, studyProblem.value) : null,
             h('button', {
@@ -192,10 +206,14 @@ export const GuideMapEditor = defineComponent({
         h('div', { class: 'guide-map-layout' }, [
           h('div', { class: 'guide-map-scroll' }, [
             h('div', {
-              class: ['guide-map-canvas', { 'is-connecting': connectingFromId.value !== null }],
+              class: ['guide-map-canvas', 'guide-map-surface', 'is-pattern-' + (props.data.background ?? GUIDE_MAP_DEFAULT_PATTERN),
+                { 'is-connecting': connectingFromId.value !== null }],
               style: { width: MAP_CANVAS_WIDTH + 'px', height: MAP_CANVAS_HEIGHT + 'px', '--guide-grid': MAP_GRID + 'px' },
               role: 'group', 'aria-label': 'Topic map editor',
             }, [
+              h(GuideMapBackdrop, {
+                pattern: props.data.background ?? GUIDE_MAP_DEFAULT_PATTERN, topics: props.data.topics,
+              }),
               h('svg', {
                 class: 'guide-route',
                 style: { left: MAP_PADDING + 'px', top: MAP_PADDING + 'px' },

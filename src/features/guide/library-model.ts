@@ -4,6 +4,8 @@ import { isRecord } from '../../core/validation.ts';
 import { validateTeachingLesson, type TeachingLesson } from './teaching-blocks.ts';
 
 export type GuideMode = 'list' | 'map';
+export type GuideMapPattern = 'water' | 'contours' | 'constellations' | 'flow' | 'plain';
+export const GUIDE_MAP_DEFAULT_PATTERN: GuideMapPattern = 'contours';
 export interface GuideSection { id: string; title: string; bullets: string[] }
 export interface ListGuideData { sections: GuideSection[] }
 export interface MapTopic { id: string; title: string; description?: string; x: number; y: number; guide: ListGuideData; lesson?: TeachingLesson }
@@ -19,6 +21,8 @@ export interface MapStudySession {
   responses?: Record<string, Record<string, string>>;
 }
 export interface MapGuideData {
+  /** Optional for backward compatibility; preexisting maps use Contours. */
+  background?: GuideMapPattern;
   topics: MapTopic[];
   connections: MapConnection[];
   startTopicId: string | null;
@@ -53,7 +57,9 @@ export const { findItem, firstEntry, countItems, deleteItem, canMove, moveItem, 
 
 export function createSection(): GuideSection { return { id: createId(), title: '', bullets: [] }; }
 export function createListGuideData(): ListGuideData { return { sections: [] }; }
-export function createMapGuideData(): MapGuideData { return { topics: [], connections: [], startTopicId: null }; }
+export function createMapGuideData(): MapGuideData {
+  return { topics: [], connections: [], startTopicId: null, background: GUIDE_MAP_DEFAULT_PATTERN };
+}
 export function createGroup(): Group { return { id: createId(), kind: 'group', name: 'New group', children: [] }; }
 
 export function insertGuide(items: LibraryItem[], target: GuideTarget, mode: GuideMode): GuideItem {
@@ -105,7 +111,8 @@ function mapData(value: unknown, ids: Set<string>): asserts value is MapGuideDat
   }
 
   if (!Array.isArray(value.connections) ||
-      Object.keys(value).some(key => !['topics','connections','startTopicId','session'].includes(key)) ||
+      Object.keys(value).some(key => !['topics','connections','startTopicId','session','background'].includes(key)) ||
+      (value.background !== undefined && !['water','contours','constellations','flow','plain'].includes(String(value.background))) ||
       value.topics.length > MAX_TOPICS) throw new Error('A Guide map is invalid.');
 
   const topicIds = new Set<string>();

@@ -7,6 +7,8 @@ import { CONTINUE_ARRIVAL_PAUSE_MS, REDUCED_MOTION_ARRIVAL_PAUSE_MS, mayOpenCont
 import { lessonForTopic } from './teaching-blocks.ts';
 import { connectedTopicIds, mapStudyProblem, startTopic, topicById } from './map-graph.ts';
 import { MAP_CANVAS_HEIGHT, MAP_CANVAS_WIDTH, MAP_PADDING } from './map-presentation.ts';
+import { GUIDE_MAP_DEFAULT_PATTERN, type GuideMapPattern } from './library-model.ts';
+import { GuideMapBackdrop } from './map-background.ts';
 import {
   MAP_HEIGHT, MAP_TOPIC_HEIGHT, MAP_TOPIC_WIDTH, MAP_WIDTH,
   type MapGuideData, type MapStudySession, type MapTopic,
@@ -36,6 +38,13 @@ export const GuideMapStudy = defineComponent({
     const arriving = ref(false);
     const focused = ref(false);
     const travelTargetId = ref<string | null>(null);
+    // A fresh key restarts each short-lived arrival effect without a frame loop.
+    const arrivalEffect = ref<{ id: string; sequence: number } | null>(null);
+    let arrivalSequence = 0;
+    function celebrateArrival(id: string) {
+      if (reducedMotion.matches) return;
+      arrivalEffect.value = { id, sequence: ++arrivalSequence };
+    }
     const scroll = ref<HTMLElement | null>(null);
     const topicHeading = ref<HTMLElement | null>(null);
     const topicPanel = ref<HTMLElement | null>(null);
@@ -151,6 +160,7 @@ export const GuideMapStudy = defineComponent({
       camera.value = null;
       cameraZooming.value = false;
       travelTargetId.value = null;
+      arrivalEffect.value = null;
     }
 
     onBeforeUnmount(clearTimers);
@@ -229,6 +239,7 @@ export const GuideMapStudy = defineComponent({
       if (!animate || reducedMotion.matches) {
         focusTopic(first.id, 'instant');
         arriving.value = false;
+        celebrateArrival(first.id);
         return;
       }
 
@@ -262,6 +273,7 @@ export const GuideMapStudy = defineComponent({
             cameraZooming.value = false;
             camera.value = null;
             arriving.value = false;
+            celebrateArrival(first.id);
           }, 1050);
         }, 260);
       });
@@ -317,6 +329,7 @@ export const GuideMapStudy = defineComponent({
         currentId.value = targetId;
         travelTargetId.value = null;
         travelling.value = false;
+        celebrateArrival(targetId);
         after();
         if (openAfter) showTopic();
       }, duration);
@@ -353,6 +366,7 @@ export const GuideMapStudy = defineComponent({
       if (!isUnlocked(id)) return;
       cancelContinueOpen();
       if (id === currentId.value) {
+        celebrateArrival(id);
         opened.value = new Set([...opened.value, id]);
         prepareCurrent();
         saveSession();
@@ -416,6 +430,7 @@ export const GuideMapStudy = defineComponent({
         focusTopic(targetId, reducedMotion.matches ? 'auto' : 'smooth');
         later(() => {
           currentId.value = targetId;
+          celebrateArrival(targetId);
           step(index + 1);
         }, duration);
       }
@@ -538,6 +553,8 @@ export const GuideMapStudy = defineComponent({
       const currentVisited = visited.value.has(topic.id);
       const travelerId = travelTargetId.value ?? currentId.value;
       const traveler = topicById(props.data, travelerId);
+      const pattern: GuideMapPattern = props.data.background ?? GUIDE_MAP_DEFAULT_PATTERN;
+      const arrivalTopic = arrivalEffect.value ? topicById(props.data, arrivalEffect.value.id) : null;
 
       return h('div', { class: 'guide-study-session' }, [
         h('div', { class: 'guide-study-toolbar' }, [
@@ -568,7 +585,8 @@ export const GuideMapStudy = defineComponent({
             inert: focused.value,
           }, [
             h('div', {
-              class: ['guide-study-map', { 'is-camera-zooming': cameraZooming.value }],
+              class: ['guide-study-map', 'guide-map-surface', 'is-pattern-' + pattern,
+                { 'is-camera-zooming': cameraZooming.value }],
               style: {
                 width: MAP_CANVAS_WIDTH + 'px',
                 height: MAP_CANVAS_HEIGHT + 'px',
@@ -578,6 +596,18 @@ export const GuideMapStudy = defineComponent({
               },
               'aria-label': 'Study route map',
             }, [
+              h(GuideMapBackdrop, { pattern, topics: props.data.topics }),
+              arrivalTopic && arrivalEffect.value ? h('div', {
+                key: 'arrival-' + arrivalEffect.value.sequence,
+                class: ['guide-map-arrival-effect', 'is-' + pattern],
+                style: {
+                  left: arrivalTopic.x + MAP_PADDING + MAP_TOPIC_WIDTH / 2 + 'px',
+                  top: arrivalTopic.y + MAP_PADDING + MAP_TOPIC_HEIGHT / 2 + 'px',
+                },
+                'aria-hidden': 'true',
+              }, [0, 1, 2].map(i => h('span', {
+                key: i, class: 'guide-map-arrival-ring', style: { '--ring-index': String(i) },
+              }))) : null,
               h('svg', {
                 class: 'guide-study-route',
                 style: { left: MAP_PADDING + 'px', top: MAP_PADDING + 'px' },

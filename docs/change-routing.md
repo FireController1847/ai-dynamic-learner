@@ -58,7 +58,7 @@ Use this as a starting-file index, not a feature specification. Follow imports o
 | Guide library/modes | `src/features/guide/guide.ts`, `library.ts`, `library-model.ts`, `mode-picker.ts` |
 | Guide List | `list-editor.ts` |
 | Guide AI/JSON import | `ai-import.ts`, `guide.ts`, `library.ts` |
-| Guide Map | `map-editor.ts`, `map-graph.ts`, `map-study.ts`, `map-presentation.ts`, `guide.css` |
+| Guide Map | `map-editor.ts`, `map-graph.ts`, `map-study.ts`, `map-presentation.ts`, `map-background.ts`, `guide.css` |
 | Review library/model | `src/features/knowledge-check/knowledge-check.ts`, `library.ts`, `library-model.ts` |
 | Review authoring | `check-builder.ts`, `question-model.ts`, `fill-blank-editor.ts`, `set-options*.ts` |
 | Review solver uploads / AI algorithms | `src/core/parameterized/solver-package.ts`, `solver-sandbox.ts`, `variant-validation.ts`; `src/features/knowledge-check/solver-editor.ts`, `ai-parameterized-format.ts`, `ai-import-format.ts`, `parameterized-session.ts` |
