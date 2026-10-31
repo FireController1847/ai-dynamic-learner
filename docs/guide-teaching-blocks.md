@@ -46,6 +46,12 @@ AI Guide import is re-enabled. Map mode now asks for **Teaching Blocks v2 JSON**
 
 The first `diagram` implementation is a selectable conceptual flow, **not** a general-purpose graph layout, anatomy viewer, image importer, or executable visualization engine. Additional renderer types can be introduced with a schema version and backward-compatible validation.
 
+## Guide v2.2.0: continuation and interactive exploration
+
+- Selecting **Continue to next topic** follows the map animation, settles at the destination for **340ms** (100ms with reduced-motion preferences), and then **automatically opens the arriving lesson**. The learner does not have to click the reached map stop. Pending auto-open timers are cancelled if the learner navigates elsewhere, closes or pauses the map, restarts, or the component unmounts. The initial Start Adventure camera introduction and manual map-stop opening are unchanged.
+- The **Explore** Teaching Block is now visibly different from **Check your understanding**. Explore uses accessible, horizontally scrollable **tabs** and a permanently visible explanation panel; the first perspective appears immediately, switching perspectives is never scored, and existing saved choices are retained. Arrow keys and Home/End move among tab choices.
+- Guide AI generation now **heavily prefers source-grounded parameterized examples** whenever changing inputs can teach repeatable formulas, computations or procedures. Under **Focus on numerics**, parameterization is the highest-priority block for supported numerical worked examples. Prompts use Review's variable/range/constraint/computed-answer discipline while keeping Guide's revealable teaching steps, no grading, and the prohibition on AI-provided executable solver packages. Missing source formulas, ranges or numerical tasks are never invented to inflate parameterization.
+
 ## Creative map spacing
 
 New AI maps enforce a **64px minimum clear gap** between topic rectangles. Spacious, genuinely organic suggested positions are preserved. Cramped or rigid-grid layouts are replaced by a deterministic, branch-following winding trail with gentle vertical variation and short connections across row turns, not a uniform row-major grid. For larger maps, limited canvas space can still require multiple rows; the AI prompt encourages grouping related subjects into fewer meaningful stops rather than making a stop for every heading. Already saved maps and manually arranged positions are not moved.
