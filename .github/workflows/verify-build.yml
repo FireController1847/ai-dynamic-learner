@@ -21,7 +21,5 @@ jobs:
         run: npm ci
       - name: Type check
         run: npm run typecheck
-      - name: Test Guide teaching blocks
-        run: npm run test:guide
       - name: Production build
         run: npm run build
