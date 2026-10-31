@@ -1,3 +1,16 @@
+## v2.12.0
+
+<small data-utc="2026-10-31T04:06:06.509Z">October 30, 2026</small>
+
+- **Power Lines:** Background clicks now activate the closest scenery feature: a passing train at the tracks, a car in the nearby roadway, electrical pulses on the wires, sparks climbing utility poles, or a shooting-star/glint effect in the sky.
+- **Interaction:** Click-triggered trains and cars appear near the interaction point and continue along their respective horizontal routes; tapping near the sun or moon accentuates the orbiting body without changing background brightness.
+- **Performance & Accessibility:** Limited simultaneous effects, reused the existing animation clock, and preserved pause and reduced-motion behavior.
+
+<details>
+<summary>View 1 commit</summary>
+<ol><li>Release commit link pending.</li></ol>
+</details>
+
 ## v2.11.1
 
 <small data-utc="2026-10-31T04:02:20.498Z">October 30, 2026</small>

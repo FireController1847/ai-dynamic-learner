@@ -11,13 +11,13 @@ const hash = (n: number) => {
 
 // Side-on desert panorama, composed as horizontal bands rather than a road-to-horizon view.
 // Back to front: sky, railroad, power poles, then the road.
-const skyLine = H * 0.385;
-const railY = H * 0.485;
+export const skyLine = H * 0.385;
+export const railY = H * 0.485;
 const poleGround = H * 0.755;
-const roadTop = H * 0.775;
-const poleXs = [-48, 172, 395, 620, 845, 1070, 1295, 1520, W + 110];
+export const roadTop = H * 0.775;
+export const poleXs = [-48, 172, 395, 620, 845, 1070, 1295, 1520, W + 110];
 
-function post(index: number) {
+export function post(index: number) {
   const x = poleXs[index];
   const size = 0.94 + 0.075 * Math.sin(index * 1.8);
   const base = { x, y: poleGround + (hash(index + 61) - 0.5) * 12 };
@@ -30,7 +30,7 @@ function wirePoint(wire: number, index: number): Point {
     y: p.top.y + 11 + wire * 11 };
 }
 /** All electrical animation and static line work share these hanging conductor paths. */
-function wireAt(wire: number, position: number): Point {
+export function wireAt(wire: number, position: number): Point {
   const u = clamp(position, 0, 1) * (poleXs.length - 1);
   const i = Math.min(poleXs.length - 2, Math.floor(u));
   const t = u - i;

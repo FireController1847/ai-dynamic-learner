@@ -5,8 +5,9 @@ import { createWaterFoamSprite, drawGuideAmbient } from './map-ambient.ts';
 import { drawCircuitBase, drawCircuitMotion, drawProgrammingBase, drawProgrammingMotion,
   launchCircuitSignals, type CircuitSignal } from './map-tech-background.ts';
 import { drawProgrammingHudBase, drawProgrammingHudMotion } from './map-programming-hud.ts';
-import { drawPowerLinesBase, drawPowerLinesMotion, launchPowerLinesPulse,
-  type PowerPulse } from './map-power-lines.ts';
+import { drawPowerLinesBase, drawPowerLinesMotion, type PowerPulse } from './map-power-lines.ts';
+import { clearPowerLinesInteractions, createPowerLinesInteractions,
+  drawPowerLinesInteractions, triggerPowerLinesAt } from './map-power-lines-interactions.ts';
 
 export const GUIDE_MAP_PATTERNS: readonly { value: GuideMapPattern; label: string }[] = [
   { value: 'water', label: 'Water · varied wave crests' },
@@ -276,6 +277,7 @@ export const GuideMapBackdrop = defineComponent({
     const effects: Disturbance[] = [];
     const circuitSignals: CircuitSignal[] = [];
     const powerPulses: PowerPulse[] = [];
+    const powerInteractions = createPowerLinesInteractions();
     let mounted = false, active = true, visible = true;
     let frame = 0, lastPaint = 0, animationTime = 0, lastTick = 0;
     let ink = '', waterSprite: HTMLCanvasElement | null = null;
@@ -347,8 +349,10 @@ export const GuideMapBackdrop = defineComponent({
       else if (running && props.pattern === 'programming') {
         drawProgrammingMotion(ctx, now / 1000, effects);
         drawProgrammingHudMotion(ctx, now / 1000);
-      } else if (running && props.pattern === 'power-lines')
+      } else if (running && props.pattern === 'power-lines') {
         drawPowerLinesMotion(ctx, now / 1000, powerPulses);
+        drawPowerLinesInteractions(ctx, now / 1000, powerInteractions);
+      }
       // Draw still whitecaps in reduced-motion mode, too.
       if (running || props.pattern === 'water') {
         drawGuideAmbient(ctx, props.pattern, running ? now / 1000 : 0,
@@ -391,7 +395,7 @@ export const GuideMapBackdrop = defineComponent({
       if (props.pattern === 'circuit') {
         launchCircuitSignals(clamp(x, 0, W), clamp(y, 0, H), animationTime, circuitSignals);
       } else if (props.pattern === 'power-lines') {
-        launchPowerLinesPulse(clamp(x, 0, W), clamp(y, 0, H), animationTime, powerPulses);
+        triggerPowerLinesAt(clamp(x, 0, W), clamp(y, 0, H), animationTime, powerInteractions, powerPulses);
       } else {
         effects.push({ x: clamp(x, 0, W), y: clamp(y, 0, H), start: animationTime });
         if (effects.length > 5) effects.shift();
@@ -417,8 +421,8 @@ export const GuideMapBackdrop = defineComponent({
       refresh();
     });
     onActivated(() => { active = true; updateActivity(); });
-    onDeactivated(() => { active = false; cancelLoop(); effects.splice(0); circuitSignals.splice(0); powerPulses.splice(0); });
-    watch(() => props.pattern, () => { effects.splice(0); circuitSignals.splice(0); powerPulses.splice(0); refresh(); });
+    onDeactivated(() => { active = false; cancelLoop(); effects.splice(0); circuitSignals.splice(0); powerPulses.splice(0); clearPowerLinesInteractions(powerInteractions); });
+    watch(() => props.pattern, () => { effects.splice(0); circuitSignals.splice(0); powerPulses.splice(0); clearPowerLinesInteractions(powerInteractions); refresh(); });
     watch(() => props.paused, paused => {
       if (paused) {
         cancelLoop();
@@ -436,6 +440,7 @@ export const GuideMapBackdrop = defineComponent({
       effects.splice(0);
       circuitSignals.splice(0);
       powerPulses.splice(0);
+      clearPowerLinesInteractions(powerInteractions);
       glowSprite = waterSprite = null;
     });
     return () => h('div', { ref: root, class: 'guide-map-backdrop',
