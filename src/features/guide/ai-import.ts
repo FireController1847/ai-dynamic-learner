@@ -1,6 +1,7 @@
 import { computed, defineComponent, h, ref, type PropType } from 'vue';
 import { AiPromptExchange, type AiPromptExchangeHandle } from '../../components/ai-prompt-exchange.ts';
 import { AiScopeChoices } from '../../components/ai-scope-choices.ts';
+import { AiFocusChoices } from '../../components/ai-focus-choices.ts';
 import { AiCategoryPicker } from '../../components/ai-category-picker.ts';
 import { categoryScopedPrompt, type AiCardScope, type AiCardCategories } from '../../core/ai-study-categories.ts';
 import { MAX_AI_IMPORT_LENGTH } from '../../core/ai-json.ts';
@@ -10,6 +11,7 @@ import { isRecord } from '../../core/validation.ts';
 import { AI_PLAIN_TEXT_ONLY_GUIDANCE } from '../../core/ai-formatting-guidance.ts';
 import { parseAiTeachingLesson } from './ai-teaching-schema.ts';
 import { guideAiTeachingPrompt } from './ai-teaching-prompt.ts';
+import { GUIDE_AI_FOCUSES, type GuideAiFocus } from './ai-focus.ts';
 import { DEFAULT_TEACHING_WEIGHTS, teachingMixProblem, allocateTeachingBlocks, TEACHING_TYPES, rebalanceTeachingWeights, type TeachingMixMode, type TeachingWeights } from './ai-teaching-mix.ts';
 import { GUIDE_AI_MAX_SPACED_TOPICS, stopsAreSpaced } from './ai-map-layout.ts';
 import type { TeachingLesson } from './teaching-blocks.ts';
@@ -36,6 +38,7 @@ export interface GuideAiPromptOptions {
   coverage: PromptCoverage;
   bulletStyle: PromptBulletStyle;
   mixMode?: TeachingMixMode;
+  aiFocus?: GuideAiFocus;
   targetBlocks?: number;
   weights?: TeachingWeights;
 }
@@ -414,6 +417,7 @@ export const GuideAiImportWorkspace = defineComponent({
     const coverage = ref<PromptCoverage>(DEFAULT_PROMPT_OPTIONS.coverage);
     const bulletStyle = ref<PromptBulletStyle>(DEFAULT_PROMPT_OPTIONS.bulletStyle);
     const mixMode = ref<TeachingMixMode>('ai');
+    const aiFocus = ref<GuideAiFocus>('default');
     const targetBlocks = ref(30);
     const weights = ref<TeachingWeights>({ ...DEFAULT_TEACHING_WEIGHTS });
     const mixError = computed(() => props.mode === 'map' ? teachingMixProblem(mixMode.value, weights.value, targetBlocks.value) : '');
@@ -422,7 +426,8 @@ export const GuideAiImportWorkspace = defineComponent({
     const problem = ref('');
     const prompt = computed(() => mixError.value ? '' : guideAiPrompt({
       detail: detail.value, coverage: coverage.value, bulletStyle: bulletStyle.value,
-      mixMode: mixMode.value, targetBlocks: targetBlocks.value, weights: weights.value,
+      mixMode: mixMode.value, aiFocus: aiFocus.value,
+      targetBlocks: targetBlocks.value, weights: weights.value,
     }, props.mode, chosenScope.value));
     function importValidated() {
       problem.value = '';
@@ -519,6 +524,12 @@ export const GuideAiImportWorkspace = defineComponent({
                     h('button', { type: 'button', class: 'quiet-button', key: value,
                       'aria-pressed': mixMode.value === value, onClick: () => { mixMode.value = value; } }, label)),
                 ]),
+                mixMode.value === 'ai' ? h(AiFocusChoices, {
+                  options: GUIDE_AI_FOCUSES,
+                  value: aiFocus.value,
+                  name: 'guide-ai-focus',
+                  onSelect: (id: string) => { aiFocus.value = id as GuideAiFocus; },
+                }) : null,
                 h('label', { class: 'guide-ai-option' }, [
                   h('span', 'Approximate total Teaching Blocks'),
                   h('input', { type: 'number', min: 1, max: 80, step: 1, value: targetBlocks.value,
