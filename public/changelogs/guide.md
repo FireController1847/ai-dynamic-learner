@@ -8,7 +8,7 @@
 
 <details>
 <summary>View 1 commit</summary>
-<ol><li>Release commit link pending.</li></ol>
+<ol><li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/fa389c3b95e3b0c406515fe7265670cd20363f16">fa389c3b</a> — feat(guide): expand map lessons into fullscreen floating windows (v2.13.0)</li></ol>
 </details>
 
 ## v2.12.5
