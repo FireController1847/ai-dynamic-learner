@@ -26,7 +26,7 @@ const paths: Record<string, string> = {
   archive: 'M3 3h18v5H3ZM5 8v13h14V8M9 12h6',
   document: 'M6 3h9l4 4v14H6ZM15 3v5h5M9 12h6M9 16h6',
   'scroll-text': 'M7 3h13v18H7a4 4 0 0 1-4-4V7a4 4 0 0 1 4-4Zm0 0v14a2 2 0 0 1-4 0M11 8h6M11 12h6M11 16h5',
-  'history-settings': 'M3 4v5h5M3.4 9a8.7 8.7 0 1 1 7.6 11M11.5 7v4.5l2.5 1.5M17 13.4v1.2m0 5.8v1.2M13.4 17.5h1.2m5.8 0h1.2M14.5 15l.9.9m3.2 3.2.9.9m0-5-.9.9m-3.2 3.2-.9.9M19.6 17.5a2.6 2.6 0 1 1-5.2 0 2.6 2.6 0 0 1 5.2 0Z',
+  'history-settings': 'M3 4.5v5h5M3.4 9.5A8.6 8.6 0 1 1 18.5 12.5M10.5 19.5A8.6 8.6 0 0 1 3.4 9.5M11.5 6.8V11l2.2 1.2',
   cards: 'M6 3h15v14H6ZM3 7v14h14M9 8h9M9 12h6',
   pencil: 'm4 16-1 5 5-1L20 8l-4-4ZM14 6l4 4',
   trash: 'M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7',
@@ -64,6 +64,8 @@ const paths: Record<string, string> = {
   ai: 'M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5ZM19 13l.8 2.2L22 16l-2.2.8L19 19l-.8-2.2L16 16l2.2-.8ZM5 15l.7 1.8L8 17.5l-2.3.7L5 20l-.7-1.8L2 17.5l2.3-.7Z',
 };
 
+const historyGear = 'M16.45 13.90L16.66 12.47L18.34 12.47L18.55 13.90L19.31 14.21L20.47 13.35L21.65 14.53L20.79 15.69L21.10 16.45L22.53 16.66L22.53 18.34L21.10 18.55L20.79 19.31L21.65 20.47L20.47 21.65L19.31 20.79L18.55 21.10L18.34 22.53L16.66 22.53L16.45 21.10L15.69 20.79L14.53 21.65L13.35 20.47L14.21 19.31L13.90 18.55L12.47 18.34L12.47 16.66L13.90 16.45L14.21 15.69L13.35 14.53L14.53 13.35L15.69 14.21ZM19.05 17.50a1.55 1.55 0 1 0 -3.1 0a1.55 1.55 0 1 0 3.1 0Z';
+
 export const Icon = defineComponent({
   name: 'Icon',
   props: { name: { type: String, required: true } },
@@ -73,7 +75,11 @@ export const Icon = defineComponent({
       fill: 'none', stroke: 'currentColor', 'stroke-width': 1.6,
       'stroke-linecap': 'round', 'stroke-linejoin': 'round',
       'aria-hidden': 'true', focusable: 'false',
-    }, props.name === 'theme' ? [
+    }, props.name === 'history-settings' ? [
+      h('path', { d: paths['history-settings'] }),
+      // A single filled, hollow gear stays legible at the 20px utility-icon size.
+      h('path', { d: historyGear, fill: 'currentColor', 'fill-rule': 'evenodd', stroke: 'none' }),
+    ] : props.name === 'theme' ? [
       h('circle', { cx: 12, cy: 12, r: 9 }),
       h('path', { d: 'M12 3a9 9 0 0 1 0 18Z', fill: 'currentColor', stroke: 'none', 'fill-opacity': 0.22 }),
       h('path', { d: 'M12 3v18' }),
