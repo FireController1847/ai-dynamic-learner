@@ -360,7 +360,7 @@ export const GuideMapStudy = defineComponent({
         opened.value = new Set([...opened.value, targetId]);
         saveSession();
         showTopic();
-      }, reducedMotion.matches ? REDUCED_MOTION_ARRIVAL_PAUSE_MS : CONTINUE_ARRIVAL_PAUSE_MS);
+      }, reducedMotion.matches || props.motionPaused ? REDUCED_MOTION_ARRIVAL_PAUSE_MS : CONTINUE_ARRIVAL_PAUSE_MS);
       timers.add(pendingContinueOpen);
     }
 
@@ -420,6 +420,7 @@ export const GuideMapStudy = defineComponent({
       if (!plan || travelling.value) return;
       const { route, ancestorId } = plan;
       const duration = reducedMotion.matches ? 0 : 520;
+      arrivalHighlightId.value = null;
       focused.value = false;
       travelling.value = true;
 
