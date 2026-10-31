@@ -12,25 +12,60 @@ const hash = (seed: number): number => {
  * No randomness, simulation state, networking or time-dependent storage.
  */
 interface WaterDisturbance { x: number; y: number; start: number }
-interface WaterCrest { x: number; y: number; half: number; rise: number; phase: number; speed: number; opacity: number }
+interface WaterCrest { x: number; y: number; size: number; phase: number; speed: number; opacity: number }
 const waterCrests: WaterCrest[] = [];
-for (let row = 0; row < H / 74 + 1; row++) for (let col = 0; col < W / 91 + 1; col++) {
+// Restore the earlier crest density: roughly 450 soft, individually timed caps.
+for (let row = 0; row < H / 48 + 1; row++) for (let col = 0; col < W / 76 + 1; col++) {
   const seed = row * 109 + col * 23;
   waterCrests.push({
-    x: 18 + col * 91 + (row % 2) * 35 + (hash(seed + 1) - 0.5) * 19,
-    y: 17 + row * 74 + (hash(seed + 2) - 0.5) * 16,
-    half: 10 + hash(seed + 3) * 7,
-    rise: 4 + hash(seed + 4) * 4,
-    phase: hash(seed + 5) * TAU,
-    speed: 0.56 + hash(seed + 6) * 0.33,
-    opacity: 0.046 + hash(seed + 7) * 0.039,
+    x: 16 + col * 76 + (row % 2) * 31 + (hash(seed + 1) - 0.5) * 14,
+    y: 15 + row * 48 + (hash(seed + 2) - 0.5) * 11,
+    size: 0.72 + hash(seed + 3) * 0.45,
+    phase: hash(seed + 4) * TAU,
+    speed: 0.48 + hash(seed + 5) * 0.57,
+    opacity: 0.24 + hash(seed + 6) * 0.12,
   });
+}
+
+/** Render the foam and glow once, then reuse the tiny sprite for every crest. */
+export function createWaterFoamSprite(ink: string): HTMLCanvasElement {
+  const sprite = document.createElement('canvas');
+  sprite.width = 64; sprite.height = 32;
+  const ctx = sprite.getContext('2d');
+  if (!ctx) return sprite;
+  ctx.strokeStyle = ink;
+  ctx.fillStyle = ink;
+  ctx.lineCap = 'round';
+  ctx.shadowColor = ink;
+  ctx.shadowBlur = 5;
+  ctx.globalAlpha = 0.32;
+  ctx.lineWidth = 1.6;
+  // A single shallow foam lip, not the paired arches that resembled birds.
+  ctx.beginPath();
+  ctx.moveTo(7, 21);
+  ctx.quadraticCurveTo(31, 8, 57, 21);
+  ctx.stroke();
+  ctx.globalAlpha = 0.23;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(16, 24);
+  ctx.quadraticCurveTo(29, 21, 40, 24);
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+  ctx.globalAlpha = 0.22;
+  for (const [x, y] of [[21, 25], [39, 26], [48, 23]]) {
+    ctx.beginPath();
+    ctx.arc(x, y, 0.75, 0, TAU);
+    ctx.fill();
+  }
+  return sprite;
 }
 
 /** These accents are deliberately less expensive than the cached backdrop. */
 export function drawGuideAmbient(ctx: CanvasRenderingContext2D,
   pattern: GuideMapPattern, seconds: number,
-  glowSprite?: HTMLCanvasElement | null, disturbances: readonly WaterDisturbance[] = []): void {
+  glowSprite?: HTMLCanvasElement | null, disturbances: readonly WaterDisturbance[] = [],
+  waterSprite?: HTMLCanvasElement | null): void {
   if (pattern === 'plain') return;
   ctx.save();
   ctx.fillStyle = ctx.strokeStyle;
@@ -82,30 +117,39 @@ export function drawGuideAmbient(ctx: CanvasRenderingContext2D,
       ctx.fill();
     }
   } else if (pattern === 'water') {
-    // Rolling crests travel in staggered, softly overlapping bands over the
-    // cached water motif. Each crest has its own phase, height and speed.
-    ctx.lineWidth = 1.15;
+    // Quiet swells continuously appear, foam briefly, then vanish as the next
+    // crest rolls in. Foam is a cached one-hump sprite, avoiding per-frame paths,
+    // shadows or gradients for hundreds of caps.
     for (const crest of waterCrests) {
-      const phase = seconds * crest.speed - crest.x * 0.014 + crest.phase;
-      const swell = Math.sin(phase);
-      const x = crest.x + Math.cos(phase * 0.7) * 3.5;
-      let y = crest.y + swell * 4.4;
-      let rise = crest.rise * (0.84 + 0.25 * Math.sin(phase + 0.7));
+      const phase = seconds * crest.speed + crest.phase - crest.x * 0.006;
+      const foam = (0.5 + 0.5 * Math.sin(phase)) ** 1.9;
+      if (foam < 0.025) continue;
+      const x = crest.x + Math.cos(phase * 0.8) * 3.8;
+      let y = crest.y + Math.sin(phase) * 2.4;
+      let size = crest.size * (0.92 + foam * 0.12);
       for (const disturbance of disturbances) {
         const age = (seconds * 1000 - disturbance.start) / 1750;
-        if (age < 0 || age >= 1) continue;
-        const distance = Math.hypot(x - disturbance.x, y - disturbance.y);
-        const offset = (distance - age * 265) / 35;
-        y += 6 * Math.cos(offset * 2.2) * Math.exp(-offset * offset) * (1 - age);
-        rise += 1.5 * Math.exp(-offset * offset) * (1 - age);
+        if (age < 0 || age >= 1 ||
+            Math.abs(x - disturbance.x) > 330 ||
+            Math.abs(y - disturbance.y) > 330) continue;
+        const dist = Math.hypot(x - disturbance.x, y - disturbance.y);
+        const offset = (dist - age * 265) / 34;
+        if (Math.abs(offset) > 3) continue;
+        const impulse = Math.exp(-offset * offset) * (1 - age);
+        y += 5 * Math.cos(offset * 2) * impulse;
+        size += 0.045 * impulse;
       }
-      ctx.globalAlpha = crest.opacity * (0.72 + 0.28 * (swell + 1) * 0.5);
-      ctx.beginPath();
-      ctx.moveTo(x - crest.half, y + 1.8);
-      ctx.quadraticCurveTo(x - crest.half * 0.50, y - rise, x, y + 1.8);
-      ctx.quadraticCurveTo(x + crest.half * 0.53, y - rise * 0.9,
-        x + crest.half, y + 1.8);
-      ctx.stroke();
+      ctx.globalAlpha = crest.opacity * foam;
+      if (waterSprite) {
+        const w = 54 * size, h = 27 * size;
+        ctx.drawImage(waterSprite, x - w / 2, y - h / 2, w, h);
+      } else {
+        ctx.lineWidth = 1.1;
+        ctx.beginPath();
+        ctx.moveTo(x - 13 * size, y + 2);
+        ctx.quadraticCurveTo(x, y - 6 * size, x + 13 * size, y + 2);
+        ctx.stroke();
+      }
     }
   } else if (pattern === 'flow') {
     for (let i = 0; i < 22; i++) {

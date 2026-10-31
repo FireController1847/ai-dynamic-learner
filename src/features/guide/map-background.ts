@@ -1,7 +1,7 @@
 import { defineComponent, h, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref, watch, type PropType } from 'vue';
 import type { GuideMapPattern } from './library-model.ts';
 import { MAP_CANVAS_HEIGHT, MAP_CANVAS_WIDTH } from './map-presentation.ts';
-import { drawGuideAmbient } from './map-ambient.ts';
+import { createWaterFoamSprite, drawGuideAmbient } from './map-ambient.ts';
 
 export const GUIDE_MAP_PATTERNS: readonly { value: GuideMapPattern; label: string }[] = [
   { value: 'water', label: 'Water · varied wave crests' },
@@ -49,30 +49,8 @@ function drawTexture(ctx: CanvasRenderingContext2D, pattern: GuideMapPattern,
   ctx.lineWidth = 1.05;
   ctx.fillStyle = ctx.strokeStyle;
   if (pattern === 'water') {
-    for (let row = 0; row < H / 48 + 1; row++) {
-      for (let col = 0; col < W / 76 + 1; col++) {
-        const seed = row * 109 + col * 17;
-        const x = 20 + col * 76 + (row % 2) * 35 + (hash(seed + 1) - 0.5) * 15;
-        const y = 18 + row * 48 + (hash(seed + 2) - 0.5) * 10;
-        const half = 11 + hash(seed + 3) * 5;
-        const rise = 5 + hash(seed + 4) * 3;
-        let displacement = 0;
-        for (const effect of effects) {
-          const age = (now - effect.start) / lifetime('water');
-          const distance = Math.hypot(x - effect.x, y - effect.y);
-          const relative = (distance - age * 265) / 37;
-          displacement += Math.cos(relative * 2.2) * Math.exp(-relative * relative) *
-            (1 - age) * 5;
-        }
-        const yy = y + displacement;
-        ctx.globalAlpha = 0.047 + hash(seed + 5) * 0.035;
-        ctx.beginPath();
-        ctx.moveTo(x - half, yy + 2);
-        ctx.quadraticCurveTo(x - half * 0.53, yy - rise, x, yy + 2);
-        ctx.quadraticCurveTo(x + half * 0.52, yy - rise * 0.87, x + half, yy + 2);
-        ctx.stroke();
-      }
-    }
+    // The foam caps are drawn once in reduced motion or animated over this
+    // transparent still layer; no duplicate birds remain underneath.
   } else if (pattern === 'contours') {
     for (let row = 0; row < H / 109 + 1; row++) {
       for (let col = 0; col < W / 136 + 1; col++) {
@@ -268,6 +246,11 @@ function drawEffects(ctx: CanvasRenderingContext2D, pattern: GuideMapPattern,
   ctx.restore();
 }
 
+/**
+ * Two browser-composited Canvas layers. The static scenery is painted only
+ * when the pattern, theme or pixel ratio changes; interactions repaint just
+ * the one-pixel-per-map-unit transparent overlay.
+ */
 export const GuideMapBackdrop = defineComponent({
   name: 'GuideMapBackdrop',
   props: {
@@ -275,148 +258,161 @@ export const GuideMapBackdrop = defineComponent({
     paused: { type: Boolean, default: false },
   },
   setup(props, { expose }) {
-    const canvas = ref<HTMLCanvasElement | null>(null);
+    const root = ref<HTMLElement | null>(null);
+    const staticCanvas = ref<HTMLCanvasElement | null>(null);
+    const overlayCanvas = ref<HTMLCanvasElement | null>(null);
     const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const effects: Disturbance[] = [];
-    let frame = 0, mounted = false, active = true, visible = true;
-    let tick: number | null = null;
-    // The scenery and firefly glow are immutable until the theme, DPR or
-    // selected pattern changes. Keep them off the ambient animation hot path.
-    let staticLayer: HTMLCanvasElement | null = null;
+    let mounted = false, active = true, visible = true;
+    let frame = 0, lastPaint = 0;
+    let ink = '', waterSprite: HTMLCanvasElement | null = null;
     let glowSprite: HTMLCanvasElement | null = null;
-    let ink = '';
-    let cachedWidth = 0, cachedHeight = 0, needsRepaint = true;
-    function invalidateStatic() {
-      needsRepaint = true;
-      invalidate();
-    }
-    function ensureStatic(element: HTMLCanvasElement, dpr: number) {
-      const width = Math.round(W * dpr), height = Math.round(H * dpr);
-      if (!needsRepaint && staticLayer && width === cachedWidth && height === cachedHeight) return;
-      needsRepaint = false;
-      cachedWidth = width; cachedHeight = height;
-      ink = getComputedStyle(element).color;
-      const layer = document.createElement('canvas');
-      layer.width = width; layer.height = height;
-      const layerCtx = layer.getContext('2d');
-      if (layerCtx) {
-        layerCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        layerCtx.strokeStyle = ink;
-        drawTexture(layerCtx, props.pattern, [], 0);
-        staticLayer = layer;
-      } else staticLayer = null;
-      // A single reusable firefly halo replaces dozens of radial gradients
-      // created on every frame. The glow follows the current theme ink.
-      const sprite = document.createElement('canvas');
-      sprite.width = sprite.height = 40;
-      const spriteCtx = sprite.getContext('2d');
-      if (spriteCtx) {
-        const gradient = spriteCtx.createRadialGradient(20, 20, 0, 20, 20, 20);
-        gradient.addColorStop(0, ink);
-        gradient.addColorStop(0.18, ink);
-        gradient.addColorStop(1, 'transparent');
-        spriteCtx.fillStyle = gradient;
-        spriteCtx.fillRect(0, 0, 40, 40);
-        glowSprite = sprite;
-      } else glowSprite = null;
-    }
     let observer: MutationObserver | null = null;
     let visibilityObserver: IntersectionObserver | null = null;
+    const TARGET_FRAME_MS = 1000 / 40;
+    const FALLBACK_FRAME_MS = 1000 / 30;
+    let frameBudget = TARGET_FRAME_MS;
+
     function canAnimate() {
       return mounted && active && visible && !props.paused && !motion.matches &&
         !document.hidden && props.pattern !== 'plain';
     }
-    function stopAnimation() {
-      if (tick !== null) { window.clearTimeout(tick); tick = null; }
+    function cancelLoop() {
       if (frame) { cancelAnimationFrame(frame); frame = 0; }
+      lastPaint = 0;
     }
-    // Ambient motion is intentionally throttled to ~10fps (brief interactions
-    // to ~20fps), rather than running a constant 60fps render loop.
-    function schedule() {
-      if (!canAnimate() || frame || tick !== null) return;
-      tick = window.setTimeout(() => {
-        tick = null;
-        if (canAnimate()) frame = requestAnimationFrame(animate);
-      }, effects.length ? 50 : 100);
-    }
-    function draw(now = performance.now()) {
-      const element = canvas.value;
-      const ctx = element?.getContext('2d');
-      if (!element || !ctx) return;
-      // Decorative low-contrast lines do not benefit from full 2–3x retina
-      // buffers. Limit the pixel work while retaining crisp, small details.
-      const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
-      const pixelW = Math.round(W * dpr), pixelH = Math.round(H * dpr);
-      if (element.width !== pixelW || element.height !== pixelH) {
-        element.width = pixelW; element.height = pixelH;
+    function ensureSize(element: HTMLCanvasElement, scale: number) {
+      const width = Math.round(W * scale), height = Math.round(H * scale);
+      if (element.width !== width || element.height !== height) {
+        element.width = width; element.height = height;
       }
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    function repaintStatic() {
+      const element = staticCanvas.value;
+      if (!mounted || !element) return;
+      const scale = Math.min(window.devicePixelRatio || 1, 1.25);
+      ensureSize(element, scale);
+      const ctx = element.getContext('2d', { alpha: true });
+      if (!ctx) return;
+      ink = getComputedStyle(element).color;
+      ctx.setTransform(scale, 0, 0, scale, 0, 0);
       ctx.clearRect(0, 0, W, H);
-      ensureStatic(element, dpr);
+      ctx.strokeStyle = ink;
+      drawTexture(ctx, props.pattern, [], 0);
+      // Firefly glows and water foam are colored/rasterized once, then reused.
+      glowSprite = document.createElement('canvas');
+      glowSprite.width = glowSprite.height = 40;
+      const glow = glowSprite.getContext('2d');
+      if (glow) {
+        const gradient = glow.createRadialGradient(20, 20, 0, 20, 20, 20);
+        gradient.addColorStop(0, ink);
+        gradient.addColorStop(0.18, ink);
+        gradient.addColorStop(1, 'transparent');
+        glow.fillStyle = gradient;
+        glow.fillRect(0, 0, 40, 40);
+      } else glowSprite = null;
+      waterSprite = createWaterFoamSprite(ink);
+    }
+    function paintOverlay(now: number) {
+      const element = overlayCanvas.value;
+      if (!element) return;
+      // Low-latency 2D is GPU-composited by supporting browsers. 1x buffer
+      // bounds pixel-fill work without introducing a WebGL-only dependency.
+      ensureSize(element, 1);
+      const ctx = element.getContext('2d', { alpha: true, desynchronized: true });
+      if (!ctx) return;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, W, H);
       ctx.strokeStyle = ink;
       for (let i = effects.length - 1; i >= 0; i--) {
         if (now - effects[i].start >= lifetime(props.pattern)) effects.splice(i, 1);
       }
-      if (staticLayer) ctx.drawImage(staticLayer, 0, 0, W, H);
-      else drawTexture(ctx, props.pattern, [], 0);
-      if (canAnimate()) drawGuideAmbient(ctx, props.pattern, now / 1000, glowSprite, effects);
-      drawEffects(ctx, props.pattern, effects, now);
-      ctx.globalAlpha = 1;
+      const running = canAnimate();
+      // Draw still whitecaps in reduced-motion mode, too.
+      if (running || props.pattern === 'water') {
+        drawGuideAmbient(ctx, props.pattern, running ? now / 1000 : 0,
+          glowSprite, running ? effects : [], waterSprite);
+      }
+      if (running) drawEffects(ctx, props.pattern, effects, now);
     }
     function animate(now: number) {
       frame = 0;
       if (!canAnimate()) return;
-      draw(now);
-      schedule();
+      if (lastPaint && now - lastPaint < frameBudget - 1) {
+        frame = requestAnimationFrame(animate);
+        return;
+      }
+      const start = performance.now();
+      paintOverlay(now);
+      const cost = performance.now() - start;
+      // Target 40 FPS; avoid fighting map navigation on slower hardware.
+      frameBudget = cost > TARGET_FRAME_MS * 0.72 ? FALLBACK_FRAME_MS : TARGET_FRAME_MS;
+      lastPaint = now;
+      frame = requestAnimationFrame(animate);
     }
-    function invalidate() {
-      stopAnimation();
-      if (mounted) draw();
-      schedule();
+    function refresh() {
+      cancelLoop();
+      if (mounted) {
+        repaintStatic();
+        paintOverlay(performance.now());
+      }
+      if (canAnimate()) frame = requestAnimationFrame(animate);
+    }
+    function updateActivity() {
+      cancelLoop();
+      if (canAnimate()) frame = requestAnimationFrame(animate);
+      else if (mounted && motion.matches) paintOverlay(0);
     }
     function interactAt(x: number, y: number) {
       if (!canAnimate() || !Number.isFinite(x) || !Number.isFinite(y)) return;
       effects.push({ x: clamp(x, 0, W), y: clamp(y, 0, H), start: performance.now() });
       if (effects.length > 5) effects.shift();
-      stopAnimation();
-      frame = requestAnimationFrame(animate);
+      // Do not interrupt/recreate the render loop on an interaction.
+      if (!frame) frame = requestAnimationFrame(animate);
     }
     expose({ interactAt } satisfies GuideMapBackdropHandle);
-    function onMotionChange() { if (motion.matches) effects.splice(0); invalidate(); }
     onMounted(() => {
       mounted = true;
-      observer = new MutationObserver(invalidateStatic);
-      observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+      observer = new MutationObserver(refresh);
+      observer.observe(document.documentElement, {
+        attributes: true, attributeFilter: ['data-theme'],
+      });
       visibilityObserver = new IntersectionObserver(entries => {
         visible = entries.some(entry => entry.isIntersecting);
-        invalidate();
+        updateActivity();
       });
-      if (canvas.value) visibilityObserver.observe(canvas.value);
-      motion.addEventListener('change', onMotionChange);
-      document.addEventListener('visibilitychange', invalidate);
-      window.addEventListener('resize', invalidateStatic);
-      invalidate();
+      if (root.value) visibilityObserver.observe(root.value);
+      motion.addEventListener('change', updateActivity);
+      document.addEventListener('visibilitychange', updateActivity);
+      window.addEventListener('resize', refresh);
+      refresh();
     });
-    onActivated(() => { active = true; invalidate(); });
-    onDeactivated(() => { active = false; stopAnimation(); effects.splice(0); });
-    watch(() => props.pattern, () => { effects.splice(0); invalidateStatic(); });
+    onActivated(() => { active = true; updateActivity(); });
+    onDeactivated(() => { active = false; cancelLoop(); effects.splice(0); });
+    watch(() => props.pattern, () => { effects.splice(0); refresh(); });
     watch(() => props.paused, paused => {
-      if (paused) { stopAnimation(); effects.splice(0); }
-      else invalidate();
+      if (paused) {
+        cancelLoop();
+        effects.splice(0);
+      } else updateActivity();
     });
     onBeforeUnmount(() => {
       mounted = false;
-      stopAnimation();
+      cancelLoop();
       observer?.disconnect();
       visibilityObserver?.disconnect();
-      motion.removeEventListener('change', onMotionChange);
-      document.removeEventListener('visibilitychange', invalidate);
-      window.removeEventListener('resize', invalidateStatic);
-      staticLayer = null;
-      glowSprite = null;
+      motion.removeEventListener('change', updateActivity);
+      document.removeEventListener('visibilitychange', updateActivity);
+      window.removeEventListener('resize', refresh);
       effects.splice(0);
+      glowSprite = waterSprite = null;
     });
-    return () => h('canvas', { ref: canvas, class: 'guide-map-backdrop',
-      'aria-hidden': 'true', role: 'presentation' });
+    return () => h('div', { ref: root, class: 'guide-map-backdrop',
+      'aria-hidden': 'true', role: 'presentation' }, [
+      h('canvas', { ref: staticCanvas, class: 'guide-map-backdrop-layer guide-map-backdrop-static',
+        'aria-hidden': 'true', role: 'presentation' }),
+      h('canvas', { ref: overlayCanvas, class: 'guide-map-backdrop-layer guide-map-backdrop-motion',
+        'aria-hidden': 'true', role: 'presentation' }),
+    ]);
   },
 });
