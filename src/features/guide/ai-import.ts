@@ -11,6 +11,7 @@ import { isRecord } from '../../core/validation.ts';
 import { AI_PLAIN_TEXT_ONLY_GUIDANCE } from '../../core/ai-formatting-guidance.ts';
 import { parseAiTeachingLesson } from './ai-teaching-schema.ts';
 import { guideAiTeachingPrompt } from './ai-teaching-prompt.ts';
+import { guideAiFileOutputInstructions } from './ai-file-output.ts';
 import { GUIDE_AI_FOCUSES, type GuideAiFocus } from './ai-focus.ts';
 import { DEFAULT_TEACHING_WEIGHTS, teachingMixProblem, allocateTeachingBlocks, TEACHING_TYPES, rebalanceTeachingWeights, type TeachingMixMode, type TeachingWeights } from './ai-teaching-mix.ts';
 import { GUIDE_AI_MAX_SPACED_TOPICS, stopsAreSpaced } from './ai-map-layout.ts';
@@ -125,9 +126,9 @@ Do NOT include citations, references, footnotes, source annotations, source list
 function listPrompt(options: GuideAiPromptOptions): string {
   return `${promptIntro(options, 'list')}
 
-Return ONLY one fenced JSON code block, starting with ${JSON_FENCE}json and ending with ${JSON_FENCE}.
+${guideAiFileOutputInstructions('list')}
 
-Use this structure:
+Write the following illustrative JSON STRUCTURE into the downloadable file (the fenced example below is NOT the response format):
 ${JSON_FENCE}json
 {
   "format": "${LIST_IMPORT_FORMAT}",
