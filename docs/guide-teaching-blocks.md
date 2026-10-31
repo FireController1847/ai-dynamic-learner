@@ -61,7 +61,7 @@ Under **Let AI choose**, use **AI focus** to optionally prioritize **Default**, 
 1. Start **Create guide with AI** from the Guide library and select Map mode (List mode retains its classic notes workflow). The secondary **Import an AI response** shortcut sits in the builder action row, as in Review.
 2. Select **Overall subject** or **Choose a category**, using Review's shared scope selection and saved-category picker. Selecting a category scopes the AI instructions to that category's source material and skips repeating the source handoff.
 3. In the instructions stage, choose coverage and teaching depth. Select **Let AI choose** (with an optional AI teaching focus) or a **Custom weighted mix** across all nine block kinds. Weights total 100%; the target count is guidance rather than filler quota.
-4. Supply source material, copy the generated instructions to the AI conversation and return the resulting JSON.
+4. Supply source material and copy the generated instructions to the AI conversation. Both Map and List modes request an actual downloadable UTF-8 JSON file (`dynamic-learner-guide-map.json` or `dynamic-learner-guide-list.json`), matching Review. The examples in the prompts are schema illustrations, not instructions to print JSON in a code block. If a file cannot be attached, the prompts permit complete raw JSON as a fallback.
 5. Upload the JSON file or paste its response and select **Import guide**. Valid responses import immediately, without a separate source-comparison or coverage-approval screen; required source-coverage metadata and lesson structure are still validated.
 6. Imported v2 maps contain real `TeachingLesson` objects and render offline immediately. Original v1 section-based JSON continues to import.
 
