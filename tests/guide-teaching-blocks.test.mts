@@ -298,6 +298,36 @@ test('organic placement keeps connected branch descendants adjacent', () => {
   assert.ok(placed.has('branch-b-next'));
 });
 
+test('Guide AI Map and List prompts request downloadable JSON files, not chat code blocks', () => {
+  for (const [mode, filename] of [
+    ['map', 'dynamic-learner-guide-map.json'],
+    ['list', 'dynamic-learner-guide-list.json'],
+  ] as const) {
+    const prompt = guideAiPrompt(undefined, mode);
+    assert.match(prompt, /OUTPUT AS A DOWNLOADABLE JSON FILE, NOT A CHAT CODE BLOCK/);
+    assert.ok(prompt.includes('Create an actual UTF-8 .json file named ' + filename));
+    assert.match(prompt, /Attach the file to your reply/);
+    assert.match(prompt, /If your AI environment cannot create or attach a downloadable file/);
+    assert.match(prompt, /COMPLETE raw JSON as a fallback/);
+    assert.doesNotMatch(prompt, /Return ONLY (one|a complete) fenced JSON code block/);
+    assert.match(prompt, /illustrative schema|illustrative JSON STRUCTURE/i);
+  }
+});
+
+test('Guide category-scoped prompts retain file output instructions', () => {
+  const scope = {
+    subject: 'Mathematics',
+    category: { key: 'fractions', title: 'Fractions', description: 'Arithmetic with fractions' },
+  };
+  for (const mode of ['map', 'list'] as const) {
+    const prompt = guideAiPrompt(undefined, mode, scope);
+    assert.match(prompt, /OUTPUT AS A DOWNLOADABLE JSON FILE/);
+    assert.match(prompt, /Fractions/);
+    assert.ok(prompt.includes(mode === 'map'
+      ? 'dynamic-learner-guide-map.json' : 'dynamic-learner-guide-list.json'));
+  }
+});
+
 test('AI Guide prompt teaches with v2 blocks and creative, spacious coordinates', () => {
   const prompt = guideAiPrompt({
     detail: 'balanced', coverage: 'comprehensive', bulletStyle: 'thoughts',
