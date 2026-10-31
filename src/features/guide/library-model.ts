@@ -198,7 +198,7 @@ function mapData(value: unknown, ids: Set<string>): asserts value is MapGuideDat
       for (const [topicId, response] of Object.entries(session.responses)) {
         if (!isValidId(topicId) || !isRecord(response) || Object.keys(response).length > 80 ||
             Object.entries(response).some(([blockId, choice]) =>
-              !isValidId(blockId) || typeof choice !== 'string' || choice.length > 128))
+              !isValidId(blockId) || typeof choice !== 'string' || choice.length > 2048))
           throw new Error('Saved Guide lesson responses contain invalid choices.');
       }
     }
