@@ -52,17 +52,18 @@ export function createWaterFoamSprite(ink: string): HTMLCanvasElement {
 
   // Crisp foam glints trace just the tops of both arches. Compute these
   // segments from the same quadratic curves so they follow the exact shape.
+  const context = ctx;
   function foamAtCrest(x0: number, y0: number, cx: number, cy: number, x1: number, y1: number) {
-    ctx.beginPath();
+    context.beginPath();
     for (let i = 0; i <= 8; i++) {
       const t = 0.34 + (i / 8) * 0.32;
       const a = 1 - t;
       const x = a * a * x0 + 2 * a * t * cx + t * t * x1;
       const y = a * a * y0 + 2 * a * t * cy + t * t * y1;
-      if (i) ctx.lineTo(x, y);
-      else ctx.moveTo(x, y);
+      if (i) context.lineTo(x, y);
+      else context.moveTo(x, y);
     }
-    ctx.stroke();
+    context.stroke();
   }
   ctx.globalAlpha = 0.86;
   ctx.lineWidth = 1.3;
