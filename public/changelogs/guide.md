@@ -7,7 +7,7 @@
 
 <details>
 <summary>View 1 commit</summary>
-<ol><li>Release commit link pending.</li></ol>
+<ol><li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/8491db24bcb5665b02e6c6ed57cd464fb6ce755d">8491db24</a> — fix(guide): anchor lesson window buttons above independent scroll layer (v2.14.2)</li></ol>
 </details>
 
 ## v2.14.1
