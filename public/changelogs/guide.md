@@ -7,7 +7,7 @@
 
 <details>
 <summary>View 1 commit</summary>
-<ol><li>Release commit link pending.</li></ol>
+<ol><li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/9316593dcd193a14a311954756565e52abf1a686">9316593d</a> — fix(guide): align lesson window controls at top-right edge (v2.14.1)</li></ol>
 </details>
 
 ## v2.14.0
