@@ -9,6 +9,8 @@ import { TeachingLessonView } from './teaching-lesson.ts';
 import { PopupDialog } from '../../components/popup-dialog.ts';
 import { Icon } from '../../components/icon.ts';
 import { renderTeachingMath } from './teaching-text.ts';
+import { ParameterizedVariables, ParameterizedAnswers } from '../knowledge-check/parameterized-fields.ts';
+import { validateGenerationRules } from '../../core/parameterized/template.ts';
 
 const LIMIT = 10000;
 type EditorView = 'edit' | 'preview' | 'both';
@@ -241,6 +243,42 @@ export const TeachingBlocksEditor = defineComponent({
           parts.push(field('Scenario', block.scenario, value => { block.scenario = value; }, true),
             stringList('Walkthrough step', block.steps, 12, 'Next action.', 1),
             field('Takeaway', block.takeaway, value => { block.takeaway = value; }, true));
+          break;
+        case 'parameterized':
+          parts.push(
+            h('p', { class: 'guide-teach-hint' },
+              'Review’s parameter engine computes each example. Write {{variable}} for generated values and {{answerKey}} for computed results. Markdown and LaTeX work in the learner view.'),
+            field('Generated prompt', block.prompt, value => { block.prompt = value; }, true),
+            h(ParameterizedVariables, { rules: block.rules }),
+            h('fieldset', { class: 'guide-teach-collection' }, [
+              h('legend', 'Constraints (one expression per line)'),
+              h('textarea', { rows: 3, class: 'guide-teach-rules-input', value: block.rules.constraints.join('\n'),
+                onInput: (event: Event) => {
+                  block.rules.constraints = inputValue(event).split('\n').map(line => line.trim()).filter(Boolean);
+                } }),
+            ]),
+            h(ParameterizedAnswers, { rules: block.rules }),
+            stringList('Walkthrough step', block.steps, 12, 'Explain the next calculation using {{variable}}.', 1),
+            field('Takeaway', block.takeaway, value => { block.takeaway = value; }, true),
+            h('details', { class: 'guide-teach-rules-advanced' }, [
+              h('summary', 'Advanced generation rules JSON'),
+              h('p', 'Use Review’s rules schema, including derived variables and solver configuration. The main fields and rules are validated before saving.'),
+              h('textarea', {
+                rows: 12, class: 'guide-teach-rules-input', maxlength: 100000,
+                value: JSON.stringify(block.rules, null, 2),
+                onChange: (event: Event) => {
+                  try {
+                    const candidate: unknown = JSON.parse(inputValue(event));
+                    validateGenerationRules(candidate);
+                    block.rules = candidate;
+                    error.value = '';
+                  } catch (cause) {
+                    error.value = cause instanceof Error ? cause.message : String(cause);
+                  }
+                },
+              }),
+            ]),
+          );
           break;
         case 'comparison':
           parts.push(sideFields(block.left, 'First side'), sideFields(block.right, 'Second side'));
