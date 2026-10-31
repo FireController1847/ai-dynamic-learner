@@ -106,6 +106,18 @@ function blocks(raw: unknown, solvers: readonly SolverPackage[]): TeachingBlock[
         keys(value, ['kind','title','prompt','choices'], label);
         return { id, kind: 'exploration', title, prompt: text(value.prompt, label + ' prompt'),
           choices: choices(value.choices, label) };
+      case 'guided-practice':
+        keys(value, ['kind','title','stage','setup','prompt','hint','reveal','reflection'], label);
+        if (!['guided','apply','revisit'].includes(String(value.stage)))
+          throw new Error(label + ' stage must be guided, apply, or revisit.');
+        return { id, kind: 'guided-practice', title,
+          stage: value.stage as 'guided' | 'apply' | 'revisit',
+          setup: text(value.setup, label + ' prior instruction'),
+          prompt: text(value.prompt, label + ' thinking invitation'),
+          hint: text(value.hint, label + ' clue'),
+          reveal: text(value.reveal, label + ' explanation'),
+          ...(value.reflection === undefined ? {} :
+            { reflection: optional(value.reflection, label + ' reflection') }) };
       case 'check': {
         keys(value, ['kind','title','question','options','correctIndex'], label);
         const options = choices(value.options, label);

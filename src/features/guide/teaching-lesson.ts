@@ -1,6 +1,7 @@
 import { defineComponent, h, ref, type PropType, type VNode } from 'vue';
 import { renderTeachingMath as math, renderTeachingRich as rich } from './teaching-text.ts';
 import { ParameterizedTeachingView } from './parameterized-teaching-view.ts';
+import { GuideGuidedPractice } from './guided-practice.ts';
 import type { TeachingBlock, TeachingChoice, TeachingLesson, TeachingSide } from './teaching-blocks.ts';
 
 function caption(value: string | undefined) {
@@ -204,6 +205,13 @@ export const TeachingLessonView = defineComponent({
           ];
           break;
         }
+        case 'guided-practice':
+          name = 'Try it together';
+          body = h(GuideGuidedPractice, {
+            block, response: props.responses[block.id] ?? '',
+            onAnswer: (response: string) => answer(block.id, response),
+          });
+          break;
         case 'check': {
           name = 'Check your understanding';
           const selected = block.options.find(option => option.id === props.responses[block.id]);

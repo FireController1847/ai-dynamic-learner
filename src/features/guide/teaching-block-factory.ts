@@ -21,6 +21,7 @@ export const TEACHING_BLOCK_KINDS: readonly { kind: TeachingBlockKind; label: st
   { kind: 'sequence', label: 'Step by step', help: 'Let learners inspect the stages of a process.' },
   { kind: 'diagram', label: 'Visual model', help: 'Connect selectable concepts in a visual flow.' },
   { kind: 'exploration', label: 'Exploration', help: 'Let learners try different choices and discover consequences.' },
+  { kind: 'guided-practice', label: 'Try it together', help: 'Teach first, then offer a gentle prediction with a clue and reveal. Revisit ideas later without grading.' },
   { kind: 'check', label: 'Understanding check', help: 'Offer an ungraded question with explanatory feedback.' },
   { kind: 'connection', label: 'Concept connection', help: 'Connect what was learned with what comes next.' },
 ];
@@ -53,6 +54,12 @@ export function newTeachingBlock(kind: TeachingBlockKind): TeachingBlock {
         { id: createId(), label: 'Second concept', detail: 'Explain the second concept.' }] };
     case 'exploration': return { id, kind, title: 'Explore an outcome', prompt: 'What would happen?',
       choices: [newTeachingChoice(), newTeachingChoice()] };
+    case 'guided-practice': return { id, kind, title: 'Think it through together',
+      stage: 'guided', setup: 'First, let’s review the idea and why it works.',
+      prompt: 'Based on that explanation, what do you think happens next?',
+      hint: 'Think about the rule we just introduced.',
+      reveal: 'Walk through the reasoning here, one clear connection at a time.',
+      reflection: 'What changed about your understanding?' };
     case 'check': {
       const options = [newTeachingChoice(), newTeachingChoice()];
       return { id, kind, title: 'Check your understanding',

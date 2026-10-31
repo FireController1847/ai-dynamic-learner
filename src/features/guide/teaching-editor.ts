@@ -299,6 +299,27 @@ export const TeachingBlocksEditor = defineComponent({
           parts.push(field('Prompt', block.prompt, value => { block.prompt = value; }, true),
             choiceFields(block.choices));
           break;
+        case 'guided-practice':
+          parts.push(
+            h('label', { class: 'guide-teach-field' }, [
+              h('span', 'Learning stage'),
+              h('select', { value: block.stage, onChange: (event: Event) =>
+                { block.stage = inputValue(event) as typeof block.stage; } }, [
+                h('option', { value: 'guided' }, 'Try it together — supported'),
+                h('option', { value: 'apply' }, 'Use what you learned — more independent'),
+                h('option', { value: 'revisit' }, 'Remember and connect — return later'),
+              ]),
+            ]),
+            h('p', { class: 'guide-teach-hint' },
+              'The learner always receives an explanation before being invited to think. Clues and the worked explanation are optional to reveal, with no grading.'),
+            field('Teach the idea first', block.setup, value => { block.setup = value; }, true),
+            field('Gentle thinking invitation', block.prompt, value => { block.prompt = value; }, true),
+            field('Clue if needed', block.hint, value => { block.hint = value; }, true),
+            field('Explanation to reveal', block.reveal, value => { block.reveal = value; }, true),
+            field('Further connection (optional)', block.reflection,
+              value => { block.reflection = value; }, true),
+          );
+          break;
         case 'check':
           parts.push(field('Question', block.question, value => { block.question = value; }, true),
             choiceFields(block.options, block.correctId, id => { block.correctId = id; }));

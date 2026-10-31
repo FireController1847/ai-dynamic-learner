@@ -17,6 +17,8 @@ export type TeachingBlock =
   | { id: string; kind: 'sequence'; title: string; intro?: string; steps: TeachingStep[] }
   | { id: string; kind: 'diagram'; title: string; caption?: string; nodes: TeachingNode[] }
   | { id: string; kind: 'exploration'; title: string; prompt: string; choices: TeachingChoice[] }
+  | { id: string; kind: 'guided-practice'; title: string; stage: 'guided' | 'apply' | 'revisit';
+      setup: string; prompt: string; hint: string; reveal: string; reflection?: string }
   | { id: string; kind: 'check'; title: string; question: string; options: TeachingChoice[]; correctId: string }
   | { id: string; kind: 'connection'; title: string; body: string; next?: string };
 
@@ -142,6 +144,16 @@ export function validateTeachingLesson(value: unknown, ids: Set<string>): assert
         strictKeys(block, ['id','kind','title','prompt','choices'], 'Exploration');
         requiredText(block.prompt, 'Exploration prompt');
         choices(block.choices, ids, 'Exploration');
+        break;
+      case 'guided-practice':
+        strictKeys(block, ['id','kind','title','stage','setup','prompt','hint','reveal','reflection'], 'Guided practice');
+        if (!['guided','apply','revisit'].includes(String(block.stage)))
+          throw new Error('Guided practice needs a learning stage.');
+        requiredText(block.setup, 'Prior instruction');
+        requiredText(block.prompt, 'Invitation to think');
+        requiredText(block.hint, 'Supporting clue');
+        requiredText(block.reveal, 'Modelled explanation');
+        optionalText(block.reflection, 'Reflection');
         break;
       case 'check': {
         strictKeys(block, ['id','kind','title','question','options','correctId'], 'Understanding check');
