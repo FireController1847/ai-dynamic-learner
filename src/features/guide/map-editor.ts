@@ -10,6 +10,7 @@ import {
   MAP_TOPIC_WIDTH, MAP_WIDTH, MAX_TEXT_LENGTH, MAX_TOPICS, type MapGuideData, type MapTopic,
 } from './library-model.ts';
 import { GuideListEditor } from './list-editor.ts';
+import { TeachingBlocksEditor } from './teaching-editor.ts';
 import { MAP_CANVAS_HEIGHT, MAP_CANVAS_WIDTH, MAP_PADDING } from './map-presentation.ts';
 
 const snap = (value: number) => Math.round(value / MAP_GRID) * MAP_GRID;
@@ -299,8 +300,11 @@ export const GuideMapEditor = defineComponent({
                 ]);
               })) : h('p', { class: 'guide-topic-help' }, 'No paths yet. Use Connect, then choose another topic.'),
             ]),
-            h('p', { class: 'guide-topic-help' }, 'This stop has its own mini guide.'),
-            h(GuideListEditor, { data: selectedTopic.guide, compact: true }),
+            h(TeachingBlocksEditor, { key: selectedTopic.id, topic: selectedTopic }),
+            !selectedTopic.lesson ? h('details', { class: 'guide-legacy-notes' }, [
+              h('summary', 'Edit original bullet notes'),
+              h(GuideListEditor, { data: selectedTopic.guide, compact: true }),
+            ]) : null,
           ] : [
             h('div', { class: 'guide-topic-panel-empty' }, [h('p', 'Add a topic to start building the map.')]),
           ]),

@@ -13,8 +13,10 @@ import { canMove,createSection,findItem,firstEntry,groupOptions,insertGuide,move
 import { GuideModePicker } from './mode-picker.ts';
 import { GuideListEditor } from './list-editor.ts';
 import { GuideMapEditor } from './map-editor.ts';
+import { layoutSpacedAiMap, GUIDE_AI_MAX_SPACED_TOPICS } from './ai-map-layout.ts';
 import { layoutMapTopics } from './map-graph.ts';
 import { GuideMapStudy } from './map-study.ts';
+import { createTeachingBlocksDemo } from './teaching-debug.ts';
 
 const MIN_LIBRARY_WIDTH=248, LIBRARY_WIDTH_KEY='dynamic-learner.ui.guide.library-width';
 const LEGACY_LIBRARY_WIDTH_KEY='dynamic-learner.ui.study-guide.library-width';
@@ -28,17 +30,24 @@ function importedMapData(value:SimpleMapGuideImport):MapGuideData{
     if(!from||!to)throw new Error('The imported Guide has an invalid topic connection.');
     return{id:createId(),from,to};
   });
-  const generatedPositions=layoutMapTopics([...ids.values()],connections,startTopicId);
   const useSuggestedPositions=value.topics.every(topic=>topic.position!==undefined);
+  const suggested=useSuggestedPositions
+    ? value.topics.map(topic=>({x:topic.position![0],y:topic.position![1]})) : undefined;
+  // Preserve legacy v1 imports which could exceed the number of comfortably
+  // spaced stops. New AI v2 maps are bounded and always use the safe layout.
+  const generatedPositions=value.topics.length>GUIDE_AI_MAX_SPACED_TOPICS
+    ? (suggested
+      ? new Map([...ids.values()].map((id,index)=>[id,suggested[index]] as const))
+      : layoutMapTopics([...ids.values()],connections,startTopicId))
+    : layoutSpacedAiMap([...ids.values()],connections,startTopicId,suggested);
   const topics=value.topics.map(source=>{
     const id=ids.get(source.key);
     if(!id)throw new Error('The imported Guide has an invalid topic.');
-    const position=useSuggestedPositions&&source.position
-      ?{x:source.position[0],y:source.position[1]}
-      :generatedPositions.get(id)??{x:0,y:0};
+    const position=generatedPositions.get(id)??{x:0,y:0};
     return{
       id,title:source.title,x:position.x,y:position.y,
       ...(source.description ? { description: source.description } : {}),
+      ...(source.lesson?{lesson:source.lesson}:{}),
       guide:{sections:source.sections.map(section=>{
         const result=createSection();result.title=section.title;result.bullets=[...section.bullets];return result;
       })}
@@ -87,6 +96,19 @@ export const Guide=defineComponent({
     async function cancel(){creationTarget.value=null;await nextTick();if(collapsed.value)showLibrary.value?.focus();else library.value?.focusNewGuide();}
     function create(mode:GuideMode){if(!creationTarget.value)return;try{const item=insertGuide(props.model.items,creationTarget.value,mode);selectedId.value=item.id;editingMapId.value=null;creationTarget.value=null;library.value?.reveal(item.id);message.value='Created '+item.name+'.';nextTick(()=>library.value?.beginRename(item.id));}catch(error){message.value=error instanceof Error?error.message:String(error);}}
 
+    function createDebugGuide(){
+      try {
+        const item=insertGuide(props.model.items,target(),'map');
+        if(item.mode!=='map')throw new Error('The debug guide could not be created.');
+        item.name='Teaching Blocks — Demo';
+        item.data=createTeachingBlocksDemo();
+        selectedId.value=item.id;editingMapId.value=null;creationTarget.value=null;
+        aiTarget.value=null;aiStage.value=null;aiMode.value=null;
+        library.value?.reveal(item.id);message.value='Created '+item.name+'.';
+        if(overlay.value)collapsed.value=true;
+      }catch(error){message.value=error instanceof Error?error.message:String(error);}
+    }
+
     function beginAi(){creationTarget.value=null;aiTarget.value=target();aiStage.value='choose';aiMode.value=null;aiDirect.value=false;message.value='';if(overlay.value)collapsed.value=true;}
     function cancelAi(){aiTarget.value=null;aiStage.value=null;aiMode.value=null;message.value='';}
     function chooseAiMode(mode:GuideMode){if(!aiTarget.value)return;aiDirect.value=false;aiMode.value=mode;aiStage.value='import';}
@@ -122,8 +144,8 @@ export const Guide=defineComponent({
 
     function detail(){
       if(aiTarget.value&&aiStage.value==='choose')return h('section',{class:'guide-detail guide-builder-detail',inert:overlay.value&&!collapsed.value},[
-        h(GuideModePicker,{destination:aiTarget.value.parentName,onCreate:chooseAiMode,onCancel:cancelAi}),
-        h('button',{type:'button',class:'quiet-button',onClick:importExistingAi},'Import an AI response'),
+        h(GuideModePicker,{destination:aiTarget.value.parentName,allowAiResponseImport:true,
+          onCreate:chooseAiMode,onImportAiResponse:importExistingAi,onCancel:cancelAi}),
         h('p',{class:'visually-hidden',role:'status'},message.value)
       ]);
       if(aiTarget.value&&aiStage.value==='import'&&aiMode.value)return h('section',{'data-ai-scroll-region':'',class:'guide-detail guide-builder-detail',inert:overlay.value&&!collapsed.value},[
@@ -154,7 +176,7 @@ export const Guide=defineComponent({
       h('div',{ref:layout,class:['guide-layout',{'library-collapsed':collapsed.value,'library-resizing':panel.resizing.value}],style:panel.width.value===null?null:{'--library-width':panel.width.value+'px'}},[
         collapsed.value?h('button',{ref:showLibrary,type:'button',class:'icon-button library-floating-toggle',title:'Show library','aria-label':'Show library','aria-expanded':false,'aria-controls':'guide-library',onClick:()=>setCollapsed(false)},[h(Icon,{name:'panel-open'})]):null,
         overlay.value&&!collapsed.value?h('button',{type:'button',class:'library-scrim','aria-label':'Close library',onClick:()=>setCollapsed(true)}):null,
-        h(GuideLibrary,{ref:library,items:props.model.items,selectedId:selectedId.value,collapsed:collapsed.value,onSelect:select,onOpenItem:()=>{if(overlay.value)void setCollapsed(true);},onToggleLibrary:()=>setCollapsed(true),onNewGuide:begin,onOpenAiImport:beginAi}),
+        h(GuideLibrary,{ref:library,items:props.model.items,selectedId:selectedId.value,collapsed:collapsed.value,onSelect:select,onOpenItem:()=>{if(overlay.value)void setCollapsed(true);},onToggleLibrary:()=>setCollapsed(true),onNewGuide:begin,onOpenAiImport:beginAi,onCreateDebugGuide:createDebugGuide}),
         !overlay.value&&!collapsed.value?h('div',{class:'library-resizer',role:'separator',tabindex:0,'aria-label':'Resize library','aria-orientation':'vertical','aria-valuemin':MIN_LIBRARY_WIDTH,'aria-valuemax':panel.maxWidth(),'aria-valuenow':Math.round(panel.currentWidth()),onPointerdown:panel.beginResize,onPointermove:panel.resizeFromPointer,onPointerup:panel.endResize,onPointercancel:panel.endResize,onKeydown:panel.resizeFromKeyboard,onDblclick:panel.resetWidth}):null,
         detail()
       ])

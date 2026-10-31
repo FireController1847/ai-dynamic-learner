@@ -9,7 +9,7 @@ import { countGuides,countItems,createGroup,deleteItem,findItem,firstEntry,guide
 export const GuideLibrary=defineComponent({
   name:'GuideLibrary',
   props:{items:{type:Array as PropType<LibraryItem[]>,required:true},selectedId:{type:String as PropType<string|null>,default:null},collapsed:Boolean},
-  emits:{select:(_id:string|null)=>true,'open-item':()=>true,'toggle-library':()=>true,'new-guide':()=>true,'open-ai-import':()=>true},
+  emits:{select:(_id:string|null)=>true,'open-item':()=>true,'toggle-library':()=>true,'new-guide':()=>true,'open-ai-import':()=>true,'create-debug-guide':()=>true},
   setup(props,{emit,expose}){
     const expanded=ref(new Set<string>()),editingId=ref<string|null>(null),draft=ref(''),input=ref<HTMLInputElement|null>(null);
     const labels=new Map<string|null,HTMLElement>();const collapseButton=ref<HTMLButtonElement|null>(null),newGuideButton=ref<HTMLButtonElement|null>(null);

@@ -1,10 +1,18 @@
 import { computed, defineComponent, h, ref, type PropType } from 'vue';
-import { AiPromptExchange } from '../../components/ai-prompt-exchange.ts';
-import { AiCoverageAcceptance } from '../../components/ai-coverage-acceptance.ts';
+import { AiPromptExchange, type AiPromptExchangeHandle } from '../../components/ai-prompt-exchange.ts';
+import { AiScopeChoices } from '../../components/ai-scope-choices.ts';
+import { AiCategoryPicker } from '../../components/ai-category-picker.ts';
+import { categoryScopedPrompt, type AiCardScope, type AiCardCategories } from '../../core/ai-study-categories.ts';
+import { MAX_AI_IMPORT_LENGTH } from '../../core/ai-json.ts';
 import { AI_COMPLETE_COVERAGE_PROMPT, parseAiSubjectCoverage, type AiSubjectCoverage } from '../../core/ai-subject-coverage.ts';
 import { inputValue } from '../../core/dom.ts';
 import { isRecord } from '../../core/validation.ts';
 import { AI_PLAIN_TEXT_ONLY_GUIDANCE } from '../../core/ai-formatting-guidance.ts';
+import { parseAiTeachingLesson } from './ai-teaching-schema.ts';
+import { guideAiTeachingPrompt } from './ai-teaching-prompt.ts';
+import { DEFAULT_TEACHING_WEIGHTS, teachingMixProblem, allocateTeachingBlocks, TEACHING_TYPES, rebalanceTeachingWeights, type TeachingMixMode, type TeachingWeights } from './ai-teaching-mix.ts';
+import { GUIDE_AI_MAX_SPACED_TOPICS, stopsAreSpaced } from './ai-map-layout.ts';
+import type { TeachingLesson } from './teaching-blocks.ts';
 import {
   MAP_GRID, MAP_MAX_X, MAP_MAX_Y, MAP_TOPIC_HEIGHT, MAP_TOPIC_WIDTH,
   MAX_BULLETS, MAX_NAME_LENGTH, MAX_SECTIONS, MAX_TEXT_LENGTH, MAX_TOPICS, type GuideMode,
@@ -15,6 +23,7 @@ const MAP_IMPORT_FORMAT = 'dynamic-learner-guide-map';
 const LEGACY_LIST_IMPORT_FORMAT = 'dynamic-learner-study-guide';
 const LEGACY_MAP_IMPORT_FORMAT = 'dynamic-learner-study-guide-map';
 const IMPORT_VERSION = 1;
+const TEACHING_IMPORT_VERSION = 2;
 const MAX_IMPORT_BULLET_DEPTH = 7;
 const JSON_FENCE = '```';
 
@@ -26,6 +35,9 @@ export interface GuideAiPromptOptions {
   detail: PromptDetail;
   coverage: PromptCoverage;
   bulletStyle: PromptBulletStyle;
+  mixMode?: TeachingMixMode;
+  targetBlocks?: number;
+  weights?: TeachingWeights;
 }
 
 export interface SimpleGuideImportSection {
@@ -46,6 +58,7 @@ export interface SimpleMapGuideImportTopic {
   description?: string;
   position?: readonly [number, number];
   sections: SimpleGuideImportSection[];
+  lesson?: TeachingLesson;
 }
 
 export interface SimpleMapGuideImport {
@@ -151,157 +164,19 @@ Limits:
 }
 
 function mapPrompt(options: GuideAiPromptOptions): string {
-  return `${promptIntro(options, 'map')}
-
-Create a connected topic map that feels like an adventurous path the learner can explore, not a plain outline drawn as boxes. Each topic is a study stop with its own small list-style guide and an optional short introduction. Put the topics in a useful learning order so one stop naturally leads to the next.
-
-Shape the route like a small exploration tree:
-- build a clear main path through most of the material;
-- for a medium or large map, usually add one or two meaningful branch points when the content supports them instead of forcing everything into one straight chain;
-- keep side branches short, usually one or two stops and only occasionally three, so the learner can explore them and naturally backtrack to the main route;
-- a branch may go above or below the main path and should feel like a short optional trail;
-- avoid both extremes: do not make every topic a single unbranched line, and do not make a hub-and-spoke map where one broad topic connects to most other topics;
-- most topics should have one or two connections; three is appropriate at a genuine fork;
-- connect concepts according to prerequisite, chronology, process, increasing depth, or another natural learning progression.
-
-Make the visual layout creative and predominantly horizontal, like an adventure-map trail:
-- place the starting topic toward the left and let the main route generally progress toward the right;
-- let the route gently wander up and down instead of putting every stop on one row;
-- place short branches above or below the main route;
-- do not form a vertical line or a vertical tree;
-- avoid overlapping topic boxes and leave breathing room between nearby stops;
-- every topic must include a suggested "position": [x, y]. x and y are snapped map coordinates, not semantic data.
-
-The map must still be one connected tree: every topic is reachable from the starting topic, there are no loops/cycles, no duplicate connections, and a topic is never connected to itself. With N topics, use exactly N-1 connections.
-
-Return ONLY one fenced JSON code block, starting with ${JSON_FENCE}json and ending with ${JSON_FENCE}.
-
-Use this structure:
-${JSON_FENCE}json
-{
-  "format": "${MAP_IMPORT_FORMAT}",
-  "version": ${IMPORT_VERSION},
-  "title": "Short guide title",
-  "startTopic": "foundations",
-  "coverage": [{ "subject": "Specific source topic", "itemNumbers": [1] }],
-  "topics": [
-    {
-      "key": "foundations",
-      "description": "Begin with the core ideas that make the rest of the journey easier to understand.",
-      "title": "Foundations",
-      "position": [64, 384],
-      "sections": [
-        {
-          "title": "Core ideas",
-          "bullets": [
-            {
-              "text": "Key idea",
-              "children": [
-                { "text": "Supporting detail" }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "key": "core-process",
-      "description": "Now explore how those foundations connect and work together in practice.",
-      "title": "Core Process",
-      "position": [288, 288],
-      "sections": [
-        {
-          "title": "How it works",
-          "bullets": [
-            { "text": "Core process point" }
-          ]
-        }
-      ]
-    },
-    {
-      "key": "applications",
-      "description": "See why the earlier concepts matter when they are put to use.",
-      "title": "Applications",
-      "position": [608, 352],
-      "sections": [
-        {
-          "title": "Using the ideas",
-          "bullets": [
-            { "text": "Application point" }
-          ]
-        }
-      ]
-    },
-    {
-      "key": "case-study",
-      "description": "Take an optional detour to see these ideas through one concrete example.",
-      "title": "Case Study",
-      "position": [608, 544],
-      "sections": [
-        {
-          "title": "Explore a side trail",
-          "bullets": [
-            { "text": "Short branch point" }
-          ]
-        }
-      ]
-    },
-    {
-      "key": "advanced-topics",
-      "title": "Advanced Topics",
-      "position": [960, 288],
-      "sections": [
-        {
-          "title": "Going deeper",
-          "bullets": [
-            { "text": "Advanced point" }
-          ]
-        }
-      ]
-    }
-  ],
-  "connections": [
-    ["foundations", "core-process"],
-    ["core-process", "applications"],
-    ["applications", "advanced-topics"],
-    ["applications", "case-study"]
-  ]
-}
-${JSON_FENCE}
-
-Map rules:
-- "key" is a short unique local reference used only by this JSON response;
-- "startTopic" must match one topic key;
-- each connection is exactly [fromTopicKey, toTopicKey];
-- order connections to reflect the intended exploration route from the starting topic outward;
-- make the longest useful learning path pass through most of the material, while allowing one or two short side trails when useful;
-- prefer a horizontal main route with occasional small forks; avoid both a perfectly straight chain and a wide hub-and-spoke structure;
-- "position" is [x, y] on Dynamic Learner's 1440×896 map canvas;
-- position x must be a multiple of ${MAP_GRID} from 0–${MAP_MAX_X}; position y must be a multiple of ${MAP_GRID} from 0–${MAP_MAX_Y};
-- each topic occupies about ${MAP_TOPIC_WIDTH}×${MAP_TOPIC_HEIGHT}; keep topic rectangles from overlapping;
-- use position creatively to make the route visually wander while still reading primarily left-to-right;
-- every topic should represent a meaningful conceptual stop, not a single trivia fact;
-- usually include a short "description" for each topic: one or two plain-text sentences explaining why this stop belongs on the journey and what kind of ideas will be revealed;
-- descriptions should set context and curiosity, not merely repeat the title, list the forthcoming bullets, or spoil the entire content; omit the description when it would be filler;
-- each topic's sections and nested bullets use the same note structure as List mode;
-- preserve important terminology and factual accuracy;
-- do not invent unsupported information.
-
-Limits:
-- title: 1–${MAX_NAME_LENGTH} characters;
-- 1–${MAX_TOPICS} topics;
-- each topic supports up to ${MAX_SECTIONS} sections and ${MAX_BULLETS} bullets/sub-bullets;
-- topic titles, section titles, bullet text, and topic keys must be non-empty plain text no longer than ${MAX_TEXT_LENGTH} characters;
-- optional topic descriptions must be plain text no longer than ${MAX_TEXT_LENGTH} characters (normally just 1–2 short sentences);
-- at most ${MAX_IMPORT_BULLET_DEPTH + 1} bullet levels;
-- do not generate Dynamic Learner IDs, groups, or other application fields. Dynamic Learner validates suggested positions and owns the stored map data.`;
+  return guideAiTeachingPrompt(options);
 }
 
 export function guideAiPrompt(
   options: GuideAiPromptOptions = DEFAULT_PROMPT_OPTIONS,
   mode: GuideMode = 'list',
+  scope: AiCardScope | null = null,
 ): string {
-  return mode === 'map' ? mapPrompt(options) : listPrompt(options);
+  const generated = mode === 'map' ? mapPrompt(options) : listPrompt(options);
+  // Reuse Review's established category scoping. The original source stays
+  // authoritative, while the selected category strictly limits new content.
+  return scope ? categoryScopedPrompt(generated, scope,
+    mode === 'map' ? 'an interactive Guide topic map and Teaching Blocks' : 'a List-mode Guide') : generated;
 }
 
 function parseImportBullet(
@@ -398,7 +273,8 @@ function parseListImport(value: unknown): SimpleListGuideImport {
 function parseMapImport(value: unknown): SimpleMapGuideImport {
   if (!isRecord(value) ||
       Object.keys(value).some((key) => !['format', 'version', 'title', 'startTopic', 'topics', 'connections', 'coverage'].includes(key)) ||
-      (value.format !== MAP_IMPORT_FORMAT && value.format !== LEGACY_MAP_IMPORT_FORMAT) || value.version !== IMPORT_VERSION ||
+      (value.format !== MAP_IMPORT_FORMAT && value.format !== LEGACY_MAP_IMPORT_FORMAT) ||
+      (value.version !== IMPORT_VERSION && value.version !== TEACHING_IMPORT_VERSION) ||
       typeof value.title !== 'string' || !value.title.trim() || value.title.trim().length > MAX_NAME_LENGTH ||
       typeof value.startTopic !== 'string' || !value.startTopic.trim() ||
       !Array.isArray(value.topics) || !value.topics.length || value.topics.length > MAX_TOPICS ||
@@ -406,10 +282,12 @@ function parseMapImport(value: unknown): SimpleMapGuideImport {
     throw new Error('This is not a supported Map-mode Guide import.');
   }
 
+  if (value.topics.length > GUIDE_AI_MAX_SPACED_TOPICS && value.version === TEACHING_IMPORT_VERSION)
+    throw new Error('For separated map stops, generate at most ' + GUIDE_AI_MAX_SPACED_TOPICS + ' topics.');
   const keys = new Set<string>();
   const topics = value.topics.map((topic, topicIndex): SimpleMapGuideImportTopic => {
     if (!isRecord(topic) ||
-        Object.keys(topic).some((key) => !['key', 'title', 'description', 'position', 'sections'].includes(key)) ||
+        Object.keys(topic).some((key) => !['key', 'title', 'description', 'position', 'sections', 'lesson'].includes(key)) ||
         typeof topic.key !== 'string' || !topic.key.trim() || topic.key.trim().length > MAX_TEXT_LENGTH ||
         typeof topic.title !== 'string' || !topic.title.trim() || topic.title.trim().length > MAX_TEXT_LENGTH ||
         (Object.hasOwn(topic, 'description') && (typeof topic.description !== 'string' || topic.description.length > MAX_TEXT_LENGTH)) ||
@@ -424,6 +302,10 @@ function parseMapImport(value: unknown): SimpleMapGuideImport {
     const key = topic.key.trim();
     if (keys.has(key)) throw new Error(`Topic key "${key}" is duplicated.`);
     keys.add(key);
+    if (topic.lesson === undefined && topic.sections === undefined)
+      throw new Error('Topic ' + (topicIndex + 1) + ' needs Teaching Blocks or sections.');
+    if (value.version === TEACHING_IMPORT_VERSION && topic.lesson === undefined)
+      throw new Error('Topic ' + (topicIndex + 1) + ' is missing its Teaching Blocks lesson.');
     const position = Array.isArray(topic.position)
       ? [topic.position[0] as number, topic.position[1] as number] as const
       : undefined;
@@ -432,7 +314,8 @@ function parseMapImport(value: unknown): SimpleMapGuideImport {
       title: topic.title.trim(),
       ...(typeof topic.description === 'string' && topic.description.trim() ? { description: topic.description.trim() } : {}),
       position,
-      sections: parseImportSections(topic.sections, { count: 0 }, `Topic ${topicIndex + 1}`),
+      sections: topic.sections === undefined ? [] : parseImportSections(topic.sections, { count: 0 }, `Topic ${topicIndex + 1}`),
+      ...(topic.lesson === undefined ? {} : { lesson: parseAiTeachingLesson(topic.lesson) }),
     };
   });
 
@@ -440,20 +323,10 @@ function parseMapImport(value: unknown): SimpleMapGuideImport {
   if (positionedTopics.length !== 0 && positionedTopics.length !== topics.length) {
     throw new Error('Map-mode AI positions must be provided for every topic or omitted for every topic.');
   }
-  for (let firstIndex = 0; firstIndex < positionedTopics.length; firstIndex += 1) {
-    const first = positionedTopics[firstIndex];
-    if (!first?.position) continue;
-    for (let secondIndex = firstIndex + 1; secondIndex < positionedTopics.length; secondIndex += 1) {
-      const second = positionedTopics[secondIndex];
-      if (!second?.position) continue;
-      const overlaps =
-        first.position[0] < second.position[0] + MAP_TOPIC_WIDTH &&
-        first.position[0] + MAP_TOPIC_WIDTH > second.position[0] &&
-        first.position[1] < second.position[1] + MAP_TOPIC_HEIGHT &&
-        first.position[1] + MAP_TOPIC_HEIGHT > second.position[1];
-      if (overlaps) throw new Error(`Map topics "${first.title}" and "${second.title}" overlap.`);
-    }
-  }
+  // Discard cramped AI suggestions and let the import layout engine repair them.
+  const allSpaced = positionedTopics.length === topics.length &&
+    stopsAreSpaced(positionedTopics.map(topic => ({ x: topic.position![0], y: topic.position![1] })));
+  if (!allSpaced) topics.forEach(topic => { topic.position = undefined; });
 
   const startTopic = value.startTopic.trim();
   if (!keys.has(startTopic)) throw new Error('The starting topic does not match a topic key.');
@@ -525,26 +398,48 @@ export const GuideAiImportWorkspace = defineComponent({
   },
   emits: { back: () => true, cancel: () => true, import: (_value: SimpleGuideImport) => true },
   setup(props, { emit }) {
+    const stage = ref<'scope' | 'categories' | 'exchange'>(props.direct ? 'exchange' : 'scope');
+    const chosenScope = ref<AiCardScope | null>(null);
+    const categoryList = ref<AiCardCategories | null>(null);
+    const exchangeRef = ref<AiPromptExchangeHandle | null>(null);
+    function back() {
+      if (stage.value === 'exchange') {
+        if (exchangeRef.value?.goBack()) return;
+        if (props.direct) { emit('back'); return; }
+        stage.value = chosenScope.value ? 'categories' : 'scope';
+      } else if (stage.value === 'categories') stage.value = 'scope';
+      else emit('back');
+    }
     const detail = ref<PromptDetail>(DEFAULT_PROMPT_OPTIONS.detail);
     const coverage = ref<PromptCoverage>(DEFAULT_PROMPT_OPTIONS.coverage);
     const bulletStyle = ref<PromptBulletStyle>(DEFAULT_PROMPT_OPTIONS.bulletStyle);
+    const mixMode = ref<TeachingMixMode>('ai');
+    const targetBlocks = ref(30);
+    const weights = ref<TeachingWeights>({ ...DEFAULT_TEACHING_WEIGHTS });
+    const mixError = computed(() => props.mode === 'map' ? teachingMixProblem(mixMode.value, weights.value, targetBlocks.value) : '');
+    const allocations = computed(() => mixError.value || mixMode.value !== 'custom' ? null : allocateTeachingBlocks(weights.value, targetBlocks.value));
     const json = ref('');
     const problem = ref('');
-    const candidate = ref<SimpleGuideImport | null>(null);
-    const coverageAccepted = ref(false);
-    const prompt = computed(() => guideAiPrompt({ detail: detail.value, coverage: coverage.value, bulletStyle: bulletStyle.value }, props.mode));
-    function preview() {
-      coverageAccepted.value = false;
-      candidate.value = null;
+    const prompt = computed(() => mixError.value ? '' : guideAiPrompt({
+      detail: detail.value, coverage: coverage.value, bulletStyle: bulletStyle.value,
+      mixMode: mixMode.value, targetBlocks: targetBlocks.value, weights: weights.value,
+    }, props.mode, chosenScope.value));
+    function importValidated() {
       problem.value = '';
       try {
+        let imported: SimpleGuideImport;
         if (props.direct) {
-          try { candidate.value = parseGuideAiImport(json.value, 'list'); }
-          catch { candidate.value = parseGuideAiImport(json.value, 'map'); }
-        } else candidate.value = parseGuideAiImport(json.value, props.mode);
-        if (!props.direct && !candidate.value.coverage) throw new Error('Missing subject inventory. Request full JSON with coverage itemNumbers for every source topic.');
+          try { imported = parseGuideAiImport(json.value, 'list'); }
+          catch { imported = parseGuideAiImport(json.value, 'map'); }
+        } else imported = parseGuideAiImport(json.value, props.mode);
+        // Keep validating the AI's claimed coverage inventory for new generated
+        // guides, but never force a second manual comparison/approval screen.
+        if (!props.direct && !imported.coverage)
+          throw new Error('The response is missing its source coverage inventory. Request corrected JSON.');
+        emit('import', imported);
+      } catch (error) {
+        problem.value = error instanceof Error ? error.message : String(error);
       }
-      catch (error) { candidate.value = null; problem.value = error instanceof Error ? error.message : String(error); }
     }
     function optionField<T extends string>(
       id: string,
@@ -567,53 +462,38 @@ export const GuideAiImportWorkspace = defineComponent({
       ]);
     }
 
-    function importPreview(value: SimpleGuideImport) {
-      if (value.mode === 'list') {
-        return [
-          h('strong', value.title),
-          h('span', { class: 'guide-ai-status' },
-            `${value.sections.length} section${value.sections.length === 1 ? '' : 's'} · ${importBulletCount(value)} bullets and sub-bullets`),
-          h('ul', [
-            ...value.sections.slice(0, 5).map((section) =>
-              h('li', `${section.title} — ${section.bullets.length} item${section.bullets.length === 1 ? '' : 's'}`)),
-            value.sections.length > 5 ? h('li', `…and ${value.sections.length - 5} more sections`) : null,
-          ]),
-        ];
-      }
-
-      const start = value.topics.find(topic => topic.key === value.startTopic);
-      return [
-        h('strong', value.title),
-        h('span', { class: 'guide-ai-status' },
-          `${value.topics.length} topic${value.topics.length === 1 ? '' : 's'} · ${value.connections.length} path${value.connections.length === 1 ? '' : 's'} · ${mapBulletCount(value)} bullets and sub-bullets`),
-        h('span', { class: 'guide-ai-status' }, 'Starts at ' + (start?.title ?? value.startTopic)),
-        h('ul', [
-          ...value.topics.slice(0, 5).map(topic =>
-            h('li', `${topic.title} — ${topic.sections.length} section${topic.sections.length === 1 ? '' : 's'}`)),
-          value.topics.length > 5 ? h('li', `…and ${value.topics.length - 5} more topics`) : null,
-        ]),
-      ];
-    }
-
-    return () => h('section', { class: 'guide-ai-workspace', 'aria-labelledby': 'guide-ai-title' }, [
+    return () => stage.value === 'categories' ? h(AiCategoryPicker, {
+      key: 'guide-categories', label: 'Guide', destination: props.destination,
+      initialCategories: categoryList.value, onBack: () => { stage.value = 'scope'; },
+      onCancel: () => emit('cancel'),
+      onSelect: (selected: AiCardScope, list: AiCardCategories) => {
+        chosenScope.value = selected; categoryList.value = list; stage.value = 'exchange';
+      },
+    }) : h('section', { class: 'guide-ai-workspace', 'aria-labelledby': 'guide-ai-title' }, [
       h('header', { class: 'guide-ai-header' }, [
         h('div', { class: 'guide-ai-heading' }, [
           h('span', { class: 'guide-ai-kicker' }, `${props.direct ? 'Existing AI response' : props.mode === 'map' ? 'Map mode' : 'List mode'} · Saved in ${props.destination}`),
-          h('h2', { id: 'guide-ai-title' }, 'Create with AI'),
-          h('p', props.direct ? 'Paste an existing AI response to create a Guide.' : 'Prepare a Guide from your source material with AI.'),
+          h('h2', { id: 'guide-ai-title' }, stage.value === 'scope' ? 'Choose what to teach' : chosenScope.value?.category.title ?? 'Create with AI'),
+          h('p', props.direct ? 'Import an existing AI response.' : stage.value === 'scope' ? 'Choose between the overall subject and a specific category, just like Review.' : chosenScope.value?.category.description ?? 'Prepare a Guide from your source material with AI.'),
         ]),
         h('div', { class: 'guide-ai-actions' }, [
-          h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('back') }, 'Back'),
+          h('button', { type: 'button', class: 'quiet-button', onClick: back }, 'Back'),
           h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel') }, 'Cancel'),
         ]),
       ]),
-      h(AiPromptExchange, {
-        idPrefix: 'guide-ai', label: 'Guide', prompt: prompt.value, json: json.value, problem: problem.value, startInImport: props.direct, importOnly: props.direct,
-        hasPreview: candidate.value !== null,
-        promptHelp: 'These instructions will turn your source material into a Guide.',
-        importHelp: 'Paste your AI response to check and preview the Guide.',
-        onUpdateJson: (value: string) => { json.value = value; candidate.value = null; coverageAccepted.value = false; problem.value = ''; },
-        onValidate: preview,
+      stage.value === 'scope' ? h(AiScopeChoices, {
+        onOverall: () => { chosenScope.value = null; stage.value = 'exchange'; },
+        onCategory: () => { stage.value = 'categories'; },
+      }) : h(AiPromptExchange, {
+        ref: exchangeRef, idPrefix: 'guide-ai', label: 'Guide', prompt: prompt.value, json: json.value, problem: problem.value, startInImport: props.direct, importOnly: props.direct,
+        hasPreview: false, showReviewStep: false,
+        skipSource: Boolean(chosenScope.value),
+        preferFileImport: true, maxLength: MAX_AI_IMPORT_LENGTH,
+        promptHelp: 'Create a guided interactive lesson from your source, using Teaching Blocks and an exploratory map.',
+        importHelp: 'Upload your AI-generated JSON file or paste the response. Selecting Import guide validates and imports it directly.',
+        validateLabel: 'Import guide',
+        onUpdateJson: (value: string) => { json.value = value; problem.value = ''; },
+        onValidate: importValidated,
       }, {
         options: () => h('div', { class: 'guide-ai-options' }, [
               optionField('guide-ai-detail', 'Detail', detail.value, [
@@ -626,20 +506,40 @@ export const GuideAiImportWorkspace = defineComponent({
                 { value: 'balanced', label: 'Balanced' },
                 { value: 'comprehensive', label: 'Comprehensive' },
               ], (value) => { coverage.value = value; }, 'Key ideas only or more of the subject.'),
-              optionField('guide-ai-bullet-style', 'Bullet style', bulletStyle.value, [
+              props.mode === 'list' ? optionField('guide-ai-bullet-style', 'Bullet style', bulletStyle.value, [
                 { value: 'phrases', label: 'Key phrases' },
                 { value: 'thoughts', label: 'Complete thoughts' },
-              ], (value) => { bulletStyle.value = value; }, 'Short key phrases or complete sentences.'),
+              ], (value) => { bulletStyle.value = value; }, 'List mode retains the classic notes format.') : null,
+              props.mode === 'map' ? h('div', { class: 'guide-ai-teaching-settings' }, [
+                h('h3', 'Teaching Blocks mix'),
+                h('p', { class: 'study-ai-muted' },
+                  'Like Review, let AI choose the best types or specify your own weighted distribution. Teaching Blocks help explain concepts before Review assesses them.'),
+                h('div', { class: 'guide-ai-mix-modes', role: 'group', 'aria-label': 'Teaching block selection strategy' }, [
+                  ...([['ai', 'Let AI choose'], ['custom', 'Custom weighted mix']] as const).map(([value, label]) =>
+                    h('button', { type: 'button', class: 'quiet-button', key: value,
+                      'aria-pressed': mixMode.value === value, onClick: () => { mixMode.value = value; } }, label)),
+                ]),
+                h('label', { class: 'guide-ai-option' }, [
+                  h('span', 'Approximate total Teaching Blocks'),
+                  h('input', { type: 'number', min: 1, max: 80, step: 1, value: targetBlocks.value,
+                    onInput: (event: Event) => { targetBlocks.value = Number(inputValue(event)); } }),
+                  h('small', 'A target, not a requirement. No filler to hit a count.'),
+                ]),
+                mixMode.value === 'custom' ? h('div', { class: 'guide-ai-weight-list' },
+                  TEACHING_TYPES.map(kind => h('label', { class: 'guide-ai-weight-row', key: kind }, [
+                    h('span', kind.replace(/-/g, ' ')),
+                    h('input', { type: 'number', min: 0, max: 100, step: 1,
+                      'aria-label': kind + ' teaching block percentage', value: weights.value[kind],
+                      onChange: (event: Event) => {
+                        weights.value = rebalanceTeachingWeights(weights.value, kind, Number(inputValue(event)));
+                      } }),
+                    h('span', '%'),
+                    allocations.value ? h('small', '≈ ' + allocations.value[kind]) : null,
+                  ]))) : null,
+                mixError.value ? h('p', { class: 'guide-ai-mix-error', role: 'alert' }, mixError.value) : null,
+              ]) : null,
             ]),
-        preview: () => candidate.value ? h('div', { class: 'guide-ai-preview' }, [
-          ...importPreview(candidate.value),
-          candidate.value.coverage ? h(AiCoverageAcceptance, { key: json.value, coverage: candidate.value.coverage,
-            items: candidate.value.mode === 'list' ? candidate.value.sections.map(section => section.title + ': ' + section.bullets.join('; ')) : candidate.value.topics.map(topic => topic.title + ': ' + topic.sections.map(section => section.title + ': ' + section.bullets.join('; ')).join('; ')),
-            onApproval: (approved: boolean) => { coverageAccepted.value = approved; },
-          }) : h('p', { class: 'study-ai-muted' }, 'Legacy JSON has no coverage inventory; completeness is unverified.'),
-          h('button', { type: 'button', class: 'card-primary-button', disabled: Boolean(candidate.value.coverage) && !coverageAccepted.value,
-            onClick: () => { if (candidate.value && (!candidate.value.coverage || coverageAccepted.value)) emit('import', candidate.value); } }, 'Import guide'),
-        ]) : null,
+
       }),
     ]);
   },

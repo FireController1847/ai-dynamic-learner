@@ -1,0 +1,274 @@
+/* Interactive Guide lessons: independent, theme-aware teaching blocks. */
+.guide-teaching-lesson{display:grid;gap:22px;padding:22px 0 12px;min-width:0}
+.guide-lesson-block{min-width:0;padding:clamp(18px,3vw,26px);border:1px solid var(--border-color);border-radius:18px;background:var(--page-background);box-shadow:0 4px 16px rgb(0 0 0 / 3%)}
+.guide-lesson-block.is-explanation{border-left:4px solid var(--brand)}
+.guide-lesson-block.is-check,.guide-lesson-block.is-exploration{background:color-mix(in srgb,var(--brand-tint) 22%,var(--page-background))}
+.guide-lesson-block.is-connection{border-left:4px solid var(--success)}
+.guide-lesson-block-header{display:grid;gap:5px;margin-bottom:16px}
+.guide-lesson-block-kind,.guide-lesson-small-label{color:var(--brand-text);font-size:11px;font-weight:750;letter-spacing:.07em;text-transform:uppercase}
+.guide-lesson-block-header h4{margin:0;color:var(--text-color);font-size:clamp(18px,2.6vw,22px);line-height:1.3}
+.guide-lesson-block-body{display:grid;gap:14px;min-width:0}
+.guide-lesson-prose,.guide-lesson-scenario p,.guide-lesson-side p,.guide-lesson-diagram-detail p,.guide-lesson-step-detail p,.guide-lesson-feedback p{margin:0;color:var(--text-color);font-size:15px;line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere}
+.guide-lesson-block-body>p:first-child{margin-top:0}
+.guide-lesson-highlights{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding-top:12px;border-top:1px solid var(--border-color)}
+.guide-lesson-highlights>.guide-lesson-small-label{width:100%}
+.guide-lesson-highlight{display:inline-flex;padding:5px 11px;border:1px solid color-mix(in srgb,var(--brand) 22%,var(--border-color));border-radius:999px;background:var(--brand-tint);color:var(--brand-text);font-size:12px;font-weight:600}
+.guide-lesson-scenario{display:grid;gap:10px;padding:16px;border-radius:12px;background:var(--surface-subtle)}
+.guide-lesson-toggle{justify-self:start}
+.guide-lesson-walkthrough{display:grid;gap:12px;margin:0;padding:16px 16px 16px 40px;border-radius:12px;background:var(--surface-subtle)}
+.guide-lesson-walkthrough li{padding-left:4px;line-height:1.6}
+.guide-lesson-takeaway{margin:0;padding:12px 15px;border-left:3px solid var(--brand);background:var(--brand-tint);color:var(--text-color);line-height:1.65}
+.guide-lesson-comparison{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.guide-lesson-side{min-width:0;padding:18px;border-radius:12px;border:1px solid var(--border-color);background:var(--surface-subtle)}
+.guide-lesson-side h5,.guide-lesson-step-detail h5{margin:0 0 10px;font-size:17px}
+.guide-lesson-list{display:grid;gap:8px;padding-left:21px;margin:12px 0 0;color:var(--text-color);line-height:1.5}
+.guide-lesson-caption{margin:0;color:var(--text-secondary);font-size:13px;line-height:1.6}
+.guide-lesson-sequence-nav{display:flex;gap:8px;max-width:100%;padding:4px 0 8px;overflow-x:auto}
+.guide-lesson-step-tab{display:flex;flex:1 0 125px;flex-direction:column;align-items:flex-start;gap:8px;min-width:0;min-height:90px;padding:12px;text-align:left;font-size:13px;line-height:1.4;border:1px solid var(--border-color);border-radius:12px;color:var(--text-color);background:var(--surface-subtle)}
+.guide-lesson-step-tab>span{display:grid;place-items:center;width:23px;height:23px;border-radius:50%;background:var(--surface-hover);font-size:11px;font-weight:700}
+.guide-lesson-step-tab.is-selected,.guide-lesson-diagram-node.is-selected{border-color:var(--brand);background:var(--brand-tint);box-shadow:inset 0 0 0 1px var(--brand)}
+.guide-lesson-step-tab.is-selected>span{background:var(--brand);color:white}
+.guide-lesson-step-detail,.guide-lesson-diagram-detail,.guide-lesson-feedback{display:grid;gap:10px;padding:17px;border:1px solid var(--border-color);border-radius:12px;background:var(--surface-subtle)}
+.guide-lesson-step-actions,.guide-lesson-footer{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.guide-lesson-step-actions{margin-top:6px}
+.guide-lesson-diagram{display:flex;align-items:center;gap:10px;overflow-x:auto;padding:8px 2px 12px}
+.guide-lesson-diagram-node{display:grid;flex:1 0 120px;gap:10px;place-items:center;min-height:116px;padding:12px;border:1px solid var(--control-border);border-radius:14px;background:var(--surface-subtle);color:var(--text-color);text-align:center;font-weight:650;line-height:1.4}
+.guide-lesson-diagram-dot{display:grid;place-items:center;width:27px;height:27px;border-radius:50%;background:var(--brand);color:white;font-size:12px}
+.guide-lesson-diagram-arrow{flex:0 0 auto;color:var(--brand-text);font-size:23px}
+.guide-lesson-question{margin:0;font-weight:600;font-size:16px;line-height:1.6}
+.guide-lesson-choice-list{display:grid;gap:8px}
+.guide-lesson-choice{display:flex;align-items:center;gap:12px;width:100%;padding:13px;text-align:left;border:1px solid var(--control-border);border-radius:12px;background:var(--page-background);color:var(--text-color);line-height:1.5}
+.guide-lesson-choice:hover{border-color:var(--brand);background:var(--surface-hover)}
+.guide-lesson-choice.is-selected{border-color:var(--brand);background:var(--brand-tint)}
+.guide-lesson-choice-index{display:grid;flex:0 0 29px;place-items:center;width:29px;height:29px;border-radius:9px;background:var(--surface-subtle);color:var(--text-secondary);font-weight:700}
+.guide-lesson-choice.is-selected .guide-lesson-choice-index{background:var(--brand);color:white}
+.guide-lesson-feedback.is-correct{border-color:var(--success)}
+.guide-lesson-prompt{margin:0;color:var(--text-secondary);font-size:13px}
+.guide-lesson-next{display:grid;gap:5px;padding:12px 15px;border-radius:12px;background:var(--surface-subtle)}
+.guide-lesson-next p{margin:0;line-height:1.6}
+.guide-lesson-footer{padding:18px 0;border-top:1px solid var(--border-color)}
+.guide-lesson-footer .guide-study-visited-note{width:100%;margin:0}
+.guide-lesson-empty{padding:20px;border:1px dashed var(--border-color);border-radius:14px}
+.guide-lesson-empty h4{margin:0 0 8px}.guide-lesson-empty p{margin:0;color:var(--text-secondary)}
+.guide-topic-teaching-note{margin:12px 0;padding:12px;border-left:3px solid var(--brand);background:var(--brand-tint);font-size:12px;line-height:1.6}
+@media(max-width:600px){.guide-teaching-lesson{gap:14px;padding-top:16px}.guide-lesson-block{padding:16px;border-radius:14px}.guide-lesson-comparison{grid-template-columns:1fr}.guide-lesson-diagram-node{flex-basis:132px}.guide-lesson-step-tab{flex-basis:110px}}
+@media(prefers-reduced-motion:reduce){.guide-lesson-block,.guide-lesson-choice,.guide-lesson-step-tab{scroll-behavior:auto}}
+
+.guide-debug-launch{padding:8px 12px;border-bottom:1px solid var(--border-color)}
+.guide-debug-create{width:100%;min-height:36px;justify-content:center;font-size:12px}
+
+
+/* Authoring lives in the map's right-hand stop panel and remains scrollable. */
+.guide-teach-editor{display:grid;min-width:0;gap:12px;margin:16px 0 24px;padding-top:14px;border-top:1px solid var(--border-color)}
+.guide-teach-heading{display:grid;gap:6px}
+.guide-teach-heading h3{margin:0;font-size:18px}
+.guide-teach-heading p,.guide-teach-convert p,.guide-teach-hint{margin:0;color:var(--text-secondary);font-size:12px;line-height:1.55}
+.guide-teach-convert{display:grid;justify-items:start;gap:12px;padding:16px;border-radius:12px;background:var(--brand-tint)}
+.guide-teach-create{display:flex;align-items:end;gap:8px;flex-wrap:wrap}
+.guide-teach-create>.guide-teach-field{flex:1 1 150px}
+.guide-teach-create>.card-primary-button{min-height:40px}
+.guide-teach-field{display:grid;gap:6px;min-width:0;flex:1}
+.guide-teach-field>span{color:var(--text-secondary);font-size:12px;font-weight:600}
+.guide-teach-field input,.guide-teach-field select,.guide-teach-field textarea{width:100%;min-width:0;border:1px solid var(--control-border);border-radius:8px;background:var(--page-background);color:var(--text-color);padding:10px;font:inherit;font-size:14px;line-height:1.5}
+.guide-teach-field textarea{min-height:92px;resize:vertical}
+.guide-teach-outline{display:grid;gap:6px;list-style:none;margin:0;padding:0}
+.guide-teach-outline-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;align-items:center;padding:7px;border:1px solid var(--border-color);border-radius:10px;background:var(--page-background)}
+.guide-teach-outline-row.is-selected{border-color:var(--brand)}
+.guide-teach-outline-label{display:grid;gap:3px;min-width:0;color:var(--text-color);text-align:left}.guide-teach-outline-label strong{font-size:13px;overflow-wrap:anywhere}
+.guide-teach-outline-kind{font-size:10px;text-transform:capitalize;letter-spacing:.04em;color:var(--brand-text)}
+.guide-teach-outline-actions{display:flex;gap:2px}
+.guide-teach-outline-actions .icon-button{width:28px;min-width:28px;height:30px;font-size:17px}
+.guide-teach-delete-confirm{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:12px}
+.guide-teach-delete-confirm .quiet-button{min-height:32px}
+.guide-teach-tabbar{display:flex;gap:6px;padding-bottom:8px;border-bottom:1px solid var(--border-color)}
+.guide-teach-tabbar button[aria-pressed=true]{border-color:var(--brand);color:var(--brand-text);background:var(--brand-tint)}
+.guide-teach-form{display:grid;gap:14px;min-width:0;padding:14px;border:1px solid var(--border-color);border-radius:12px;background:var(--page-background)}
+.guide-teach-form-heading{display:grid;gap:3px}
+.guide-teach-form-heading strong{text-transform:capitalize}
+.guide-teach-form-heading span{font-size:11px;color:var(--text-secondary)}
+.guide-teach-collection{display:grid;min-width:0;gap:10px;padding:12px;border:1px solid var(--border-color);border-radius:10px}
+.guide-teach-collection legend{padding-inline:5px;font-size:12px;font-weight:700}
+.guide-teach-list-row,.guide-teach-list-card{display:grid;gap:8px;min-width:0}
+.guide-teach-list-card{padding:12px;border:1px solid var(--border-color);border-radius:9px;background:var(--surface-subtle)}
+.guide-teach-list-card strong{font-size:12px}
+.guide-teach-list-row>.quiet-button,.guide-teach-list-card>.quiet-button{justify-self:start}
+.guide-teach-correct{display:flex;gap:7px;align-items:center;font-size:12px}
+.guide-teach-form-actions{display:flex;flex-wrap:wrap;gap:8px}
+.guide-teach-error{margin:0;color:var(--danger);font-size:12px}
+.guide-teach-empty{margin:0;padding:12px;border:1px dashed var(--border-color);border-radius:10px;color:var(--text-secondary);font-size:12px}
+.guide-teach-preview{min-width:0}
+.guide-teach-preview .guide-teaching-lesson{gap:12px}
+.guide-teach-preview .guide-lesson-block{padding:14px}
+.guide-legacy-notes{border-top:1px solid var(--border-color);padding-top:10px}
+.guide-legacy-notes summary{cursor:pointer;font-weight:600}
+.guide-legacy-notes .guide-list-editor{margin-top:12px}
+@media(max-width:900px){.guide-teach-field input,.guide-teach-field select,.guide-teach-field textarea{font-size:16px}}
+
+
+/* Full-screen top-layer dialogs keep authoring and preview outside the narrow map sidebar. */
+.guide-teach-preview-launch{width:100%;min-height:42px;justify-content:center}
+.guide-teach-modal-content{display:grid;gap:16px;min-width:0;padding:4px 6px 8px}
+.guide-teach-modal-intro{margin:0;color:var(--text-secondary);font-size:14px;line-height:1.65}
+.guide-teach-modal-content .guide-teach-form{padding:20px;gap:20px;border-radius:14px}
+.guide-teach-modal-content .guide-teach-field input,
+.guide-teach-modal-content .guide-teach-field select,
+.guide-teach-modal-content .guide-teach-field textarea{font-size:15px}
+.guide-teach-modal-content .guide-teach-field textarea{min-height:140px}
+.guide-teach-modal-content .guide-teach-list-row{grid-template-columns:minmax(0,1fr) auto;align-items:end}
+.guide-teach-modal-content .guide-teach-collection{padding:16px;gap:16px}
+.guide-teach-modal-content .guide-teach-list-card{padding:16px;gap:12px}
+.guide-teach-modal-content .guide-teach-form-actions{position:sticky;bottom:-4px;z-index:1;padding:12px 0 0;border-top:1px solid var(--border-color);background:var(--page-background)}
+.guide-teach-modal-content.guide-teach-preview{padding-inline:clamp(6px,3vw,30px)}
+.guide-teach-modal-content.guide-teach-preview .guide-teaching-lesson{width:min(820px,100%);margin-inline:auto;gap:20px}
+.guide-teach-modal-content.guide-teach-preview .guide-lesson-block{padding:clamp(18px,3vw,28px)}
+@media(max-width:600px){
+  .guide-teach-modal-content{padding-inline:0}
+  .guide-teach-modal-content .guide-teach-form{padding:12px;gap:14px}
+  .guide-teach-modal-content .guide-teach-collection{padding:10px}
+  .guide-teach-modal-content .guide-teach-list-row{grid-template-columns:minmax(0,1fr)}
+  .guide-teach-modal-content .guide-teach-list-row>.quiet-button{justify-self:start}
+}
+
+/* The editor and preview use independent scrolling regions, not a sticky footer
+   over one long sidebar-sized form. No content can appear beneath the dialog. */
+.guide-teach-edit-dialog .popup-card{
+  display:flex;
+  flex-direction:column;
+  height:min(92dvh,980px);
+  max-height:calc(100dvh - 24px);
+  min-height:0;
+  overflow:hidden;
+  padding:0;
+}
+.guide-teach-edit-dialog .popup-header{
+  flex:0 0 auto;
+  min-width:0;
+  padding:18px 24px 14px;
+  border-bottom:1px solid var(--border-color);
+}
+.guide-teach-edit-dialog .popup-header h2{min-width:0;overflow-wrap:anywhere}
+.guide-teach-edit-workspace{display:flex;flex:1 1 auto;flex-direction:column;min-height:0;min-width:0;overflow:hidden}
+.guide-teach-edit-toolbar{display:flex;flex:0 0 auto;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:12px 24px;border-bottom:1px solid var(--border-color)}
+.guide-teach-edit-toolbar .guide-teach-modal-intro{flex:1 1 240px;font-size:12px}
+.guide-teach-view-switch{display:flex;align-items:center;gap:4px}
+.guide-teach-view-switch .quiet-button{min-width:76px}
+.guide-teach-view-switch .quiet-button.is-active{border-color:var(--brand);background:var(--brand-tint);color:var(--brand-text)}
+.guide-teach-edit-panes{display:grid;grid-template-columns:minmax(0,1fr);flex:1 1 auto;min-height:0;min-width:0;overflow:hidden}
+.guide-teach-edit-panes.is-both{grid-template-columns:repeat(2,minmax(0,1fr))}
+.guide-teach-edit-pane{min-width:0;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable;padding:20px 24px;background:var(--page-background)}
+.guide-teach-live-preview{border-left:1px solid var(--border-color);background:var(--surface-subtle)}
+.guide-teach-live-preview .guide-teaching-lesson{gap:16px;padding:8px 0 20px}
+.guide-teach-live-preview .guide-lesson-block{padding:18px}
+.guide-teach-preview-label{margin:0;font-size:12px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;color:var(--text-secondary)}
+.guide-teach-edit-fields .guide-teach-form{padding:0;border:0;border-radius:0;background:transparent}
+.guide-teach-edit-fields .guide-teach-field input[type='text'],
+.guide-teach-edit-fields .guide-teach-field select{
+  box-sizing:border-box;
+  height:42px;
+  min-height:42px;
+}
+.guide-teach-edit-fields .guide-teach-field textarea{
+  box-sizing:border-box;
+  min-height:96px;
+  resize:vertical;
+}
+.guide-teach-edit-fields .guide-teach-list-row{
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:end;
+  column-gap:10px;
+  row-gap:8px;
+}
+.guide-teach-edit-fields .guide-teach-list-row .guide-teach-field textarea{min-height:72px}
+.guide-teach-edit-fields .guide-teach-list-row>.quiet-button{
+  box-sizing:border-box;
+  align-self:end;
+  justify-self:end;
+  width:auto;
+  height:42px;
+  min-height:42px;
+  max-height:42px;
+  padding:0 12px;
+  white-space:nowrap;
+}
+.guide-teach-edit-fields .guide-teach-collection{padding:14px;gap:12px}
+.guide-teach-edit-fields .guide-teach-list-card{padding:14px;gap:10px}
+.guide-teach-edit-fields .guide-teach-list-card>.quiet-button{
+  align-self:start;
+  justify-self:start;
+  min-height:36px;
+  padding:6px 12px;
+}
+.guide-teach-dialog-footer{display:flex;flex:0 0 auto;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:14px 24px max(14px,env(safe-area-inset-bottom));border-top:1px solid var(--border-color);background:var(--page-background)}
+.guide-teach-dialog-footer .guide-teach-form-actions{position:static;margin:0;padding:0;border:0;display:flex;gap:8px;background:transparent}
+.guide-teach-dialog-footer .guide-teach-error{flex:1 1 220px}
+.guide-teach-edit-button{color:var(--text-secondary)}
+.guide-teach-edit-button:hover{color:var(--brand-text)}
+@media(max-width:780px){
+  .guide-teach-edit-dialog .popup-header{padding:14px 16px 10px}
+  .guide-teach-edit-toolbar{padding:10px 16px}
+  .guide-teach-edit-panes.is-both{grid-template-columns:minmax(0,1fr);grid-template-rows:repeat(2,minmax(0,1fr))}
+  .guide-teach-live-preview{border-left:0;border-top:1px solid var(--border-color)}
+  .guide-teach-edit-pane{padding:14px 16px}
+  .guide-teach-dialog-footer{padding:12px 16px max(12px,env(safe-area-inset-bottom))}
+  .guide-teach-edit-fields .guide-teach-list-row{grid-template-columns:minmax(0,1fr)}
+  .guide-teach-edit-fields .guide-teach-list-row>.quiet-button{justify-self:start}
+  .guide-teach-edit-dialog .popup-card{height:calc(100dvh - 20px);max-height:calc(100dvh - 20px)}
+}
+@media(max-height:520px){
+  .guide-teach-edit-dialog .popup-card{height:calc(100dvh - 16px);max-height:calc(100dvh - 16px)}
+  .guide-teach-edit-toolbar{padding-block:6px}
+  .guide-teach-dialog-footer{padding-block:8px}
+}
+
+
+/* Teaching prose reuses the shared Markdown sanitizer and KaTeX styling. */
+.guide-lesson-rich{min-width:0;font-size:inherit;line-height:1.75;overflow-wrap:anywhere}
+.guide-lesson-rich > :first-child{margin-top:0}
+.guide-lesson-rich > :last-child{margin-bottom:0}
+.guide-lesson-rich :is(pre,table,.markdown-latex-block){max-width:100%;overflow-x:auto}
+.guide-lesson-rich :is(h1,h2,h3,h4,h5,h6){font-size:1.12em}
+.guide-lesson-rich p,.guide-lesson-rich li{white-space:normal}
+.guide-lesson-question>.guide-lesson-rich>p{margin:0;font-weight:inherit}
+.guide-lesson-takeaway>.guide-lesson-rich{margin-top:4px}
+.guide-lesson-takeaway>.guide-lesson-rich>p{margin:0}
+.guide-lesson-scenario>.guide-lesson-rich>p{margin:0}
+.guide-lesson-step-detail>.guide-lesson-rich>p{margin:0}
+.guide-lesson-side>.guide-lesson-rich>p{margin:0}
+.guide-lesson-diagram-detail>.guide-lesson-rich>p{margin:0}
+.guide-lesson-feedback>.guide-lesson-rich>p{margin:0}
+.guide-lesson-caption>.guide-lesson-rich{color:var(--text-secondary);font-size:13px}
+.guide-lesson-math-inline{display:inline;white-space:nowrap;overflow-wrap:normal}
+.guide-lesson-math-display{display:inline-block;max-width:100%;vertical-align:middle;overflow-x:auto;overflow-y:hidden}
+.guide-lesson-math-inline .katex,.guide-lesson-math-display .katex{color:inherit}
+.guide-lesson-block-header h4,.guide-lesson-highlight,.guide-lesson-choice,
+.guide-lesson-diagram-node,.guide-lesson-step-tab{overflow-wrap:anywhere}
+
+
+/* Structured table teaching block: accessible table layout with horizontal scrolling. */
+.guide-lesson-table-scroll{max-width:100%;overflow-x:auto;overscroll-behavior-inline:contain;border:1px solid var(--border-color);border-radius:12px}
+.guide-lesson-table-scroll:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.guide-lesson-data-table{width:100%;min-width:max-content;border-collapse:separate;border-spacing:0;font-size:14px;line-height:1.55}
+.guide-lesson-data-table :is(th,td){min-width:120px;max-width:440px;padding:12px 15px;vertical-align:top;text-align:left;overflow-wrap:anywhere;border-right:1px solid var(--border-color);border-bottom:1px solid var(--border-color)}
+.guide-lesson-data-table tr>:last-child{border-right:0}
+.guide-lesson-data-table tbody tr:last-child>*{border-bottom:0}
+.guide-lesson-data-table thead th{background:var(--surface-subtle);font-weight:700;white-space:normal}
+.guide-lesson-data-table tbody th{font-weight:650}
+.guide-lesson-data-table tbody tr:nth-child(even){background:color-mix(in srgb,var(--surface-subtle) 65%,var(--page-background))}
+.guide-lesson-data-table .guide-lesson-rich{line-height:1.5;font-size:inherit}
+.guide-lesson-data-table .guide-lesson-rich>p{margin:0}
+.guide-teach-table-editor{min-width:0}
+.guide-teach-table-columns,.guide-teach-table-rows{display:grid;gap:10px;min-width:0}
+.guide-teach-table-column{display:flex;align-items:end;gap:8px;min-width:0}
+.guide-teach-table-column>.guide-teach-field{min-width:0}
+.guide-teach-table-column>.quiet-button{height:42px;min-height:42px;flex:0 0 auto;align-self:end;white-space:nowrap}
+.guide-teach-table-row{display:grid;gap:10px;min-width:0;margin:0;padding:12px;border:1px solid var(--border-color);border-radius:10px}
+.guide-teach-table-row legend{font-size:12px;font-weight:700;padding:0 5px}
+.guide-teach-table-cells{display:flex;gap:10px;max-width:100%;overflow-x:auto;scrollbar-gutter:stable;padding:2px 0 8px}
+.guide-teach-table-cell{flex:1 0 175px;min-width:175px}
+.guide-teach-table-cell textarea{min-height:72px}
+.guide-teach-table-row>.quiet-button{justify-self:start;align-self:start;min-height:36px}
+@media(max-width:600px){
+  .guide-teach-table-column{flex-wrap:wrap}
+  .guide-teach-table-column>.quiet-button{align-self:start}
+  .guide-lesson-data-table :is(th,td){padding:10px 12px}
+}

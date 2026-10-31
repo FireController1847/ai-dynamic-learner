@@ -190,3 +190,16 @@ body:has(.navigation-drawer[open]) { overflow: hidden; }
 @media (pointer: coarse) {
   .navigation-link, .navigation-tools-summary { min-height: 44px; }
 }
+
+
+/* The compatibility notification can be dismissed without changing storage safety. */
+.workspace-compatibility-notice{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.workspace-compatibility-copy{min-width:0;flex:1}
+.workspace-compatibility-copy p{margin:5px 0 0;line-height:1.5}
+.workspace-compatibility-clarification{font-size:12px;opacity:.86}
+.workspace-compatibility-actions{display:flex;align-items:center;flex-wrap:wrap;justify-content:flex-end;gap:6px;flex-shrink:0}
+.workspace-compatibility-actions .quiet-button,.workspace-compatibility-actions .icon-button{border-color:currentColor;background:transparent;color:inherit}
+.workspace-compatibility-actions .icon-button{min-width:32px;width:32px;height:32px;font-size:20px}
+.compatibility-status-button{color:var(--text-secondary)}
+.compatibility-status-dot{flex-shrink:0;width:8px;height:8px;border-radius:50%;background:var(--danger)}
+@media(max-width:800px){.workspace-compatibility-notice{flex-direction:column}.workspace-compatibility-actions{justify-content:flex-start;flex-wrap:wrap}}

@@ -23,6 +23,7 @@ import { defineComponent, type PropType, computed, createApp, h, KeepAlive, next
 initializeTheme();
 
 const TIPS_ENABLED = false;
+const COMPATIBILITY_NOTICE_KEY = 'dynamic-learner.ui.compatibility-dismissed.v1';
 
 const homeTipsFeature = Object.freeze({ id: 'home', label: appConfig.name });
 
@@ -73,6 +74,37 @@ const App = defineComponent({
     const backupBusy = ref(false);
     const recoveryBusy = ref(false);
     const confirmReload = ref(false);
+    const compatibilityDismissed = ref<string | null>(null);
+    const compatibilityIgnored = ref<string | null>((() => {
+      try { return localStorage.getItem(COMPATIBILITY_NOTICE_KEY); }
+      catch { return null; }
+    })());
+    const compatibilityNoticeId = computed(() => {
+      const status = workspace.compatibility.value;
+      return status && status.mode !== 'normal'
+        ? JSON.stringify([status.mode, status.databaseVersion, status.readOnly, status.issues])
+        : null;
+    });
+    const compatibilityNoticeHidden = computed(() =>
+      compatibilityNoticeId.value !== null &&
+      (compatibilityDismissed.value === compatibilityNoticeId.value ||
+       compatibilityIgnored.value === compatibilityNoticeId.value));
+    function dismissCompatibility(persist: boolean) {
+      const id = compatibilityNoticeId.value;
+      if (!id) return;
+      compatibilityDismissed.value = id;
+      if (persist) {
+        compatibilityIgnored.value = id;
+        try { localStorage.setItem(COMPATIBILITY_NOTICE_KEY, id); }
+        catch { /* Unavailable preferences must not affect workspace protections. */ }
+      }
+    }
+    function showCompatibility() {
+      compatibilityDismissed.value = null;
+      compatibilityIgnored.value = null;
+      try { localStorage.removeItem(COMPATIBILITY_NOTICE_KEY); }
+      catch { /* The notice can still be restored for this visit. */ }
+    }
     // Never reuse a previous confirmation for a later, unrelated conflict.
     watch(() => workspace.needsReconcile.value, needed => {
       if (!needed) confirmReload.value = false;
@@ -188,6 +220,14 @@ const App = defineComponent({
             : h(Icon, { name: 'document' }),
         h('h1', activeFeature.value?.label ?? (currentPath.value === '/' ? appConfig.name : 'Page not found')),
         h('div', { class: 'app-header-actions' }, [
+          compatibilityNoticeHidden.value ? h('button', {
+            type: 'button', class: 'quiet-button app-header-action compatibility-status-button',
+            title: 'Compatibility notice hidden. Storage protections still apply. Show details.',
+            'aria-label': 'Show hidden workspace compatibility notice',
+            onClick: showCompatibility,
+          }, [h('span', { class: 'compatibility-status-dot', 'aria-hidden': 'true' }),
+            h('span', { class: 'app-header-action-label' },
+              workspace.compatibility.value?.readOnly ? 'Read-only' : 'Compatibility')]) : null,
           h('button', {
             ref: statisticsButton, type: 'button', class: 'quiet-button app-header-action',
             title: 'Workspace statistics', 'aria-label': 'Open workspace statistics', 'aria-haspopup': 'dialog',
@@ -247,15 +287,28 @@ const App = defineComponent({
         catalog: tipsCatalog,
         storageKey: 'dynamic-learner.tips.v1',
       }) : null,
-      workspace.compatibility.value && workspace.compatibility.value.mode !== 'normal'
-        ? h('aside', { class: 'workspace-storage-warning', role: 'status',
+      workspace.compatibility.value && workspace.compatibility.value.mode !== 'normal' &&
+      !compatibilityNoticeHidden.value
+        ? h('aside', { class: 'workspace-storage-warning workspace-compatibility-notice', role: 'status',
           'aria-label': 'Workspace compatibility' }, [
-          h('strong', workspace.compatibility.value.readOnly
-            ? 'Workspace recovery — read-only' : 'Compatibility mode — newer data preserved'),
-          ...workspace.compatibility.value.issues.map(issue => h('p', issue)),
-          h('p', workspace.compatibility.value.readOnly
-            ? 'Use a compatible build to edit this workspace. You can download a full raw rescue from Workspace.'
-            : 'Supported apps remain editable. Unsupported records are protected. Download a raw rescue before restoring or clearing data.'),
+          h('div', { class: 'workspace-compatibility-copy' }, [
+            h('strong', workspace.compatibility.value.readOnly
+              ? 'Workspace recovery — read-only' : 'Compatibility mode — newer data preserved'),
+            ...workspace.compatibility.value.issues.map(issue => h('p', issue)),
+            h('p', workspace.compatibility.value.readOnly
+              ? 'Use a compatible build to edit this workspace. You can download a full raw rescue from Workspace.'
+              : 'Supported apps remain editable. Unsupported records are protected. Download a raw rescue before restoring or clearing data.'),
+            h('p', { class: 'workspace-compatibility-clarification' },
+              'Hiding this notice never bypasses workspace validation, read-only recovery, or backup restrictions.'),
+          ]),
+          h('div', { class: 'workspace-compatibility-actions' }, [
+            h('button', { type: 'button', class: 'quiet-button',
+              title: 'Remember this compatibility condition in this browser. A different warning will still appear.',
+              onClick: () => dismissCompatibility(true) }, 'Ignore this warning'),
+            h('button', { type: 'button', class: 'icon-button',
+              title: 'Dismiss compatibility notice', 'aria-label': 'Dismiss compatibility notice',
+              onClick: () => dismissCompatibility(false) }, '×'),
+          ]),
         ]) : null,
       workspace.storageProblem.value ? h('p', {
         class: 'workspace-storage-warning', role: 'alert',
