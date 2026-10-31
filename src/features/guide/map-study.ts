@@ -40,6 +40,8 @@ export const GuideMapStudy = defineComponent({
     const arriving = ref(false);
     const focused = ref(false);
     const travelTargetId = ref<string | null>(null);
+    // Destination-only arrival pulse; the starting prompt has its own lifecycle.
+    const arrivalHighlightId = ref<string | null>(null);
     const backdrop = ref<GuideMapBackdropHandle | null>(null);
     function celebrateArrival(id: string) {
       const stop = topicById(props.data, id);
@@ -164,6 +166,7 @@ export const GuideMapStudy = defineComponent({
       camera.value = null;
       cameraZooming.value = false;
       travelTargetId.value = null;
+      arrivalHighlightId.value = null;
     }
 
     onBeforeUnmount(clearTimers);
@@ -191,6 +194,7 @@ export const GuideMapStudy = defineComponent({
     }
 
     function showTopic() {
+      arrivalHighlightId.value = null;
       nextTick(() => {
         focused.value = true;
         nextTick(() => { topicHeading.value?.focus({ preventScroll: true }); });
@@ -232,6 +236,7 @@ export const GuideMapStudy = defineComponent({
       skipped.value = new Set();
       focused.value = false;
       arriving.value = animate && !reducedMotion.matches;
+      arrivalHighlightId.value = null;
       currentId.value = first.id;
       path.value = [first.id];
       responsesByTopic.value = {};
@@ -320,11 +325,12 @@ export const GuideMapStudy = defineComponent({
       // Multiple routes still require the learner to choose one.
     }
 
-    function travelTo(targetId: string, after: () => void, openAfter = false) {
+    function travelTo(targetId: string, after: () => void) {
       if (travelling.value) return;
       cancelContinueOpen();
       const duration = reducedMotion.matches ? 0 : 520;
       focused.value = false;
+      arrivalHighlightId.value = null;
       travelling.value = true;
       travelTargetId.value = targetId;
       focusTopic(targetId, reducedMotion.matches ? 'auto' : 'smooth');
@@ -332,36 +338,39 @@ export const GuideMapStudy = defineComponent({
         currentId.value = targetId;
         travelTargetId.value = null;
         travelling.value = false;
+        arrivalHighlightId.value = targetId;
         celebrateArrival(targetId);
         after();
-        if (openAfter) showTopic();
       }, duration);
     }
 
-    // When a learner continues along a route, let the traveler settle on the
-    // destination before opening its lesson. Manual map navigation still opens
-    // immediately on arrival; the initial map introduction remains unchanged.
+    // The traveler finishes moving before the destination begins pulsing.
+    // Continue and direct map navigation use the same cancellable delay.
+    function scheduleArrivalOpen(targetId: string) {
+      cancelContinueOpen();
+      pendingContinueOpen = window.setTimeout(() => {
+        const timer = pendingContinueOpen;
+        pendingContinueOpen = null;
+        if (timer !== null) timers.delete(timer);
+        if (!mayOpenContinuedStop({
+          started: started.value, travelling: travelling.value,
+          arriving: arriving.value, currentId: currentId.value,
+          targetId, focused: focused.value,
+        })) return;
+        opened.value = new Set([...opened.value, targetId]);
+        saveSession();
+        showTopic();
+      }, reducedMotion.matches ? REDUCED_MOTION_ARRIVAL_PAUSE_MS : CONTINUE_ARRIVAL_PAUSE_MS);
+      timers.add(pendingContinueOpen);
+    }
+
     function visitNext(targetId: string) {
       if (!currentId.value || !available.value.includes(targetId)) return;
       travelTo(targetId, () => {
         path.value = pathTo(targetId);
         prepareCurrent();
         saveSession();
-        cancelContinueOpen();
-        pendingContinueOpen = window.setTimeout(() => {
-          const timer = pendingContinueOpen;
-          pendingContinueOpen = null;
-          if (timer !== null) timers.delete(timer);
-          if (!mayOpenContinuedStop({
-            started: started.value, travelling: travelling.value,
-            arriving: arriving.value, currentId: currentId.value,
-            targetId, focused: focused.value,
-          })) return;
-          opened.value = new Set([...opened.value, targetId]);
-          saveSession();
-          showTopic();
-        }, reducedMotion.matches ? REDUCED_MOTION_ARRIVAL_PAUSE_MS : CONTINUE_ARRIVAL_PAUSE_MS);
-        timers.add(pendingContinueOpen);
+        scheduleArrivalOpen(targetId);
       });
     }
 
@@ -378,10 +387,10 @@ export const GuideMapStudy = defineComponent({
       }
       travelTo(id, () => {
         path.value = pathTo(id);
-        opened.value = new Set([...opened.value, id]);
         prepareCurrent();
         saveSession();
-      }, true);
+        scheduleArrivalOpen(id);
+      });
     }
 
     function resumeSkippedStop() {
@@ -427,13 +436,17 @@ export const GuideMapStudy = defineComponent({
           const onward = connectedTopicIds(props.data, ancestorId).filter(id => !visited.value.has(id));
           saveSession();
           if (onward.length === 1) visitNext(onward[0]);
+          else {
+            arrivalHighlightId.value = ancestorId;
+            celebrateArrival(ancestorId);
+          }
           return;
         }
         travelTargetId.value = targetId;
         focusTopic(targetId, reducedMotion.matches ? 'auto' : 'smooth');
         later(() => {
           currentId.value = targetId;
-          celebrateArrival(targetId);
+          // Intermediate backtracking stops are not the final destination.
           step(index + 1);
         }, duration);
       }
@@ -627,8 +640,10 @@ export const GuideMapStudy = defineComponent({
                     'is-opened': opened.value.has(entry.id),
                     'is-unlocked': unlocked,
                     'is-target': entry.id === travelTargetId.value,
-                    'is-arrival-highlight': startPromptVisible.value && entry.id === startTopic(props.data)?.id,
-                  'is-start-near-top': entry.y < 64,
+                    'is-arrival-highlight': arrivalHighlightId.value === entry.id ||
+                      (startPromptVisible.value && entry.id === startTopic(props.data)?.id),
+                    'is-start-prompt': startPromptVisible.value && entry.id === startTopic(props.data)?.id,
+                    'is-start-near-top': entry.y < 64,
                   }],
                   style: { left: entry.x + MAP_PADDING + 'px', top: entry.y + MAP_PADDING + 'px' },
                   'aria-label': (startPromptVisible.value && entry.id === startTopic(props.data)?.id

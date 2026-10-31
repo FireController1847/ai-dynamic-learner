@@ -130,19 +130,19 @@
   z-index: 4; border-color: var(--brand); background: var(--brand-tint); opacity: 1;
   animation: guide-start-glow 2000ms ease-in-out infinite;
 }
-.guide-study-stop.is-arrival-highlight::before {
+.guide-study-stop.is-start-prompt::before {
   content: 'START HERE'; position: absolute; bottom: calc(100% + 12px); left: 50%;
   padding: 3px 9px; border-radius: 999px; background: var(--brand); color: var(--on-accent);
   font-size: 11px; font-weight: 700; letter-spacing: .04em; white-space: nowrap;
   transform: translateX(-50%);
 }
-.guide-study-stop.is-arrival-highlight.is-start-near-top::before {
+.guide-study-stop.is-start-prompt.is-start-near-top::before {
   top: calc(100% + 12px); bottom: auto;
 }
 .guide-study-stop.is-arrival-highlight::after {
   content: ''; position: absolute; inset: -9px; border: 2px solid var(--brand);
   border-radius: 36px; pointer-events: none;
-  animation: guide-arrival-ring 2000ms ease-out infinite;
+  animation: guide-arrival-ring 1250ms ease-out infinite;
 }
 @keyframes guide-arrival-ring {
   0% { opacity: 0; transform: scale(.94); }

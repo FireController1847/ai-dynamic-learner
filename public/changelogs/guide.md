@@ -1,3 +1,16 @@
+## v2.11.1
+
+<small data-utc="2026-10-31T04:02:20.498Z">October 30, 2026</small>
+
+- **Power Lines:** Shifted the desert panorama to horizontal layers with a road in front, wooden poles across the middle, a railroad behind, and open sky above. Passing vehicles, pulses, and the brightness-independent sun/moon orbit remain.
+- **Map Navigation:** Increased the destination pause to 1.4 seconds, so arrival animation can play before the lesson opens, including manual step-to-step moves.
+- **Arrival Effects:** Highlighted the destination rather than leaving the prominent glow on the start or previous stop; stopped celebrating intermediate backtracking stops.
+
+<details>
+<summary>View 1 commit</summary>
+<ol><li>Release commit link pending.</li></ol>
+</details>
+
 ## v2.11.0
 
 <small data-utc="2026-10-31T03:57:17.424Z">October 30, 2026</small>
