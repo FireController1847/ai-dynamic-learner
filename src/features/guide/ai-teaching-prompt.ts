@@ -58,9 +58,9 @@ export function guideAiTeachingPrompt(options: GuideAiPromptOptions, isOverall =
       TEACHING_TYPES.map(type => type + ' ' + weights[type] + '%').join('; ') +
       '. Aim for ' + countGoal + ' meaningful Teaching Blocks across the whole map; the mix percentages are approximate. ' +
       (isOverall ? 'The total may adapt to the breadth of the source; avoid filler.' : 'The selected total is strict; do not pad with filler.')
-    : 'Let AI choose the most educationally appropriate teaching block types for each concept. HEAVILY PREFER parameterized worked examples whenever the source genuinely supports changing inputs, formulas, algorithms, rules or calculations; reuse one sound template rather than hardcoding many nearly identical worked examples. Aim for EXACTLY ' +
+    : 'Let AI choose the most educationally appropriate teaching block types for each concept. HEAVILY PREFER parameterized worked examples whenever the source genuinely supports changing inputs, formulas, algorithms, rules or calculations; reuse one sound template rather than hardcoding many nearly identical worked examples. Aim for ' +
       countGoal + ' meaningful Teaching Blocks across the whole map. ' +
-      (isOverall ? 'Adapt within the preferred band when the overall source requires it; explain substantial deviations.' : 'Deviate only when the source makes the exact count educationally unsound.')
+      (isOverall ? 'Adapt within the preferred band when the overall source requires it; explain substantial deviations.' : 'Deviate only when the source makes the exact count educationally unsound.');
   return [
     'Using the original source material supplied earlier in this AI conversation, create a Dynamic Learner Guide MAP. The Guide TEACHES concepts before Review tests retention.',
     'Think like an excellent instructor building an interactive textbook, not a bulleted outline. Build understanding, teach WHY, supply context, select appropriate examples, visual models, explanations, comparisons and gentle questions. Never invent unsupported facts.',
