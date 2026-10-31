@@ -1,10 +1,10 @@
 .changelog-page {
-  width: min(100%, 960px);
+  width: min(100%, 1200px);
   margin: 0 auto;
   padding: 0 0 32px;
   display: grid;
   align-content: start;
-  gap: 20px;
+  gap: 16px;
 }
 .changelog-intro { display: grid; gap: 4px; }
 .changelog-intro h2 { font-size: 20px; line-height: 26px; }
@@ -37,11 +37,43 @@
   color: var(--brand-text);
   font-weight: 600;
 }
-.changelog-panel { min-width: 0; }
-.changelog-article { min-width: 0; max-width: 800px; }
-.changelog-article .markdown-content { line-height: 1.65; }
+.changelog-panel, .changelog-article { min-width: 0; width: 100%; }
 .changelog-message { color: var(--text-secondary); }
 .changelog-message p { margin: 0 0 12px; }
+
+/* Release metadata occupies the left rail, with notes using the remaining width.
+   One subdued divider separates releases instead of stacked Markdown rules. */
+.changelog-release {
+  display: grid;
+  grid-template-columns: 188px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+  padding: 16px 0;
+}
+.changelog-release:first-child { padding-top: 4px; }
+.changelog-release + .changelog-release { border-top: 1px solid var(--border-color); }
+.changelog-release-info { display: grid; align-content: start; gap: 4px; }
+.changelog-release-version { margin: 0; font-size: 20px; line-height: 26px; font-weight: 600; }
+.changelog-release-date { color: var(--text-secondary); font-size: 12px; line-height: 18px; }
+.changelog-release-notes { min-width: 0; }
+.changelog-release-notes .markdown-content { line-height: 1.5; }
+.changelog-release-notes .markdown-content > ul { padding-left: 20px; margin: 0; }
+.changelog-release-notes .markdown-content > ul li { margin: 2px 0; }
+.changelog-release-notes .markdown-content > details {
+  margin: 8px 0 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.55;
+}
+.changelog-release-notes .markdown-content details summary {
+  width: fit-content;
+  cursor: pointer;
+  padding: 4px 0;
+}
+.changelog-release-notes .markdown-content details summary:hover { color: var(--text-color); }
+.changelog-release-notes .markdown-content details ol { margin: 8px 0; padding-left: 22px; }
+.changelog-release-notes .markdown-content details li { margin: 3px 0; overflow-wrap: anywhere; }
+.changelog-release-notes .markdown-content > hr { display: none; }
 .changelog-empty {
   display: grid;
   justify-items: center;
@@ -55,23 +87,15 @@
 .changelog-empty .ui-icon { width: 28px; height: 28px; opacity: 0.55; }
 .changelog-empty h3 { color: var(--text-color); font-size: 16px; }
 .changelog-empty p { margin: 0; }
+
+/* Keep the fallback Markdown viewer readable if a changelog has no version headings. */
+.changelog-article > .markdown-content { line-height: 1.55; }
+
+@media (max-width: 700px) {
+  .changelog-release { grid-template-columns: minmax(0, 1fr); gap: 6px; padding: 14px 0; }
+  .changelog-release-info { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 12px; }
+  .changelog-release-version { font-size: 18px; line-height: 24px; }
+}
 @media (max-width: 700px), (pointer: coarse) {
   .changelog-tab { min-height: 44px; }
 }
-
-/* Commit provenance stays quiet until deliberately expanded. */
-.changelog-article .markdown-content small { color: var(--text-secondary); font-size: 12px; }
-.changelog-article .markdown-content details {
-  margin: 16px 0 24px;
-  color: var(--text-secondary);
-  font-size: 12px;
-  line-height: 1.55;
-}
-.changelog-article .markdown-content details summary {
-  width: fit-content;
-  cursor: pointer;
-  padding: 4px 0;
-}
-.changelog-article .markdown-content details summary:hover { color: var(--text-color); }
-.changelog-article .markdown-content details ol { margin: 8px 0; padding-left: 20px; }
-.changelog-article .markdown-content details li { margin: 3px 0; overflow-wrap: anywhere; }

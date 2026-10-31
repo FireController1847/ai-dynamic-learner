@@ -1,4 +1,4 @@
-import { defineComponent, h, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, defineComponent, h, onBeforeUnmount, ref, watch } from 'vue';
 import { featureDefinitions } from '../features/feature-definitions.ts';
 import { MarkdownContent } from '../components/markdown-content.ts';
 import { Icon } from '../components/icon.ts';
@@ -10,6 +10,30 @@ const tabs = [
   ...featureDefinitions.filter(feature => !feature.hidden).map(feature => ({ id: feature.id, label: feature.label })),
 ];
 
+interface VersionedRelease {
+  version: string;
+  date: string | null;
+  notes: string;
+}
+
+// A version heading defines one compact release row; ordinary Markdown remains
+// supported for changelogs that do not use the versioned release format.
+function parseVersionedReleases(markdown: string): VersionedRelease[] | null {
+  const source = markdown.trim();
+  const headings = [...source.matchAll(/^##[ \t]+(v?\d+\.\d+\.\d+(?:-[\w.-]+)?)[ \t]*$/gm)];
+  if (!headings.length || headings[0].index !== 0) return null;
+
+  return headings.map((heading, index) => {
+    const end = headings[index + 1]?.index ?? source.length;
+    let notes = source.slice(heading.index! + heading[0].length, end)
+      .replace(/\n[ \t]*---[ \t]*\s*$/, '').trim();
+    const dateLine = /^<small>([^\n]*?)<\/small>\s*(?:\n|$)/.exec(notes);
+    const date = dateLine?.[1]?.trim() ?? null;
+    if (dateLine) notes = notes.slice(dateLine[0].length).trim();
+    return { version: heading[1], date, notes };
+  });
+}
+
 export const ChangelogPage = defineComponent({
   name: 'ChangelogPage',
   setup() {
@@ -18,6 +42,7 @@ export const ChangelogPage = defineComponent({
     const loading = ref(false);
     const failed = ref(false);
     const cache = new Map<string, string | null>();
+    const releases = computed(() => text.value ? parseVersionedReleases(text.value) : null);
     let request: AbortController | null = null;
 
     async function load() {
@@ -106,9 +131,21 @@ export const ChangelogPage = defineComponent({
             h('p', 'Unable to load updates right now.'),
             h('button', { type: 'button', class: 'quiet-button', onClick: () => { void load(); } }, 'Try again'),
           ])
-          : text.value ? h('article', { class: 'changelog-article' }, [
-            h(MarkdownContent, { text: text.value }),
-          ])
+          : text.value ? h('article', { class: 'changelog-article' },
+            releases.value
+              ? releases.value.map(release => h('section', {
+                key: release.version, class: 'changelog-release',
+                'aria-label': 'Version ' + release.version,
+              }, [
+                h('div', { class: 'changelog-release-info' }, [
+                  h('h3', { class: 'changelog-release-version' }, release.version),
+                  release.date ? h('span', { class: 'changelog-release-date' }, release.date) : null,
+                ]),
+                h('div', { class: 'changelog-release-notes' }, [
+                  h(MarkdownContent, { text: release.notes }),
+                ]),
+              ]))
+              : [h(MarkdownContent, { text: text.value })])
           : h('div', { class: 'changelog-empty' }, [
             h(Icon, { name: 'history-settings' }),
             h('h3', 'No updates yet'),
