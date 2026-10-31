@@ -11,8 +11,26 @@ const hash = (seed: number): number => {
  * Sparse, slowly moving accents layered over the static Canvas patterns.
  * No randomness, simulation state, networking or time-dependent storage.
  */
+interface WaterDisturbance { x: number; y: number; start: number }
+interface WaterCrest { x: number; y: number; half: number; rise: number; phase: number; speed: number; opacity: number }
+const waterCrests: WaterCrest[] = [];
+for (let row = 0; row < H / 74 + 1; row++) for (let col = 0; col < W / 91 + 1; col++) {
+  const seed = row * 109 + col * 23;
+  waterCrests.push({
+    x: 18 + col * 91 + (row % 2) * 35 + (hash(seed + 1) - 0.5) * 19,
+    y: 17 + row * 74 + (hash(seed + 2) - 0.5) * 16,
+    half: 10 + hash(seed + 3) * 7,
+    rise: 4 + hash(seed + 4) * 4,
+    phase: hash(seed + 5) * TAU,
+    speed: 0.56 + hash(seed + 6) * 0.33,
+    opacity: 0.046 + hash(seed + 7) * 0.039,
+  });
+}
+
+/** These accents are deliberately less expensive than the cached backdrop. */
 export function drawGuideAmbient(ctx: CanvasRenderingContext2D,
-  pattern: GuideMapPattern, seconds: number): void {
+  pattern: GuideMapPattern, seconds: number,
+  glowSprite?: HTMLCanvasElement | null, disturbances: readonly WaterDisturbance[] = []): void {
   if (pattern === 'plain') return;
   ctx.save();
   ctx.fillStyle = ctx.strokeStyle;
@@ -53,14 +71,10 @@ export function drawGuideAmbient(ctx: CanvasRenderingContext2D,
       const glow = Math.max(0, Math.sin(seconds * (0.9 + hash(i + 91) * 0.65) + phase));
       const brightness = glow * glow * (0.5 + 0.5 * hash(i + 69));
       if (brightness < 0.055) continue;
-      ctx.globalAlpha = brightness * 0.14;
-      const halo = ctx.createRadialGradient(x, y, 0, x, y, 13);
-      halo.addColorStop(0, ctx.strokeStyle.toString());
-      halo.addColorStop(1, 'transparent');
-      ctx.fillStyle = halo;
-      ctx.beginPath();
-      ctx.arc(x, y, 13, 0, TAU);
-      ctx.fill();
+      if (glowSprite) {
+        ctx.globalAlpha = brightness * 0.14;
+        ctx.drawImage(glowSprite, x - 13, y - 13, 26, 26);
+      }
       ctx.globalAlpha = brightness * 0.33;
       ctx.fillStyle = ctx.strokeStyle;
       ctx.beginPath();
@@ -68,16 +82,29 @@ export function drawGuideAmbient(ctx: CanvasRenderingContext2D,
       ctx.fill();
     }
   } else if (pattern === 'water') {
-    // A handful of crest highlights move a few pixels, not an entire wave sheet.
-    for (let i = 0; i < 18; i++) {
-      const x = 22 + hash(i * 7 + 1) * (W - 44);
-      const y = 20 + hash(i * 7 + 2) * (H - 40);
-      const phase = seconds * 0.4 + hash(i * 7 + 3) * TAU;
-      ctx.globalAlpha = 0.035 * (0.5 + 0.5 * Math.sin(phase));
-      ctx.lineWidth = 0.9;
+    // Rolling crests travel in staggered, softly overlapping bands over the
+    // cached water motif. Each crest has its own phase, height and speed.
+    ctx.lineWidth = 1.15;
+    for (const crest of waterCrests) {
+      const phase = seconds * crest.speed - crest.x * 0.014 + crest.phase;
+      const swell = Math.sin(phase);
+      const x = crest.x + Math.cos(phase * 0.7) * 3.5;
+      let y = crest.y + swell * 4.4;
+      let rise = crest.rise * (0.84 + 0.25 * Math.sin(phase + 0.7));
+      for (const disturbance of disturbances) {
+        const age = (seconds * 1000 - disturbance.start) / 1750;
+        if (age < 0 || age >= 1) continue;
+        const distance = Math.hypot(x - disturbance.x, y - disturbance.y);
+        const offset = (distance - age * 265) / 35;
+        y += 6 * Math.cos(offset * 2.2) * Math.exp(-offset * offset) * (1 - age);
+        rise += 1.5 * Math.exp(-offset * offset) * (1 - age);
+      }
+      ctx.globalAlpha = crest.opacity * (0.72 + 0.28 * (swell + 1) * 0.5);
       ctx.beginPath();
-      ctx.moveTo(x - 10, y + Math.sin(phase) * 2);
-      ctx.quadraticCurveTo(x, y - 4, x + 10, y);
+      ctx.moveTo(x - crest.half, y + 1.8);
+      ctx.quadraticCurveTo(x - crest.half * 0.50, y - rise, x, y + 1.8);
+      ctx.quadraticCurveTo(x + crest.half * 0.53, y - rise * 0.9,
+        x + crest.half, y + 1.8);
       ctx.stroke();
     }
   } else if (pattern === 'flow') {

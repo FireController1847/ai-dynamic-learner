@@ -280,6 +280,46 @@ export const GuideMapBackdrop = defineComponent({
     const effects: Disturbance[] = [];
     let frame = 0, mounted = false, active = true, visible = true;
     let tick: number | null = null;
+    // The scenery and firefly glow are immutable until the theme, DPR or
+    // selected pattern changes. Keep them off the ambient animation hot path.
+    let staticLayer: HTMLCanvasElement | null = null;
+    let glowSprite: HTMLCanvasElement | null = null;
+    let ink = '';
+    let cachedWidth = 0, cachedHeight = 0, needsRepaint = true;
+    function invalidateStatic() {
+      needsRepaint = true;
+      invalidate();
+    }
+    function ensureStatic(element: HTMLCanvasElement, dpr: number) {
+      const width = Math.round(W * dpr), height = Math.round(H * dpr);
+      if (!needsRepaint && staticLayer && width === cachedWidth && height === cachedHeight) return;
+      needsRepaint = false;
+      cachedWidth = width; cachedHeight = height;
+      ink = getComputedStyle(element).color;
+      const layer = document.createElement('canvas');
+      layer.width = width; layer.height = height;
+      const layerCtx = layer.getContext('2d');
+      if (layerCtx) {
+        layerCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        layerCtx.strokeStyle = ink;
+        drawTexture(layerCtx, props.pattern, [], 0);
+        staticLayer = layer;
+      } else staticLayer = null;
+      // A single reusable firefly halo replaces dozens of radial gradients
+      // created on every frame. The glow follows the current theme ink.
+      const sprite = document.createElement('canvas');
+      sprite.width = sprite.height = 40;
+      const spriteCtx = sprite.getContext('2d');
+      if (spriteCtx) {
+        const gradient = spriteCtx.createRadialGradient(20, 20, 0, 20, 20, 20);
+        gradient.addColorStop(0, ink);
+        gradient.addColorStop(0.18, ink);
+        gradient.addColorStop(1, 'transparent');
+        spriteCtx.fillStyle = gradient;
+        spriteCtx.fillRect(0, 0, 40, 40);
+        glowSprite = sprite;
+      } else glowSprite = null;
+    }
     let observer: MutationObserver | null = null;
     let visibilityObserver: IntersectionObserver | null = null;
     function canAnimate() {
@@ -303,19 +343,23 @@ export const GuideMapBackdrop = defineComponent({
       const element = canvas.value;
       const ctx = element?.getContext('2d');
       if (!element || !ctx) return;
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      // Decorative low-contrast lines do not benefit from full 2–3x retina
+      // buffers. Limit the pixel work while retaining crisp, small details.
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
       const pixelW = Math.round(W * dpr), pixelH = Math.round(H * dpr);
       if (element.width !== pixelW || element.height !== pixelH) {
         element.width = pixelW; element.height = pixelH;
       }
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, W, H);
-      ctx.strokeStyle = getComputedStyle(element).color;
+      ensureStatic(element, dpr);
+      ctx.strokeStyle = ink;
       for (let i = effects.length - 1; i >= 0; i--) {
         if (now - effects[i].start >= lifetime(props.pattern)) effects.splice(i, 1);
       }
-      drawTexture(ctx, props.pattern, effects, now);
-      if (canAnimate()) drawGuideAmbient(ctx, props.pattern, now / 1000);
+      if (staticLayer) ctx.drawImage(staticLayer, 0, 0, W, H);
+      else drawTexture(ctx, props.pattern, [], 0);
+      if (canAnimate()) drawGuideAmbient(ctx, props.pattern, now / 1000, glowSprite, effects);
       drawEffects(ctx, props.pattern, effects, now);
       ctx.globalAlpha = 1;
     }
@@ -341,7 +385,7 @@ export const GuideMapBackdrop = defineComponent({
     function onMotionChange() { if (motion.matches) effects.splice(0); invalidate(); }
     onMounted(() => {
       mounted = true;
-      observer = new MutationObserver(invalidate);
+      observer = new MutationObserver(invalidateStatic);
       observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
       visibilityObserver = new IntersectionObserver(entries => {
         visible = entries.some(entry => entry.isIntersecting);
@@ -350,12 +394,12 @@ export const GuideMapBackdrop = defineComponent({
       if (canvas.value) visibilityObserver.observe(canvas.value);
       motion.addEventListener('change', onMotionChange);
       document.addEventListener('visibilitychange', invalidate);
-      window.addEventListener('resize', invalidate);
+      window.addEventListener('resize', invalidateStatic);
       invalidate();
     });
     onActivated(() => { active = true; invalidate(); });
     onDeactivated(() => { active = false; stopAnimation(); effects.splice(0); });
-    watch(() => props.pattern, () => { effects.splice(0); invalidate(); });
+    watch(() => props.pattern, () => { effects.splice(0); invalidateStatic(); });
     watch(() => props.paused, paused => {
       if (paused) { stopAnimation(); effects.splice(0); }
       else invalidate();
@@ -367,7 +411,9 @@ export const GuideMapBackdrop = defineComponent({
       visibilityObserver?.disconnect();
       motion.removeEventListener('change', onMotionChange);
       document.removeEventListener('visibilitychange', invalidate);
-      window.removeEventListener('resize', invalidate);
+      window.removeEventListener('resize', invalidateStatic);
+      staticLayer = null;
+      glowSprite = null;
       effects.splice(0);
     });
     return () => h('canvas', { ref: canvas, class: 'guide-map-backdrop',

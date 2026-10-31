@@ -155,3 +155,11 @@ A new **Fireflies** scene joins Water, Contours, Constellations and Flow. Existi
 **Teaching UX:** Guided practice now has one clear block label with concise context headings, no repeated reassurance copy, and simpler Hint / Reveal explanation controls. Structured and Markdown tables fit their available width with wrapped text instead of a forced horizontal scrollbar; sequence and Explore tabs wrap across rows.
 
 Manual verification: choose Fireflies in Map Editor, reload it, click the map and observe a subtle scatter, then enter and exit a study lesson to confirm background activity pauses/resumes. Inspect star twinkles and other ambient scenes, theme changes, reduced-motion, background tabs, table wrapping at narrow widths, and the guided-practice label/hint/reveal flow. No tests or browser automation were run.
+
+## Guide v2.7.1: cached scenery and richer animated water
+
+**Performance:** The expensive base texture is now rasterized once to an offscreen Canvas and copied into each subsequent frame. Its cache is regenerated only when the chosen pattern, theme color or display pixel density changes. A reusable 40px firefly-halo sprite avoids allocating a new radial gradient for every moving firefly on every frame; the Fireflies look and pulse remain intact. Decorative Canvas buffers cap device pixel ratio at 1.5 to bound memory and pixel-fill cost on Retina/high-DPI screens. Ambient animation remains throttled and paused on lessons, hidden tabs, offscreen canvases and reduced-motion preferences.
+
+**Water:** A deterministic array of staggered wave crests now rises, rolls and fades gently at varying phases, lengths and speeds over the static repeating water background. Interaction ripples still spread from clicks and arrivals, and temporarily move nearby animated crests as their wavefront passes. Other worlds retain their existing distinct click effects and ambient animations. Backgrounds continue to use neutral theme ink.
+
+Manual checks: compare guide map animation smoothness, Fireflies glow and Constellations twinkle at normal/Retina zoom; open and close a stop to observe pause/resume, switch light/dark themes and patterns, click Water and inspect the displaced rolling crests. Check reduced motion and viewport visibility. No automated tests or browser automation were added or run.
