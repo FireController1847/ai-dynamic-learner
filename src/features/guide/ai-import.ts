@@ -4,7 +4,6 @@ import { AiScopeChoices } from '../../components/ai-scope-choices.ts';
 import { AiCategoryPicker } from '../../components/ai-category-picker.ts';
 import { categoryScopedPrompt, type AiCardScope, type AiCardCategories } from '../../core/ai-study-categories.ts';
 import { MAX_AI_IMPORT_LENGTH } from '../../core/ai-json.ts';
-import { AiCoverageAcceptance } from '../../components/ai-coverage-acceptance.ts';
 import { AI_COMPLETE_COVERAGE_PROMPT, parseAiSubjectCoverage, type AiSubjectCoverage } from '../../core/ai-subject-coverage.ts';
 import { inputValue } from '../../core/dom.ts';
 import { isRecord } from '../../core/validation.ts';
@@ -421,25 +420,26 @@ export const GuideAiImportWorkspace = defineComponent({
     const allocations = computed(() => mixError.value || mixMode.value !== 'custom' ? null : allocateTeachingBlocks(weights.value, targetBlocks.value));
     const json = ref('');
     const problem = ref('');
-    const candidate = ref<SimpleGuideImport | null>(null);
-    const coverageAccepted = ref(false);
     const prompt = computed(() => mixError.value ? '' : guideAiPrompt({
       detail: detail.value, coverage: coverage.value, bulletStyle: bulletStyle.value,
       mixMode: mixMode.value, targetBlocks: targetBlocks.value, weights: weights.value,
     }, props.mode, chosenScope.value));
-    function preview() {
-      if (mixError.value && !props.direct) { problem.value = mixError.value; return; }
-      coverageAccepted.value = false;
-      candidate.value = null;
+    function importValidated() {
       problem.value = '';
       try {
+        let imported: SimpleGuideImport;
         if (props.direct) {
-          try { candidate.value = parseGuideAiImport(json.value, 'list'); }
-          catch { candidate.value = parseGuideAiImport(json.value, 'map'); }
-        } else candidate.value = parseGuideAiImport(json.value, props.mode);
-        if (!props.direct && !candidate.value.coverage) throw new Error('Missing subject inventory. Request full JSON with coverage itemNumbers for every source topic.');
+          try { imported = parseGuideAiImport(json.value, 'list'); }
+          catch { imported = parseGuideAiImport(json.value, 'map'); }
+        } else imported = parseGuideAiImport(json.value, props.mode);
+        // Keep validating the AI's claimed coverage inventory for new generated
+        // guides, but never force a second manual comparison/approval screen.
+        if (!props.direct && !imported.coverage)
+          throw new Error('The response is missing its source coverage inventory. Request corrected JSON.');
+        emit('import', imported);
+      } catch (error) {
+        problem.value = error instanceof Error ? error.message : String(error);
       }
-      catch (error) { candidate.value = null; problem.value = error instanceof Error ? error.message : String(error); }
     }
     function optionField<T extends string>(
       id: string,
@@ -460,37 +460,6 @@ export const GuideAiImportWorkspace = defineComponent({
         }, options.map((option) => h('option', { value: option.value }, option.label))),
         h('small', { class: 'study-ai-muted' }, explanation),
       ]);
-    }
-
-    function importPreview(value: SimpleGuideImport) {
-      if (value.mode === 'list') {
-        return [
-          h('strong', value.title),
-          h('span', { class: 'guide-ai-status' },
-            `${value.sections.length} section${value.sections.length === 1 ? '' : 's'} · ${importBulletCount(value)} bullets and sub-bullets`),
-          h('ul', [
-            ...value.sections.slice(0, 5).map((section) =>
-              h('li', `${section.title} — ${section.bullets.length} item${section.bullets.length === 1 ? '' : 's'}`)),
-            value.sections.length > 5 ? h('li', `…and ${value.sections.length - 5} more sections`) : null,
-          ]),
-        ];
-      }
-
-      const start = value.topics.find(topic => topic.key === value.startTopic);
-      const teachingCount = value.topics.reduce((total, topic) => total + (topic.lesson?.blocks.length ?? 0), 0);
-      return [
-        h('strong', value.title),
-        h('span', { class: 'guide-ai-status' },
-          `${value.topics.length} topics · ${value.connections.length} paths · ${teachingCount} Teaching Blocks` +
-            (mapBulletCount(value) ? ` · ${mapBulletCount(value)} legacy notes` : '')),
-        h('span', { class: 'guide-ai-status' }, 'Starts at ' + (start?.title ?? value.startTopic)),
-        h('ul', [
-          ...value.topics.slice(0, 5).map(topic =>
-            h('li', `${topic.title} — ${topic.lesson?.blocks.length ?? 0} Teaching Blocks` +
-              (topic.sections.length ? ` · ${topic.sections.length} legacy sections` : ''))),
-          value.topics.length > 5 ? h('li', `…and ${value.topics.length - 5} more topics`) : null,
-        ]),
-      ];
     }
 
     return () => stage.value === 'categories' ? h(AiCategoryPicker, {
@@ -517,13 +486,14 @@ export const GuideAiImportWorkspace = defineComponent({
         onCategory: () => { stage.value = 'categories'; },
       }) : h(AiPromptExchange, {
         ref: exchangeRef, idPrefix: 'guide-ai', label: 'Guide', prompt: prompt.value, json: json.value, problem: problem.value, startInImport: props.direct, importOnly: props.direct,
-        hasPreview: candidate.value !== null, showReviewStep: !props.direct,
+        hasPreview: false, showReviewStep: false,
         skipSource: Boolean(chosenScope.value),
         preferFileImport: true, maxLength: MAX_AI_IMPORT_LENGTH,
         promptHelp: 'Create a guided interactive lesson from your source, using Teaching Blocks and an exploratory map.',
-        importHelp: 'Upload the AI-generated JSON file or paste the response. We validate lessons, coverage and map layout before importing.',
-        onUpdateJson: (value: string) => { json.value = value; candidate.value = null; coverageAccepted.value = false; problem.value = ''; },
-        onValidate: preview,
+        importHelp: 'Upload your AI-generated JSON file or paste the response. Selecting Import guide validates and imports it directly.',
+        validateLabel: 'Import guide',
+        onUpdateJson: (value: string) => { json.value = value; problem.value = ''; },
+        onValidate: importValidated,
       }, {
         options: () => h('div', { class: 'guide-ai-options' }, [
               optionField('guide-ai-detail', 'Detail', detail.value, [
@@ -569,19 +539,7 @@ export const GuideAiImportWorkspace = defineComponent({
                 mixError.value ? h('p', { class: 'guide-ai-mix-error', role: 'alert' }, mixError.value) : null,
               ]) : null,
             ]),
-        preview: () => candidate.value ? h('div', { class: 'guide-ai-preview' }, [
-          ...importPreview(candidate.value),
-          candidate.value.coverage ? h(AiCoverageAcceptance, { key: json.value, coverage: candidate.value.coverage,
-            items: candidate.value.mode === 'list' ? candidate.value.sections.map(section => section.title + ': ' + section.bullets.join('; ')) : candidate.value.topics.map(topic =>
-              topic.title + ': ' + (topic.lesson?.blocks.map(block => block.title + ' — ' +
-                (block.kind === 'explanation' ? block.body : block.kind === 'example' ? block.scenario :
-                  block.kind === 'check' ? block.question : block.kind === 'exploration' ? block.prompt : ''))
-                .join('; ') ?? topic.sections.map(section => section.title + ': ' + section.bullets.join('; ')).join('; '))),
-            onApproval: (approved: boolean) => { coverageAccepted.value = approved; },
-          }) : h('p', { class: 'study-ai-muted' }, 'Legacy JSON has no coverage inventory; completeness is unverified.'),
-          h('button', { type: 'button', class: 'card-primary-button', disabled: Boolean(candidate.value.coverage) && !coverageAccepted.value,
-            onClick: () => { if (candidate.value && (!candidate.value.coverage || coverageAccepted.value)) emit('import', candidate.value); } }, 'Import guide'),
-        ]) : null,
+
       }),
     ]);
   },
