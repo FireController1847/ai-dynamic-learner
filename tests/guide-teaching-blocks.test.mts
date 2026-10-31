@@ -242,6 +242,58 @@ test('Review-style teaching mix stays at 100% and allocates meaningful targets',
   assert.equal(TEACHING_TYPES.reduce((sum, type) => sum + counts[type], 0), 30);
 });
 
+
+test('dense AI maps follow an organic serpentine trail without crowding stops', () => {
+  for (const count of [1, 2, 8, 12, 18, 34, 42]) {
+    const ids = Array.from({ length: count }, (_, index) => 'stop-' + index);
+    const edges = ids.slice(1).map((id, index) => ({ from: ids[index], to: id }));
+    const placed = layoutSpacedAiMap(ids, edges, ids[0]);
+    const positions = ids.map(id => placed.get(id)!);
+    assert.equal(positions.length, count);
+    assert.ok(stopsAreSpaced(positions), count + ' stops must have 64px clearance');
+    for (const { x, y } of positions) {
+      assert.equal(x % 32, 0);
+      assert.equal(y % 32, 0);
+      assert.ok(x >= 0 && x <= 1280 && y >= 0 && y <= 832);
+    }
+    if (count === 34) {
+      // The old row-major layout teleported between opposite ends every row.
+      const longest = Math.max(...positions.slice(1).map((point, index) =>
+        Math.hypot(point.x - positions[index].x, point.y - positions[index].y)));
+      assert.ok(longest < 390, 'main trail should not make a full-canvas jump');
+      assert.ok(new Set(positions.slice(0, 6).map(point => point.y)).size >= 3,
+        'the first six stops should wander vertically, not align in a straight row');
+    }
+  }
+});
+
+test('a spaced but rigid 34-stop AI grid is recomposed as a winding route', () => {
+  const ids = Array.from({ length: 34 }, (_, index) => 'n' + index);
+  const edges = ids.slice(1).map((id, index) => ({ from: ids[index], to: id }));
+  const grid = ids.map((_, index) => ({
+    x: (index % 6) * 224, y: Math.floor(index / 6) * 128,
+  }));
+  assert.ok(stopsAreSpaced(grid));
+  const placed = layoutSpacedAiMap(ids, edges, ids[0], grid);
+  const actual = ids.map(id => placed.get(id)!);
+  assert.ok(stopsAreSpaced(actual));
+  assert.notDeepEqual(actual, grid);
+  assert.ok(actual.some((position, index) => position.y !== grid[index].y));
+});
+
+test('organic placement keeps connected branch descendants adjacent', () => {
+  const ids = ['start', 'branch-a', 'branch-a-next', 'branch-b', 'branch-b-next'];
+  const edges = [
+    { from: 'start', to: 'branch-a' },
+    { from: 'branch-a', to: 'branch-a-next' },
+    { from: 'start', to: 'branch-b' },
+    { from: 'branch-b', to: 'branch-b-next' },
+  ];
+  const placed = layoutSpacedAiMap(ids, edges, 'start');
+  assert.ok(stopsAreSpaced([...placed.values()]));
+  assert.ok(placed.has('branch-b-next'));
+});
+
 test('AI Guide prompt teaches with v2 blocks and creative, spacious coordinates', () => {
   const prompt = guideAiPrompt({
     detail: 'balanced', coverage: 'comprehensive', bulletStyle: 'thoughts',
