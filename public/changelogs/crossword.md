@@ -6,7 +6,7 @@
 - **AI Import:** Improved file uploads, copy confirmations, and return navigation.
 
 <details>
-<summary>View 3 commits</summary>
+<summary>View 4 commits</summary>
 <ol>
 <li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/273390291a8790b8a3f0abcb6ea472b008321fa9">27339029</a> — Expose AI exchange step-back navigation to parent workflow</li>
 <li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/f7bfd3d45efa008e418b0e23a0e5532042194b3f">f7bfd3d4</a> — Add opt-in JSON file selection to shared AI response step</li>
@@ -176,7 +176,7 @@
 - **AI Instructions:** Clarified plain-text requirements for generated crossword content.
 
 <details>
-<summary>View 4 commits</summary>
+<summary>View 3 commits</summary>
 <ol>
 <li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/8b24e775c074ca9484bfffea0256273c02060927">8b24e775</a> — Revert non-Guide AI features (#25)</li>
 <li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/d5ff44c01fd08b3c051c39dd57157630b12d5f7d">d5ff44c0</a> — Restore category-based AI workflows across learning apps</li>
