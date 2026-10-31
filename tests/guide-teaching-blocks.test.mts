@@ -477,7 +477,7 @@ test('Guide prompts strongly prefer source-supported parameterized worked exampl
   assert.match(normal, /HEAVILY PREFER parameterized worked examples/);
   assert.match(normal, /FAVOR reusable parameterized Teaching Blocks/);
   assert.match(normal, /computed answers that depend on generated variables/);
-  assert.match(normal, /Never randomize genuinely fixed quantities/);
+  assert.match(normal, /Do not randomize genuinely fixed quantities/);
   assert.match(numeric, /NUMERICS FOCUS — HIGHEST PRIORITY/);
   assert.match(numeric, /EVERY source-supported numerical worked example/);
   assert.match(numeric, /PARAMETERIZED worked Teaching Blocks/);
