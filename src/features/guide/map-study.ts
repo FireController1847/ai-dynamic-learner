@@ -43,6 +43,13 @@ export const GuideMapStudy = defineComponent({
     const cameraZooming = ref(false);
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const timers = new Set<number>();
+    let pendingContinueOpen: number | null = null;
+    function cancelContinueOpen() {
+      if (pendingContinueOpen === null) return;
+      window.clearTimeout(pendingContinueOpen);
+      timers.delete(pendingContinueOpen);
+      pendingContinueOpen = null;
+    }
 
     const current = computed(() => topicById(props.data, currentId.value));
     const studyProblem = computed(() => mapStudyProblem(props.data));
@@ -135,6 +142,7 @@ export const GuideMapStudy = defineComponent({
     }
 
     function clearTimers() {
+      cancelContinueOpen();
       for (const timer of timers) window.clearTimeout(timer);
       timers.clear();
       travelling.value = false;
@@ -176,6 +184,7 @@ export const GuideMapStudy = defineComponent({
     }
 
     function closeTopic() {
+      cancelContinueOpen();
       focused.value = false;
       nextTick(() => { viewMapButton.value?.focus({ preventScroll: true }); });
     }
@@ -297,6 +306,7 @@ export const GuideMapStudy = defineComponent({
 
     function travelTo(targetId: string, after: () => void, openAfter = false) {
       if (travelling.value) return;
+      cancelContinueOpen();
       const duration = reducedMotion.matches ? 0 : 520;
       focused.value = false;
       travelling.value = true;
@@ -311,17 +321,34 @@ export const GuideMapStudy = defineComponent({
       }, duration);
     }
 
+    // When a learner continues along a route, let the traveler settle on the
+    // destination before opening its lesson. Manual map navigation still opens
+    // immediately on arrival; the initial map introduction remains unchanged.
+    const CONTINUE_ARRIVAL_PAUSE_MS = 340;
     function visitNext(targetId: string) {
       if (!currentId.value || !available.value.includes(targetId)) return;
       travelTo(targetId, () => {
         path.value = pathTo(targetId);
         prepareCurrent();
         saveSession();
+        cancelContinueOpen();
+        pendingContinueOpen = window.setTimeout(() => {
+          const timer = pendingContinueOpen;
+          pendingContinueOpen = null;
+          if (timer !== null) timers.delete(timer);
+          if (!started.value || travelling.value || arriving.value ||
+              currentId.value !== targetId || focused.value) return;
+          opened.value = new Set([...opened.value, targetId]);
+          saveSession();
+          showTopic();
+        }, reducedMotion.matches ? 100 : CONTINUE_ARRIVAL_PAUSE_MS);
+        timers.add(pendingContinueOpen);
       });
     }
 
     function openStop(id: string) {
       if (!isUnlocked(id)) return;
+      cancelContinueOpen();
       if (id === currentId.value) {
         opened.value = new Set([...opened.value, id]);
         prepareCurrent();
