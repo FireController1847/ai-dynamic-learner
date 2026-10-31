@@ -1,5 +1,6 @@
 import { AI_COMPLETE_COVERAGE_PROMPT } from '../../core/ai-subject-coverage.ts';
 import { DEFAULT_TEACHING_WEIGHTS, TEACHING_TYPES } from './ai-teaching-mix.ts';
+import { guideAiFocusPrompt } from './ai-focus.ts';
 import { GUIDE_AI_STOP_GAP, GUIDE_AI_MAX_SPACED_TOPICS } from './ai-map-layout.ts';
 import { MAP_GRID, MAP_MAX_X, MAP_MAX_Y, MAP_TOPIC_HEIGHT, MAP_TOPIC_WIDTH } from './library-model.ts';
 import type { GuideAiPromptOptions } from './ai-import.ts';
@@ -35,6 +36,7 @@ const EXAMPLE = {
 export function guideAiTeachingPrompt(options: GuideAiPromptOptions): string {
   const target = options.targetBlocks ?? 30;
   const weights = options.weights ?? DEFAULT_TEACHING_WEIGHTS;
+  const focus = options.mixMode === 'custom' ? '' : guideAiFocusPrompt(options.aiFocus);
   const mix = options.mixMode === 'custom'
     ? 'Custom teaching mix (approximate percentages over the entire map): ' +
       TEACHING_TYPES.map(type => type + ' ' + weights[type] + '%').join('; ') +
@@ -46,6 +48,11 @@ export function guideAiTeachingPrompt(options: GuideAiPromptOptions): string {
     'Think like an excellent instructor building an interactive textbook, not a bulleted outline. Build understanding, teach WHY, supply context, select appropriate examples, visual models, explanations, comparisons and gentle questions. Never invent unsupported facts.',
     'Coverage: ' + options.coverage + '. Detail: ' + options.detail + '.',
     mix,
+    ...(focus ? [
+      'OPTIONAL TEACHING FOCUS (qualitative priority, not a block-type quota):',
+      focus,
+      'Keep full subject coverage and use only source-supported facts. The selected focus changes how material is taught, not which objectives may be omitted.',
+    ] : []),
     AI_COMPLETE_COVERAGE_PROMPT,
     'Coverage itemNumbers are 1-based topic indices in the topics array. Be honest about source gaps.',
     '',
