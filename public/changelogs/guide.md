@@ -1,3 +1,18 @@
+## v2.11.0
+
+<small data-utc="2026-10-31T03:57:17.424Z">October 30, 2026</small>
+
+- **Power Lines:** Added a perspective desert railway with wooden poles, electrical pulses that follow sagging wires, passing trains and cars, and an orbiting sun and moon that do not affect background brightness.
+- **Programming:** Added binary registers, hexadecimal memory panels, HUD graphics, network nodes, packet animations, and signal displays.
+- **Theming:** Returned the Programming background to the site's light/dark palette.
+- **Library:** Added a persistent Reorder footer for moving a selected guide or group between folders and up/down among siblings.
+- **AI Maps:** Power Lines is available to generated guides and imported maps.
+
+<details>
+<summary>View 1 commit</summary>
+<ol><li>Release commit link pending.</li></ol>
+</details>
+
 ## v2.10.0
 
 <small data-utc="2026-10-31T03:50:49.659Z">October 30, 2026</small>

@@ -4,7 +4,7 @@ import { isRecord } from '../../core/validation.ts';
 import { validateTeachingLesson, type TeachingLesson } from './teaching-blocks.ts';
 
 export type GuideMode = 'list' | 'map';
-export type GuideMapPattern = 'water' | 'contours' | 'constellations' | 'flow' | 'fireflies' | 'circuit' | 'programming' | 'plain';
+export type GuideMapPattern = 'water' | 'contours' | 'constellations' | 'flow' | 'fireflies' | 'circuit' | 'programming' | 'power-lines' | 'plain';
 export const GUIDE_MAP_DEFAULT_PATTERN: GuideMapPattern = 'contours';
 export interface GuideSection { id: string; title: string; bullets: string[] }
 export interface ListGuideData { sections: GuideSection[] }
@@ -112,7 +112,7 @@ function mapData(value: unknown, ids: Set<string>): asserts value is MapGuideDat
 
   if (!Array.isArray(value.connections) ||
       Object.keys(value).some(key => !['topics','connections','startTopicId','session','background'].includes(key)) ||
-      (value.background !== undefined && !['water','contours','constellations','flow','fireflies','circuit','programming','plain'].includes(String(value.background))) ||
+      (value.background !== undefined && !['water','contours','constellations','flow','fireflies','circuit','programming','power-lines','plain'].includes(String(value.background))) ||
       value.topics.length > MAX_TOPICS) throw new Error('A Guide map is invalid.');
 
   const topicIds = new Set<string>();

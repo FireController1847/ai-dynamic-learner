@@ -315,13 +315,9 @@
 .guide-map-backdrop{position:absolute;inset:0;display:block;width:100%;height:100%;pointer-events:none;z-index:0;color:var(--text-color)}
 .guide-map-backdrop-layer{position:absolute;inset:0;display:block;width:100%;height:100%;pointer-events:none}
 .guide-map-surface.is-pattern-circuit .guide-map-backdrop{color:var(--brand)}
-/* A dedicated dark terminal surface, including when the rest of the app is light. */
-.guide-map-surface.is-pattern-programming{
-  background-color:#07170f;
-  background-image:repeating-linear-gradient(to bottom,transparent 0,transparent 3px,rgba(82,236,153,.023) 4px,transparent 5px)
-}
-.guide-map-surface.is-pattern-programming .guide-map-backdrop{color:#69e4aa}
-:root[data-theme='dark'] .guide-map-surface.is-pattern-programming .guide-map-backdrop{color:#74dfab}
+/* Tech landscapes inherit the site's light/dark surface and accent colors. */
+.guide-map-surface.is-pattern-programming .guide-map-backdrop{color:var(--brand)}
+.guide-map-surface.is-pattern-power-lines .guide-map-backdrop{color:var(--text-secondary)}
 .guide-map-backdrop-motion{transform:translate3d(0,0,0);backface-visibility:hidden}
 .guide-map-surface .guide-route,.guide-map-surface .guide-study-route{z-index:1}
 .guide-map-surface .guide-topic-stop,.guide-map-surface .guide-study-stop{z-index:2}
@@ -410,3 +406,16 @@
 .guide-library-root-drop.drop-inside{border-color:var(--brand);background:var(--brand-tint)}
 /* The control belongs to the map, not the foreground lesson overlay. */
 .guide-study-layout>.guide-map-motion-toggle{z-index:2}
+
+/* Persistent library organization affordance, aligned with other library footers. */
+.guide-library-footer{flex-shrink:0;padding:8px;border-top:1px solid var(--border-color);background:var(--page-background)}
+.guide-library-reorder>summary{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 10px;border-radius:var(--radius);font-size:13px;font-weight:600;cursor:pointer;list-style:none;color:var(--text-secondary)}
+.guide-library-reorder>summary::-webkit-details-marker{display:none}
+.guide-library-reorder>summary:hover{background:var(--surface-hover);color:var(--text-color)}
+.guide-library-reorder[open]>summary{color:var(--brand-text)}
+.guide-library-reorder-content{display:grid;gap:9px;padding:10px 4px 4px}
+.guide-library-reorder-content label{display:grid;gap:5px;font-size:12px;color:var(--text-secondary)}
+.guide-library-reorder-content select{width:100%;min-height:38px;padding:6px 8px;border:1px solid var(--control-border);border-radius:var(--radius);background:var(--page-background);color:var(--text-color)}
+.guide-library-reorder-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.guide-library-reorder-actions button{justify-content:center;min-height:38px}
+.guide-library-reorder-empty{margin:0;color:var(--text-secondary);font-size:12px}
