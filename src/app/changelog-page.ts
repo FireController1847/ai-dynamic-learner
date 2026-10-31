@@ -110,7 +110,7 @@ export const ChangelogPage = defineComponent({
             h(MarkdownContent, { text: text.value }),
           ])
           : h('div', { class: 'changelog-empty' }, [
-            h(Icon, { name: 'scroll-text' }),
+            h(Icon, { name: 'history-settings' }),
             h('h3', 'No updates yet'),
             h('p', 'Release notes for this section have not been published.'),
           ]),

@@ -219,7 +219,7 @@ const App = defineComponent({
             : h(Icon, { name: activeFeature.value.icon, class: 'app-logo app-header-logo' })
           : currentPath.value === '/'
             ? h(AppIcon, { name: 'dynamic-learner', imageClass: 'app-logo app-header-logo' })
-            : h(Icon, { name: isChangelog.value ? 'scroll-text' : 'document' }),
+            : h(Icon, { name: isChangelog.value ? 'history-settings' : 'document' }),
         h('h1', isChangelog.value ? 'Changelog'
           : activeFeature.value?.label ?? (currentPath.value === '/' ? appConfig.name : 'Page not found')),
         h('div', { class: 'app-header-actions' }, [

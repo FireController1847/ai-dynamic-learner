@@ -96,16 +96,18 @@ export const NavigationDrawer = defineComponent({
               h('ul', items.map(navigationItem)),
             ])] : [];
           })),
-          h('div', { class: 'navigation-information' }, [
+        ]),
+        slots.footer ? h('div', { class: 'drawer-footer' }, [
+          h('nav', { class: 'drawer-utility-navigation', 'aria-label': 'Project information' }, [
             h('a', {
               href: props.changelogHref,
-              class: 'navigation-link',
+              class: 'quiet-button drawer-utility-link',
               'aria-current': props.activePath === '/changelog/' ? 'page' : undefined,
               onClick: (event: MouseEvent) => emit('navigate', event, '/changelog/'),
-            }, [h(Icon, { name: 'scroll-text' }), h('span', 'Changelog')]),
+            }, [h(Icon, { name: 'history-settings' }), 'Changelog']),
           ]),
-        ]),
-        slots.footer ? h('div', { class: 'drawer-footer' }, slots.footer()) : null,
+          slots.footer(),
+        ]) : null,
       ])]) : null,
     });
   },
