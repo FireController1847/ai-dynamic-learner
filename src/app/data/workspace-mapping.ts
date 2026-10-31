@@ -43,7 +43,8 @@ export function workspaceRows(workspaceId: string, workspace: Workspace): DataRo
         throw new Error('Cannot store a library item without a valid ID, type and name.');
       }
       scoped('libraryNodes', [workspaceId, app, id], { app, id, kind, name, parentKey, position,
-        ...(app === 'solve-it-grid' ? { createdAt: item.createdAt } : {}) });
+        ...(app === 'solve-it-grid' ? { createdAt: item.createdAt,
+          ...(Object.hasOwn(item, 'mode') ? { mode: item.mode } : {}) } : {}) });
       if (kind === 'group') {
         library(app, item.children as Record<string, unknown>[], id);
         return;
@@ -224,7 +225,8 @@ export async function hydrateWorkspace(store: Pick<IndexedDataStore, 'all'> & Pa
       let item: Item = { id, kind: row.kind, name: row.name };
       if (app === 'solve-it-grid') {
         if (row.kind !== 'task-set' || row.parentKey !== '@root') throw new Error('A saved task set is invalid.');
-        item = { id, name: row.name, createdAt: row.createdAt };
+        item = { id, name: row.name, createdAt: row.createdAt,
+          ...(own(row, 'mode') ? { mode: row.mode } : {}) };
         const body = value<Stored>(solveItSets, id);
         if (body) {
           if (body.configured !== true) throw new Error('A saved task set configuration is invalid.');

@@ -15,13 +15,14 @@ import {
   countItems as countCrosswordItems,
 } from '../features/crossword/library-model.ts';
 
-import { defineComponent, type PropType, h, ref, shallowRef } from 'vue';
+import { defineComponent, type PropType, h, nextTick, ref, shallowRef } from 'vue';
 
 export const WorkspaceTools = defineComponent({
   name: 'WorkspaceTools',
   props: { workspace: { type: Object as PropType<WorkspaceController>, required: true } },
   setup(props) {
     const fileInput = ref<HTMLInputElement | null>(null);
+    const backupReview = ref<HTMLElement | null>(null);
     const pending = shallowRef<{ name: string; data: Workspace } | null>(null);
     const busy = ref(false);
     const downloading = ref(false);
@@ -40,6 +41,9 @@ export const WorkspaceTools = defineComponent({
       message.value = '';
       try {
         pending.value = { name: file.name, data: await props.workspace.readBackup(file) };
+        message.value = 'Backup validated. Review the contents below before restoring.';
+        await nextTick();
+        backupReview.value?.focus();
       } catch (problem) {
         error.value = (problem instanceof Error ? problem.message : String(problem)) || 'The backup could not be read.';
       } finally {
@@ -74,7 +78,10 @@ export const WorkspaceTools = defineComponent({
 
     async function replace() {
       if (!pending.value || busy.value) return;
-      if (!requestLeave()) return;
+      if (!requestLeave()) {
+        error.value = 'The current activity prevented leaving. The backup has not been restored.';
+        return;
+      }
       busy.value = true;
       error.value = '';
       try {
@@ -122,12 +129,26 @@ export const WorkspaceTools = defineComponent({
           disabled: busy.value || (props.workspace.compatibility.value !== null &&
             props.workspace.compatibility.value.mode !== 'normal'),
           onClick: () => fileInput.value?.click(),
-        }, [h(Icon, { name: 'upload' }), busy.value ? 'Reading backup…' : 'Upload backup']),
+        }, [h(Icon, { name: 'upload' }), busy.value ? 'Reading backup…'
+          : props.workspace.compatibility.value && props.workspace.compatibility.value.mode !== 'normal'
+            ? 'Upload unavailable' : 'Upload backup']),
         h('input', {
           ref: fileInput, type: 'file', accept: '.json,application/json', hidden: true,
           onChange: upload,
         }),
       ]),
+      h('p', { class: 'workspace-message', role: 'status' }, message.value),
+      error.value ? h('p', { class: 'workspace-error', role: 'alert' }, error.value) : null,
+      pending.value ? h('div', { ref: backupReview, class: 'backup-review', role: 'region', tabindex: -1, 'aria-label': 'Review backup' }, [
+        h('p', `Replace this workspace with “${pending.value.name}”? This backup contains ${countNotebookItems(pending.value.data.features.notebook.items)} Notebook groups and documents with ${countDocuments(pending.value.data.features.notebook.items)} documents, ${countIndexCardItems(pending.value.data.features['index-cards'].items)} Index Cards groups and sets with ${countCards(pending.value.data.features['index-cards'].items)} cards, plus ${countWordSearchItems(pending.value.data.features['word-search'].items)} Word Search library items with ${countWordSearches(pending.value.data.features['word-search'].items)} word searches, ${countCrosswordItems(pending.value.data.features.crossword.items)} Crossword library items with ${countCrosswords(pending.value.data.features.crossword.items)} crosswords, and ${pending.value.data.features['todo-list'].items.length} todo lists (including archived lists). This backup also contains ${countKnowledgeCheckItems(pending.value.data.features['knowledge-check'].items)} Review library items with ${countChecks(pending.value.data.features['knowledge-check'].items)} knowledge sets. Current data will be replaced, not merged.`),
+        h('p', 'Download a backup first if you want to keep the current workspace.'),
+        h('div', { class: 'workspace-actions' }, [
+          h('button', { type: 'button', class: 'quiet-button', onClick: () => { void replace(); }, disabled: busy.value }, busy.value ? 'Restoring…' : 'Replace workspace'),
+          h('button', {
+            type: 'button', class: 'quiet-button', onClick: () => { pending.value = null; },
+          }, 'Cancel'),
+        ]),
+      ]) : null,
       props.workspace.compatibility.value && props.workspace.compatibility.value.mode !== 'normal'
         ? h('p', { class: 'backup-preferences-help' },
           'Compatibility mode: regular backup restore and workspace clearing are disabled. Raw rescue includes unsupported saved data and is not importable with Upload backup.') : null,
@@ -169,18 +190,6 @@ export const WorkspaceTools = defineComponent({
         props.workspace.backup.problem.value
           ? h('p', { class: 'workspace-error', role: 'alert' }, props.workspace.backup.problem.value) : null,
       ]),
-      pending.value ? h('div', { class: 'backup-review', role: 'region', 'aria-label': 'Review backup' }, [
-        h('p', `Replace this workspace with “${pending.value.name}”? This backup contains ${countNotebookItems(pending.value.data.features.notebook.items)} Notebook groups and documents with ${countDocuments(pending.value.data.features.notebook.items)} documents, ${countIndexCardItems(pending.value.data.features['index-cards'].items)} Index Cards groups and sets with ${countCards(pending.value.data.features['index-cards'].items)} cards, plus ${countWordSearchItems(pending.value.data.features['word-search'].items)} Word Search library items with ${countWordSearches(pending.value.data.features['word-search'].items)} word searches, ${countCrosswordItems(pending.value.data.features.crossword.items)} Crossword library items with ${countCrosswords(pending.value.data.features.crossword.items)} crosswords, and ${pending.value.data.features['todo-list'].items.length} todo lists (including archived lists). This backup also contains ${countKnowledgeCheckItems(pending.value.data.features['knowledge-check'].items)} Review library items with ${countChecks(pending.value.data.features['knowledge-check'].items)} knowledge sets. Current data will be replaced, not merged.`),
-        h('p', 'Download a backup first if you want to keep the current workspace.'),
-        h('div', { class: 'workspace-actions' }, [
-          h('button', { type: 'button', class: 'quiet-button', onClick: () => { void replace(); }, disabled: busy.value }, busy.value ? 'Restoring…' : 'Replace workspace'),
-          h('button', {
-            type: 'button', class: 'quiet-button', onClick: () => { pending.value = null; },
-          }, 'Cancel'),
-        ]),
-      ]) : null,
-      h('p', { class: 'workspace-message', role: 'status' }, message.value),
-      error.value ? h('p', { class: 'workspace-error', role: 'alert' }, error.value) : null,
       props.workspace.storageProblem.value
         ? h('p', { class: 'workspace-error', role: 'alert' }, props.workspace.storageProblem.value) : null,
       clearStep.value ? h(DeleteConfirmation, {

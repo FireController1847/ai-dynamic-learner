@@ -216,9 +216,10 @@ export async function observeWorkspace(
         const kind = app === 'solve-it-grid' ? 'task-set' : String(item.kind);
         const nodeKey = [workspaceId, app, id];
         attach('libraryNodes', nodeKey, item,
-          () => [item.name, item.kind, ...(app === 'solve-it-grid' ? [item.createdAt] : [])],
+          () => [item.name, item.kind, ...(app === 'solve-it-grid' ? [item.createdAt, item.mode] : [])],
           () => put('libraryNodes', nodeKey, { app, id, kind, name: item.name, parentKey, position,
-            ...(app === 'solve-it-grid' ? { createdAt: item.createdAt } : {}) }), true, seen);
+            ...(app === 'solve-it-grid' ? { createdAt: item.createdAt,
+              ...(Object.hasOwn(item, 'mode') ? { mode: item.mode } : {}) } : {}) }), true, seen);
         if (kind === 'group') {
           library(app, item.children as Plain[], id);
           return;
