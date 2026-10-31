@@ -68,7 +68,22 @@ export function guideAiTeachingPrompt(options: GuideAiPromptOptions): string {
     '- check: kind,title,question,options (2–8 objects containing label,explanation),correctIndex (zero-based integer). Gentle ungraded feedback.',
     '- connection: kind,title,body,optional next. Help the learner connect adjacent topics.',
     '',
-    'Use Markdown in longer text (headings, emphasis, lists, code, comparison tables) and LaTeX in any field: $x^2$, \\(x^2\\), $$...$$ or \\[...\\]. No arbitrary block kinds, HTML, JavaScript, source citation tokens, or arbitrary external URLs.',
+    'PARAMETERIZED EXAMPLE SCHEMA (only when genuinely educational, never copy unrelated example facts):',
+    JSON.stringify({
+      kind: 'parameterized', title: 'Compute the area',
+      prompt: 'A rectangle is {{width}} by {{height}} units. What is its area?',
+      steps: ['Identify width {{width}} and height {{height}}.',
+        'Multiply them: {{width}} × {{height}} = {{area}}.'],
+      takeaway: 'The area is {{area}} square units.',
+      rules: { version: 1, variables: [
+        { name: 'width', kind: 'integer', min: 2, max: 12 },
+        { name: 'height', kind: 'integer', min: 2, max: 12 },
+      ], constraints: [], answers: [
+        { key: 'area', label: 'Area', expression: 'width * height',
+          matching: 'numeric', precision: 0 },
+      ] },
+    }),
+    'Use Markdown in longer text (headings, emphasis, lists, code, comparison tables) and LaTeX in any field: $x^2$, \\(x^2\\), $...$ or \\[...\\]. No arbitrary block kinds, HTML, JavaScript, source citation tokens, or arbitrary external URLs.',
     'Each map topic MUST have lesson: {"version":1,"blocks":[...]}, usually 2–8 useful blocks; at most 80. No legacy sections/bullets in a new map. Every required string nonempty, <=10000 characters. Never create stored IDs. Parameterized blocks count as one block each and should appear where generating multiple worked examples genuinely improves understanding.',
     '',
     'MAP DESIGN IS A FIRST-CLASS TEACHING FEATURE: Make the route feel like an illustrated adventure with meaningful destinations, not a worksheet grid. The main path should travel across the canvas with an irregular rhythm, gentle S-bends and occasional purpose-driven side trails.',
