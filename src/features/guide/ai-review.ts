@@ -88,6 +88,8 @@ export const GuideAiReview = defineComponent({
         ]):null,
         h('section',{class:'guide-ai-review-outline','aria-label':'Guide preview'},[
           h('h3',guide.title),
+          guide.mode==='map' ? h('p',{class:'guide-ai-review-disclaimer'},
+            'Map background: ' + (guide.background ?? 'contours').replace(/^./,letter=>letter.toUpperCase())) : null,
           h('div',{class:'guide-ai-review-counts'},[
             h('div',[h('strong',String(names.length)),h('span',guide.mode==='map'?'Map stops':'List sections')]),
             guide.mode==='map'?h('div',[h('strong',String(blockCount)),h('span','Teaching Blocks')]):null,

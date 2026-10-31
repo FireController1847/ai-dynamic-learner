@@ -53,7 +53,7 @@ function importedMapData(value:SimpleMapGuideImport):MapGuideData{
       })}
     };
   });
-  return{topics,connections,startTopicId,background:'contours'};
+  return{topics,connections,startTopicId,background:value.background??'contours'};
 }
 
 export const Guide=defineComponent({

@@ -21,7 +21,7 @@ import { GUIDE_AI_MAX_SPACED_TOPICS, stopsAreSpaced } from './ai-map-layout.ts';
 import type { TeachingLesson } from './teaching-blocks.ts';
 import {
   MAP_GRID, MAP_MAX_X, MAP_MAX_Y, MAP_TOPIC_HEIGHT, MAP_TOPIC_WIDTH,
-  MAX_BULLETS, MAX_NAME_LENGTH, MAX_SECTIONS, MAX_TEXT_LENGTH, MAX_TOPICS, type GuideMode,
+  MAX_BULLETS, MAX_NAME_LENGTH, MAX_SECTIONS, MAX_TEXT_LENGTH, MAX_TOPICS, type GuideMode, type GuideMapPattern,
 } from './library-model.ts';
 
 const LIST_IMPORT_FORMAT = 'dynamic-learner-guide';
@@ -72,6 +72,8 @@ export interface SimpleMapGuideImportTopic {
 export interface SimpleMapGuideImport {
   mode: 'map';
   title: string;
+  /** One theme for the full generated map, optional for legacy AI responses. */
+  background?: GuideMapPattern;
   coverage?: AiSubjectCoverage[];
   confidence: GuideAiConfidence | null;
   startTopic: string;
@@ -284,7 +286,7 @@ function parseListImport(value: unknown): SimpleListGuideImport {
 
 function parseMapImport(value: unknown): SimpleMapGuideImport {
   if (!isRecord(value) ||
-      Object.keys(value).some((key) => !['format', 'version', 'title', 'startTopic', 'topics', 'connections', 'coverage', 'confidence', 'solvers'].includes(key)) ||
+      Object.keys(value).some((key) => !['format', 'version', 'title', 'startTopic', 'topics', 'connections', 'coverage', 'confidence', 'solvers', 'background'].includes(key)) ||
       (value.format !== MAP_IMPORT_FORMAT && value.format !== LEGACY_MAP_IMPORT_FORMAT) ||
       (value.version !== IMPORT_VERSION && value.version !== TEACHING_IMPORT_VERSION) ||
       typeof value.title !== 'string' || !value.title.trim() || value.title.trim().length > MAX_NAME_LENGTH ||
@@ -296,6 +298,10 @@ function parseMapImport(value: unknown): SimpleMapGuideImport {
 
   if (value.version !== TEACHING_IMPORT_VERSION && value.solvers !== undefined)
     throw new Error('Algorithm solvers are supported only in version 2 Teaching Block maps.');
+  const backgrounds: readonly GuideMapPattern[] = ['water','contours','constellations','flow','fireflies','plain'];
+  if (value.background !== undefined && !backgrounds.includes(value.background as GuideMapPattern))
+    throw new Error('Map background must be Water, Contours, Constellations, Flow, Fireflies or Plain.');
+  const background = value.background as GuideMapPattern | undefined;
   const solvers = parseAiSolvers(value.solvers);
   if (value.topics.length > GUIDE_AI_MAX_SPACED_TOPICS && value.version === TEACHING_IMPORT_VERSION)
     throw new Error('For separated map stops, generate at most ' + GUIDE_AI_MAX_SPACED_TOPICS + ' topics.');
@@ -393,6 +399,7 @@ function parseMapImport(value: unknown): SimpleMapGuideImport {
   }
 
   return { mode: 'map', title: value.title.trim(), startTopic, topics, connections,
+    ...(background ? { background } : {}),
     confidence: parseGuideConfidence(value.confidence),
     coverage: value.coverage === undefined ? undefined : parseAiSubjectCoverage(value.coverage, topics.length) };
 }

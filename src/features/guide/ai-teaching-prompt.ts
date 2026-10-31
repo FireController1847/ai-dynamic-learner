@@ -9,7 +9,7 @@ import type { GuideAiPromptOptions } from './ai-import.ts';
 
 const EXAMPLE = {
   format: 'dynamic-learner-guide-map', version: 2,
-  title: 'Understanding operating systems', startTopic: 'foundations',
+  title: 'Understanding operating systems', background: 'flow', startTopic: 'foundations',
   coverage: [{ subject: 'Core process concepts', itemNumbers: [1] }],
   confidence: GUIDE_CONFIDENCE_EXAMPLE,
   topics: [
@@ -134,6 +134,8 @@ export function guideAiTeachingPrompt(options: GuideAiPromptOptions): string {
     'Think in LEARNING DESTINATIONS: combine closely related headings into one stop containing several well-chosen Teaching Blocks. A normal Guide Map should contain EXACTLY 5, 6 or 7 purposeful stops, preferably 6. Do NOT make a stop for every fact, heading or Teaching Block. Use more or fewer ONLY when genuinely justified by the source or requested total. Preserve required learning objectives inside lessons even when multiple objectives share a stop.',
     'Before choosing coordinates, imagine the complete graph as a journey. Identify a main trail, where branches leave and rejoin through backtracking, and which related lessons should sit near each other. Keep directly connected stops visually close whenever the canvas allows.',
     'Avoid orderly rows or columns, identical coordinate increments, staircase diagrams, regular lattices and snake-shaped page-filling grids. Positions should differ organically in BOTH x and y; use the available open space to give a pleasing winding, branching route.',
+    'MAP BACKGROUND — SELECT A DISTINCT WORLD: Set the top-level "background" field to EXACTLY ONE of "water", "contours", "constellations", "flow" or "fireflies". This is ONE background for the whole map, not one per stop. Choose thoughtfully to complement the subject and mood: Water for fluid processes, cycles or nature; Contours for terrain, geography or layered systems; Constellations for astronomy, patterns, abstraction and connected ideas; Flow for algorithms, motion, systems and transitions; Fireflies for life sciences, ecology, discovery or warm exploration. These are suggestions rather than mandatory mappings.',
+    'BACKGROUND VARIETY — IMPORTANT: Do not default to "contours" for every map. Vary choices between generated guides, especially when multiple themes are suitable. Explore ALL five worlds over time, including Fireflies, Water and Constellations. For ambiguous material choose a fitting imaginative alternative instead of repeatedly selecting the same default. Do not pretend to know earlier maps unless the user supplied them. Never use "plain" in a newly generated Map. Include your selected background in the downloadable JSON and verify that the value is allowed.',
     'MAP ART DIRECTION:',
     '- Design a creative, connected adventure tree, progressing mainly left to right with gentle vertical wandering and short, meaningful branch trails. Avoid straight lines, hub-and-spoke layouts, loops and disconnected topics.',
     '- Boxes are ' + MAP_TOPIC_WIDTH + 'x' + MAP_TOPIC_HEIGHT + ' px; leave at least ' + GUIDE_AI_STOP_GAP + ' px CLEAR SPACE between their boundaries. No touching or near-touching blocks.',
@@ -142,7 +144,7 @@ export function guideAiTeachingPrompt(options: GuideAiPromptOptions): string {
     '- Give meaningful 1–2 sentence descriptions to build curiosity. No filler stops. If uncertain about map positions, omit ALL position fields and let the app create a spaced route.',
     '',
     guideAiFileOutputInstructions('map'),
-    'The downloadable JSON file must use format "dynamic-learner-guide-map" and version 2, with title, startTopic, coverage, confidence, topics, connections and OPTIONAL solvers (only when a Parameterized block truly requires algorithm execution).',
+    'The downloadable JSON file must use format "dynamic-learner-guide-map" and version 2, with title, background, startTopic, coverage, confidence, topics, connections and OPTIONAL solvers (only when a Parameterized block truly requires algorithm execution).',
     'The following shows the JSON structure to write INTO THE FILE. It is an illustrative schema ONLY: its two example stops and four sample blocks are NOT an instruction about output size. Your real output should normally have 5–7 stops and EXACTLY ' + target + ' Teaching Blocks unless a concrete exception is justified:',
     String.fromCharCode(96).repeat(3) + 'json',
     JSON.stringify(EXAMPLE, null, 2),
