@@ -50,11 +50,17 @@ The first `diagram` implementation is a selectable conceptual flow, **not** a ge
 
 New AI maps enforce a **64px minimum clear gap** between topic rectangles. Spacious, genuinely organic suggested positions are preserved. Cramped or rigid-grid layouts are replaced by a deterministic, branch-following winding trail with gentle vertical variation and short connections across row turns, not a uniform row-major grid. For larger maps, limited canvas space can still require multiple rows; the AI prompt encourages grouping related subjects into fewer meaningful stops rather than making a stop for every heading. Already saved maps and manually arranged positions are not moved.
 
+## Guide v2.0.0 and AI learning priorities
+
+Guide v2.0.0 marks the major Teaching Blocks release. The displayed application version changed from `1.12.1` because of new interactive lesson architecture, authoring, structured AI import, Markdown/LaTeX and Table blocks. Previously saved legacy guides remain supported.
+
+Under **Let AI choose**, use **AI focus** to optionally prioritize **Default**, **Numerics**, **Active recall**, **Memorization**, **Relationships**, or **Application**. These are qualitative teaching priorities, not strict quotas or replacements for source coverage. This uses the same shared selection-card component as Review but has Guide-specific guidance (e.g. ungraded understanding checks instead of promising unsupported typed answer grading). **Custom weighted mix** retains its percentages and does not apply the qualitative focus.
+
 ## AI authoring flow
 
 1. Start **Create guide with AI** from the Guide library and select Map mode (List mode retains its classic notes workflow). The secondary **Import an AI response** shortcut sits in the builder action row, as in Review.
 2. Select **Overall subject** or **Choose a category**, using Review's shared scope selection and saved-category picker. Selecting a category scopes the AI instructions to that category's source material and skips repeating the source handoff.
-3. In the instructions stage, choose coverage and teaching depth. Select **Let AI choose** or a **Custom weighted mix** across all nine block kinds. Weights total 100%; the target count is guidance rather than filler quota.
+3. In the instructions stage, choose coverage and teaching depth. Select **Let AI choose** (with an optional AI teaching focus) or a **Custom weighted mix** across all nine block kinds. Weights total 100%; the target count is guidance rather than filler quota.
 4. Supply source material, copy the generated instructions to the AI conversation and return the resulting JSON.
 5. Upload the JSON file or paste its response and select **Import guide**. Valid responses import immediately, without a separate source-comparison or coverage-approval screen; required source-coverage metadata and lesson structure are still validated.
 6. Imported v2 maps contain real `TeachingLesson` objects and render offline immediately. Original v1 section-based JSON continues to import.
