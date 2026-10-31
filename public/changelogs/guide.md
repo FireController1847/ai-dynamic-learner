@@ -7,7 +7,7 @@
 
 <details>
 <summary>View 1 commit</summary>
-<ol><li>Release commit link pending.</li></ol>
+<ol><li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/ec977657909dac81a5e771a99f8cb51bcb26ced8">ec977657</a> — fix(guide): remove redundant library reorder footer (v2.12.2)</li></ol>
 </details>
 
 ## v2.12.1
