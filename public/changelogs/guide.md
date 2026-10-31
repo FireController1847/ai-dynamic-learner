@@ -1,3 +1,15 @@
+## v2.14.2
+
+<small data-utc="2026-10-31T23:30:07.361Z">October 31, 2026</small>
+
+- **Lesson Controls:** Anchored expand/restore and close icons 10px from the lesson window's actual top-right corner, eliminating the excessive vertical offset.
+- **Scrolling:** Separated the floating window's controls from its scrolling content, keeping both icons aligned and visible in regular and fullscreen modes without resetting lesson progress.
+
+<details>
+<summary>View 1 commit</summary>
+<ol><li>Release commit link pending.</li></ol>
+</details>
+
 ## v2.14.1
 
 <small data-utc="2026-10-31T23:20:34.029Z">October 31, 2026</small>

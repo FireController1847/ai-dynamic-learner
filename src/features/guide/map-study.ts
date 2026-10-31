@@ -56,6 +56,7 @@ export const GuideMapStudy = defineComponent({
     const scroll = ref<HTMLElement | null>(null);
     const topicHeading = ref<HTMLElement | null>(null);
     const topicPanel = ref<HTMLElement | null>(null);
+    const topicScroll = ref<HTMLElement | null>(null);
     const fullscreenButton = ref<HTMLButtonElement | null>(null);
     const viewMapButton = ref<HTMLButtonElement | null>(null);
     const camera = ref<{ x: number; y: number; scale: number } | null>(null);
@@ -179,11 +180,11 @@ export const GuideMapStudy = defineComponent({
     });
 
     function toggleFullscreenLesson() {
-      const scrollTop = topicPanel.value?.scrollTop ?? 0;
+      const scrollTop = topicScroll.value?.scrollTop ?? 0;
       fullscreenLesson.value = !fullscreenLesson.value;
       // Vue's Teleport moves the existing lesson node: no content or input state is recreated.
       nextTick(() => {
-        if (topicPanel.value) topicPanel.value.scrollTop = scrollTop;
+        if (topicScroll.value) topicScroll.value.scrollTop = scrollTop;
         fullscreenButton.value?.focus({ preventScroll: true });
       });
     }
@@ -265,7 +266,7 @@ export const GuideMapStudy = defineComponent({
     function prepareCurrent() {
       const topic = current.value;
       if (!topic) return;
-      topicPanel.value?.scrollTo({ top: 0, behavior: 'instant' });
+      topicScroll.value?.scrollTo({ top: 0, behavior: 'instant' });
     }
 
     function start(animate = true, resetCompletion = false) {
@@ -483,7 +484,7 @@ export const GuideMapStudy = defineComponent({
           path.value = path.value.slice(0, path.value.indexOf(ancestorId) + 1);
           travelTargetId.value = null;
           travelling.value = false;
-          topicPanel.value?.scrollTo({ top: 0, behavior: 'instant' });
+          topicScroll.value?.scrollTo({ top: 0, behavior: 'instant' });
           // A single remaining trail is not a choice: follow it without
           // reopening the already studied stop or requiring another click.
           const onward = connectedTopicIds(props.data, ancestorId).filter(id => !visited.value.has(id));
@@ -770,7 +771,9 @@ export const GuideMapStudy = defineComponent({
                   onClick: closeTopic,
                 }, [h(Icon, { name: 'x' })]),
               ]),
-            h('div', { class: 'guide-study-topic-inner' }, [
+              h('div', { ref: topicScroll, class: 'guide-study-topic-scroll', role: 'region',
+                'aria-label': 'Lesson content', tabindex: 0 }, [
+                h('div', { class: 'guide-study-topic-inner' }, [
             travelling.value ? h('div', { class: 'guide-study-travelling' }, [
               h('strong', 'Following the path…'),
               h('p', 'Moving to the next stop.'),
@@ -804,6 +807,7 @@ export const GuideMapStudy = defineComponent({
               ]),
               routeControls(topic),
             ],
+                ]),
               ]),
             ]),
           ]),

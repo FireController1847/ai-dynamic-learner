@@ -166,7 +166,7 @@
   --guide-lesson-pad-x: clamp(20px, 4vw, 44px);
   --guide-lesson-pad-y: clamp(28px, 5vw, 56px);
   position: absolute; z-index: 4; inset: clamp(12px, 3vw, 32px); min-width: 0; min-height: 0;
-  overflow: auto; padding: var(--guide-lesson-pad-y) var(--guide-lesson-pad-x) max(260px, 48vh);
+  overflow: hidden; padding: 0;
   border: 1px solid var(--border-color); border-radius: var(--radius-dialog);
   background: var(--page-background); box-shadow: var(--shadow-overlay);
   visibility: hidden; pointer-events: none; opacity: 0; transform: translateY(16px) scale(.96);
@@ -175,12 +175,17 @@
 .guide-study-topic.is-visible {
   visibility: visible; pointer-events: auto; opacity: 1; transform: translateY(0) scale(1);
 }
+/* Controls are anchored to the *window*, not the scrolling lesson text.
+   A dedicated scroll layer prevents sticky/transform offsets from drifting. */
 .guide-study-close-row {
-  position: sticky; top: var(--guide-lesson-pad-y); z-index: 5;
-  display: flex; align-items: flex-start; justify-content: flex-end; gap: 4px;
-  height: 0; margin-right: calc(10px - var(--guide-lesson-pad-x));
-  transform: translateY(calc(10px - var(--guide-lesson-pad-y)));
-  pointer-events: none;
+  position: absolute; top: 10px; right: 10px; z-index: 5;
+  display: flex; align-items: center; justify-content: flex-end; gap: 4px;
+  height: 44px; margin: 0; transform: none; pointer-events: none;
+}
+.guide-study-topic-scroll {
+  position: absolute; inset: 0; min-width: 0; min-height: 0;
+  overflow: auto; overscroll-behavior: contain;
+  padding: var(--guide-lesson-pad-y) var(--guide-lesson-pad-x) max(260px, 48vh);
 }
 .guide-study-close {
   position: relative; display: grid; place-items: center;
@@ -225,7 +230,8 @@
   to { opacity: 1; transform: translateY(0); }
 }
 @media (max-width: 900px) {
-  .guide-study-topic { --guide-lesson-pad-x: 20px; --guide-lesson-pad-y: 20px; inset: 12px; padding: 20px; }
+  .guide-study-topic { --guide-lesson-pad-x: 20px; --guide-lesson-pad-y: 20px; inset: 12px; }
+  .guide-study-topic-scroll { padding: 20px 20px max(260px, 48vh); }
 }
 @media (max-width: 560px) {
   .guide-study-intro-header { align-items: flex-start; gap: 16px; }
@@ -235,7 +241,8 @@
   .guide-study-toolbar { flex-wrap: wrap; }
   .guide-study-toolbar-actions { width: 100%; }
   .guide-study-toolbar-actions > button { flex: 1; min-height: 44px; }
-  .guide-study-topic { --guide-lesson-pad-x: 16px; --guide-lesson-pad-y: 24px; padding: 24px 16px max(210px, 42vh); }
+  .guide-study-topic { --guide-lesson-pad-x: 16px; --guide-lesson-pad-y: 24px; }
+  .guide-study-topic-scroll { padding: 24px 16px max(210px, 42vh); }
 }
 @media (prefers-reduced-motion: reduce) {
   .guide-traveler, .guide-study-route line, .guide-connection-prompt, .guide-study-topic, .guide-study-map.is-camera-zooming { transition: none; }
@@ -453,16 +460,21 @@
   --guide-lesson-pad-y:clamp(24px,4vw,48px);
   position:fixed;inset:clamp(12px,2.5vw,32px);z-index:9991;
   width:auto;height:auto;max-width:none;max-height:none;
-  padding:var(--guide-lesson-pad-y) var(--guide-lesson-pad-x) 96px;
   visibility:visible;pointer-events:auto;opacity:1;
   transform:none;transition:none;overscroll-behavior:contain;
 }
 /* Both actions share one button size and icon baseline, including fullscreen. */
+.guide-study-topic.is-fullscreen>.guide-study-topic-scroll{
+  padding:var(--guide-lesson-pad-y) var(--guide-lesson-pad-x) 96px;
+}
 .guide-study-topic-heading{padding-right:96px}
 @media(max-width:560px){
   .guide-study-topic.is-fullscreen{
     --guide-lesson-pad-x:16px;--guide-lesson-pad-y:20px;
-    inset:8px;padding:20px 16px 72px;
+    inset:8px;
+  }
+  .guide-study-topic.is-fullscreen>.guide-study-topic-scroll{
+    padding:20px 16px 72px;
   }
   .guide-study-topic-heading{padding-right:88px}
 }
