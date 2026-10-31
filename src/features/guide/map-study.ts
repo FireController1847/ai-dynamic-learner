@@ -3,6 +3,7 @@ import { useStatistics } from '../../components/statistics-context.ts';
 import { computed, defineComponent, h, nextTick, onBeforeUnmount, onDeactivated, ref, type PropType } from 'vue';
 import { GuideTypeIcon } from './guide-type-icon.ts';
 import { TeachingLessonView } from './teaching-lesson.ts';
+import { CONTINUE_ARRIVAL_PAUSE_MS, REDUCED_MOTION_ARRIVAL_PAUSE_MS, mayOpenContinuedStop } from './map-study-arrival.ts';
 import { lessonForTopic } from './teaching-blocks.ts';
 import { connectedTopicIds, mapStudyProblem, startTopic, topicById } from './map-graph.ts';
 import { MAP_CANVAS_HEIGHT, MAP_CANVAS_WIDTH, MAP_PADDING } from './map-presentation.ts';
@@ -324,7 +325,6 @@ export const GuideMapStudy = defineComponent({
     // When a learner continues along a route, let the traveler settle on the
     // destination before opening its lesson. Manual map navigation still opens
     // immediately on arrival; the initial map introduction remains unchanged.
-    const CONTINUE_ARRIVAL_PAUSE_MS = 340;
     function visitNext(targetId: string) {
       if (!currentId.value || !available.value.includes(targetId)) return;
       travelTo(targetId, () => {
@@ -336,12 +336,15 @@ export const GuideMapStudy = defineComponent({
           const timer = pendingContinueOpen;
           pendingContinueOpen = null;
           if (timer !== null) timers.delete(timer);
-          if (!started.value || travelling.value || arriving.value ||
-              currentId.value !== targetId || focused.value) return;
+          if (!mayOpenContinuedStop({
+            started: started.value, travelling: travelling.value,
+            arriving: arriving.value, currentId: currentId.value,
+            targetId, focused: focused.value,
+          })) return;
           opened.value = new Set([...opened.value, targetId]);
           saveSession();
           showTopic();
-        }, reducedMotion.matches ? 100 : CONTINUE_ARRIVAL_PAUSE_MS);
+        }, reducedMotion.matches ? REDUCED_MOTION_ARRIVAL_PAUSE_MS : CONTINUE_ARRIVAL_PAUSE_MS);
         timers.add(pendingContinueOpen);
       });
     }
