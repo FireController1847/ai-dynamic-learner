@@ -1,3 +1,15 @@
+## v2.12.3
+
+<small data-utc="2026-10-31T04:18:01.094Z">October 30, 2026</small>
+
+- **Library:** Restored Guide's persistent bottom bar with a compact Reorder button instead of a full-width panel.
+- **Reordering:** The small button opens an anchored popover for moving items between groups or up and down; the existing main **Location and order** section and drag-and-drop remain unchanged.
+
+<details>
+<summary>View 1 commit</summary>
+<ol><li>Release commit link pending.</li></ol>
+</details>
+
 ## v2.12.2
 
 <small data-utc="2026-10-31T04:15:52.179Z">October 30, 2026</small>
