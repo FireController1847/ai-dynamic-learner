@@ -459,3 +459,15 @@
   }
   .guide-study-topic-heading{padding-right:88px}
 }
+
+/* Completed Guide adventures use the shared green verified icon treatment. */
+.guide-library-drag-row .directory-label{
+  display:flex;align-items:center;gap:5px;
+}
+.guide-library-label-text{
+  flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.guide-library-complete{
+  display:inline-flex;flex:0 0 auto;align-items:center;color:var(--success);
+}
+.guide-library-complete .ui-icon{width:16px;height:16px}

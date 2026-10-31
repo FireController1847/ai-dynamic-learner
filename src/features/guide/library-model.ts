@@ -27,6 +27,8 @@ export interface MapGuideData {
   connections: MapConnection[];
   startTopicId: string | null;
   session?: MapStudySession;
+  /** Remembers a completed adventure until explicitly reset on its overview. */
+  completed?: boolean;
 }
 export type GuideItem =
   | { id: string; kind: 'guide'; name: string; mode: 'list'; data: ListGuideData }
@@ -61,6 +63,15 @@ export function createMapGuideData(): MapGuideData {
   return { topics: [], connections: [], startTopicId: null, background: GUIDE_MAP_DEFAULT_PATTERN };
 }
 export function createGroup(): Group { return { id: createId(), kind: 'group', name: 'New group', children: [] }; }
+
+/** Old saved adventures already have visitedIds, so their completed badges need no migration. */
+export function mapAdventureCompleted(data: MapGuideData): boolean {
+  if (data.completed !== undefined) return data.completed;
+  const session = data.session;
+  return Boolean(data.topics.length > 0 && session &&
+    session.visitedIds.length === data.topics.length &&
+    data.topics.every(topic => session.visitedIds.includes(topic.id)));
+}
 
 export function insertGuide(items: LibraryItem[], target: GuideTarget, mode: GuideMode): GuideItem {
   if (countItems(items) >= MAX_ITEMS) throw new Error('The Guide library supports ' + MAX_ITEMS + ' items.');
@@ -111,7 +122,8 @@ function mapData(value: unknown, ids: Set<string>): asserts value is MapGuideDat
   }
 
   if (!Array.isArray(value.connections) ||
-      Object.keys(value).some(key => !['topics','connections','startTopicId','session','background'].includes(key)) ||
+      Object.keys(value).some(key => !['topics','connections','startTopicId','session','background','completed'].includes(key)) ||
+      (value.completed !== undefined && typeof value.completed !== 'boolean') ||
       (value.background !== undefined && !['water','contours','constellations','flow','fireflies','circuit','programming','power-lines','plain'].includes(String(value.background))) ||
       value.topics.length > MAX_TOPICS) throw new Error('A Guide map is invalid.');
 

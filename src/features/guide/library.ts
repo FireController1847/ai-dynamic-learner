@@ -6,7 +6,7 @@ import { inputValue } from '../../core/dom.ts';
 import { Icon } from '../../components/icon.ts';
 import { DeleteConfirmation } from '../../components/delete-confirmation.ts';
 import { GuideTypeIcon } from './guide-type-icon.ts';
-import { canMove,countGuides,countItems,createGroup,deleteItem,findItem,firstEntry,guideIsEmpty,MAX_DEPTH,MAX_ITEMS,MAX_NAME_LENGTH,moveItem,type LibraryItem } from './library-model.ts';
+import { canMove,countGuides,countItems,createGroup,deleteItem,findItem,firstEntry,guideIsEmpty,mapAdventureCompleted,MAX_DEPTH,MAX_ITEMS,MAX_NAME_LENGTH,moveItem,type LibraryItem } from './library-model.ts';
 export const GuideLibrary=defineComponent({
   name:'GuideLibrary',
   props:{items:{type:Array as PropType<LibraryItem[]>,required:true},selectedId:{type:String as PropType<string|null>,default:null},collapsed:Boolean},
@@ -92,7 +92,11 @@ export const GuideLibrary=defineComponent({
         group?h('button',{type:'button',class:['tree-toggle',{'is-open':open}],'aria-label':(open?'Collapse ':'Expand ')+item.name,'aria-expanded':open,onClick:()=>toggle(item.id)},[h(Icon,{name:'chevron'})]):h('span',{class:'tree-toggle-space'}),
         group?h(Icon,{name:'folder'}):h(GuideTypeIcon,{mode:item.mode,compact:true}),
         editing?h('input',{ref:input,class:'directory-rename',value:draft.value,maxlength:MAX_NAME_LENGTH,'aria-label':'Rename '+(group?'group':'guide'),onInput:(e:Event)=>{draft.value=inputValue(e);},onBlur:()=>finish(true),onKeydown:(e:KeyboardEvent)=>{if(!e.isComposing&&(e.key==='Enter'||e.key==='Escape')){e.preventDefault();e.stopPropagation();void finish(e.key==='Enter',true);}}})
-          :h('button',{ref:(el)=>{if(el instanceof HTMLElement)labels.set(item.id,el);else labels.delete(item.id);},type:'button',class:'directory-label',title:item.name,'aria-pressed':props.selectedId===item.id,onClick:()=>{emit('select',item.id);emit('open-item');},onDblclick:()=>rename(item),onKeydown:(e:KeyboardEvent)=>{if(e.key==='F2'){e.preventDefault();void rename(item);}}},item.name),
+          :h('button',{ref:(el)=>{if(el instanceof HTMLElement)labels.set(item.id,el);else labels.delete(item.id);},type:'button',class:'directory-label',title:item.name,'aria-pressed':props.selectedId===item.id,onClick:()=>{emit('select',item.id);emit('open-item');},onDblclick:()=>rename(item),onKeydown:(e:KeyboardEvent)=>{if(e.key==='F2'){e.preventDefault();void rename(item);}}},[
+            h('span',{class:'guide-library-label-text'},item.name),
+            item.kind==='guide'&&item.mode==='map'&&mapAdventureCompleted(item.data)
+              ?h('span',{class:'guide-library-complete',title:'Adventure completed','aria-label':'Adventure completed'},[h(Icon,{name:'verified'})]):null,
+          ]),
         h('button',{type:'button',class:'icon-button rename-button',title:'Rename '+item.name,'aria-label':'Rename '+item.name,onClick:()=>rename(item)},[h(Icon,{name:'pencil'})]),
         h('button',{type:'button',class:'icon-button delete-button',title:'Delete '+item.name,'aria-label':'Delete '+item.name,onClick:(e:MouseEvent)=>requestDelete(item,e)},[h(Icon,{name:'trash'})])
       ]),

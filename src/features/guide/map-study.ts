@@ -8,7 +8,7 @@ import { CONTINUE_ARRIVAL_PAUSE_MS, REDUCED_MOTION_ARRIVAL_PAUSE_MS, mayOpenCont
 import { lessonForTopic } from './teaching-blocks.ts';
 import { connectedTopicIds, mapStudyProblem, startTopic, topicById } from './map-graph.ts';
 import { MAP_CANVAS_HEIGHT, MAP_CANVAS_WIDTH, MAP_PADDING } from './map-presentation.ts';
-import { GUIDE_MAP_DEFAULT_PATTERN, type GuideMapPattern } from './library-model.ts';
+import { GUIDE_MAP_DEFAULT_PATTERN, mapAdventureCompleted, type GuideMapPattern } from './library-model.ts';
 import { GuideMapBackdrop, type GuideMapBackdropHandle } from './map-background.ts';
 import { GuideMapMotionToggle } from './map-motion-toggle.ts';
 import {
@@ -253,9 +253,12 @@ export const GuideMapStudy = defineComponent({
       const next = new Set(visited.value);
       next.add(id);
       visited.value = next;
-      if (complete.value && !completionRecorded) {
-        statistics?.record('guide', props.statisticsId, 'adventuresCompleted');
-        completionRecorded = true;
+      if (complete.value) {
+        props.data.completed = true;
+        if (!completionRecorded) {
+          statistics?.record('guide', props.statisticsId, 'adventuresCompleted');
+          completionRecorded = true;
+        }
       }
     }
 
@@ -265,7 +268,11 @@ export const GuideMapStudy = defineComponent({
       topicPanel.value?.scrollTo({ top: 0, behavior: 'instant' });
     }
 
-    function start(animate = true) {
+    function start(animate = true, resetCompletion = false) {
+      // Only the overview's Start over action removes a previously earned badge.
+      // Study again starts a fresh run without erasing prior completion.
+      if (resetCompletion) props.data.completed = false;
+      else if (mapAdventureCompleted(props.data)) props.data.completed = true;
       fullscreenLesson.value = false;
       clearTimers();
       if (studyProblem.value) return;
@@ -599,7 +606,7 @@ export const GuideMapStudy = defineComponent({
               }, 'Resume adventure'),
               h('button', {
                 type: 'button', class: 'quiet-button', disabled: studyProblem.value !== null,
-                onClick: () => start(true),
+                onClick: () => start(true, true),
               }, 'Start over'),
             ] : h('button', {
               type: 'button', class: 'card-primary-button', disabled: studyProblem.value !== null,

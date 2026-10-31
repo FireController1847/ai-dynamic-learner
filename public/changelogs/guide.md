@@ -1,3 +1,16 @@
+## v2.14.0
+
+<small data-utc="2026-10-31T23:12:20.427Z">October 31, 2026</small>
+
+- **Library Completion:** Finished Map adventures now show the same green verified checkmark alongside their title as other completed library activities.
+- **Persistence:** Completion remains visible after Save & exit, reload, and Study again; previously finished adventures are recognized from their saved stop history.
+- **Reset Behavior:** Start over on the overview clears the completed checkmark until the adventure is finished again. List-mode guides remain unchanged.
+
+<details>
+<summary>View 1 commit</summary>
+<ol><li>Release commit link pending.</li></ol>
+</details>
+
 ## v2.13.0
 
 <small data-utc="2026-10-31T23:04:14.247Z">October 31, 2026</small>
