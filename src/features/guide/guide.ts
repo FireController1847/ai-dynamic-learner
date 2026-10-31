@@ -79,6 +79,8 @@ export const Guide=defineComponent({
     const query=window.matchMedia('(max-width: 700px), (max-width: 1100px) and (pointer: coarse)');
     const overlay=ref(query.matches),collapsed=ref(query.matches&&selectedId.value!==null),layout=ref<HTMLElement|null>(null),library=ref<GuideLibraryHandle|null>(null),showLibrary=ref<HTMLButtonElement|null>(null),message=ref('');
     const editingMapId=ref<string|null>(null);
+    const mapMotionPaused=ref(false);
+    function toggleMapMotion(){mapMotionPaused.value=!mapMotionPaused.value;}
     const panel=usePersistedPanelResize({preferenceKey:LIBRARY_WIDTH_KEY,container:layout,panelSelector:'.directory-panel',minWidth:MIN_LIBRARY_WIDTH,maxWidth:640,minRemainingWidth:320,fallbackWidth:280,disabled:()=>overlay.value||collapsed.value});
 
     function media(e:MediaQueryListEvent){overlay.value=e.matches;panel.resizing.value=false;if(e.matches&&selectedId.value)collapsed.value=true;}
@@ -166,8 +168,8 @@ export const Guide=defineComponent({
         item.mode==='list'
           ? h('div',{class:'guide-list-workspace'},[h(GuideListEditor,{data:item.data})])
           : editingMapId.value===item.id
-            ? h(GuideMapEditor,{data:item.data,onStudy:()=>{editingMapId.value=null;}})
-            : h(GuideMapStudy,{key:'study-'+item.id,data:item.data,guideName:item.name,statisticsId:item.id,onEdit:()=>{editingMapId.value=item.id;}}),
+            ? h(GuideMapEditor,{data:item.data,motionPaused:mapMotionPaused.value,onToggleMotion:toggleMapMotion,onStudy:()=>{editingMapId.value=null;}})
+            : h(GuideMapStudy,{key:'study-'+item.id,data:item.data,guideName:item.name,statisticsId:item.id,motionPaused:mapMotionPaused.value,onToggleMotion:toggleMapMotion,onEdit:()=>{editingMapId.value=item.id;}}),
         item.mode==='map'&&editingMapId.value!==item.id?null:organization(item),h('p',{class:'visually-hidden',role:'status'},message.value)
       ]);
     }

@@ -14,14 +14,18 @@ import { TeachingBlocksEditor } from './teaching-editor.ts';
 import { MAP_CANVAS_HEIGHT, MAP_CANVAS_WIDTH, MAP_PADDING } from './map-presentation.ts';
 import { GUIDE_MAP_DEFAULT_PATTERN, type GuideMapPattern } from './library-model.ts';
 import { GUIDE_MAP_PATTERNS, GuideMapBackdrop, type GuideMapBackdropHandle } from './map-background.ts';
+import { GuideMapMotionToggle } from './map-motion-toggle.ts';
 
 const snap = (value: number) => Math.round(value / MAP_GRID) * MAP_GRID;
 const clamp = (value: number, max: number) => Math.max(0, Math.min(max, value));
 
 export const GuideMapEditor = defineComponent({
   name: 'GuideMapEditor',
-  props: { data: { type: Object as PropType<MapGuideData>, required: true } },
-  emits: { study: () => true },
+  props: {
+    data: { type: Object as PropType<MapGuideData>, required: true },
+    motionPaused: { type: Boolean, default: false },
+  },
+  emits: { study: () => true, toggleMotion: () => true },
   setup(props, { emit }) {
     const backdrop = ref<GuideMapBackdropHandle | null>(null);
     const selectedId = ref<string | null>(props.data.topics[0]?.id ?? null);
@@ -204,7 +208,7 @@ export const GuideMapEditor = defineComponent({
           role: 'status',
           'aria-hidden': connectingFromId.value === null ? 'true' : undefined,
         }, connectionMessage.value),
-        h('div', { class: 'guide-map-layout' }, [
+        h('div', { class: ['guide-map-layout', { 'is-map-motion-paused': props.motionPaused }] }, [
           h('div', { class: 'guide-map-scroll' }, [
             h('div', {
               class: ['guide-map-canvas', 'guide-map-surface', 'is-pattern-' + (props.data.background ?? GUIDE_MAP_DEFAULT_PATTERN),
@@ -223,6 +227,7 @@ export const GuideMapEditor = defineComponent({
             }, [
               h(GuideMapBackdrop, {
                 ref: backdrop, pattern: props.data.background ?? GUIDE_MAP_DEFAULT_PATTERN,
+                paused: props.motionPaused,
               }),
               h('svg', {
                 class: 'guide-route',
@@ -269,6 +274,9 @@ export const GuideMapEditor = defineComponent({
               ])),
             ]),
           ]),
+          h(GuideMapMotionToggle, {
+            paused: props.motionPaused, onToggle: () => emit('toggleMotion'),
+          }),
           h('aside', { class: 'guide-topic-panel', 'aria-label': 'Selected topic guide' }, selectedTopic ? [
             h('div', { class: 'guide-topic-panel-heading' }, [
               h('input', {

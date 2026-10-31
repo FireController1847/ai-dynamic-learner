@@ -9,6 +9,7 @@ import { connectedTopicIds, mapStudyProblem, startTopic, topicById } from './map
 import { MAP_CANVAS_HEIGHT, MAP_CANVAS_WIDTH, MAP_PADDING } from './map-presentation.ts';
 import { GUIDE_MAP_DEFAULT_PATTERN, type GuideMapPattern } from './library-model.ts';
 import { GuideMapBackdrop, type GuideMapBackdropHandle } from './map-background.ts';
+import { GuideMapMotionToggle } from './map-motion-toggle.ts';
 import {
   MAP_HEIGHT, MAP_TOPIC_HEIGHT, MAP_TOPIC_WIDTH, MAP_WIDTH,
   type MapGuideData, type MapStudySession, type MapTopic,
@@ -20,8 +21,9 @@ export const GuideMapStudy = defineComponent({
     data: { type: Object as PropType<MapGuideData>, required: true },
     guideName: { type: String, required: true },
     statisticsId: { type: String, required: true },
+    motionPaused: { type: Boolean, default: false },
   },
-  emits: { edit: () => true },
+  emits: { edit: () => true, toggleMotion: () => true },
   setup(props, { emit }) {
     const saved = props.data.session;
     const statistics = useStatistics();
@@ -578,7 +580,7 @@ export const GuideMapStudy = defineComponent({
             }, 'Save & exit'),
           ]),
         ]),
-        h('div', { class: 'guide-study-layout' }, [
+        h('div', { class: ['guide-study-layout', { 'is-map-motion-paused': props.motionPaused }] }, [
           h('div', {
             ref: scroll,
             class: ['guide-study-map-scroll', { 'is-cinematic': camera.value !== null }],
@@ -605,7 +607,7 @@ export const GuideMapStudy = defineComponent({
                 );
               },
             }, [
-              h(GuideMapBackdrop, { ref: backdrop, pattern, paused: focused.value }),
+              h(GuideMapBackdrop, { ref: backdrop, pattern, paused: focused.value || props.motionPaused }),
               h('svg', {
                 class: 'guide-study-route',
                 style: { left: MAP_PADDING + 'px', top: MAP_PADDING + 'px' },
@@ -651,6 +653,9 @@ export const GuideMapStudy = defineComponent({
               }) : null,
             ]),
           ]),
+          h(GuideMapMotionToggle, {
+            paused: props.motionPaused, onToggle: () => emit('toggleMotion'),
+          }),
           !focused.value ? h('p', { class: 'guide-study-map-hint', role: 'status' },
             arriving.value ? 'Finding your starting point…'
               : travelling.value ? 'Following the route…'
