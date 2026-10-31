@@ -2,7 +2,7 @@
 
 This directory contains read-only Markdown release notes for Dynamic Learner.
 **A matching changelog entry is required whenever an app's version is bumped.**
-Guide's history is published; other app histories may begin with their next release.
+Guide and Review (formerly Knowledge Check) have published release histories; other apps may begin with their next release.
 
 To publish a tab or a new release, add or update its UTF-8 Markdown file using the exact filename below.
 The build copies files into `/changelogs/`, and the Changelog page renders them
