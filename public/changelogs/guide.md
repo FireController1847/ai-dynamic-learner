@@ -1,3 +1,15 @@
+## v2.12.5
+
+<small data-utc="2026-10-31T04:21:56.513Z">October 30, 2026</small>
+
+- **Layout:** Reduced Guide's closed **Location and order** footer to one standard control-height row, matching the other apps.
+- **Organization:** Removed oversized summary padding; expanding the bar still reveals the same move-to-group and up/down controls.
+
+<details>
+<summary>View 1 commit</summary>
+<ol><li>Release commit link pending.</li></ol>
+</details>
+
 ## v2.12.4
 
 <small data-utc="2026-10-31T04:20:08.010Z">October 30, 2026</small>

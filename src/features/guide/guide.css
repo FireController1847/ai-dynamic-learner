@@ -415,8 +415,18 @@
   overflow:auto;overscroll-behavior:contain;
   border-top:1px solid var(--border-color);
 }
+/* Closed is a single control-height row, never a panel-sized footer.
+   The shared .organization-summary supplies the standard spacing. */
+.guide-detail.is-guide>.item-organization:not([open]){
+  flex:0 0 var(--control-height);
+  height:var(--control-height);
+  min-height:var(--control-height);
+  max-height:var(--control-height);
+  overflow:hidden;
+}
 .guide-detail.is-guide>.item-organization .organization-summary{
-  display:list-item;padding:12px 0;
+  display:list-item;
+  padding-block:calc((var(--control-height) - 20px) / 2);
 }
 .guide-detail.is-guide>.guide-list-workspace{
   min-height:0;overflow:auto;
