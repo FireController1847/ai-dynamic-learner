@@ -7,7 +7,7 @@
 
 <details>
 <summary>View 1 commit</summary>
-<ol><li>Release commit link pending.</li></ol>
+<ol><li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/3efd5dca23ea4ff23fee9c07f00c7945bdec72de">3efd5dca</a> — fix(guide): keep collapsed location and order footer one row tall (v2.12.5)</li></ol>
 </details>
 
 ## v2.12.4
