@@ -10,7 +10,7 @@
 <details>
 <summary>View 1 commit</summary>
 <ol>
-<li>Release commit link pending.</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/1f2139b078eaab56648b0834fbc00825a76809b6">1f2139b0</a> — feat(guide): interactive circuit board and hacker backgrounds (v2.10.0)</li>
 </ol>
 </details>
 
