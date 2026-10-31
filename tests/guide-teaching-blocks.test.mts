@@ -7,6 +7,8 @@ import { reactive, ref } from 'vue';
 import { validateGuide } from '../src/features/guide/library-model.ts';
 import { tokenizeTeachingMath, renderTeachingMath } from '../src/features/guide/teaching-text.ts';
 import { parseGuideAiImport, guideAiPrompt } from '../src/features/guide/ai-import.ts';
+import { GUIDE_AI_FOCUSES, guideAiFocusPrompt } from '../src/features/guide/ai-focus.ts';
+import { featureDefinitions } from '../src/features/feature-definitions.ts';
 import { layoutSpacedAiMap, stopsAreSpaced, GUIDE_AI_STOP_GAP } from '../src/features/guide/ai-map-layout.ts';
 import { allocateTeachingBlocks, rebalanceTeachingWeights, DEFAULT_TEACHING_WEIGHTS, TEACHING_TYPES } from '../src/features/guide/ai-teaching-mix.ts';
 
@@ -336,4 +338,36 @@ test('Guide category scoping reuses Review category contract and constrains its 
   assert.match(prompt, /ONLY for this category/);
   assert.match(prompt, /Teaching Blocks/);
   assert.match(prompt, /Let AI choose/);
+});
+
+test('Guide 2.0.0 marks the Teaching Blocks major release', () => {
+  const guide = featureDefinitions.find(feature => feature.id === 'guide');
+  assert.equal(guide?.version, '2.0.0');
+});
+
+test('AI Guide focus options prioritize teaching rather than graded responses', () => {
+  assert.deepEqual(GUIDE_AI_FOCUSES.map(option => option.id),
+    ['default', 'numerics', 'recall', 'memorization', 'relationships', 'application']);
+  assert.equal(guideAiFocusPrompt('default'), '');
+  for (const focus of GUIDE_AI_FOCUSES.filter(option => option.id !== 'default')) {
+    const prompt = guideAiPrompt({
+      detail: 'balanced', coverage: 'comprehensive', bulletStyle: 'thoughts',
+      mixMode: 'ai', aiFocus: focus.id, targetBlocks: 30, weights: DEFAULT_TEACHING_WEIGHTS,
+    }, 'map');
+    assert.ok(prompt.includes(focus.prompt), focus.label + ' must be included in AI instructions');
+    assert.match(prompt, /Keep full subject coverage/);
+    assert.match(prompt, /OPTIONAL TEACHING FOCUS/);
+  }
+});
+
+test('Guide focus is ignored for custom mix and default leaves the teaching prompt alone', () => {
+  const options = {
+    detail: 'balanced' as const, coverage: 'balanced' as const, bulletStyle: 'thoughts' as const,
+    mixMode: 'ai' as const, targetBlocks: 25, weights: DEFAULT_TEACHING_WEIGHTS,
+  };
+  assert.equal(guideAiPrompt({ ...options, aiFocus: 'default' }, 'map'),
+    guideAiPrompt(options, 'map'));
+  const custom = guideAiPrompt({ ...options, mixMode: 'custom', aiFocus: 'numerics' }, 'map');
+  assert.doesNotMatch(custom, /OPTIONAL TEACHING FOCUS/);
+  assert.ok(!custom.includes(guideAiFocusPrompt('numerics')));
 });
