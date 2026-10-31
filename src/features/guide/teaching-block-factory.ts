@@ -1,5 +1,6 @@
 import { createId } from '../../core/ids.ts';
 import type { TeachingBlock, TeachingChoice } from './teaching-blocks.ts';
+import { defaultTeachingContent } from './parameterized-teaching.ts';
 
 export type TeachingBlockKind = TeachingBlock['kind'];
 
@@ -14,6 +15,7 @@ export function copyTeachingBlock<T extends TeachingBlock>(block: T): T {
 export const TEACHING_BLOCK_KINDS: readonly { kind: TeachingBlockKind; label: string; help: string }[] = [
   { kind: 'explanation', label: 'Explanation', help: 'Teach an idea in readable paragraphs.' },
   { kind: 'example', label: 'Worked example', help: 'Present a situation, walk through it, then connect the result.' },
+  { kind: 'parameterized', label: 'Parameterized example', help: 'Generate values, explore variables and reveal an explained solution using Review’s computation engine.' },
   { kind: 'comparison', label: 'Comparison', help: 'Place two related ideas side by side.' },
   { kind: 'table', label: 'Table', help: 'Compare multiple concepts in a structured, editable table with Markdown and math.' },
   { kind: 'sequence', label: 'Step by step', help: 'Let learners inspect the stages of a process.' },
@@ -34,6 +36,7 @@ export function newTeachingBlock(kind: TeachingBlockKind): TeachingBlock {
     case 'explanation': return { id, kind, title: 'A new concept', body: 'Explain the concept here.', highlights: [] };
     case 'example': return { id, kind, title: 'Worked example', scenario: 'Describe a situation here.',
       steps: ['Describe the first action.'], takeaway: 'Explain what this example teaches.' };
+    case 'parameterized': return { id, kind, title: 'Explore a generated example', ...defaultTeachingContent() };
     case 'comparison': return { id, kind, title: 'Compare two ideas',
       left: { label: 'First idea', description: 'Explain the first idea.', points: [] },
       right: { label: 'Second idea', description: 'Explain the second idea.', points: [] } };
