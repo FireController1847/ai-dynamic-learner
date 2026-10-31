@@ -1,3 +1,16 @@
+## v2.13.0
+
+<small data-utc="2026-10-31T23:04:14.247Z">October 31, 2026</small>
+
+- **Fullscreen Lessons:** Added an expand/restore icon immediately to the left of the Map lesson's close (X) control, opening the lesson in a floating, page-wide window above the navigation and workspace.
+- **Reading Experience:** Kept lessons scrollable, responsive, and theme-aware; the map and underlying page are dimmed while expanded.
+- **Continuity & Accessibility:** Preserved lesson interactions when resizing, provided Escape-to-restore and keyboard focus cycling, and kept the existing X action for returning to the map.
+
+<details>
+<summary>View 1 commit</summary>
+<ol><li>Release commit link pending.</li></ol>
+</details>
+
 ## v2.12.5
 
 <small data-utc="2026-10-31T04:21:56.513Z">October 30, 2026</small>

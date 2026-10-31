@@ -435,3 +435,27 @@
   flex:1;min-height:0;overflow:auto;
   align-content:start;
 }
+
+/* Map lessons can lift out of Guide's clipped workspace without changing
+   the lesson component or resetting its interactive inputs. */
+.guide-study-fullscreen-scrim{
+  position:fixed;inset:0;z-index:9990;
+  background:var(--scrim);
+}
+.guide-study-topic.is-fullscreen{
+  position:fixed;inset:clamp(12px,2.5vw,32px);z-index:9991;
+  width:auto;height:auto;max-width:none;max-height:none;
+  padding:clamp(24px,4vw,48px) clamp(20px,4vw,48px) 96px;
+  visibility:visible;pointer-events:auto;opacity:1;
+  transform:none;transition:none;overscroll-behavior:contain;
+}
+.guide-study-close-row{gap:2px}
+.guide-study-expand{margin:-12px 0 0 0;font-size:initial}
+.guide-study-expand .ui-icon{width:20px;height:20px}
+.guide-study-topic-heading{padding-right:96px}
+@media(max-width:560px){
+  .guide-study-topic.is-fullscreen{
+    inset:8px;padding:20px 16px 72px;
+  }
+  .guide-study-topic-heading{padding-right:88px}
+}

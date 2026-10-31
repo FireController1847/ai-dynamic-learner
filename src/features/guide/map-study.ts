@@ -1,6 +1,7 @@
 import { useStudySession } from '../../components/use-study-session.ts';
 import { useStatistics } from '../../components/statistics-context.ts';
-import { computed, defineComponent, h, nextTick, onBeforeUnmount, onDeactivated, ref, type PropType } from 'vue';
+import { computed, defineComponent, h, nextTick, onBeforeUnmount, onDeactivated, ref, Teleport, type PropType } from 'vue';
+import { Icon } from '../../components/icon.ts';
 import { GuideTypeIcon } from './guide-type-icon.ts';
 import { TeachingLessonView } from './teaching-lesson.ts';
 import { CONTINUE_ARRIVAL_PAUSE_MS, REDUCED_MOTION_ARRIVAL_PAUSE_MS, mayOpenContinuedStop } from './map-study-arrival.ts';
@@ -39,6 +40,7 @@ export const GuideMapStudy = defineComponent({
     const travelling = ref(false);
     const arriving = ref(false);
     const focused = ref(false);
+    const fullscreenLesson = ref(false);
     const travelTargetId = ref<string | null>(null);
     // Destination-only arrival pulse; the starting prompt has its own lifecycle.
     const arrivalHighlightId = ref<string | null>(null);
@@ -54,6 +56,7 @@ export const GuideMapStudy = defineComponent({
     const scroll = ref<HTMLElement | null>(null);
     const topicHeading = ref<HTMLElement | null>(null);
     const topicPanel = ref<HTMLElement | null>(null);
+    const fullscreenButton = ref<HTMLButtonElement | null>(null);
     const viewMapButton = ref<HTMLButtonElement | null>(null);
     const camera = ref<{ x: number; y: number; scale: number } | null>(null);
     const cameraZooming = ref(false);
@@ -170,7 +173,44 @@ export const GuideMapStudy = defineComponent({
     }
 
     onBeforeUnmount(clearTimers);
-    onDeactivated(clearTimers);
+    onDeactivated(() => {
+      fullscreenLesson.value = false;
+      clearTimers();
+    });
+
+    function toggleFullscreenLesson() {
+      const scrollTop = topicPanel.value?.scrollTop ?? 0;
+      fullscreenLesson.value = !fullscreenLesson.value;
+      // Vue's Teleport moves the existing lesson node: no content or input state is recreated.
+      nextTick(() => {
+        if (topicPanel.value) topicPanel.value.scrollTop = scrollTop;
+        fullscreenButton.value?.focus({ preventScroll: true });
+      });
+    }
+
+    function lessonKeydown(event: KeyboardEvent) {
+      if (!fullscreenLesson.value) return;
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+        toggleFullscreenLesson();
+        return;
+      }
+      if (event.key !== 'Tab' || !topicPanel.value) return;
+      const focusable = [...topicPanel.value.querySelectorAll<HTMLElement>(
+        'button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),' +
+        'textarea:not([disabled]),[tabindex]:not([tabindex="-1"])',
+      )].filter(element => element.getClientRects().length > 0 && !element.closest('[inert]'));
+      const first = focusable[0], last = focusable[focusable.length - 1];
+      if (!first || !last) return;
+      if (event.shiftKey && (document.activeElement === first || !topicPanel.value.contains(document.activeElement))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (document.activeElement === last || !topicPanel.value.contains(document.activeElement))) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
 
     function later(callback: () => void, delay: number) {
       const timer = window.setTimeout(() => {
@@ -203,6 +243,7 @@ export const GuideMapStudy = defineComponent({
 
     function closeTopic() {
       cancelContinueOpen();
+      fullscreenLesson.value = false;
       focused.value = false;
       nextTick(() => { viewMapButton.value?.focus({ preventScroll: true }); });
     }
@@ -225,6 +266,7 @@ export const GuideMapStudy = defineComponent({
     }
 
     function start(animate = true) {
+      fullscreenLesson.value = false;
       clearTimers();
       if (studyProblem.value) return;
       const first = startTopic(props.data);
@@ -288,12 +330,14 @@ export const GuideMapStudy = defineComponent({
     }
 
     function restart() {
+      fullscreenLesson.value = false;
       focused.value = false;
       started.value = false;
       nextTick(() => start(true));
     }
 
     function resumeAdventure() {
+      fullscreenLesson.value = false;
       clearTimers();
       started.value = true;
       focused.value = false;
@@ -303,6 +347,7 @@ export const GuideMapStudy = defineComponent({
     }
 
     function returnToOverview() {
+      fullscreenLesson.value = false;
       clearTimers();
       focused.value = false;
       started.value = false;
@@ -572,6 +617,7 @@ export const GuideMapStudy = defineComponent({
       const traveler = topicById(props.data, travelerId);
       const pattern: GuideMapPattern = props.data.background ?? GUIDE_MAP_DEFAULT_PATTERN;
 
+      const lessonFullscreen = focused.value && !travelling.value && fullscreenLesson.value;
       return h('div', { class: 'guide-study-session' }, [
         h('div', { class: 'guide-study-toolbar' }, [
           h('div', [
@@ -680,22 +726,43 @@ export const GuideMapStudy = defineComponent({
               : travelling.value ? 'Following the route…'
               : complete.value ? 'Map complete! Select any unlocked stop to revisit its lesson.'
               : 'Select an unlocked stop to explore its lesson.') : null,
-          h('section', {
-            ref: topicPanel,
-            class: ['guide-study-topic', { 'is-visible': focused.value && !travelling.value }],
-            'aria-hidden': !focused.value || travelling.value,
-            inert: !focused.value || travelling.value,
-            'aria-label': 'Current topic lesson',
-          }, [
-            h('div', { class: 'guide-study-close-row' }, [
-              h('button', {
-                type: 'button',
-                class: 'icon-button guide-study-close',
-                title: 'View map',
-                'aria-label': 'Close lesson and view map',
-                onClick: closeTopic,
-              }, '×'),
-            ]),
+          h(Teleport, { to: 'body', disabled: !lessonFullscreen }, [
+            lessonFullscreen ? h('div', {
+              class: 'guide-study-fullscreen-scrim',
+              'aria-hidden': 'true',
+              onClick: toggleFullscreenLesson,
+            }) : null,
+            h('section', {
+              ref: topicPanel,
+              class: ['guide-study-topic', {
+                'is-visible': focused.value && !travelling.value,
+                'is-fullscreen': lessonFullscreen,
+              }],
+              'aria-hidden': !focused.value || travelling.value,
+              inert: !focused.value || travelling.value,
+              role: lessonFullscreen ? 'dialog' : undefined,
+              'aria-modal': lessonFullscreen ? 'true' : undefined,
+              'aria-label': 'Current topic lesson',
+              onKeydown: lessonKeydown,
+            }, [
+              h('div', { class: 'guide-study-close-row' }, [
+                h('button', {
+                  ref: fullscreenButton,
+                  type: 'button',
+                  class: 'icon-button guide-study-close guide-study-expand',
+                  title: lessonFullscreen ? 'Restore lesson to Guide' : 'Expand lesson to fullscreen',
+                  'aria-label': lessonFullscreen ? 'Restore lesson to Guide' : 'Expand lesson to fullscreen',
+                  'aria-pressed': lessonFullscreen,
+                  onClick: toggleFullscreenLesson,
+                }, [h(Icon, { name: lessonFullscreen ? 'minimize' : 'maximize' })]),
+                h('button', {
+                  type: 'button',
+                  class: 'icon-button guide-study-close',
+                  title: 'View map',
+                  'aria-label': 'Close lesson and view map',
+                  onClick: closeTopic,
+                }, '×'),
+              ]),
             h('div', { class: 'guide-study-topic-inner' }, [
             travelling.value ? h('div', { class: 'guide-study-travelling' }, [
               h('strong', 'Following the path…'),
@@ -730,6 +797,7 @@ export const GuideMapStudy = defineComponent({
               ]),
               routeControls(topic),
             ],
+              ]),
             ]),
           ]),
         ]),
