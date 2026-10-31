@@ -605,7 +605,7 @@ export const GuideMapStudy = defineComponent({
                 );
               },
             }, [
-              h(GuideMapBackdrop, { ref: backdrop, pattern }),
+              h(GuideMapBackdrop, { ref: backdrop, pattern, paused: focused.value }),
               h('svg', {
                 class: 'guide-study-route',
                 style: { left: MAP_PADDING + 'px', top: MAP_PADDING + 'px' },

@@ -1,13 +1,14 @@
 import { defineComponent, h, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref, watch, type PropType } from 'vue';
 import type { GuideMapPattern } from './library-model.ts';
 import { MAP_CANVAS_HEIGHT, MAP_CANVAS_WIDTH } from './map-presentation.ts';
+import { drawGuideAmbient } from './map-ambient.ts';
 
 export const GUIDE_MAP_PATTERNS: readonly { value: GuideMapPattern; label: string }[] = [
   { value: 'water', label: 'Water · varied wave crests' },
   { value: 'contours', label: 'Contours · small terrain curves' },
   { value: 'constellations', label: 'Constellations · starlight' },
   { value: 'flow', label: 'Flow · drifting currents' },
-  { value: 'plain', label: 'Plain · no pattern' },
+  { value: 'fireflies', label: 'Fireflies · drifting lights' },
 ];
 
 export interface GuideMapBackdropHandle { interactAt(x: number, y: number): void }
@@ -121,6 +122,15 @@ function drawTexture(ctx: CanvasRenderingContext2D, pattern: GuideMapPattern,
         }
       }
     }
+  } else if (pattern === 'fireflies') {
+    for (let i = 0; i < 44; i++) {
+      const x = 22 + hash(i * 5 + 1) * (W - 44);
+      const y = 22 + hash(i * 5 + 2) * (H - 44);
+      ctx.globalAlpha = 0.045 + hash(i + 67) * 0.035;
+      ctx.beginPath();
+      ctx.arc(x, y, 1 + hash(i + 51) * 0.55, 0, TAU);
+      ctx.fill();
+    }
   } else if (pattern === 'flow') {
     for (let row = 0; row < H / 70 + 1; row++) {
       for (let col = 0; col < W / 114 + 1; col++) {
@@ -228,6 +238,21 @@ function drawFlowGust(ctx: CanvasRenderingContext2D, effect: Disturbance, age: n
   }
 }
 
+/** Tapping fireflies scatters a few points of light, not circular water ripples. */
+function drawFireflies(ctx: CanvasRenderingContext2D, effect: Disturbance, age: number) {
+  ctx.fillStyle = ctx.strokeStyle;
+  for (let i = 0; i < 12; i++) {
+    const angle = i * 2.39996 + hash(i + 34) * 0.7;
+    const distance = age * (23 + hash(i + 49) * 94);
+    const x = effect.x + Math.cos(angle) * distance;
+    const y = effect.y + Math.sin(angle) * distance - age * 15;
+    ctx.globalAlpha = 0.22 * (1 - age) * (0.45 + hash(i + 51) * 0.55);
+    ctx.beginPath();
+    ctx.arc(x, y, 1 + hash(i + 63) * 1.15, 0, TAU);
+    ctx.fill();
+  }
+}
+
 function drawEffects(ctx: CanvasRenderingContext2D, pattern: GuideMapPattern,
   effects: readonly Disturbance[], now: number) {
   if (pattern === 'plain') return;
@@ -238,19 +263,42 @@ function drawEffects(ctx: CanvasRenderingContext2D, pattern: GuideMapPattern,
     else if (pattern === 'contours') drawContourBloom(ctx, effect, age);
     else if (pattern === 'constellations') drawStarlight(ctx, effect, age);
     else if (pattern === 'flow') drawFlowGust(ctx, effect, age);
+    else if (pattern === 'fireflies') drawFireflies(ctx, effect, age);
   }
   ctx.restore();
 }
 
 export const GuideMapBackdrop = defineComponent({
   name: 'GuideMapBackdrop',
-  props: { pattern: { type: String as PropType<GuideMapPattern>, required: true } },
+  props: {
+    pattern: { type: String as PropType<GuideMapPattern>, required: true },
+    paused: { type: Boolean, default: false },
+  },
   setup(props, { expose }) {
     const canvas = ref<HTMLCanvasElement | null>(null);
     const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const effects: Disturbance[] = [];
-    let frame = 0, mounted = false;
+    let frame = 0, mounted = false, active = true, visible = true;
+    let tick: number | null = null;
     let observer: MutationObserver | null = null;
+    let visibilityObserver: IntersectionObserver | null = null;
+    function canAnimate() {
+      return mounted && active && visible && !props.paused && !motion.matches &&
+        !document.hidden && props.pattern !== 'plain';
+    }
+    function stopAnimation() {
+      if (tick !== null) { window.clearTimeout(tick); tick = null; }
+      if (frame) { cancelAnimationFrame(frame); frame = 0; }
+    }
+    // Ambient motion is intentionally throttled to ~10fps (brief interactions
+    // to ~20fps), rather than running a constant 60fps render loop.
+    function schedule() {
+      if (!canAnimate() || frame || tick !== null) return;
+      tick = window.setTimeout(() => {
+        tick = null;
+        if (canAnimate()) frame = requestAnimationFrame(animate);
+      }, effects.length ? 50 : 100);
+    }
     function draw(now = performance.now()) {
       const element = canvas.value;
       const ctx = element?.getContext('2d');
@@ -267,27 +315,27 @@ export const GuideMapBackdrop = defineComponent({
         if (now - effects[i].start >= lifetime(props.pattern)) effects.splice(i, 1);
       }
       drawTexture(ctx, props.pattern, effects, now);
+      if (canAnimate()) drawGuideAmbient(ctx, props.pattern, now / 1000);
       drawEffects(ctx, props.pattern, effects, now);
       ctx.globalAlpha = 1;
     }
     function animate(now: number) {
       frame = 0;
-      if (!mounted) return;
-      if (motion.matches) effects.splice(0);
+      if (!canAnimate()) return;
       draw(now);
-      if (effects.length) frame = requestAnimationFrame(animate);
+      schedule();
     }
     function invalidate() {
-      if (frame) { cancelAnimationFrame(frame); frame = 0; }
+      stopAnimation();
       if (mounted) draw();
-      if (mounted && effects.length) frame = requestAnimationFrame(animate);
+      schedule();
     }
     function interactAt(x: number, y: number) {
-      if (!mounted || props.pattern === 'plain' || motion.matches ||
-          !Number.isFinite(x) || !Number.isFinite(y)) return;
+      if (!canAnimate() || !Number.isFinite(x) || !Number.isFinite(y)) return;
       effects.push({ x: clamp(x, 0, W), y: clamp(y, 0, H), start: performance.now() });
       if (effects.length > 5) effects.shift();
-      if (!frame) frame = requestAnimationFrame(animate);
+      stopAnimation();
+      frame = requestAnimationFrame(animate);
     }
     expose({ interactAt } satisfies GuideMapBackdropHandle);
     function onMotionChange() { if (motion.matches) effects.splice(0); invalidate(); }
@@ -295,21 +343,30 @@ export const GuideMapBackdrop = defineComponent({
       mounted = true;
       observer = new MutationObserver(invalidate);
       observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+      visibilityObserver = new IntersectionObserver(entries => {
+        visible = entries.some(entry => entry.isIntersecting);
+        invalidate();
+      });
+      if (canvas.value) visibilityObserver.observe(canvas.value);
       motion.addEventListener('change', onMotionChange);
+      document.addEventListener('visibilitychange', invalidate);
       window.addEventListener('resize', invalidate);
       invalidate();
     });
-    onActivated(invalidate);
-    onDeactivated(() => {
-      if (frame) { cancelAnimationFrame(frame); frame = 0; }
-      effects.splice(0);
-    });
+    onActivated(() => { active = true; invalidate(); });
+    onDeactivated(() => { active = false; stopAnimation(); effects.splice(0); });
     watch(() => props.pattern, () => { effects.splice(0); invalidate(); });
+    watch(() => props.paused, paused => {
+      if (paused) { stopAnimation(); effects.splice(0); }
+      else invalidate();
+    });
     onBeforeUnmount(() => {
       mounted = false;
-      if (frame) cancelAnimationFrame(frame);
+      stopAnimation();
       observer?.disconnect();
+      visibilityObserver?.disconnect();
       motion.removeEventListener('change', onMotionChange);
+      document.removeEventListener('visibilitychange', invalidate);
       window.removeEventListener('resize', invalidate);
       effects.splice(0);
     });

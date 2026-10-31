@@ -5,9 +5,9 @@ import { renderTeachingRich as rich } from './teaching-text.ts';
 
 type Practice = Extract<TeachingBlock, { kind: 'guided-practice' }>;
 const stageNames = {
-  guided: 'Try it together',
-  apply: 'Use what you learned',
-  revisit: 'Remember and connect',
+  guided: 'Explore',
+  apply: 'Apply',
+  revisit: 'Connect',
 } as const;
 
 /** Source-backed teaching comes before prediction. No answer checking or score. */
@@ -27,48 +27,47 @@ export const GuideGuidedPractice = defineComponent({
       return h('section', { class: 'guide-practice', 'aria-label': stageNames[props.block.stage] }, [
         h('div', { class: 'guide-practice-stage' }, [
           h('span', { class: 'guide-lesson-small-label' }, stageNames[props.block.stage]),
-          h('span', { class: 'guide-practice-note' }, 'Not a test · Go at your own pace'),
         ]),
         h('div', { class: 'guide-practice-setup' }, [
-          h('strong', props.block.stage === 'revisit' ? 'Remember the idea' : 'First, the idea'),
+          h('strong', props.block.stage === 'revisit' ? 'Recall the idea' : 'The idea'),
           rich(props.block.setup),
         ]),
         h('div', { class: 'guide-practice-prompt' }, [
-          h('span', { class: 'guide-lesson-small-label' }, 'A little thought experiment'),
+          h('span', { class: 'guide-lesson-small-label' }, 'Consider'),
           rich(props.block.prompt),
         ]),
         !revealed ? [
           h('label', { class: 'guide-practice-thinking' }, [
-            h('span', 'What do you think? (optional)'),
+            h('span', 'Your thoughts (optional)'),
             h('textarea', { rows: 2, maxlength: 1200, value: thinking.value,
-              placeholder: 'A prediction, a quick sketch in words, or nothing at all…',
+              placeholder: 'Write a thought, or leave this blank…',
               onInput: (event: Event) => { thinking.value = inputValue(event); } }),
           ]),
           hinted ? h('div', { class: 'guide-practice-hint' }, [
-            h('span', { class: 'guide-lesson-small-label' }, 'A clue to help'),
+            h('span', { class: 'guide-lesson-small-label' }, 'Hint'),
             rich(props.block.hint),
           ]) : null,
           h('div', { class: 'guide-practice-actions' }, [
             !hinted ? h('button', { type: 'button', class: 'quiet-button',
-              onClick: () => emit('answer', 'hint') }, 'Give me a clue') : null,
+              onClick: () => emit('answer', 'hint') }, 'Show hint') : null,
             h('button', { type: 'button', class: 'card-primary-button',
-              onClick: () => emit('answer', 'revealed') }, 'Show me how it works'),
+              onClick: () => emit('answer', 'revealed') }, 'Reveal explanation'),
           ]),
         ] : [
           h('div', { class: 'guide-practice-reveal', role: 'status' }, [
-            h('span', { class: 'guide-lesson-small-label' }, 'Let’s work it through'),
+            h('span', { class: 'guide-lesson-small-label' }, 'Explanation'),
             rich(props.block.reveal),
             thinking.value.trim() ? h('div', { class: 'guide-practice-reflection' }, [
               h('strong', 'Your earlier thought'),
               h('p', thinking.value),
             ]) : null,
             props.block.reflection ? h('div', { class: 'guide-practice-reflection' }, [
-              h('span', { class: 'guide-lesson-small-label' }, 'One more connection'),
+              h('span', { class: 'guide-lesson-small-label' }, 'Connection'),
               rich(props.block.reflection),
             ]) : null,
           ]),
           h('button', { type: 'button', class: 'quiet-button guide-practice-retry',
-            onClick: () => { thinking.value = ''; emit('answer', ''); } }, 'Try recalling it again'),
+            onClick: () => { thinking.value = ''; emit('answer', ''); } }, 'Think again'),
         ],
       ]);
     };

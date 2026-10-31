@@ -24,8 +24,8 @@
 .guide-lesson-side h5,.guide-lesson-step-detail h5{margin:0 0 10px;font-size:17px}
 .guide-lesson-list{display:grid;gap:8px;padding-left:21px;margin:12px 0 0;color:var(--text-color);line-height:1.5}
 .guide-lesson-caption{margin:0;color:var(--text-secondary);font-size:13px;line-height:1.6}
-.guide-lesson-sequence-nav{display:flex;gap:8px;max-width:100%;padding:4px 0 8px;overflow-x:auto}
-.guide-lesson-step-tab{display:flex;flex:1 0 125px;flex-direction:column;align-items:flex-start;gap:8px;min-width:0;min-height:90px;padding:12px;text-align:left;font-size:13px;line-height:1.4;border:1px solid var(--border-color);border-radius:12px;color:var(--text-color);background:var(--surface-subtle)}
+.guide-lesson-sequence-nav{display:flex;flex-wrap:wrap;gap:8px;max-width:100%;padding:4px 0 8px;overflow-x:visible}
+.guide-lesson-step-tab{display:flex;flex:1 1 125px;flex-direction:column;align-items:flex-start;gap:8px;min-width:0;min-height:90px;padding:12px;text-align:left;font-size:13px;line-height:1.4;border:1px solid var(--border-color);border-radius:12px;color:var(--text-color);background:var(--surface-subtle)}
 .guide-lesson-step-tab>span{display:grid;place-items:center;width:23px;height:23px;border-radius:50%;background:var(--surface-hover);font-size:11px;font-weight:700}
 .guide-lesson-step-tab.is-selected,.guide-lesson-diagram-node.is-selected{border-color:var(--brand);background:var(--brand-tint);box-shadow:inset 0 0 0 1px var(--brand)}
 .guide-lesson-step-tab.is-selected>span{background:var(--brand);color:white}
@@ -226,7 +226,9 @@
 .guide-lesson-rich{min-width:0;font-size:inherit;line-height:1.75;overflow-wrap:anywhere}
 .guide-lesson-rich > :first-child{margin-top:0}
 .guide-lesson-rich > :last-child{margin-bottom:0}
-.guide-lesson-rich :is(pre,table,.markdown-latex-block){max-width:100%;overflow-x:auto}
+.guide-lesson-rich :is(pre,.markdown-latex-block){max-width:100%;overflow-x:auto}
+.guide-lesson-rich table{width:100%;max-width:100%;table-layout:fixed;border-collapse:collapse}
+.guide-lesson-rich table :is(th,td){min-width:0;overflow-wrap:anywhere;hyphens:auto}
 .guide-lesson-rich :is(h1,h2,h3,h4,h5,h6){font-size:1.12em}
 .guide-lesson-rich p,.guide-lesson-rich li{white-space:normal}
 .guide-lesson-question>.guide-lesson-rich>p{margin:0;font-weight:inherit}
@@ -246,10 +248,10 @@
 
 
 /* Structured table teaching block: accessible table layout with horizontal scrolling. */
-.guide-lesson-table-scroll{max-width:100%;overflow-x:auto;overscroll-behavior-inline:contain;border:1px solid var(--border-color);border-radius:12px}
+.guide-lesson-table-scroll{max-width:100%;overflow-x:hidden;border:1px solid var(--border-color);border-radius:12px}
 .guide-lesson-table-scroll:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
-.guide-lesson-data-table{width:100%;min-width:max-content;border-collapse:separate;border-spacing:0;font-size:14px;line-height:1.55}
-.guide-lesson-data-table :is(th,td){min-width:120px;max-width:440px;padding:12px 15px;vertical-align:top;text-align:left;overflow-wrap:anywhere;border-right:1px solid var(--border-color);border-bottom:1px solid var(--border-color)}
+.guide-lesson-data-table{width:100%;min-width:0;table-layout:fixed;border-collapse:separate;border-spacing:0;font-size:14px;line-height:1.55}
+.guide-lesson-data-table :is(th,td){min-width:0;padding:12px 15px;vertical-align:top;text-align:left;overflow-wrap:anywhere;hyphens:auto;border-right:1px solid var(--border-color);border-bottom:1px solid var(--border-color)}
 .guide-lesson-data-table tr>:last-child{border-right:0}
 .guide-lesson-data-table tbody tr:last-child>*{border-bottom:0}
 .guide-lesson-data-table thead th{background:var(--surface-subtle);font-weight:700;white-space:normal}
@@ -307,8 +309,8 @@
    always-open information panel, visually distinct from Check answer buttons. */
 .guide-lesson-explore-intro{display:grid;gap:8px;min-width:0}
 .guide-lesson-explore-intro>.guide-lesson-small-label{color:var(--text-secondary)}
-.guide-lesson-explore-tabs{display:flex;flex-wrap:nowrap;gap:4px;max-width:100%;min-width:0;padding:5px 5px 0;overflow-x:auto;overscroll-behavior-inline:contain;scrollbar-gutter:stable;border-bottom:2px solid var(--border-color)}
-.guide-lesson-explore-tab{flex:0 0 auto;min-height:42px;max-width:260px;padding:10px 16px;border:1px solid transparent;border-bottom:3px solid transparent;border-radius:10px 10px 0 0;background:transparent;color:var(--text-secondary);font:inherit;font-size:14px;font-weight:600;line-height:1.35;text-align:center;cursor:pointer;white-space:normal;overflow-wrap:anywhere}
+.guide-lesson-explore-tabs{display:flex;flex-wrap:wrap;gap:4px;max-width:100%;min-width:0;padding:5px 5px 0;overflow-x:visible;border-bottom:2px solid var(--border-color)}
+.guide-lesson-explore-tab{flex:1 1 145px;min-width:0;min-height:42px;max-width:none;padding:10px 16px;border:1px solid transparent;border-bottom:3px solid transparent;border-radius:10px 10px 0 0;background:transparent;color:var(--text-secondary);font:inherit;font-size:14px;font-weight:600;line-height:1.35;text-align:center;cursor:pointer;white-space:normal;overflow-wrap:anywhere}
 .guide-lesson-explore-tab:hover{background:var(--surface-subtle);color:var(--text-color)}
 .guide-lesson-explore-tab.is-active{background:var(--surface-subtle);color:var(--text-color);border-color:var(--border-color);border-bottom-color:var(--brand)}
 .guide-lesson-explore-tab:focus-visible{outline:2px solid var(--brand);outline-offset:-2px}

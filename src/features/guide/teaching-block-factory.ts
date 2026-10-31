@@ -21,7 +21,7 @@ export const TEACHING_BLOCK_KINDS: readonly { kind: TeachingBlockKind; label: st
   { kind: 'sequence', label: 'Step by step', help: 'Let learners inspect the stages of a process.' },
   { kind: 'diagram', label: 'Visual model', help: 'Connect selectable concepts in a visual flow.' },
   { kind: 'exploration', label: 'Exploration', help: 'Let learners try different choices and discover consequences.' },
-  { kind: 'guided-practice', label: 'Try it together', help: 'Teach first, then offer a gentle prediction with a clue and reveal. Revisit ideas later without grading.' },
+  { kind: 'guided-practice', label: 'Guided practice', help: 'Teach first, then offer a gentle prediction with a clue and reveal. Revisit ideas later without grading.' },
   { kind: 'check', label: 'Understanding check', help: 'Offer an ungraded question with explanatory feedback.' },
   { kind: 'connection', label: 'Concept connection', help: 'Connect what was learned with what comes next.' },
 ];

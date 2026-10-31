@@ -305,7 +305,7 @@ export const TeachingBlocksEditor = defineComponent({
               h('span', 'Learning stage'),
               h('select', { value: block.stage, onChange: (event: Event) =>
                 { block.stage = inputValue(event) as typeof block.stage; } }, [
-                h('option', { value: 'guided' }, 'Try it together — supported'),
+                h('option', { value: 'guided' }, 'Explore — supported'),
                 h('option', { value: 'apply' }, 'Use what you learned — more independent'),
                 h('option', { value: 'revisit' }, 'Remember and connect — return later'),
               ]),

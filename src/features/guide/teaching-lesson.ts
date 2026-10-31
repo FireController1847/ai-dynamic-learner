@@ -206,7 +206,7 @@ export const TeachingLessonView = defineComponent({
           break;
         }
         case 'guided-practice':
-          name = 'Try it together';
+          name = 'Guided practice';
           body = h(GuideGuidedPractice, {
             block, response: props.responses[block.id] ?? '',
             onAnswer: (response: string) => answer(block.id, response),
