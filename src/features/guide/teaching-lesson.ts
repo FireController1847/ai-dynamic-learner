@@ -154,14 +154,53 @@ export const TeachingLessonView = defineComponent({
           break;
         }
         case 'exploration': {
-          name = 'Explore';
-          const selected = block.choices.find(choice => choice.id === props.responses[block.id]);
+          name = 'Explore perspectives';
+          // Exploration is a tabbed reference, not a quiz. The first panel is
+          // visible immediately, while an explicit tab selection is remembered.
+          const selected = block.choices.find(choice => choice.id === props.responses[block.id])
+            ?? block.choices[0];
+          const panelId = 'guide-explore-panel-' + block.id;
           body = [
-            h('div', { class: 'guide-lesson-question' }, rich(block.prompt)),
-            optionButtons(block.choices, selected?.id, id => answer(block.id, id)),
-            selected ? h('div', { class: 'guide-lesson-feedback', role: 'status' }, [
-              h('strong', math(selected.label)), rich(selected.explanation),
-            ]) : h('p', { class: 'guide-lesson-prompt' }, 'Choose an option to explore what happens. You can try every option.'),
+            h('div', { class: 'guide-lesson-explore-intro' }, [
+              h('span', { class: 'guide-lesson-small-label' }, 'Browse different perspectives'),
+              rich(block.prompt),
+            ]),
+            h('div', { class: 'guide-lesson-explore-tabs', role: 'tablist',
+              'aria-label': 'Explore ' + block.title }, block.choices.map((choice, index) => {
+                const active = choice.id === selected?.id;
+                return h('button', {
+                  key: choice.id, id: 'guide-explore-tab-' + choice.id,
+                  type: 'button', role: 'tab', 'aria-selected': active,
+                  'aria-controls': panelId, tabindex: active ? 0 : -1,
+                  class: ['guide-lesson-explore-tab', { 'is-active': active }],
+                  onClick: () => answer(block.id, choice.id),
+                  onKeydown: (event: KeyboardEvent) => {
+                    const last = block.choices.length - 1;
+                    const destination = event.key === 'ArrowRight' || event.key === 'ArrowDown'
+                      ? (index + 1) % block.choices.length
+                      : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
+                        ? (index + last) % block.choices.length
+                        : event.key === 'Home' ? 0 : event.key === 'End' ? last : -1;
+                    if (destination < 0) return;
+                    event.preventDefault();
+                    const nextChoice = block.choices[destination];
+                    if (!nextChoice) return;
+                    answer(block.id, nextChoice.id);
+                    (document.getElementById('guide-explore-tab-' + nextChoice.id) as HTMLElement | null)?.focus();
+                  },
+                }, math(choice.label));
+              })),
+            selected ? h('section', {
+              id: panelId, class: 'guide-lesson-explore-panel', role: 'tabpanel',
+              'aria-labelledby': 'guide-explore-tab-' + selected.id,
+              tabindex: 0,
+            }, [
+              h('div', { class: 'guide-lesson-explore-panel-label' }, [
+                h('span', { class: 'guide-lesson-small-label' }, 'Exploring'),
+                h('strong', math(selected.label)),
+              ]),
+              rich(selected.explanation),
+            ]) : null,
           ];
           break;
         }
