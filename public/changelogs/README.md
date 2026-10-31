@@ -9,7 +9,6 @@ The build copies files into `/changelogs/`, and the Changelog page renders them
 with the shared Markdown renderer. No app registration, manifest, or IndexedDB
 migration is needed. Missing files display a friendly empty state.
 
-- `all.md` — All Apps
 - `calculator.md`
 - `notebook.md`
 - `todo-list.md`

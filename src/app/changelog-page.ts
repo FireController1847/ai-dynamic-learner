@@ -5,10 +5,9 @@ import { Icon } from '../components/icon.ts';
 import { pageHref } from './navigation.ts';
 
 // Static release notes are not learning features or workspace records.
-const tabs = [
-  { id: 'all', label: 'All Apps' },
-  ...featureDefinitions.filter(feature => !feature.hidden).map(feature => ({ id: feature.id, label: feature.label })),
-];
+const tabs = featureDefinitions
+  .filter(feature => !feature.hidden)
+  .map(feature => ({ id: feature.id, label: feature.label }));
 
 interface VersionedRelease {
   version: string;
