@@ -3,7 +3,7 @@ import { TEACHING_BLOCK_KINDS, type TeachingBlockKind } from './teaching-block-f
 export type TeachingWeights = Record<TeachingBlockKind, number>;
 export type TeachingMixMode = 'ai' | 'custom';
 export const DEFAULT_TEACHING_WEIGHTS: TeachingWeights = {
-  explanation: 28, example: 18, comparison: 10, table: 10,
+  explanation: 25, example: 16, parameterized: 5, comparison: 10, table: 10,
   sequence: 10, diagram: 8, exploration: 6, check: 6, connection: 4,
 };
 export const TEACHING_TYPES = TEACHING_BLOCK_KINDS.map(item => item.kind);
