@@ -8,7 +8,9 @@
 
 <details>
 <summary>View 1 commit</summary>
-<ol><li>Release commit link pending.</li></ol>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/c64e45ebd4d32f7b89b3a11cc5391509db58165b">c64e45eb</a> — feat(guide): contextual clicks throughout Power Lines scenery (v2.12.0)</li>
+</ol>
 </details>
 
 ## v2.11.1
