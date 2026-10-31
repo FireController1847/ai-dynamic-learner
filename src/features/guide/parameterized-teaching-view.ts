@@ -36,7 +36,11 @@ export const ParameterizedTeachingView = defineComponent({
       const current = state();
       persist({ ...current, revealed: false, overrides: { ...current.overrides, [name]: value } });
     }
-    watch(() => [props.response, JSON.stringify(props.block)], async () => {
+    // Toggling the solution should not re-run generation. Only a changed seed,
+    // numeric override or authored template should generate another variant.
+    watch(() => JSON.stringify({
+      block: props.block, n: state().n, overrides: state().overrides,
+    }), async () => {
       controller.abort(); controller = new AbortController(); const request = controller;
       variant.value = null; problem.value = ''; loading.value = true;
       try {
@@ -93,6 +97,13 @@ export const ParameterizedTeachingView = defineComponent({
               h('dt', answer.label), h('dd', answer.text),
             ])),
             rich(generated.texts.takeaway ?? props.block.takeaway),
+            h('details', { class: 'guide-parameterized-inspect' }, [
+              h('summary', 'Inspect generated values and example seed'),
+              h('p', 'Example seed: ' + generated.seed),
+              h('dl', generated.answers.length ? Object.entries(generated.values).flatMap(([name, value]) => [
+                h('dt', name), h('dd', String(value)),
+              ]) : []),
+            ]),
             generated.trace.length ? h('details', [
               h('summary', 'Solver walkthrough'),
               h('ol', generated.trace.map((line, index) => h('li', { key: index }, rich(line)))),
