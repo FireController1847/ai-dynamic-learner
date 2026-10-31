@@ -12,6 +12,7 @@ import { featureDefinitions } from '../src/features/feature-definitions.ts';
 import { defaultTeachingContent, validTeachingContent, teachingTemplate, readTeachingState, writeTeachingState, controlledTeachingTemplate } from '../src/features/guide/parameterized-teaching.ts';
 import { generateVariant } from '../src/core/parameterized/generator.ts';
 import { layoutSpacedAiMap, stopsAreSpaced, GUIDE_AI_STOP_GAP } from '../src/features/guide/ai-map-layout.ts';
+import { CONTINUE_ARRIVAL_PAUSE_MS, REDUCED_MOTION_ARRIVAL_PAUSE_MS, mayOpenContinuedStop } from '../src/features/guide/map-study-arrival.ts';
 import { allocateTeachingBlocks, rebalanceTeachingWeights, DEFAULT_TEACHING_WEIGHTS, TEACHING_TYPES } from '../src/features/guide/ai-teaching-mix.ts';
 
 function demoModel() {
@@ -452,4 +453,36 @@ test('AI accepts expression-based parameterized lessons, but not solver scripts'
   const rules = unsafe.topics[0].lesson.blocks[0].rules;
   (rules as unknown as { solver: unknown }).solver = { id: 'x', version: '1', parameters: {}, package: { source: 'evil' } };
   assert.throws(() => parseGuideAiImport(JSON.stringify(unsafe), 'map'));
+});
+
+test('continued map stops open only after arrival and never during abandoned navigation', () => {
+  assert.ok(CONTINUE_ARRIVAL_PAUSE_MS >= 200 && CONTINUE_ARRIVAL_PAUSE_MS <= 600);
+  assert.ok(REDUCED_MOTION_ARRIVAL_PAUSE_MS < CONTINUE_ARRIVAL_PAUSE_MS);
+  const ready = { started: true, travelling: false, arriving: false,
+    currentId: 'next', targetId: 'next', focused: false };
+  assert.equal(mayOpenContinuedStop(ready), true);
+  assert.equal(mayOpenContinuedStop({ ...ready, started: false }), false);
+  assert.equal(mayOpenContinuedStop({ ...ready, travelling: true }), false);
+  assert.equal(mayOpenContinuedStop({ ...ready, arriving: true }), false);
+  assert.equal(mayOpenContinuedStop({ ...ready, currentId: 'other' }), false);
+  assert.equal(mayOpenContinuedStop({ ...ready, focused: true }), false);
+});
+
+test('Guide prompts strongly prefer source-supported parameterized worked examples', () => {
+  const base = { detail: 'balanced' as const, coverage: 'comprehensive' as const,
+    bulletStyle: 'thoughts' as const, mixMode: 'ai' as const,
+    targetBlocks: 30, weights: DEFAULT_TEACHING_WEIGHTS };
+  const normal = guideAiPrompt({ ...base, aiFocus: 'default' }, 'map');
+  const numeric = guideAiPrompt({ ...base, aiFocus: 'numerics' }, 'map');
+  assert.match(normal, /HEAVILY PREFER parameterized worked examples/);
+  assert.match(normal, /FAVOR reusable parameterized Teaching Blocks/);
+  assert.match(normal, /computed answers that depend on generated variables/);
+  assert.match(normal, /Never randomize genuinely fixed quantities/);
+  assert.match(numeric, /NUMERICS FOCUS — HIGHEST PRIORITY/);
+  assert.match(numeric, /EVERY source-supported numerical worked example/);
+  assert.match(numeric, /PARAMETERIZED worked Teaching Blocks/);
+  assert.match(numeric, /No uploaded solver packages or scripts/);
+  assert.match(numeric, /OUTPUT AS A DOWNLOADABLE JSON FILE/);
+  const custom = guideAiPrompt({ ...base, mixMode: 'custom', aiFocus: 'numerics' }, 'map');
+  assert.doesNotMatch(custom, /NUMERICS FOCUS — HIGHEST PRIORITY/);
 });
