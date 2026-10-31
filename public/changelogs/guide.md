@@ -8,7 +8,7 @@
 
 <details>
 <summary>View 1 commit</summary>
-<ol><li>Release commit link pending.</li></ol>
+<ol><li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/929d2a14a412d2181b42382981b4db91b0f74e82">929d2a14</a> — fix(guide): match full-width Location and order footer used by other apps (v2.12.4)</li></ol>
 </details>
 
 ## v2.12.3
