@@ -215,7 +215,7 @@ export const GuideMapEditor = defineComponent({
                 if (event.target !== event.currentTarget) return;
                 const bounds = (event.currentTarget as HTMLElement).getBoundingClientRect();
                 if (!bounds.width || !bounds.height) return;
-                backdrop.value?.rippleAt(
+                backdrop.value?.interactAt(
                   (event.clientX - bounds.left) * MAP_CANVAS_WIDTH / bounds.width,
                   (event.clientY - bounds.top) * MAP_CANVAS_HEIGHT / bounds.height,
                 );

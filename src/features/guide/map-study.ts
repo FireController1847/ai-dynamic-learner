@@ -42,7 +42,7 @@ export const GuideMapStudy = defineComponent({
     function celebrateArrival(id: string) {
       const stop = topicById(props.data, id);
       if (!stop) return;
-      backdrop.value?.rippleAt(
+      backdrop.value?.interactAt(
         stop.x + MAP_PADDING + MAP_TOPIC_WIDTH / 2,
         stop.y + MAP_PADDING + MAP_TOPIC_HEIGHT / 2,
       );
@@ -599,7 +599,7 @@ export const GuideMapStudy = defineComponent({
                 if (event.target !== event.currentTarget) return;
                 const bounds = (event.currentTarget as HTMLElement).getBoundingClientRect();
                 if (!bounds.width || !bounds.height) return;
-                backdrop.value?.rippleAt(
+                backdrop.value?.interactAt(
                   (event.clientX - bounds.left) * MAP_CANVAS_WIDTH / bounds.width,
                   (event.clientY - bounds.top) * MAP_CANVAS_HEIGHT / bounds.height,
                 );
