@@ -342,9 +342,9 @@ test('Guide category scoping reuses Review category contract and constrains its 
   assert.match(prompt, /Let AI choose/);
 });
 
-test('Guide 2.0.0 marks the Teaching Blocks major release', () => {
+test('Guide 2.1.0 marks the parameterized teaching release', () => {
   const guide = featureDefinitions.find(feature => feature.id === 'guide');
-  assert.equal(guide?.version, '2.0.0');
+  assert.equal(guide?.version, '2.1.0');
 });
 
 test('AI Guide focus options prioritize teaching rather than graded responses', () => {
