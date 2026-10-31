@@ -116,7 +116,7 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'guide', label: 'Guide', path: '/guide/', icon: 'document',
     group: 'master',
-    version: '2.12.3',
+    version: '2.12.4',
     image: 'assets/app-icons/guide.png',
     description: 'Teach and explore ideas through interactive map lessons, Teaching Blocks, or simple lists.',
     metadata: {

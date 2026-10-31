@@ -6,7 +6,7 @@ import { inputValue } from '../../core/dom.ts';
 import { Icon } from '../../components/icon.ts';
 import { DeleteConfirmation } from '../../components/delete-confirmation.ts';
 import { GuideTypeIcon } from './guide-type-icon.ts';
-import { canMove,countGuides,countItems,createGroup,deleteItem,findItem,firstEntry,groupOptions,guideIsEmpty,MAX_DEPTH,MAX_ITEMS,MAX_NAME_LENGTH,moveItem,type LibraryItem } from './library-model.ts';
+import { canMove,countGuides,countItems,createGroup,deleteItem,findItem,firstEntry,guideIsEmpty,MAX_DEPTH,MAX_ITEMS,MAX_NAME_LENGTH,moveItem,type LibraryItem } from './library-model.ts';
 export const GuideLibrary=defineComponent({
   name:'GuideLibrary',
   props:{items:{type:Array as PropType<LibraryItem[]>,required:true},selectedId:{type:String as PropType<string|null>,default:null},collapsed:Boolean},
@@ -54,19 +54,6 @@ export const GuideLibrary=defineComponent({
       },'Move to end of top level');
     }
     onDeactivated(()=>{pendingDelete.value=null;deleteTrigger=null;endDrag();});
-    // The compact footer exposes the same move operations as the main
-    // "Location and order" section, without occupying library list space.
-    function moveSelected(targetId:string|null,position:MovePosition) {
-      const id=props.selectedId;
-      if(!id||!canMove(props.items,id,targetId,position)||!moveItem(props.items,id,targetId,position))return;
-      reveal(id);
-      announcement.value='Moved '+(findItem(props.items,id)?.item.name??'item')+'.';
-    }
-    function reorderSelected(offset:-1|1) {
-      const selected=findItem(props.items,props.selectedId);
-      const neighbor=selected?.siblings[selected.index+offset];
-      if(selected&&neighbor)moveSelected(neighbor.id,offset===-1?'before':'after');
-    }
     function reveal(id:string){let p=findItem(props.items,id)?.parentId;while(p){expanded.value.add(p);p=findItem(props.items,p)?.parentId;}}
     async function rename(item:LibraryItem){emit('select',item.id);editingId.value=item.id;draft.value=item.name;await nextTick();input.value?.focus();input.value?.select();}
     async function finish(commit:boolean,focus=false){const id=editingId.value;if(!id)return;const found=findItem(props.items,id),name=draft.value.trim();if(commit&&found&&name&&name.length<=MAX_NAME_LENGTH){found.item.name=name;announcement.value='Renamed to '+name+'.';}editingId.value=null;if(focus){await nextTick();labels.get(id)?.focus();}}
@@ -121,46 +108,6 @@ export const GuideLibrary=defineComponent({
       h('div',{class:'directory-scroll'},[
         props.items.length?h('ul',{class:'directory-list','aria-label':'Groups and guides'},props.items.map(renderItem)):h('p',{class:'directory-empty'},'No groups or guides yet.'),
         draggedId.value?rootTarget():null,
-      ]),
-      h('div',{class:'guide-library-footer'},[
-        h('details',{class:'guide-library-reorder',onKeydown:(event:KeyboardEvent)=>{
-          if(event.key==='Escape'){
-            (event.currentTarget as HTMLDetailsElement).open=false;
-            event.stopPropagation();
-          }
-        }},[
-          h('summary',{title:'Organize guides and groups'},[
-            h(Icon,{name:'grip'}),'Reorder'
-          ]),
-          (() => {
-            const selected=findItem(props.items,props.selectedId);
-            return h('div',{class:'guide-library-reorder-popover'},[
-              h('strong','Location and order'),
-              selected?h('div',{class:'guide-library-reorder-content'},[
-                h('label',[
-                  'Move to group',
-                  h('select',{
-                    'aria-label':'Move selected item to group',
-                    value:selected.parentId??'',
-                    onChange:(event:Event)=>moveSelected(inputValue(event)||null,'inside')
-                  },[
-                    h('option',{value:'',disabled:!canMove(props.items,selected.item.id,null,'inside')},'Top level'),
-                    ...groupOptions(props.items,selected.item.id).map(group=>
-                      h('option',{key:group.id,value:group.id,
-                        disabled:!canMove(props.items,selected.item.id,group.id,'inside')},group.label))
-                  ])
-                ]),
-                h('div',{class:'guide-library-reorder-actions'},[
-                  h('button',{type:'button',class:'quiet-button',disabled:selected.index===0,
-                    onClick:()=>reorderSelected(-1)},[h(Icon,{name:'arrow-up'}),'Move up']),
-                  h('button',{type:'button',class:'quiet-button',
-                    disabled:selected.index===selected.siblings.length-1,
-                    onClick:()=>reorderSelected(1)},[h(Icon,{name:'arrow-down'}),'Move down']),
-                ]),
-              ]):h('p',{class:'guide-library-reorder-empty'},'Select a guide or group first.'),
-            ]);
-          })(),
-        ]),
       ]),
       h('p',{class:'visually-hidden',role:'status'},announcement.value),
       pendingDelete.value?h(DeleteConfirmation,{itemName:pendingDelete.value.name,itemLabel:pendingDelete.value.kind==='group'?'group':'guide',

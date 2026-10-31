@@ -407,45 +407,21 @@
 /* The control belongs to the map, not the foreground lesson overlay. */
 .guide-study-layout>.guide-map-motion-toggle{z-index:2}
 
-
-/* Compact library footer: the reorder button stays small and its controls
-   float above the footer instead of expanding the sidebar's bottom bar. */
-.guide-library-footer{
-  display:flex;align-items:center;justify-content:flex-end;
-  flex-shrink:0;min-height:48px;padding:6px 8px;
-  border-top:1px solid var(--border-color);background:var(--surface-subtle);
+/* Match Review/Word Search: one full-width Location and order bar at the bottom
+   of the selected Guide workspace, never a separate library reorder button. */
+.guide-detail.is-guide{overflow:hidden}
+.guide-detail.is-guide>.item-organization{
+  flex-shrink:0;max-height:40%;margin:0;
+  overflow:auto;overscroll-behavior:contain;
+  border-top:1px solid var(--border-color);
 }
-.guide-library-reorder{position:relative}
-.guide-library-reorder>summary{
-  display:inline-flex;align-items:center;gap:7px;
-  min-height:34px;padding:5px 10px;border-radius:var(--radius);
-  color:var(--text-secondary);font-size:12px;font-weight:600;
-  cursor:pointer;list-style:none;user-select:none;
+.guide-detail.is-guide>.item-organization .organization-summary{
+  display:list-item;padding:12px 0;
 }
-.guide-library-reorder>summary::-webkit-details-marker{display:none}
-.guide-library-reorder>summary .ui-icon{width:16px;height:16px}
-.guide-library-reorder>summary:hover{color:var(--text-color);background:var(--surface-hover)}
-.guide-library-reorder>summary:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
-.guide-library-reorder[open]>summary{color:var(--brand-text);background:var(--brand-tint)}
-.guide-library-reorder-popover{
-  position:absolute;right:0;bottom:calc(100% + 9px);z-index:12;
-  box-sizing:border-box;width:calc(var(--library-width) - 16px);
-  max-width:calc(100vw - 32px);padding:12px;
-  border:1px solid var(--border-color);border-radius:var(--radius);
-  background:var(--page-background);box-shadow:var(--shadow-overlay);
+.guide-detail.is-guide>.guide-list-workspace{
+  min-height:0;overflow:auto;
 }
-.guide-library-reorder-popover>strong{display:block;margin-bottom:10px;font-size:13px}
-.guide-library-reorder-content{display:grid;gap:10px}
-.guide-library-reorder-content label{display:grid;gap:5px;color:var(--text-secondary);font-size:12px}
-.guide-library-reorder-content select{
-  box-sizing:border-box;width:100%;min-height:38px;padding:7px 9px;
-  border:1px solid var(--control-border);border-radius:var(--radius);
-  background:var(--page-background);color:var(--text-color);
+.guide-detail.is-guide>.guide-study-intro{
+  flex:1;min-height:0;overflow:auto;
+  align-content:start;
 }
-.guide-library-reorder-actions{display:flex;gap:8px}
-.guide-library-reorder-actions .quiet-button{
-  display:inline-flex;justify-content:center;align-items:center;gap:5px;
-  flex:1;min-width:0;padding:6px;font-size:12px;
-}
-.guide-library-reorder-actions .ui-icon{width:15px;height:15px}
-.guide-library-reorder-empty{margin:0;color:var(--text-secondary);font-size:12px}

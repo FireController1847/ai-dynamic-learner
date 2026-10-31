@@ -135,7 +135,7 @@ export const Guide=defineComponent({
     function select(id:string|null){selectedId.value=id;creationTarget.value=null;aiTarget.value=null;aiStage.value=null;aiMode.value=null;editingMapId.value=null;message.value='';}
     function moveGroup(e:Event){if(!selectedId.value||!selection.value)return;const id=inputValue(e)||null;if(moveItem(props.model.items,selectedId.value,id,'inside')){library.value?.reveal(selectedId.value);message.value='Moved '+selection.value.item.name+'.';}}
     function reorder(offset:number){if(!selection.value)return;const s=selection.value,n=s.siblings[s.index+offset];if(n&&moveItem(props.model.items,s.item.id,n.id,offset<0?'before':'after'))message.value='Moved '+s.item.name+(offset<0?' up.':' down.');}
-    function organization(item:LibraryItem){if(!selection.value)return null;return h('details',{class:['item-organization',{'library-group-organization':item.kind==='group'}],open:item.kind==='group'},[
+    function organization(item:LibraryItem){if(!selection.value)return null;return h('details',{key:'guide-organization-'+item.id,class:['item-organization',{'library-group-organization':item.kind==='group'}],open:item.kind==='group'},[
       h('summary',{class:'organization-summary'},'Location and order'),item.kind==='group'?h(EntryStatistics,{app:'guide',id:item.id}):null,
       h('div',{class:'item-location'},[h('label',{for:'guide-parent'},'Move to group'),h('select',{id:'guide-parent',value:selection.value.parentId??'',onChange:moveGroup},[
         h('option',{value:''},'Top level'),...groupOptions(props.model.items,selectedId.value).map(g=>h('option',{key:g.id,value:g.id,disabled:!canMove(props.model.items,item.id,g.id,'inside')},g.label))
@@ -170,7 +170,7 @@ export const Guide=defineComponent({
           : editingMapId.value===item.id
             ? h(GuideMapEditor,{data:item.data,motionPaused:mapMotionPaused.value,onToggleMotion:toggleMapMotion,onStudy:()=>{editingMapId.value=null;}})
             : h(GuideMapStudy,{key:'study-'+item.id,data:item.data,guideName:item.name,statisticsId:item.id,motionPaused:mapMotionPaused.value,onToggleMotion:toggleMapMotion,onEdit:()=>{editingMapId.value=item.id;}}),
-        item.mode==='map'&&editingMapId.value!==item.id?null:organization(item),h('p',{class:'visually-hidden',role:'status'},message.value)
+        organization(item),h('p',{class:'visually-hidden',role:'status'},message.value)
       ]);
     }
 

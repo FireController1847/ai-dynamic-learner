@@ -1,3 +1,16 @@
+## v2.12.4
+
+<small data-utc="2026-10-31T04:20:08.010Z">October 30, 2026</small>
+
+- **Library:** Removed the extraneous Reorder button and popover from the Guide library sidebar, matching the other apps' libraries.
+- **Location and order:** Preserved the existing full-width bottom bar in the selected Guide workspace and made it available in Map adventure mode as well as List and Map editing.
+- **Layout:** Kept Guide content independently scrollable while the bottom organization bar remains visible, including on narrower screens.
+
+<details>
+<summary>View 1 commit</summary>
+<ol><li>Release commit link pending.</li></ol>
+</details>
+
 ## v2.12.3
 
 <small data-utc="2026-10-31T04:18:01.094Z">October 30, 2026</small>
