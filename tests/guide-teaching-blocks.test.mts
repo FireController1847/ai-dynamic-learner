@@ -9,6 +9,8 @@ import { tokenizeTeachingMath, renderTeachingMath } from '../src/features/guide/
 import { parseGuideAiImport, guideAiPrompt } from '../src/features/guide/ai-import.ts';
 import { GUIDE_AI_FOCUSES, guideAiFocusPrompt } from '../src/features/guide/ai-focus.ts';
 import { featureDefinitions } from '../src/features/feature-definitions.ts';
+import { defaultTeachingContent, validTeachingContent, teachingTemplate, readTeachingState, writeTeachingState, controlledTeachingTemplate } from '../src/features/guide/parameterized-teaching.ts';
+import { generateVariant } from '../src/core/parameterized/generator.ts';
 import { layoutSpacedAiMap, stopsAreSpaced, GUIDE_AI_STOP_GAP } from '../src/features/guide/ai-map-layout.ts';
 import { allocateTeachingBlocks, rebalanceTeachingWeights, DEFAULT_TEACHING_WEIGHTS, TEACHING_TYPES } from '../src/features/guide/ai-teaching-mix.ts';
 
@@ -91,7 +93,7 @@ test('duplicate nested ids are rejected by the lesson validator', () => {
 test('all Teaching Block authoring templates start valid and use unique IDs', () => {
   const blocks = TEACHING_BLOCK_KINDS.map(item => newTeachingBlock(item.kind));
   assert.doesNotThrow(() => validateTeachingLesson({ version: 1, blocks }, new Set<string>()));
-  assert.equal(blocks.length, 9);
+  assert.equal(blocks.length, 10);
   assert.equal(new Set(blocks.map(block => block.id)).size, blocks.length);
 });
 
@@ -370,4 +372,54 @@ test('Guide focus is ignored for custom mix and default leaves the teaching prom
   const custom = guideAiPrompt({ ...options, mixMode: 'custom', aiFocus: 'numerics' }, 'map');
   assert.doesNotMatch(custom, /OPTIONAL TEACHING FOCUS/);
   assert.ok(!custom.includes(guideAiFocusPrompt('numerics')));
+});
+
+test('parameterized Teaching Block reuses the numeric generator with seeded worked steps', () => {
+  const block = newTeachingBlock('parameterized');
+  assert.equal(block.kind, 'parameterized');
+  if (block.kind !== 'parameterized') return;
+  assert.doesNotThrow(() => validTeachingContent(block));
+  const template = teachingTemplate(block);
+  const first = generateVariant(template, 'guide-test:one');
+  const again = generateVariant(template, 'guide-test:one');
+  assert.deepEqual(first, again);
+  assert.equal(first.answers[0].value, Number(first.values.a) + Number(first.values.b));
+  assert.match(first.texts.prompt, /What is \d+ \+ \d+\?/);
+  assert.ok(first.texts.step1.includes(first.answers[0].text));
+});
+
+test('generated teaching examples can adjust values without modifying source rules', () => {
+  const block = defaultTeachingContent();
+  const original = JSON.stringify(block.rules);
+  const controlled = controlledTeachingTemplate(block, { a: 8, b: 3 });
+  const generated = generateVariant(controlled, 'adjusted');
+  assert.equal(generated.values.a, 8);
+  assert.equal(generated.values.b, 3);
+  assert.equal(generated.answers[0].value, 11);
+  assert.equal(JSON.stringify(block.rules), original);
+});
+
+test('generated teaching example state persists and rejects invalid responses', () => {
+  const state = { n: 4, revealed: true, overrides: { a: 7, b: 2 } };
+  assert.deepEqual(readTeachingState(writeTeachingState(state)), state);
+  assert.deepEqual(readTeachingState('broken'), { n: 0, revealed: false, overrides: {} });
+  assert.deepEqual(readTeachingState('{"n":-2,"revealed":true,"overrides":{}}'),
+    { n: 0, revealed: false, overrides: {} });
+});
+
+test('AI accepts expression-based parameterized lessons, but not solver scripts', () => {
+  const content = defaultTeachingContent();
+  const map = {
+    format: 'dynamic-learner-guide-map', version: 2, title: 'Math lessons', startTopic: 'start',
+    topics: [{ key: 'start', title: 'Practice the calculation',
+      lesson: { version: 1, blocks: [{ kind: 'parameterized', title: 'Try new values', ...content }] } }],
+    connections: [],
+  };
+  const parsed = parseGuideAiImport(JSON.stringify(map), 'map');
+  if (parsed.mode !== 'map') throw new Error('Expected map');
+  assert.equal(parsed.topics[0].lesson?.blocks[0].kind, 'parameterized');
+  const unsafe = structuredClone(map);
+  const rules = unsafe.topics[0].lesson.blocks[0].rules;
+  (rules as unknown as { solver: unknown }).solver = { id: 'x', version: '1', parameters: {}, package: { source: 'evil' } };
+  assert.throws(() => parseGuideAiImport(JSON.stringify(unsafe), 'map'));
 });
