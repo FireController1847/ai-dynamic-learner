@@ -8,7 +8,7 @@
 
 <details>
 <summary>View 1 commit</summary>
-<ol><li>Release commit link pending.</li></ol>
+<ol><li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/78d0b31d5b548438d92659721544665736a2cc0d">78d0b31d</a> — feat(guide): show persistent completed-adventure badge in library (v2.14.0)</li></ol>
 </details>
 
 ## v2.13.0
