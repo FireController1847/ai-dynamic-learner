@@ -272,3 +272,31 @@
   .guide-teach-table-column>.quiet-button{align-self:start}
   .guide-lesson-data-table :is(th,td){padding:10px 12px}
 }
+
+
+/* Interactive parameterized examples share Review's validated generation engine. */
+.guide-parameterized{display:grid;gap:14px;min-width:0}
+.guide-parameterized-controls{display:grid;gap:12px;min-width:0;margin:0;padding:16px;border:1px solid var(--border-color);border-radius:12px;background:var(--surface-subtle)}
+.guide-parameterized-controls legend{padding-inline:5px;font-size:13px;font-weight:700}
+.guide-parameterized-variable{display:grid;gap:8px;min-width:0}
+.guide-parameterized-variable>span{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.guide-parameterized-variable output{font-variant-numeric:tabular-nums;font-weight:700}
+.guide-parameterized-variable input[type='range']{width:100%;accent-color:var(--brand)}
+.guide-parameterized-variable input[type='number']{box-sizing:border-box;width:min(100%,210px);min-height:42px;padding:8px;border:1px solid var(--control-border);border-radius:8px;background:var(--page-background);color:var(--text-color)}
+.guide-parameterized-actions{display:flex;gap:8px;flex-wrap:wrap}
+.guide-parameterized-actions button{min-height:40px}
+.guide-parameterized-solution{display:grid;gap:12px;padding:16px;border:1px solid var(--border-color);border-radius:12px;background:var(--surface-subtle)}
+.guide-parameterized-solution h5{margin:0;font-size:16px}
+.guide-parameterized-solution ol{display:grid;gap:8px;margin:0;padding-left:24px}
+.guide-parameterized-answers{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px 14px;margin:0;padding:12px;border-radius:8px;background:var(--page-background)}
+.guide-parameterized-answers dt{color:var(--text-secondary)}
+.guide-parameterized-answers dd{margin:0;font-weight:700;overflow-wrap:anywhere}
+.guide-teach-rules-input{box-sizing:border-box;width:100%;min-height:100px;min-width:0;padding:10px;border:1px solid var(--control-border);border-radius:8px;background:var(--page-background);color:var(--text-color);font:inherit;font-family:ui-monospace,monospace;font-size:13px}
+.guide-teach-rules-advanced{display:grid;gap:10px;min-width:0;padding:12px;border:1px solid var(--border-color);border-radius:9px}
+.guide-teach-rules-advanced summary{cursor:pointer;font-weight:600}
+.guide-teach-rules-advanced textarea{margin-top:10px}
+.guide-teach-edit-fields .knowledge-choice-editor{display:grid;gap:12px;min-width:0;margin:0;padding:14px;border:1px solid var(--border-color);border-radius:10px}
+.guide-teach-edit-fields .knowledge-parameter-row{display:grid;gap:10px;min-width:0;padding:12px;border:1px solid var(--border-color);border-radius:9px}
+.guide-teach-edit-fields .knowledge-field{display:grid;gap:5px;min-width:0}
+.guide-teach-edit-fields .knowledge-field :is(input,select,textarea){box-sizing:border-box;width:100%;min-height:40px;min-width:0;padding:8px;border:1px solid var(--control-border);border-radius:8px;background:var(--page-background);color:var(--text-color);font:inherit}
+.guide-teach-edit-fields .knowledge-parameter-row>.quiet-button{justify-self:start}
