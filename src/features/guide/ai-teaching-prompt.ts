@@ -36,16 +36,31 @@ const EXAMPLE = {
   connections: [['foundations', 'applications']],
 };
 
-export function guideAiTeachingPrompt(options: GuideAiPromptOptions): string {
-  const target = options.targetBlocks ?? 30;
+export const GUIDE_OVERALL_DEFAULT_BLOCKS = 50;
+export const GUIDE_CATEGORY_DEFAULT_BLOCKS = 30;
+
+/** Overall lessons can grow with breadth; focused category lessons keep a strict count. */
+export function overallTeachingBlockRange(target: number): { min: number; max: number } {
+  return {
+    min: Math.max(1, target - Math.max(2, Math.round(target * 0.10))),
+    max: Math.min(80, target + Math.max(3, Math.round(target * 0.20))),
+  };
+}
+
+export function guideAiTeachingPrompt(options: GuideAiPromptOptions, isOverall = true): string {
+  const target = options.targetBlocks ?? (isOverall ? GUIDE_OVERALL_DEFAULT_BLOCKS : GUIDE_CATEGORY_DEFAULT_BLOCKS);
+  const { min, max } = overallTeachingBlockRange(target);
+  const countGoal = isOverall ? 'ABOUT ' + target + ' (normally ' + min + '–' + max + ')' : 'EXACTLY ' + target;
   const weights = options.weights ?? DEFAULT_TEACHING_WEIGHTS;
   const focus = options.mixMode === 'custom' ? '' : guideAiFocusPrompt(options.aiFocus);
   const mix = options.mixMode === 'custom'
     ? 'Custom teaching mix (approximate percentages over the entire map): ' +
       TEACHING_TYPES.map(type => type + ' ' + weights[type] + '%').join('; ') +
-      '. Aim for EXACTLY ' + target + ' meaningful Teaching Blocks overall; the mix percentages are approximate, but the overall requested total is not. Do not pad with filler.'
+      '. Aim for ' + countGoal + ' meaningful Teaching Blocks across the whole map; the mix percentages are approximate. ' +
+      (isOverall ? 'The total may adapt to the breadth of the source; avoid filler.' : 'The selected total is strict; do not pad with filler.')
     : 'Let AI choose the most educationally appropriate teaching block types for each concept. HEAVILY PREFER parameterized worked examples whenever the source genuinely supports changing inputs, formulas, algorithms, rules or calculations; reuse one sound template rather than hardcoding many nearly identical worked examples. Aim for EXACTLY ' +
-      target + ' meaningful Teaching Blocks across the whole map; deviate only when the actual source requires fewer or more for correct teaching.';
+      countGoal + ' meaningful Teaching Blocks across the whole map. ' +
+      (isOverall ? 'Adapt within the preferred band when the overall source requires it; explain substantial deviations.' : 'Deviate only when the source makes the exact count educationally unsound.')
   return [
     'Using the original source material supplied earlier in this AI conversation, create a Dynamic Learner Guide MAP. The Guide TEACHES concepts before Review tests retention.',
     'Think like an excellent instructor building an interactive textbook, not a bulleted outline. Build understanding, teach WHY, supply context, select appropriate examples, visual models, explanations, comparisons and gentle questions. Never invent unsupported facts.',
@@ -58,10 +73,18 @@ export function guideAiTeachingPrompt(options: GuideAiPromptOptions): string {
     'FOR ALGORITHMS: Teach the governing rule and model the first state transitions before asking the learner to predict. Solver traces should move naturally from demonstrated steps to supported prediction, then independent prediction, while always retaining a reminder and reveal option. Ensure each trace entry shows exactly what changed and why. Generated algorithms cannot teach properly from a final answer alone.',
 
     mix,
-    'TEACHING BLOCK COUNT — STRONG INSTRUCTION: The user selected ' + target + ' TOTAL Teaching Blocks across ALL stops. Treat that as the exact expected count, not an estimate. Allocate the blocks among the lessons BEFORE writing JSON, then recount every top-level entry in every lesson.blocks array before exporting. The sum should be EXACTLY ' + target + '. A parameterized block is ONE block regardless of how many examples it generates; walkthrough steps and trace entries are NOT blocks. Do not accidentally overshoot by expanding every stop independently or undershoot by treating the target as optional.',
-    'COUNT EXCEPTIONS — RARE AND EXPLAINED: Source accuracy, adequate instruction before independent application, and meaningful coverage are more important than an arbitrary quota. Only deviate from the selected Teaching Block count for an actual teaching or source-backed reason, such as insufficient material for meaningful additional blocks or prerequisites that cannot responsibly fit. Never invent facts, add filler, split identical content into multiple blocks or remove essential teaching merely to match the number. Keep unavoidable deviations as small as possible and briefly explain the specific reason in confidence.coverageExplanation. A vague desire for more detail does NOT justify ignoring the chosen count.',
+    (isOverall
+      ? 'TEACHING BLOCK COUNT — OVERALL SCOPE: The user selected ' + target + ' total Teaching Blocks as a TARGET, not a rigid quota. Aim near ' + target + ' across ALL stops; ' + min + '–' + max + ' is the usual planning range for a whole subject. Count every top-level lesson.blocks entry and distribute them deliberately, but prioritize complete, source-grounded teaching over a mathematically exact total.'
+      : 'TEACHING BLOCK COUNT — CATEGORY SCOPE: The user selected EXACTLY ' + target + ' TOTAL Teaching Blocks across ALL stops. Allocate them BEFORE writing JSON and recount every top-level lesson.blocks item before exporting. The total should be EXACTLY ' + target + '. Avoid accidental overproduction or underproduction.') +
+      ' A parameterized block counts as ONE Teaching Block regardless of generated examples; walkthrough steps and solver trace entries are NOT blocks.',
+    (isOverall
+      ? 'OVERALL COUNT FLEXIBILITY: Small differences within ' + min + '–' + max + ' are expected when justified by the breadth and depth of the source; do not add material just to reach ' + target + '. Go outside this range only when the source genuinely requires it for clear prerequisite teaching, scope coverage, or to avoid filler. Briefly identify substantial count deviations and their reason in confidence.coverageExplanation.'
+      : 'CATEGORY COUNT EXCEPTIONS — RARE AND EXPLAINED: Treat ' + target + ' as a firm total. Deviate only if the source cannot sustain this many meaningful blocks or absolutely necessary prerequisites cannot fit. Keep any unavoidable difference as small as possible and explain the concrete reason in confidence.coverageExplanation.') +
+      ' Never invent facts, omit essential teaching, repeat explanations or split identical content merely to satisfy a count.',
     'STOP COUNT — STRONG DEFAULT: Generate EXACTLY 5, 6, or 7 purposeful Map stops (prefer 6) for ordinary material. Do NOT treat 8–18 stops as the default. Combine closely related source headings into individual teaching destinations, each containing several blocks. Use fewer than 5 only if the source or selected block count is genuinely too small; use more than 7 only if the source breadth, prerequisites or unusually large block count genuinely require separate destinations. Do not add stops solely to fill the map or mirror each source heading. Explain any necessary exception briefly in confidence.coverageExplanation.',
-    'PLAN AND VERIFY BOTH COUNTS: Outline a normally 5–7-stop main path from foundations to applications and revisits, allocate the ' + target + ' requested Teaching Blocks across stops, then verify the topic count AND the SUM of all lesson.blocks items. Correct accidental mismatches BEFORE producing the downloadable JSON. If the two targets genuinely conflict with the source, prioritize meaningful instruction, make the smallest deviation, and explain it.',
+    'PLAN AND VERIFY BOTH COUNTS: Create a normally 5–7-stop main path and allocate Teaching Blocks across its lessons BEFORE writing the JSON. Recount all top-level lesson.blocks entries before exporting. ' +
+      (isOverall ? 'For Overall, aim near ' + target + ', usually ' + min + '–' + max + ' if the source supports it; small meaningful variations are acceptable.' : 'For this category, total EXACTLY ' + target + ' unless a genuine source-backed exception must be explained.') +
+      ' The stop count is a separate 5–7 target. Source accuracy and teaching quality take precedence over either count.',
     'PARAMETERIZED TEACHING PRIORITY — IMPORTANT: Borrow Review\'s parameterized-generation discipline, adapted for TEACHING rather than grading. LOGIC / NUMBERS / PROCEDURES: FAVOR reusable parameterized Teaching Blocks wherever inputs, calculations, rules, equations, decision procedures or algorithms can genuinely vary. Prefer many valid generated instances of a method over one static numerical result or several hardcoded copies. This applies to source-supported algebra, statistics, operating systems calculations, algorithm tracing, and any other variable-based reasoning.',
     'Whenever the lesson teaches a repeatable computation, strongly favor a parameterized block with a complete source-grounded prompt, 1–12 instructional steps explaining HOW the result is derived, a takeaway, realistic variable ranges, satisfiable constraints, and computed answers that depend on generated variables. Use simpler explanations, comparisons, explorations and tables alongside them to teach intuition; do not create meaningless numeric problems for nonnumeric material.',
     'PARAMETER SAFETY AND CORRECTNESS: Use only formulas, input ranges, units, procedures and variable relationships that the supplied source explicitly establishes. NEVER invent sample quantities, input distributions, historical facts, constants, diagnostic thresholds, randomizable definitions or scenarios merely to force parameterization. Do not randomize genuinely fixed quantities. If no defensible variable ranges can be derived from the source, teach the concept without parameterization.',
@@ -128,7 +151,7 @@ export function guideAiTeachingPrompt(options: GuideAiPromptOptions): string {
     }),
     'For the FIFO example, use five source-supported integer variables p0..p4 and rules.solver={id:"fifo-trace",version:"1",parameters:{p0:"p0",p1:"p1",p2:"p2",p3:"p3",p4:"p4"}}; rules.answers=[{key:"faults",label:"Page faults",solverKey:"faultCount",matching:"numeric",precision:0}]. Prefer a fully correct state trace over an attractive but fictional one.',
     'Use Markdown in longer text (headings, emphasis, lists, code, comparison tables) and LaTeX in any field: $x^2$, \\(x^2\\), $...$ or \\[...\\]. No arbitrary block kinds, HTML, JavaScript, source citation tokens, or arbitrary external URLs.',
-    'Within each stop, begin with enough explanation or a model for what follows; only then introduce guided practice, exploration or a gentle check. Never open a stop with a cold recall test. Each map topic MUST have lesson: {"version":1,"blocks":[...]}, often 4–8 useful blocks for the default 30-block map, adjusted as needed to achieve the USER-SELECTED total across the full map; at most 80 per stop. No legacy sections/bullets in a new map. Every required string nonempty, <=10000 characters. Never create stored IDs. Parameterized blocks count as one block each and should appear where generating multiple worked examples genuinely improves understanding.',
+    'Within each stop, begin with enough explanation or a model for what follows; only then introduce guided practice, exploration or a gentle check. Never open a stop with a cold recall test. Each map topic MUST have lesson: {"version":1,"blocks":[...]}, commonly about ' + Math.max(1, Math.round(target / 7)) + '–' + Math.ceil(target / 5) + ' useful blocks per stop for this ' + target + '-block target, adjusted for actual lesson needs; at most 80 per stop. No legacy sections/bullets in a new map. Every required string nonempty, <=10000 characters. Never create stored IDs. Parameterized blocks count as one block each and should appear where generating multiple worked examples genuinely improves understanding.',
     '',
     'MAP DESIGN IS A FIRST-CLASS TEACHING FEATURE: Make the route feel like an illustrated adventure with meaningful destinations, not a worksheet grid. The main path should travel across the canvas with an irregular rhythm, gentle S-bends and occasional purpose-driven side trails.',
     'Think in LEARNING DESTINATIONS: combine closely related headings into one stop containing several well-chosen Teaching Blocks. A normal Guide Map should contain EXACTLY 5, 6 or 7 purposeful stops, preferably 6. Do NOT make a stop for every fact, heading or Teaching Block. Use more or fewer ONLY when genuinely justified by the source or requested total. Preserve required learning objectives inside lessons even when multiple objectives share a stop.',
@@ -145,10 +168,12 @@ export function guideAiTeachingPrompt(options: GuideAiPromptOptions): string {
     '',
     guideAiFileOutputInstructions('map'),
     'The downloadable JSON file must use format "dynamic-learner-guide-map" and version 2, with title, background, startTopic, coverage, confidence, topics, connections and OPTIONAL solvers (only when a Parameterized block truly requires algorithm execution).',
-    'The following shows the JSON structure to write INTO THE FILE. It is an illustrative schema ONLY: its two example stops and four sample blocks are NOT an instruction about output size. Your real output should normally have 5–7 stops and EXACTLY ' + target + ' Teaching Blocks unless a concrete exception is justified:',
+    'The following shows the JSON structure to write INTO THE FILE. It is an illustrative schema ONLY: its two example stops and four sample blocks are NOT an instruction about output size. Your real output should normally have 5–7 stops and ' + countGoal + ' Teaching Blocks unless source coverage warrants an exception:',
     String.fromCharCode(96).repeat(3) + 'json',
     JSON.stringify(EXAMPLE, null, 2),
     String.fromCharCode(96).repeat(3),
-    'FINAL SELF-CHECK: Count the topics array and sum the lesson.blocks arrays a final time. Unless there is a specific educational exception, there should be 5, 6 or 7 stops and EXACTLY ' + target + ' Teaching Blocks overall. Explain any unavoidable deviation in confidence.coverageExplanation. Never manufacture content merely to meet a target.',
+    'FINAL SELF-CHECK: Count the topics array and sum every lesson.blocks array. Aim for 5, 6 or 7 purposeful stops. ' +
+      (isOverall ? 'Overall Teaching Block count should be near ' + target + ' (ordinarily ' + min + '–' + max + '), adjusting to meaningful source breadth and avoiding filler. Explain any substantial deviation from this band in confidence.coverageExplanation.' : 'The category Teaching Block count should be EXACTLY ' + target + '; explain any rare unavoidable deviation in confidence.coverageExplanation.') +
+      ' Never manufacture material solely to reach a numeric target.',
   ].join('\n');
 }

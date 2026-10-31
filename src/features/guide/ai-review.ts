@@ -14,6 +14,7 @@ export const GuideAiReview = defineComponent({
     candidate:{type:Object as PropType<SimpleGuideImport>,required:true},
     direct:Boolean,
     targetBlocks:{type:Number,default:0},
+    overall:Boolean,
   },
   emits:{back:()=>true,cancel:()=>true,create:()=>true},
   setup(props,{emit}){
@@ -94,8 +95,9 @@ export const GuideAiReview = defineComponent({
             h('div',[h('strong',String(names.length)),h('span',guide.mode==='map'?'Map stops':'List sections')]),
             guide.mode==='map'?h('div',[h('strong',String(blockCount)),h('span','Teaching Blocks')]):null,
             guide.coverage?h('div',[h('strong',String(guide.coverage.length)),h('span','AI-listed subjects')]):null,
-            props.targetBlocks>0&&guide.mode==='map'&&blockCount!==props.targetBlocks?
-              h('div',[h('strong','≈'+props.targetBlocks),h('span','Requested target')]):null,
+            props.targetBlocks>0&&guide.mode==='map'&&(props.overall||blockCount!==props.targetBlocks)?
+              h('div',[h('strong',props.overall?'≈'+props.targetBlocks:String(props.targetBlocks)),
+                h('span',props.overall?'Overall target (flexible)':'Requested exact target')]):null,
           ]),
           h('details',{class:'guide-ai-review-details',open:true},[
             h('summary',guide.mode==='map'?'Map stops and teaching blocks':'Guide sections'),

@@ -1,3 +1,16 @@
+## v2.12.1
+
+<small data-utc="2026-10-31T04:09:02.521Z">October 30, 2026</small>
+
+- **AI Defaults:** Overall Guide Maps now target 50 Teaching Blocks, while individual categories retain a 30-block default. Each scope remembers its own manually chosen total.
+- **Scope Awareness:** Overall prompts allow a modest source-backed range around the requested total (45–60 at the 50-block default), while category prompts enforce the selected count except for rare explained teaching necessities.
+- **Prompt Accuracy:** Updated count planning, map block allocation, final self-checks, and preview messaging to match each scope without encouraging filler or extra map stops.
+
+<details>
+<summary>View 1 commit</summary>
+<ol><li>Release commit link pending.</li></ol>
+</details>
+
 ## v2.12.0
 
 <small data-utc="2026-10-31T04:06:06.509Z">October 30, 2026</small>

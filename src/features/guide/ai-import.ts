@@ -13,7 +13,8 @@ import { parseAiTeachingLesson } from './ai-teaching-schema.ts';
 import { parseAiSolvers } from '../knowledge-check/ai-parameterized-format.ts';
 import { GUIDE_CONFIDENCE_PROMPT, GUIDE_CONFIDENCE_EXAMPLE, parseGuideConfidence, type GuideAiConfidence } from './ai-confidence.ts';
 import { GuideAiReview } from './ai-review.ts';
-import { guideAiTeachingPrompt } from './ai-teaching-prompt.ts';
+import { GUIDE_CATEGORY_DEFAULT_BLOCKS, GUIDE_OVERALL_DEFAULT_BLOCKS,
+  guideAiTeachingPrompt, overallTeachingBlockRange } from './ai-teaching-prompt.ts';
 import { guideAiFileOutputInstructions } from './ai-file-output.ts';
 import { GUIDE_AI_FOCUSES, type GuideAiFocus } from './ai-focus.ts';
 import { DEFAULT_TEACHING_WEIGHTS, teachingMixProblem, allocateTeachingBlocks, TEACHING_TYPES, rebalanceTeachingWeights, type TeachingMixMode, type TeachingWeights } from './ai-teaching-mix.ts';
@@ -176,8 +177,8 @@ Limits:
 - do not generate IDs, layout, groups, maps, or other Dynamic Learner fields.`;
 }
 
-function mapPrompt(options: GuideAiPromptOptions): string {
-  return guideAiTeachingPrompt(options);
+function mapPrompt(options: GuideAiPromptOptions, isOverall: boolean): string {
+  return guideAiTeachingPrompt(options, isOverall);
 }
 
 export function guideAiPrompt(
@@ -185,7 +186,7 @@ export function guideAiPrompt(
   mode: GuideMode = 'list',
   scope: AiCardScope | null = null,
 ): string {
-  const generated = mode === 'map' ? mapPrompt(options) : listPrompt(options);
+  const generated = mode === 'map' ? mapPrompt(options, scope === null) : listPrompt(options);
   // Reuse Review's established category scoping. The original source stays
   // authoritative, while the selected category strictly limits new content.
   return scope ? categoryScopedPrompt(generated, scope,
@@ -447,7 +448,17 @@ export const GuideAiImportWorkspace = defineComponent({
     const bulletStyle = ref<PromptBulletStyle>(DEFAULT_PROMPT_OPTIONS.bulletStyle);
     const mixMode = ref<TeachingMixMode>('ai');
     const aiFocus = ref<GuideAiFocus>('default');
-    const targetBlocks = ref(30);
+    // Keep independent values so changing between Overall and Category restores
+    // each scope's last selected target rather than silently reusing the other.
+    const overallBlocks = ref(GUIDE_OVERALL_DEFAULT_BLOCKS);
+    const categoryBlocks = ref(GUIDE_CATEGORY_DEFAULT_BLOCKS);
+    const targetBlocks = computed({
+      get: () => chosenScope.value ? categoryBlocks.value : overallBlocks.value,
+      set: (count: number) => {
+        if (chosenScope.value) categoryBlocks.value = count;
+        else overallBlocks.value = count;
+      },
+    });
     const weights = ref<TeachingWeights>({ ...DEFAULT_TEACHING_WEIGHTS });
     const mixError = computed(() => props.mode === 'map' ? teachingMixProblem(mixMode.value, weights.value, targetBlocks.value) : '');
     const allocations = computed(() => mixError.value || mixMode.value !== 'custom' ? null : allocateTeachingBlocks(weights.value, targetBlocks.value));
@@ -508,6 +519,7 @@ export const GuideAiImportWorkspace = defineComponent({
     }) : stage.value === 'review' && candidate.value ? h(GuideAiReview, {
       candidate: candidate.value, direct: props.direct,
       targetBlocks: !props.direct && props.mode === 'map' ? targetBlocks.value : 0,
+      overall: chosenScope.value === null,
       onBack: back, onCancel: () => emit('cancel'),
       onCreate: () => { if (candidate.value) emit('import', candidate.value); },
     }) : h('section', { class: 'guide-ai-workspace', 'aria-labelledby': 'guide-ai-title' }, [
@@ -570,7 +582,12 @@ export const GuideAiImportWorkspace = defineComponent({
                   h('span', 'Target total Teaching Blocks'),
                   h('input', { type: 'number', min: 1, max: 80, step: 1, value: targetBlocks.value,
                     onInput: (event: Event) => { targetBlocks.value = Number(inputValue(event)); } }),
-                  h('small', 'AI aims for this exact total across 5–7 stops unless the source warrants an exception. No filler.'),
+                  h('small', chosenScope.value
+                    ? 'Category: aim for exactly this total across 5–7 stops. Deviate only if the source makes it necessary. No filler.'
+                    : 'Overall: aim near this total across 5–7 stops (normally ' +
+                      overallTeachingBlockRange(targetBlocks.value).min + '–' +
+                      overallTeachingBlockRange(targetBlocks.value).max +
+                      ' blocks). Allow source-backed flexibility. No filler.'),
                 ]),
                 mixMode.value === 'custom' ? h('div', { class: 'guide-ai-weight-list' },
                   TEACHING_TYPES.map(kind => h('label', { class: 'guide-ai-weight-row', key: kind }, [
