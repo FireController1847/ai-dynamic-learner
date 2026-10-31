@@ -1,3 +1,19 @@
+## v2.10.0
+
+<small data-utc="2026-10-31T03:50:49.659Z">October 30, 2026</small>
+
+- **Circuit Board:** New computer-science backdrop with PCB traces, traveling electrical signals, and click-triggered flows that follow the wires.
+- **Programming:** New hacker-terminal backdrop with code snippets, animated code rain, and interactive compiler readouts.
+- **AI Maps:** AI-generated guides can select the new backgrounds for relevant lessons.
+- **Accessibility:** Both themes respect map animation pause and reduced-motion preferences.
+
+<details>
+<summary>View 1 commit</summary>
+<ol>
+<li>Release commit link pending.</li>
+</ol>
+</details>
+
 ## v2.9.0
 
 <small data-utc="2026-10-31T03:45:57Z">October 30, 2026</small>

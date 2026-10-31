@@ -314,6 +314,9 @@
 }
 .guide-map-backdrop{position:absolute;inset:0;display:block;width:100%;height:100%;pointer-events:none;z-index:0;color:var(--text-color)}
 .guide-map-backdrop-layer{position:absolute;inset:0;display:block;width:100%;height:100%;pointer-events:none}
+.guide-map-surface.is-pattern-circuit .guide-map-backdrop{color:var(--brand)}
+.guide-map-surface.is-pattern-programming .guide-map-backdrop{color:#20815b}
+:root[data-theme='dark'] .guide-map-surface.is-pattern-programming .guide-map-backdrop{color:#74dfab}
 .guide-map-backdrop-motion{transform:translate3d(0,0,0);backface-visibility:hidden}
 .guide-map-surface .guide-route,.guide-map-surface .guide-study-route{z-index:1}
 .guide-map-surface .guide-topic-stop,.guide-map-surface .guide-study-stop{z-index:2}

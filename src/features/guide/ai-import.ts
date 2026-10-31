@@ -298,9 +298,9 @@ function parseMapImport(value: unknown): SimpleMapGuideImport {
 
   if (value.version !== TEACHING_IMPORT_VERSION && value.solvers !== undefined)
     throw new Error('Algorithm solvers are supported only in version 2 Teaching Block maps.');
-  const backgrounds: readonly GuideMapPattern[] = ['water','contours','constellations','flow','fireflies','plain'];
+  const backgrounds: readonly GuideMapPattern[] = ['water','contours','constellations','flow','fireflies','circuit','programming','plain'];
   if (value.background !== undefined && !backgrounds.includes(value.background as GuideMapPattern))
-    throw new Error('Map background must be Water, Contours, Constellations, Flow, Fireflies or Plain.');
+    throw new Error('Map background must be Water, Contours, Constellations, Flow, Fireflies, Circuit Board, Programming or Plain.');
   const background = value.background as GuideMapPattern | undefined;
   const solvers = parseAiSolvers(value.solvers);
   if (value.topics.length > GUIDE_AI_MAX_SPACED_TOPICS && value.version === TEACHING_IMPORT_VERSION)

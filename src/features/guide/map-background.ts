@@ -2,6 +2,8 @@ import { defineComponent, h, onActivated, onBeforeUnmount, onDeactivated, onMoun
 import type { GuideMapPattern } from './library-model.ts';
 import { MAP_CANVAS_HEIGHT, MAP_CANVAS_WIDTH } from './map-presentation.ts';
 import { createWaterFoamSprite, drawGuideAmbient } from './map-ambient.ts';
+import { drawCircuitBase, drawCircuitMotion, drawProgrammingBase, drawProgrammingMotion,
+  launchCircuitSignals, type CircuitSignal } from './map-tech-background.ts';
 
 export const GUIDE_MAP_PATTERNS: readonly { value: GuideMapPattern; label: string }[] = [
   { value: 'water', label: 'Water · varied wave crests' },
@@ -9,6 +11,8 @@ export const GUIDE_MAP_PATTERNS: readonly { value: GuideMapPattern; label: strin
   { value: 'constellations', label: 'Constellations · starlight' },
   { value: 'flow', label: 'Flow · drifting currents' },
   { value: 'fireflies', label: 'Fireflies · drifting lights' },
+  { value: 'circuit', label: 'Circuit Board · electrical traces' },
+  { value: 'programming', label: 'Programming · hacker terminal' },
 ];
 
 export interface GuideMapBackdropHandle { interactAt(x: number, y: number): void }
@@ -22,7 +26,7 @@ const hash = (n: number) => {
   return value - Math.floor(value);
 };
 const lifetime = (pattern: GuideMapPattern) =>
-  pattern === 'constellations' ? 1050 : pattern === 'water' ? 1750 : 1450;
+  pattern === 'constellations' ? 1050 : pattern === 'water' ? 1750 : pattern === 'programming' ? 2300 : 1450;
 
 /** A small actual star, not the connected straight segments of the old backdrop. */
 function star(ctx: CanvasRenderingContext2D, x: number, y: number,
@@ -43,6 +47,8 @@ function star(ctx: CanvasRenderingContext2D, x: number, y: number,
 function drawTexture(ctx: CanvasRenderingContext2D, pattern: GuideMapPattern,
   effects: readonly Disturbance[], now: number) {
   if (pattern === 'plain') return;
+  if (pattern === 'circuit') { drawCircuitBase(ctx); return; }
+  if (pattern === 'programming') { drawProgrammingBase(ctx); return; }
   ctx.save();
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
@@ -263,8 +269,9 @@ export const GuideMapBackdrop = defineComponent({
     const overlayCanvas = ref<HTMLCanvasElement | null>(null);
     const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const effects: Disturbance[] = [];
+    const circuitSignals: CircuitSignal[] = [];
     let mounted = false, active = true, visible = true;
-    let frame = 0, lastPaint = 0;
+    let frame = 0, lastPaint = 0, animationTime = 0, lastTick = 0;
     let ink = '', waterSprite: HTMLCanvasElement | null = null;
     let glowSprite: HTMLCanvasElement | null = null;
     let observer: MutationObserver | null = null;
@@ -280,6 +287,7 @@ export const GuideMapBackdrop = defineComponent({
     function cancelLoop() {
       if (frame) { cancelAnimationFrame(frame); frame = 0; }
       lastPaint = 0;
+      lastTick = 0;
     }
     function ensureSize(element: HTMLCanvasElement, scale: number) {
       const width = Math.round(W * scale), height = Math.round(H * scale);
@@ -328,6 +336,10 @@ export const GuideMapBackdrop = defineComponent({
         if (now - effects[i].start >= lifetime(props.pattern)) effects.splice(i, 1);
       }
       const running = canAnimate();
+      if (running && props.pattern === 'circuit')
+        drawCircuitMotion(ctx, now / 1000, circuitSignals);
+      else if (running && props.pattern === 'programming')
+        drawProgrammingMotion(ctx, now / 1000, effects);
       // Draw still whitecaps in reduced-motion mode, too.
       if (running || props.pattern === 'water') {
         drawGuideAmbient(ctx, props.pattern, running ? now / 1000 : 0,
@@ -342,8 +354,10 @@ export const GuideMapBackdrop = defineComponent({
         frame = requestAnimationFrame(animate);
         return;
       }
+      if (lastTick) animationTime += Math.min(now - lastTick, 150);
+      lastTick = now;
       const start = performance.now();
-      paintOverlay(now);
+      paintOverlay(animationTime);
       const cost = performance.now() - start;
       // Target 40 FPS; avoid fighting map navigation on slower hardware.
       frameBudget = cost > TARGET_FRAME_MS * 0.72 ? FALLBACK_FRAME_MS : TARGET_FRAME_MS;
@@ -354,7 +368,7 @@ export const GuideMapBackdrop = defineComponent({
       cancelLoop();
       if (mounted) {
         repaintStatic();
-        paintOverlay(performance.now());
+        paintOverlay(animationTime);
       }
       if (canAnimate()) frame = requestAnimationFrame(animate);
     }
@@ -365,8 +379,12 @@ export const GuideMapBackdrop = defineComponent({
     }
     function interactAt(x: number, y: number) {
       if (!canAnimate() || !Number.isFinite(x) || !Number.isFinite(y)) return;
-      effects.push({ x: clamp(x, 0, W), y: clamp(y, 0, H), start: performance.now() });
-      if (effects.length > 5) effects.shift();
+      if (props.pattern === 'circuit') {
+        launchCircuitSignals(clamp(x, 0, W), clamp(y, 0, H), animationTime, circuitSignals);
+      } else {
+        effects.push({ x: clamp(x, 0, W), y: clamp(y, 0, H), start: animationTime });
+        if (effects.length > 5) effects.shift();
+      }
       // Do not interrupt/recreate the render loop on an interaction.
       if (!frame) frame = requestAnimationFrame(animate);
     }
@@ -388,8 +406,8 @@ export const GuideMapBackdrop = defineComponent({
       refresh();
     });
     onActivated(() => { active = true; updateActivity(); });
-    onDeactivated(() => { active = false; cancelLoop(); effects.splice(0); });
-    watch(() => props.pattern, () => { effects.splice(0); refresh(); });
+    onDeactivated(() => { active = false; cancelLoop(); effects.splice(0); circuitSignals.splice(0); });
+    watch(() => props.pattern, () => { effects.splice(0); circuitSignals.splice(0); refresh(); });
     watch(() => props.paused, paused => {
       if (paused) {
         cancelLoop();
@@ -405,6 +423,7 @@ export const GuideMapBackdrop = defineComponent({
       document.removeEventListener('visibilitychange', updateActivity);
       window.removeEventListener('resize', refresh);
       effects.splice(0);
+      circuitSignals.splice(0);
       glowSprite = waterSprite = null;
     });
     return () => h('div', { ref: root, class: 'guide-map-backdrop',
