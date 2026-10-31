@@ -8,8 +8,9 @@
 - **Accessibility:** Both themes respect map animation pause and reduced-motion preferences.
 
 <details>
-<summary>View 1 commit</summary>
+<summary>View 2 commits</summary>
 <ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/0b3f8403a0ed614e5c9fed85dcc0f1256b326123">0b3f8403</a> — style(guide): give hacker background a dark scanline terminal surface</li>
 <li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/1f2139b078eaab56648b0834fbc00825a76809b6">1f2139b0</a> — feat(guide): interactive circuit board and hacker backgrounds (v2.10.0)</li>
 </ol>
 </details>
