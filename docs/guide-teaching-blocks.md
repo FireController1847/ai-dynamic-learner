@@ -69,6 +69,19 @@ Under **Let AI choose**, use **AI focus** to optionally prioritize **Default**, 
 
 Run `npm run test:guide`. CI also runs the existing TypeScript check and production build.
 
+## Parameterized Teaching Blocks (Guide v2.1.0)
+
+**Parameterized example** is the tenth Teaching Block kind. It reuses Review's validated deterministic generation engine (`src/core/parameterized/`), not a separate expression interpreter or unsafe `eval`. It teaches calculations with generated values, adjustable numeric variables, a **Generate new example** button, and an ungraded **Reveal walkthrough** action.
+
+- Create a Parameterized example in the Guide stop editor. The initial block is a working two-variable addition example, with a generated prompt, walkthrough steps, computed answer and takeaway.
+- Use `{{name}}` to insert generated variables and `{{answerKey}}` to include a computed result in prompts, walkthrough steps and takeaways. Long text supports the existing Markdown and LaTeX renderer.
+- The editor reuses Review's variable and computed-answer controls. Define bounded integer/decimal ranges, choice or derived variables, constraints, answer expressions and optional advanced rules JSON. A save validates the complete lesson and the shared parameter dependency graph.
+- The learner can change up to eight directly numeric source variables using sliders (short ranges) or number inputs (larger ranges), generate a new deterministic example, reveal/hide the worked steps, and examine any solver-provided trace. Values are calculated from shared rules; there is **no scoring**.
+- Each map session saves the example number, revealed state and numeric overrides in a bounded string, while generating the actual answers again from the stored template. Invalid saved responses recover to a clean example. Resetting lesson interactions clears these controls without changing visited stops.
+- The Guide AI v2 schema accepts `{kind:"parameterized",title,prompt,steps,takeaway,rules}`. Rules use the same `GenerationRules` schema as Review, but AI content cannot upload executable solver packages. The generation prompt prefers this block only when variable examples genuinely aid understanding, rather than filling a quota.
+
+**Versioning:** The new capability advances Guide from `2.0.0` to `2.1.0` while retaining `TeachingLesson.version=1`, because adding a discriminated block kind does not require modifying existing saved lessons.
+
 ## Compatibility notice during development
 
 The app shell can dismiss the workspace compatibility banner for the current visit, or **Ignore this warning** to remember the exact mode, database version, read-only status, and issue list in local browser preferences. Another compatibility condition shows the warning again. When hidden, a compact header indicator reopens the details. **This affects notification visibility only:** read-only recovery remains enforced, unknown data stays protected, and restricted backup/restore/clear operations remain restricted.
