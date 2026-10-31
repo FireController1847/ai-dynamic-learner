@@ -1,3 +1,17 @@
+## v2.8.0
+
+<small data-utc="2026-10-31T03:43:11Z">October 30, 2026 at 9:43 PM MDT</small>
+
+- **Library Organization:** Drag guides and groups to reorder them, nest them in groups, or move them back to the top level, with clear drop indicators.
+- **Map Controls:** Kept the pause/play icon behind an open lesson so it no longer covers teaching content.
+
+<details>
+<summary>View 1 commit</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/359a408e9e9bee5b0492ca5f9ca42ea54b12add7">359a408e</a> — feat(guide): organize library via drag-and-drop and correct map overlay layering (v2.8.0)</li>
+</ol>
+</details>
+
 ## v2.7.5
 
 <small data-utc="2026-10-31T03:21:00Z">October 30, 2026 at 9:21 PM MDT</small>
