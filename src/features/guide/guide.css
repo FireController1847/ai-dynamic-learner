@@ -304,29 +304,15 @@
 }
 
 
-/* Map scenery is theme-relative: dark themes naturally use lighter strokes,
-   light themes darker ones, with no palette-specific or fixed hex colors. */
-.guide-map-surface{
-  background-color:var(--page-background);
-  --guide-pattern-stroke:color-mix(in srgb,var(--text-color) 42%,var(--brand));
-  --guide-pattern-soft:color-mix(in srgb,var(--text-color) 72%,var(--page-background));
+/* Low-contrast, monochrome Canvas textures follow the active theme automatically.
+   Canvas is non-interactive: background clicks land on the map surface instead. */
+.guide-map-surface{background:var(--page-background)}
+.guide-map-canvas.guide-map-surface{background-image:none}
+.guide-map-canvas.guide-map-surface.is-pattern-plain{
+  background-image:linear-gradient(to right,color-mix(in srgb,var(--border-color) 24%,transparent) 1px,transparent 1px),
+    linear-gradient(to bottom,color-mix(in srgb,var(--border-color) 24%,transparent) 1px,transparent 1px)
 }
-.guide-map-surface.is-pattern-water{background-color:color-mix(in srgb,var(--page-background) 95%,var(--brand-tint))}
-.guide-map-surface.is-pattern-contours{background-color:color-mix(in srgb,var(--page-background) 95%,var(--surface-subtle))}
-.guide-map-surface.is-pattern-constellations{background-color:color-mix(in srgb,var(--page-background) 94%,var(--brand-tint))}
-.guide-map-surface.is-pattern-flow{background-color:color-mix(in srgb,var(--page-background) 95%,var(--brand-tint))}
-.guide-map-canvas.guide-map-surface{
-  background-image:linear-gradient(to right,color-mix(in srgb,var(--border-color) 28%,transparent) 1px,transparent 1px),
-    linear-gradient(to bottom,color-mix(in srgb,var(--border-color) 28%,transparent) 1px,transparent 1px);
-}
-.guide-map-backdrop{position:absolute;inset:0;display:block;width:100%;height:100%;overflow:hidden;pointer-events:none;z-index:0}
-.guide-map-backdrop .guide-pattern-line{fill:none;stroke:var(--guide-pattern-stroke);stroke-width:1.6;stroke-opacity:.23;stroke-linecap:round;stroke-linejoin:round}
-.guide-map-backdrop .guide-pattern-accent{fill:none;stroke:var(--guide-pattern-stroke);stroke-width:1.9;stroke-opacity:.34}
-.guide-map-backdrop .guide-pattern-ring{fill:none;stroke:var(--guide-pattern-stroke);stroke-width:1.4;stroke-opacity:.16}
-.guide-map-backdrop .guide-pattern-dot{fill:var(--guide-pattern-soft);opacity:.5}
-.guide-map-backdrop.is-constellations .guide-pattern-line{stroke-opacity:.3;stroke-width:1}
-.guide-map-backdrop.is-flow .guide-pattern-line{stroke-width:1.4;stroke-opacity:.27}
-.guide-map-backdrop.is-water .guide-pattern-line{stroke-opacity:.26}
+.guide-map-backdrop{position:absolute;inset:0;display:block;width:100%;height:100%;pointer-events:none;z-index:0;color:var(--text-color)}
 .guide-map-surface .guide-route,.guide-map-surface .guide-study-route{z-index:1}
 .guide-map-surface .guide-topic-stop,.guide-map-surface .guide-study-stop{z-index:2}
 .guide-map-surface .guide-study-stop.is-arrival-highlight{z-index:4}
@@ -334,23 +320,7 @@
 .guide-map-pattern-picker select{max-width:min(240px,44vw);min-height:40px;padding:7px 10px;border:1px solid var(--control-border);border-radius:8px;background:var(--page-background);color:var(--text-color);font:inherit}
 .guide-map-pattern-picker select:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .guide-map-toolbar{flex-wrap:wrap}
-.guide-map-arrival-effect{position:absolute;width:0;height:0;z-index:2;pointer-events:none}
-.guide-map-arrival-ring{position:absolute;left:0;top:0;width:96px;height:96px;box-sizing:border-box;border:2px solid var(--guide-pattern-stroke);border-radius:50%;opacity:0;transform:translate(-50%,-50%) scale(.2);animation:guide-map-water-arrival 1700ms cubic-bezier(.17,.47,.3,1) both;animation-delay:calc(var(--ring-index)*145ms)}
-.guide-map-arrival-effect.is-water .guide-map-arrival-ring{box-shadow:0 0 15px color-mix(in srgb,var(--brand) 12%,transparent)}
-.guide-map-arrival-effect:not(.is-water):not(.is-plain) .guide-map-arrival-ring{animation-name:guide-map-glow-arrival;animation-duration:1050ms}
-.guide-map-arrival-effect.is-plain{display:none}
-@keyframes guide-map-water-arrival{
-  0%{opacity:0;transform:translate(-50%,-50%) scale(.15)}
-  15%{opacity:.5}
-  100%{opacity:0;transform:translate(-50%,-50%) scale(4.2)}
-}
-@keyframes guide-map-glow-arrival{
-  0%{opacity:0;transform:translate(-50%,-50%) scale(.3)}
-  22%{opacity:.4}
-  100%{opacity:0;transform:translate(-50%,-50%) scale(2.5)}
-}
 @media(max-width:650px){.guide-map-pattern-picker{margin-left:0}}
-@media(prefers-reduced-motion:reduce){.guide-map-arrival-ring{animation:none;display:none}}
 
 /* Compact AI review and self-reported coverage estimates. */
 .guide-ai-review{gap:20px}

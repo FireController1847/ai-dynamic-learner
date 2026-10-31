@@ -1,145 +1,180 @@
-import { computed, defineComponent, h, type PropType, type VNode } from 'vue';
-import { MAP_PADDING, MAP_CANVAS_HEIGHT, MAP_CANVAS_WIDTH } from './map-presentation.ts';
-import { MAP_TOPIC_HEIGHT, MAP_TOPIC_WIDTH, type GuideMapPattern, type MapTopic } from './library-model.ts';
+import { defineComponent, h, onBeforeUnmount, onMounted, ref, watch, type PropType } from 'vue';
+import type { GuideMapPattern } from './library-model.ts';
+import { MAP_CANVAS_HEIGHT, MAP_CANVAS_WIDTH } from './map-presentation.ts';
 
 export const GUIDE_MAP_PATTERNS: readonly { value: GuideMapPattern; label: string }[] = [
-  { value: 'water', label: 'Water · rippling waves' },
-  { value: 'contours', label: 'Contours · topographic curves' },
-  { value: 'constellations', label: 'Constellations · connected stars' },
-  { value: 'flow', label: 'Flow · drifting streamlines' },
+  { value: 'water', label: 'Water · small wave crests' },
+  { value: 'contours', label: 'Contours · delicate topographic lines' },
+  { value: 'constellations', label: 'Constellations · scattered stars' },
+  { value: 'flow', label: 'Flow · quiet curved dashes' },
   { value: 'plain', label: 'Plain · no pattern' },
 ];
 
-type Point = { x: number; y: number };
+export interface GuideMapBackdropHandle { rippleAt(x: number, y: number): void }
+interface Ripple { x: number; y: number; start: number }
 const W = MAP_CANVAS_WIDTH, H = MAP_CANVAS_HEIGHT;
-const fmt = (v: number) => Number(v.toFixed(1));
+const RIPPLE_LIFETIME = 1750;
 const hash = (n: number) => {
-  const a = Math.sin(n * 127.1 + 311.7) * 43758.5453;
-  return a - Math.floor(a);
+  const v = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+  return v - Math.floor(v);
 };
-const center = (topic: MapTopic): Point => ({
-  x: topic.x + MAP_PADDING + MAP_TOPIC_WIDTH / 2,
-  y: topic.y + MAP_PADDING + MAP_TOPIC_HEIGHT / 2,
-});
-const pointDistance = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y);
+const clamp = (n: number, low: number, high: number) => Math.min(high, Math.max(low, n));
 
-/** All surfaces are deterministic functions of the authored stop positions. */
-function water(topics: readonly Point[]): VNode[] {
-  const waves: VNode[] = [];
-  for (let row = 0; row < 18; row++) {
-    const baseY = 30 + row * 58;
-    const coords: string[] = [];
-    for (let x = 0; x <= W; x += 28) {
-      let y = baseY + 9 * Math.sin(x / 105 + row * 0.58);
-      for (const stop of topics.slice(0, 50)) {
-        const dx = x - stop.x, dy = baseY - stop.y;
-        const influence = Math.exp(-(dx * dx + dy * dy) / 34000);
-        y += influence * 11 * Math.sin(dx / 50 + row * 0.32);
+/** Small repeated motifs: no permanent circles centered on authored stops. */
+function drawTexture(ctx: CanvasRenderingContext2D, pattern: GuideMapPattern,
+  ripples: readonly Ripple[], now: number) {
+  ctx.lineWidth = 1.2;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  if (pattern === 'water') {
+    ctx.globalAlpha = 0.105;
+    ctx.beginPath();
+    for (let row = 0; row < H / 48 + 1; row++) {
+      for (let col = 0; col < W / 72 + 1; col++) {
+        const x = 20 + col * 72 + (row % 2) * 35;
+        const y = 21 + row * 48;
+        // A ripple briefly displaces the little water crests as it travels past.
+        let displacement = 0;
+        for (const ripple of ripples) {
+          const age = (now - ripple.start) / RIPPLE_LIFETIME;
+          const distance = Math.hypot(x - ripple.x, y - ripple.y);
+          const wavefront = age * 270;
+          const offset = (distance - wavefront) / 24;
+          displacement += Math.cos(offset * 2.1) * Math.exp(-offset * offset) *
+            (1 - age) * 7;
+        }
+        const yy = y + displacement;
+        ctx.moveTo(x - 16, yy + 3);
+        ctx.quadraticCurveTo(x - 7, yy - 7, x + 1, yy + 3);
+        ctx.quadraticCurveTo(x + 10, yy - 5, x + 18, yy + 3);
       }
-      coords.push((x === 0 ? 'M' : 'L') + fmt(x) + ' ' + fmt(y));
     }
-    waves.push(h('path', { key: 'wave-' + row, class: 'guide-pattern-line', d: coords.join(' ') }));
+    ctx.stroke();
+  } else if (pattern === 'contours') {
+    ctx.globalAlpha = 0.095;
+    ctx.beginPath();
+    for (let row = 0; row < H / 90 + 1; row++) for (let col = 0; col < W / 110 + 1; col++) {
+      const x = col * 110 + 14 + (row % 2) * 28, y = row * 90 + 16;
+      for (let j = 0; j < 3; j++) {
+        const offset = j * 9;
+        ctx.moveTo(x, y + offset + 20);
+        ctx.bezierCurveTo(x + 12, y + offset - 6, x + 27, y + offset + 2, x + 40, y + offset + 15);
+      }
+    }
+    ctx.stroke();
+  } else if (pattern === 'constellations') {
+    ctx.globalAlpha = 0.13;
+    ctx.beginPath();
+    for (let row = 0; row < H / 75 + 1; row++) for (let col = 0; col < W / 92 + 1; col++) {
+      const n = row * 41 + col * 7;
+      const x = col * 92 + 10 + hash(n + 7) * 28;
+      const y = row * 75 + 9 + hash(n + 18) * 25;
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + 17 + hash(n + 2) * 11, y - 10 + hash(n + 9) * 18);
+      ctx.moveTo(x + 1.2, y);
+      ctx.arc(x, y, 1.2, 0, Math.PI * 2);
+    }
+    ctx.stroke();
+  } else if (pattern === 'flow') {
+    ctx.globalAlpha = 0.105;
+    ctx.beginPath();
+    for (let row = 0; row < H / 62 + 1; row++) for (let col = 0; col < W / 96 + 1; col++) {
+      const x = 12 + col * 96 + (row % 2) * 42, y = 18 + row * 62;
+      ctx.moveTo(x, y);
+      ctx.bezierCurveTo(x + 12, y - 7, x + 22, y + 9, x + 36, y);
+    }
+    ctx.stroke();
   }
-  topics.slice(0, 45).forEach((stop, i) => {
-    waves.push(h('circle', { key: 'pool-' + i, cx: stop.x, cy: stop.y,
-      r: 74 + (i % 3) * 16, class: 'guide-pattern-ring' }));
-  });
-  return waves;
 }
 
-/** Modulated polar contours give each stop a small, organic topographic basin. */
-function contours(topics: readonly Point[]): VNode[] {
-  const paths: VNode[] = [];
-  const count = topics.length > 24 ? 3 : 5;
-  for (const [i, stop] of topics.slice(0, 60).entries()) {
-    for (let ring = 0; ring < count; ring++) {
-      const radius = 39 + ring * 28;
-      const coords: string[] = [];
-      const phase = hash(i + 19) * Math.PI * 2;
-      for (let j = 0; j <= 48; j++) {
-        const theta = j / 48 * 2 * Math.PI;
-        const mod = 1 + 0.09 * Math.sin(theta * 4 + phase) +
-          0.055 * Math.cos(theta * 7 - phase * 0.7);
-        const x = stop.x + Math.cos(theta) * radius * mod;
-        const y = stop.y + Math.sin(theta) * radius * mod * 0.78;
-        coords.push((j ? 'L' : 'M') + fmt(x) + ' ' + fmt(y));
-      }
-      paths.push(h('path', { key: 'contour-' + i + '-' + ring,
-        class: ring === 0 ? 'guide-pattern-accent' : 'guide-pattern-line',
-        d: coords.join(' ') + ' Z' }));
+/** Real animated Canvas ripples, only rendered while an interaction is active. */
+function drawRipples(ctx: CanvasRenderingContext2D, pattern: GuideMapPattern,
+  ripples: readonly Ripple[], now: number) {
+  if (pattern === 'plain') return;
+  for (const ripple of ripples) {
+    const age = clamp((now - ripple.start) / RIPPLE_LIFETIME, 0, 1);
+    for (let ring = 0; ring < (pattern === 'water' ? 3 : 2); ring++) {
+      const progress = (age - ring * 0.12) / (1 - ring * 0.12);
+      if (progress <= 0 || progress >= 1) continue;
+      ctx.beginPath();
+      ctx.globalAlpha = (pattern === 'water' ? 0.34 : 0.20) *
+        Math.sin(Math.PI * Math.min(1, progress)) * (1 - progress * 0.52);
+      ctx.lineWidth = pattern === 'water' ? 1.8 : 1.4;
+      ctx.arc(ripple.x, ripple.y, 8 + progress * (pattern === 'water' ? 260 : 160),
+        0, Math.PI * 2);
+      ctx.stroke();
     }
   }
-  return paths;
-}
-
-/** Seeded Voronoi-like star neighborhoods join the authored stop positions. */
-function constellations(topics: readonly Point[]): VNode[] {
-  const stars: Point[] = [];
-  for (let i = 0; i < 115; i++) {
-    stars.push({ x: 24 + hash(i * 2 + 1) * (W - 48),
-      y: 24 + hash(i * 2 + 2) * (H - 48) });
-  }
-  const shapes: VNode[] = [];
-  for (const [i, star] of stars.entries()) {
-    const nearestStop = topics.reduce<{ dist: number; point: Point | null }>((best, candidate) => {
-      const dist = pointDistance(star, candidate);
-      return dist < best.dist ? { dist, point: candidate } : best;
-    }, { dist: Infinity, point: null });
-    if (nearestStop.point && nearestStop.dist < 225) {
-      shapes.push(h('line', { key: 'link-' + i, class: 'guide-pattern-line',
-        x1: star.x, y1: star.y, x2: nearestStop.point.x, y2: nearestStop.point.y }));
-    }
-    shapes.push(h('circle', { key: 'star-' + i, cx: star.x, cy: star.y,
-      r: i % 9 === 0 ? 2.4 : 1.3, class: 'guide-pattern-dot' }));
-  }
-  topics.slice(0, 65).forEach((stop, i) =>
-    shapes.push(h('circle', { key: 'anchor-' + i, cx: stop.x, cy: stop.y,
-      r: 30, class: 'guide-pattern-ring' })));
-  return shapes;
-}
-
-/** Streamlines integrate a smooth, stop-distorted vector field. */
-function flow(topics: readonly Point[]): VNode[] {
-  const paths: VNode[] = [];
-  for (let row = 0; row < 26; row++) {
-    let x = 0, y = row * 41 + 5;
-    const coords = ['M' + fmt(x) + ' ' + fmt(y)];
-    for (let step = 0; step < 73 && x < W + 20; step++) {
-      let turn = Math.sin(x / 170 + row * 0.22) * 0.38;
-      for (const stop of topics.slice(0, 45)) {
-        const dx = x - stop.x, dy = y - stop.y;
-        const weight = Math.exp(-(dx * dx + dy * dy) / 57000);
-        turn += weight * (dy >= 0 ? 0.65 : -0.65) * Math.cos(dx / 145);
-      }
-      x += 22;
-      y += Math.max(-12, Math.min(12, turn * 10));
-      coords.push('L' + fmt(x) + ' ' + fmt(y));
-    }
-    paths.push(h('path', { key: 'flow-' + row, class: 'guide-pattern-line', d: coords.join(' ') }));
-  }
-  topics.slice(0, 65).forEach((stop, i) => paths.push(h('circle', { key: 'eddy-' + i,
-    cx: stop.x, cy: stop.y, r: 45, class: 'guide-pattern-ring' })));
-  return paths;
+  ctx.globalAlpha = 1;
 }
 
 export const GuideMapBackdrop = defineComponent({
   name: 'GuideMapBackdrop',
-  props: {
-    pattern: { type: String as PropType<GuideMapPattern>, required: true },
-    topics: { type: Array as PropType<readonly MapTopic[]>, required: true },
-  },
-  setup(props) {
-    const geometry = computed(() => {
-      if (props.pattern === 'plain') return [];
-      const stops = props.topics.map(center);
-      if (props.pattern === 'water') return water(stops);
-      if (props.pattern === 'contours') return contours(stops);
-      if (props.pattern === 'constellations') return constellations(stops);
-      return flow(stops);
+  props: { pattern: { type: String as PropType<GuideMapPattern>, required: true } },
+  setup(props, { expose }) {
+    const canvas = ref<HTMLCanvasElement | null>(null);
+    const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const ripples: Ripple[] = [];
+    let frame = 0, mounted = false;
+    let observer: MutationObserver | null = null;
+    function draw(now = performance.now()) {
+      const element = canvas.value;
+      const ctx = element?.getContext('2d');
+      if (!element || !ctx) return;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const pixelW = Math.round(W * dpr), pixelH = Math.round(H * dpr);
+      if (element.width !== pixelW || element.height !== pixelH) {
+        element.width = pixelW; element.height = pixelH;
+      }
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, W, H);
+      ctx.strokeStyle = getComputedStyle(element).color;
+      for (let i = ripples.length - 1; i >= 0; i--) {
+        if (now - ripples[i].start >= RIPPLE_LIFETIME) ripples.splice(i, 1);
+      }
+      drawTexture(ctx, props.pattern, ripples, now);
+      drawRipples(ctx, props.pattern, ripples, now);
+      ctx.globalAlpha = 1;
+    }
+    function animate(now: number) {
+      frame = 0;
+      if (!mounted) return;
+      if (motion.matches) ripples.splice(0);
+      draw(now);
+      if (ripples.length) frame = requestAnimationFrame(animate);
+    }
+    function invalidate() {
+      if (frame) { cancelAnimationFrame(frame); frame = 0; }
+      if (mounted) draw();
+      if (mounted && ripples.length) frame = requestAnimationFrame(animate);
+    }
+    function rippleAt(x: number, y: number) {
+      if (!mounted || props.pattern === 'plain' || motion.matches ||
+          !Number.isFinite(x) || !Number.isFinite(y)) return;
+      ripples.push({ x: clamp(x, 0, W), y: clamp(y, 0, H), start: performance.now() });
+      if (ripples.length > 5) ripples.shift();
+      if (!frame) frame = requestAnimationFrame(animate);
+    }
+    expose({ rippleAt } satisfies GuideMapBackdropHandle);
+    function onMotionChange() { if (motion.matches) ripples.splice(0); invalidate(); }
+    onMounted(() => {
+      mounted = true;
+      observer = new MutationObserver(invalidate);
+      observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+      motion.addEventListener('change', onMotionChange);
+      window.addEventListener('resize', invalidate);
+      invalidate();
     });
-    return () => h('svg', {
-      class: ['guide-map-backdrop', 'is-' + props.pattern], viewBox: '0 0 ' + W + ' ' + H,
-      width: W, height: H, 'aria-hidden': 'true', focusable: 'false',
-    }, geometry.value);
+    watch(() => props.pattern, () => { ripples.splice(0); invalidate(); });
+    onBeforeUnmount(() => {
+      mounted = false;
+      if (frame) cancelAnimationFrame(frame);
+      observer?.disconnect();
+      motion.removeEventListener('change', onMotionChange);
+      window.removeEventListener('resize', invalidate);
+      ripples.splice(0);
+    });
+    return () => h('canvas', { ref: canvas, class: 'guide-map-backdrop',
+      'aria-hidden': 'true', role: 'presentation' });
   },
 });

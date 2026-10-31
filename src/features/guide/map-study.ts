@@ -8,7 +8,7 @@ import { lessonForTopic } from './teaching-blocks.ts';
 import { connectedTopicIds, mapStudyProblem, startTopic, topicById } from './map-graph.ts';
 import { MAP_CANVAS_HEIGHT, MAP_CANVAS_WIDTH, MAP_PADDING } from './map-presentation.ts';
 import { GUIDE_MAP_DEFAULT_PATTERN, type GuideMapPattern } from './library-model.ts';
-import { GuideMapBackdrop } from './map-background.ts';
+import { GuideMapBackdrop, type GuideMapBackdropHandle } from './map-background.ts';
 import {
   MAP_HEIGHT, MAP_TOPIC_HEIGHT, MAP_TOPIC_WIDTH, MAP_WIDTH,
   type MapGuideData, type MapStudySession, type MapTopic,
@@ -38,12 +38,14 @@ export const GuideMapStudy = defineComponent({
     const arriving = ref(false);
     const focused = ref(false);
     const travelTargetId = ref<string | null>(null);
-    // A fresh key restarts each short-lived arrival effect without a frame loop.
-    const arrivalEffect = ref<{ id: string; sequence: number } | null>(null);
-    let arrivalSequence = 0;
+    const backdrop = ref<GuideMapBackdropHandle | null>(null);
     function celebrateArrival(id: string) {
-      if (reducedMotion.matches) return;
-      arrivalEffect.value = { id, sequence: ++arrivalSequence };
+      const stop = topicById(props.data, id);
+      if (!stop) return;
+      backdrop.value?.rippleAt(
+        stop.x + MAP_PADDING + MAP_TOPIC_WIDTH / 2,
+        stop.y + MAP_PADDING + MAP_TOPIC_HEIGHT / 2,
+      );
     }
     const scroll = ref<HTMLElement | null>(null);
     const topicHeading = ref<HTMLElement | null>(null);
@@ -160,7 +162,6 @@ export const GuideMapStudy = defineComponent({
       camera.value = null;
       cameraZooming.value = false;
       travelTargetId.value = null;
-      arrivalEffect.value = null;
     }
 
     onBeforeUnmount(clearTimers);
@@ -554,7 +555,6 @@ export const GuideMapStudy = defineComponent({
       const travelerId = travelTargetId.value ?? currentId.value;
       const traveler = topicById(props.data, travelerId);
       const pattern: GuideMapPattern = props.data.background ?? GUIDE_MAP_DEFAULT_PATTERN;
-      const arrivalTopic = arrivalEffect.value ? topicById(props.data, arrivalEffect.value.id) : null;
 
       return h('div', { class: 'guide-study-session' }, [
         h('div', { class: 'guide-study-toolbar' }, [
@@ -595,19 +595,17 @@ export const GuideMapStudy = defineComponent({
                 } : {}),
               },
               'aria-label': 'Study route map',
+              onClick: (event: MouseEvent) => {
+                if (event.target !== event.currentTarget) return;
+                const bounds = (event.currentTarget as HTMLElement).getBoundingClientRect();
+                if (!bounds.width || !bounds.height) return;
+                backdrop.value?.rippleAt(
+                  (event.clientX - bounds.left) * MAP_CANVAS_WIDTH / bounds.width,
+                  (event.clientY - bounds.top) * MAP_CANVAS_HEIGHT / bounds.height,
+                );
+              },
             }, [
-              h(GuideMapBackdrop, { pattern, topics: props.data.topics }),
-              arrivalTopic && arrivalEffect.value ? h('div', {
-                key: 'arrival-' + arrivalEffect.value.sequence,
-                class: ['guide-map-arrival-effect', 'is-' + pattern],
-                style: {
-                  left: arrivalTopic.x + MAP_PADDING + MAP_TOPIC_WIDTH / 2 + 'px',
-                  top: arrivalTopic.y + MAP_PADDING + MAP_TOPIC_HEIGHT / 2 + 'px',
-                },
-                'aria-hidden': 'true',
-              }, [0, 1, 2].map(i => h('span', {
-                key: i, class: 'guide-map-arrival-ring', style: { '--ring-index': String(i) },
-              }))) : null,
+              h(GuideMapBackdrop, { ref: backdrop, pattern }),
               h('svg', {
                 class: 'guide-study-route',
                 style: { left: MAP_PADDING + 'px', top: MAP_PADDING + 'px' },

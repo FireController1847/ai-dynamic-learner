@@ -13,7 +13,7 @@ import { GuideListEditor } from './list-editor.ts';
 import { TeachingBlocksEditor } from './teaching-editor.ts';
 import { MAP_CANVAS_HEIGHT, MAP_CANVAS_WIDTH, MAP_PADDING } from './map-presentation.ts';
 import { GUIDE_MAP_DEFAULT_PATTERN, type GuideMapPattern } from './library-model.ts';
-import { GUIDE_MAP_PATTERNS, GuideMapBackdrop } from './map-background.ts';
+import { GUIDE_MAP_PATTERNS, GuideMapBackdrop, type GuideMapBackdropHandle } from './map-background.ts';
 
 const snap = (value: number) => Math.round(value / MAP_GRID) * MAP_GRID;
 const clamp = (value: number, max: number) => Math.max(0, Math.min(max, value));
@@ -23,6 +23,7 @@ export const GuideMapEditor = defineComponent({
   props: { data: { type: Object as PropType<MapGuideData>, required: true } },
   emits: { study: () => true },
   setup(props, { emit }) {
+    const backdrop = ref<GuideMapBackdropHandle | null>(null);
     const selectedId = ref<string | null>(props.data.topics[0]?.id ?? null);
     const connectingFromId = ref<string | null>(null);
     const invalidConnection = ref<{ from: string; to: string } | null>(null);
@@ -210,9 +211,18 @@ export const GuideMapEditor = defineComponent({
                 { 'is-connecting': connectingFromId.value !== null }],
               style: { width: MAP_CANVAS_WIDTH + 'px', height: MAP_CANVAS_HEIGHT + 'px', '--guide-grid': MAP_GRID + 'px' },
               role: 'group', 'aria-label': 'Topic map editor',
+              onClick: (event: MouseEvent) => {
+                if (event.target !== event.currentTarget) return;
+                const bounds = (event.currentTarget as HTMLElement).getBoundingClientRect();
+                if (!bounds.width || !bounds.height) return;
+                backdrop.value?.rippleAt(
+                  (event.clientX - bounds.left) * MAP_CANVAS_WIDTH / bounds.width,
+                  (event.clientY - bounds.top) * MAP_CANVAS_HEIGHT / bounds.height,
+                );
+              },
             }, [
               h(GuideMapBackdrop, {
-                pattern: props.data.background ?? GUIDE_MAP_DEFAULT_PATTERN, topics: props.data.topics,
+                ref: backdrop, pattern: props.data.background ?? GUIDE_MAP_DEFAULT_PATTERN,
               }),
               h('svg', {
                 class: 'guide-route',
