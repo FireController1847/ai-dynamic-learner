@@ -382,3 +382,23 @@
 .is-map-motion-paused .guide-study-stop::after{animation-play-state:paused}
 @media(max-width:900px){.guide-map-layout>.guide-map-motion-toggle{right:12px}}
 @media(prefers-reduced-motion:reduce){.guide-map-motion-toggle{transition:none}}
+
+/* Guide's tree now supports the same before/after/inside drag targets as Review. */
+.guide-library-drag-row{position:relative}
+.guide-library-drag-row[draggable='true']{cursor:grab}
+.guide-library-drag-row.is-dragging{opacity:.45}
+.guide-library-drag-row.drop-inside{outline:1px solid var(--brand);outline-offset:-1px;background:var(--brand-tint)}
+.guide-library-drag-row.drop-before::before,
+.guide-library-drag-row.drop-after::after{
+  content:'';position:absolute;left:0;right:0;height:2px;border-radius:2px;
+  background:var(--brand);pointer-events:none;
+}
+.guide-library-drag-row.drop-before::before{top:-2px}
+.guide-library-drag-row.drop-after::after{bottom:-2px}
+.guide-library-root-drop{
+  margin:4px 8px;padding:8px;border:1px solid transparent;border-radius:var(--radius);
+  color:var(--text-secondary);font-size:12px;
+}
+.guide-library-root-drop.drop-inside{border-color:var(--brand);background:var(--brand-tint)}
+/* The control belongs to the map, not the foreground lesson overlay. */
+.guide-study-layout>.guide-map-motion-toggle{z-index:2}

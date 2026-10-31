@@ -654,7 +654,10 @@ export const GuideMapStudy = defineComponent({
             ]),
           ]),
           h(GuideMapMotionToggle, {
-            paused: props.motionPaused, onToggle: () => emit('toggleMotion'),
+            paused: props.motionPaused,
+            inert: focused.value,
+            'aria-hidden': focused.value,
+            onToggle: () => emit('toggleMotion'),
           }),
           !focused.value ? h('p', { class: 'guide-study-map-hint', role: 'status' },
             arriving.value ? 'Finding your starting point…'
