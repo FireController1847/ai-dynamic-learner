@@ -315,7 +315,12 @@
 .guide-map-backdrop{position:absolute;inset:0;display:block;width:100%;height:100%;pointer-events:none;z-index:0;color:var(--text-color)}
 .guide-map-backdrop-layer{position:absolute;inset:0;display:block;width:100%;height:100%;pointer-events:none}
 .guide-map-surface.is-pattern-circuit .guide-map-backdrop{color:var(--brand)}
-.guide-map-surface.is-pattern-programming .guide-map-backdrop{color:#20815b}
+/* A dedicated dark terminal surface, including when the rest of the app is light. */
+.guide-map-surface.is-pattern-programming{
+  background-color:#07170f;
+  background-image:repeating-linear-gradient(to bottom,transparent 0,transparent 3px,rgba(82,236,153,.023) 4px,transparent 5px)
+}
+.guide-map-surface.is-pattern-programming .guide-map-backdrop{color:#69e4aa}
 :root[data-theme='dark'] .guide-map-surface.is-pattern-programming .guide-map-backdrop{color:#74dfab}
 .guide-map-backdrop-motion{transform:translate3d(0,0,0);backface-visibility:hidden}
 .guide-map-surface .guide-route,.guide-map-surface .guide-study-route{z-index:1}
