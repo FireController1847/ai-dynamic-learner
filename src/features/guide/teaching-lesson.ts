@@ -1,5 +1,6 @@
 import { defineComponent, h, ref, type PropType, type VNode } from 'vue';
 import { renderTeachingMath as math, renderTeachingRich as rich } from './teaching-text.ts';
+import { ParameterizedTeachingView } from './parameterized-teaching-view.ts';
 import type { TeachingBlock, TeachingChoice, TeachingLesson, TeachingSide } from './teaching-blocks.ts';
 
 function caption(value: string | undefined) {
@@ -80,6 +81,13 @@ export const TeachingLessonView = defineComponent({
           ];
           break;
         }
+        case 'parameterized':
+          name = 'Generated worked example';
+          body = h(ParameterizedTeachingView, {
+            block, response: props.responses[block.id] ?? '',
+            onUpdateResponse: (response: string) => answer(block.id, response),
+          });
+          break;
         case 'comparison':
           name = 'Compare';
           body = h('div', { class: 'guide-lesson-comparison' }, [side(block.left), side(block.right)]);
