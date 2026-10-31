@@ -1,6 +1,7 @@
 import { isValidId } from '../../core/ids.ts';
 import { isRecord } from '../../core/validation.ts';
 import type { MapTopic } from './library-model.ts';
+import { validTeachingContent, type ParameterizedTeachingContent } from './parameterized-teaching.ts';
 
 /**
  * Declarative, offline-safe lesson data. Longer text is rendered as sanitized
@@ -10,6 +11,7 @@ import type { MapTopic } from './library-model.ts';
 export type TeachingBlock =
   | { id: string; kind: 'explanation'; title: string; body: string; highlights?: string[] }
   | { id: string; kind: 'example'; title: string; scenario: string; steps: string[]; takeaway: string }
+  | ({ id: string; kind: 'parameterized'; title: string } & ParameterizedTeachingContent)
   | { id: string; kind: 'comparison'; title: string; left: TeachingSide; right: TeachingSide }
   | { id: string; kind: 'table'; title: string; caption?: string; headers: string[]; rows: string[][] }
   | { id: string; kind: 'sequence'; title: string; intro?: string; steps: TeachingStep[] }
@@ -95,6 +97,10 @@ export function validateTeachingLesson(value: unknown, ids: Set<string>): assert
         requiredText(block.scenario, 'Example scenario');
         strings(block.steps, 12, 'Example walkthrough', 1);
         requiredText(block.takeaway, 'Example takeaway');
+        break;
+      case 'parameterized':
+        strictKeys(block, ['id','kind','title','prompt','steps','takeaway','rules'], 'Parameterized example');
+        validTeachingContent(block as unknown as ParameterizedTeachingContent);
         break;
       case 'comparison':
         strictKeys(block, ['id','kind','title','left','right'], 'Comparison');
