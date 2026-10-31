@@ -1,3 +1,15 @@
+## v2.12.2
+
+<small data-utc="2026-10-31T04:15:52.179Z">October 30, 2026</small>
+
+- **Library:** Removed the oversized, duplicate Reorder footer from the Guide sidebar.
+- **Organization:** Preserved drag-and-drop ordering and the existing selected-item **Location and order** controls, consistent with other libraries.
+
+<details>
+<summary>View 1 commit</summary>
+<ol><li>Release commit link pending.</li></ol>
+</details>
+
 ## v2.12.1
 
 <small data-utc="2026-10-31T04:09:02.521Z">October 30, 2026</small>
