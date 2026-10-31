@@ -8,7 +8,7 @@
 
 <details>
 <summary>View 1 commit</summary>
-<ol><li>Release commit link pending.</li></ol>
+<ol><li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/66085ae5b85d1a87fe0f8295b0f6f46e32a9b089">66085ae5</a> — fix(guide): horizontal power lines and destination arrival timing (v2.11.1)</li></ol>
 </details>
 
 ## v2.11.0
