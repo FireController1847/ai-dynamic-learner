@@ -25,6 +25,7 @@ const paths: Record<string, string> = {
   flag: 'M5 22V3M5 4h13l-3 5 3 5H5',
   archive: 'M3 3h18v5H3ZM5 8v13h14V8M9 12h6',
   document: 'M6 3h9l4 4v14H6ZM15 3v5h5M9 12h6M9 16h6',
+  'scroll-text': 'M7 3h13v18H7a4 4 0 0 1-4-4V7a4 4 0 0 1 4-4Zm0 0v14a2 2 0 0 1-4 0M11 8h6M11 12h6M11 16h5',
   cards: 'M6 3h15v14H6ZM3 7v14h14M9 8h9M9 12h6',
   pencil: 'm4 16-1 5 5-1L20 8l-4-4ZM14 6l4 4',
   trash: 'M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7',

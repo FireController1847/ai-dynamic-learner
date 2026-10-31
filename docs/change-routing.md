@@ -7,6 +7,7 @@ Use this as a starting-file index, not a feature specification. Follow imports o
 | App identity / metadata | `src/app/app-config.ts`, `build/page-metadata.mts`, `src/html/index.html` |
 | Feature registration, labels, routes, groups, versions | `src/features/feature-definitions.ts`, `feature-registry.ts` |
 | Home cards/search | `src/app/home-page.ts`, `src/styles/home.css` |
+| Read-only Changelog page / Markdown release notes | `src/app/changelog-page.ts`, `src/styles/changelog.css`, `public/changelogs/README.md`; sidebar link in `src/app/navigation-drawer.ts` |
 | App artwork / visible icons | `src/app/app-icon.ts`, `src/assets/app-icons/`, `src/styles/shell.css` |
 | Header / shell / navigation drawer | `src/app/app.ts`, `navigation-drawer.ts`, `navigation.ts`, `src/styles/shell.css` |
 | Theme registry/settings | `src/app/theme.ts`, `theme-menu.ts`, `theme-picker.ts`, `src/styles/themes.css`, `theme.css` |

@@ -10,6 +10,7 @@
 @import 'katex/dist/katex.min.css';
 @import './markdown-content.css';
 @import './shell.css';
+@import './changelog.css';
 @import './backup-reminders.css';
 @import './theme.css';
 @import '../../packages/tips/src/tips.css';

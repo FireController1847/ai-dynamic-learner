@@ -14,6 +14,7 @@ export const NavigationDrawer = defineComponent({
     title: { type: String, required: true },
     logoName: { type: String as PropType<AppIconName>, default: 'dynamic-learner' },
     homeHref: { type: String, required: true },
+    changelogHref: { type: String, required: true },
     items: { type: Array as PropType<NavigationItem[]>, required: true },
     activePath: { type: String, required: true },
   },
@@ -95,6 +96,14 @@ export const NavigationDrawer = defineComponent({
               h('ul', items.map(navigationItem)),
             ])] : [];
           })),
+          h('div', { class: 'navigation-information' }, [
+            h('a', {
+              href: props.changelogHref,
+              class: 'navigation-link',
+              'aria-current': props.activePath === '/changelog/' ? 'page' : undefined,
+              onClick: (event: MouseEvent) => emit('navigate', event, '/changelog/'),
+            }, [h(Icon, { name: 'scroll-text' }), h('span', 'Changelog')]),
+          ]),
         ]),
         slots.footer ? h('div', { class: 'drawer-footer' }, slots.footer()) : null,
       ])]) : null,

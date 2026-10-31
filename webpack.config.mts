@@ -75,6 +75,7 @@ export default (_env: unknown, argv: { mode?: Configuration['mode'] }): Configur
       }),
       new CopyPlugin({ patterns: [
         { from: 'src/assets', to: 'assets' },
+        { from: 'public/changelogs', to: 'changelogs' },
         { from: 'LICENSE', to: 'LICENSE', toType: 'file' },
         { from: 'public/.nojekyll', to: '.nojekyll', toType: 'file' },
         { from: 'node_modules/vue/LICENSE', to: 'licenses/vue.txt' },

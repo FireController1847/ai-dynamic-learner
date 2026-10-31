@@ -16,8 +16,11 @@ function pageMetadata(route: string, baseUrl: URL | null) {
   const canonicalRoute = route === '/study-guide/' ? '/guide/' : route;
   const feature = featureDefinitions.find((candidate) => candidate.path === canonicalRoute);
   const overrides = feature?.metadata ?? {};
-  const title = overrides.title ?? (feature ? `${feature.label} · ${appConfig.name}` : appConfig.name);
-  const description = overrides.description ?? feature?.description ?? appConfig.description;
+  const isChangelog = canonicalRoute === '/changelog/';
+  const title = overrides.title ?? (feature ? `${feature.label} · ${appConfig.name}`
+    : isChangelog ? `Changelog · ${appConfig.name}` : appConfig.name);
+  const description = overrides.description ?? feature?.description ??
+    (isChangelog ? 'Release notes and improvements across Dynamic Learner and its learning apps.' : appConfig.description);
   const canonicalUrl = baseUrl ? new URL(canonicalRoute.slice(1), baseUrl).href : null;
   const siteUrl = baseUrl?.href ?? null;
   const keywords = [...new Set([
@@ -32,7 +35,7 @@ function pageMetadata(route: string, baseUrl: URL | null) {
   };
   const socialImageUrl = absoluteUrl(socialImage.path, baseUrl);
 
-  const structuredData = feature ? {
+  const structuredData = feature || isChangelog ? {
     '@context': 'https://schema.org',
     '@type': 'WebPage',
     name: title,

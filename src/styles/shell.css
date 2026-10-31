@@ -118,6 +118,8 @@ body:has(.navigation-drawer[open]) { overflow: hidden; }
 .navigation-tools[open] .navigation-tools-summary .ui-icon { transform: rotate(180deg); }
 .navigation-tools-list { margin-top: 4px !important; }
 .navigation-primary { display: grid; gap: 16px; }
+.navigation-information { padding-top: 12px; border-top: 1px solid var(--border-color); }
+.navigation-information .navigation-link > .ui-icon { width: 24px; height: 24px; }
 .navigation-group-heading {
   margin: 0 0 4px 12px;
   color: var(--text-secondary);

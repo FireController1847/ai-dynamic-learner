@@ -12,6 +12,7 @@ import { BackupReminderBanner } from './backup-reminder-ui.ts';
 import { ThemeMenu, type ThemeMenuHandle } from './theme-menu.ts';
 import { initializeTheme } from './theme.ts';
 import { HomePage } from './home-page.ts';
+import { ChangelogPage } from './changelog-page.ts';
 import { TipsExperience } from '../../packages/tips/src/index.ts';
 import { tipsCatalog } from './tips-content.ts';
 import { Icon } from '../components/icon.ts';
@@ -161,6 +162,7 @@ const App = defineComponent({
     let focusContentOnClose = false;
     const { currentPath, navigate } = useNavigation(onNavigate);
     const activeFeature = computed(() => features.find((feature) => feature.path === currentPath.value));
+    const isChangelog = computed(() => currentPath.value === '/changelog/');
     const tipsFeature = computed(() => {
       if (!TIPS_ENABLED) return null;
       const feature = activeFeature.value ?? (currentPath.value === '/' ? homeTipsFeature : null);
@@ -217,8 +219,9 @@ const App = defineComponent({
             : h(Icon, { name: activeFeature.value.icon, class: 'app-logo app-header-logo' })
           : currentPath.value === '/'
             ? h(AppIcon, { name: 'dynamic-learner', imageClass: 'app-logo app-header-logo' })
-            : h(Icon, { name: 'document' }),
-        h('h1', activeFeature.value?.label ?? (currentPath.value === '/' ? appConfig.name : 'Page not found')),
+            : h(Icon, { name: isChangelog.value ? 'scroll-text' : 'document' }),
+        h('h1', isChangelog.value ? 'Changelog'
+          : activeFeature.value?.label ?? (currentPath.value === '/' ? appConfig.name : 'Page not found')),
         h('div', { class: 'app-header-actions' }, [
           compatibilityNoticeHidden.value ? h('button', {
             type: 'button', class: 'quiet-button app-header-action compatibility-status-button',
@@ -272,6 +275,7 @@ const App = defineComponent({
         title: appConfig.name,
         logoName: 'dynamic-learner',
         homeHref: pageHref('/'),
+        changelogHref: pageHref('/changelog/'),
         items: navigationItems,
         activePath: currentPath.value,
         onClose: closeSidebar,
@@ -359,10 +363,10 @@ const App = defineComponent({
             'app-content--workspace': ['notebook', 'todo-list', 'solve-it-grid', 'index-cards', 'word-search', 'crossword', 'guide', 'knowledge-check'].includes(activeFeature.value?.id ?? ''),
           }],
           tabindex: -1,
-          inert: workspace.compatibility.value?.readOnly ?? false,
-          'aria-busy': !workspace.ready.value && !workspace.storageProblem.value,
+          inert: isChangelog.value ? false : (workspace.compatibility.value?.readOnly ?? false),
+          'aria-busy': !isChangelog.value && !workspace.ready.value && !workspace.storageProblem.value,
         }, [
-          !workspace.ready.value
+          isChangelog.value ? h(ChangelogPage) : !workspace.ready.value
             ? workspace.storageProblem.value
               ? h('section', { class: 'workspace-loading', role: 'alert' }, [
                 h('h2', 'Workspace unavailable'),
