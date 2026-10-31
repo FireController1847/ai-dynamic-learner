@@ -9,8 +9,11 @@
 - **AI Maps:** Power Lines is available to generated guides and imported maps.
 
 <details>
-<summary>View 1 commit</summary>
-<ol><li>Release commit link pending.</li></ol>
+<summary>View 2 commits</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/285b0acde67db98cf37abd15b1429b12f0df7e86">285b0acd</a> — refactor(guide): remove no-op drawing statements from new scenes</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/de40700df96557fea414924047075884addf5ead">de40700d</a> — feat(guide): power lines scenery, hacker visuals, and library reorder (v2.11.0)</li>
+</ol>
 </details>
 
 ## v2.10.0
