@@ -1,3 +1,16 @@
+## v2.16.1
+
+<small data-utc="2026-11-05T01:47:52.683Z">November 4, 2026</small>
+
+- **Onion Animation:** Removed the worm-like peeling strand; clicking now gives the onion a gentle squish and two small falling teardrops.
+- **Pepper Illustration:** Replaced the pumpkin-like bell pepper with an unmistakable curved chili pepper, a visible stem and a soft hopping motion.
+- **Consistency:** Both vegetables remain monochrome, with other backgrounds and vegetable animations unchanged.
+
+<details>
+<summary>View 1 commit</summary>
+<ol><li>Release commit link pending.</li></ol>
+</details>
+
 ## v2.16.0
 
 <small data-utc="2026-11-05T01:44:07.551Z">November 4, 2026</small>

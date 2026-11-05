@@ -220,6 +220,10 @@ function renderVegetable(ctx: CanvasRenderingContext2D, vegetable: Vegetable,
       break;
     }
     case 'onion': {
+      // An unmistakable onion bulb. No peeling strands or tentacles:
+      // clicking makes it gently squish and shed a couple of tiny teardrops.
+      const squeeze = active ? Math.sin(time * 10) * .045 * swell : 0;
+      ctx.scale(1 + squeeze, 1 - squeeze);
       fill(() => {
         ctx.moveTo(0, -43);
         ctx.bezierCurveTo(-15, -13, -40, -4, -37, 22);
@@ -233,13 +237,23 @@ function renderVegetable(ctx: CanvasRenderingContext2D, vegetable: Vegetable,
           ctx.quadraticCurveTo(dx * 1.7, 2, dx, 30);
         }, .65, 1.8);
       }
+      // Short, discrete teardrops fall free of the onion instead of
+      // animating an attached, worm-like peeling line.
       if (active) {
-        const rise = Math.sin(time * 7) * 5 * swell;
-        stroke(() => {
-          ctx.moveTo(23, 20);
-          ctx.quadraticCurveTo(48 + rise, -3, 30 + rise, -29);
-        }, .85 * swell, 2);
-        circle(30 + rise, -33, 2.2, .5 * swell);
+        for (let i = 0; i < 2; i++) {
+          const progress = clamp((elapsed - 300 - i * 250) / 850, 0, 1);
+          if (progress <= 0 || progress >= 1) continue;
+          const x = (i === 0 ? -37 : 37) + (i === 0 ? -6 : 6) * progress;
+          const y = 4 + 31 * progress * progress;
+          ctx.beginPath();
+          ctx.moveTo(x, y - 5);
+          ctx.quadraticCurveTo(x - 5, y + 1, x - 3, y + 4);
+          ctx.quadraticCurveTo(x, y + 7, x + 3, y + 4);
+          ctx.quadraticCurveTo(x + 5, y + 1, x, y - 5);
+          ctx.closePath();
+          ctx.globalAlpha = alpha * Math.sin(Math.PI * progress) * .8;
+          ctx.fill();
+        }
       }
       break;
     }
@@ -283,21 +297,45 @@ function renderVegetable(ctx: CanvasRenderingContext2D, vegetable: Vegetable,
       break;
     }
     case 'pepper': {
-      ctx.rotate(active ? Math.sin(time * 9) * .12 * swell : 0);
+      // Distinctly elongated chili-pepper silhouette instead of a
+      // round, lobed bell pepper that could be mistaken for a pumpkin.
+      const sway = active ? Math.sin(time * 8) * .11 * swell : 0;
+      const hop = active ? Math.abs(Math.sin(time * 6.5)) * 5 * swell : 0;
+      ctx.translate(0, -hop);
+      ctx.rotate(sway);
       fill(() => {
-        ctx.moveTo(0, -30);
-        ctx.bezierCurveTo(-44, -47, -46, -7, -35, 28);
-        ctx.quadraticCurveTo(-21, 51, 0, 35);
-        ctx.quadraticCurveTo(22, 51, 35, 28);
-        ctx.bezierCurveTo(48, -8, 39, -45, 0, -30);
+        ctx.moveTo(-6, -34);
+        ctx.bezierCurveTo(-34, -36, -40, -8, -32, 15);
+        ctx.bezierCurveTo(-24, 38, -2, 50, 16, 51);
+        ctx.quadraticCurveTo(6, 37, 20, 19);
+        ctx.bezierCurveTo(33, 3, 37, -17, 22, -32);
+        ctx.quadraticCurveTo(9, -39, -6, -34);
         ctx.closePath();
       });
-      stroke(() => { ctx.moveTo(-14, -26); ctx.quadraticCurveTo(-22, 9, -11, 37); }, .65);
-      stroke(() => { ctx.moveTo(13, -26); ctx.quadraticCurveTo(21, 9, 12, 37); }, .65);
-      stroke(() => { ctx.moveTo(0, -31); ctx.quadraticCurveTo(5, -47, 14, -48); }, 1, 3.2);
-      if (active) for (let i = 0; i < 3; i++) {
-        const x = -11 + i * 11 + Math.sin(time * 11 + i) * 4;
-        circle(x, 35 + Math.abs(Math.sin(time * 8 + i)) * 10 * swell, 2, .65 * swell);
+      // Small, recognizable cap, leaf and curved stem at the top.
+      fill(() => {
+        ctx.moveTo(-17, -32);
+        ctx.quadraticCurveTo(-4, -41, 8, -35);
+        ctx.quadraticCurveTo(19, -41, 26, -27);
+        ctx.quadraticCurveTo(8, -25, -3, -28);
+        ctx.quadraticCurveTo(-13, -25, -17, -32);
+        ctx.closePath();
+      }, .75);
+      stroke(() => {
+        ctx.moveTo(6, -35);
+        ctx.bezierCurveTo(3, -45, -7, -53, -19, -50);
+      }, 1, 3.2);
+      stroke(() => {
+        ctx.moveTo(-18, -20);
+        ctx.quadraticCurveTo(-26, 0, -15, 21);
+      }, .43, 1.7);
+      if (active) {
+        // A tiny grounded bounce, not loose floating blobs.
+        const dash = 8 * swell;
+        stroke(() => {
+          ctx.moveTo(-17, 55); ctx.lineTo(-17 - dash, 55 + dash * .35);
+          ctx.moveTo(15, 55); ctx.lineTo(15 + dash, 55 + dash * .35);
+        }, .5 * swell, 1.6);
       }
       break;
     }
