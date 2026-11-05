@@ -5,8 +5,8 @@ const KINDS = ['banana', 'apple', 'strawberry', 'orange', 'lemon', 'pear',
   'grapes', 'cherries', 'watermelon', 'pineapple', 'kiwi'] as const;
 type FruitKind = typeof KINDS[number];
 interface Fruit { x: number; y: number; scale: number; angle: number; kind: FruitKind }
-export interface FruitPaint { x: number; y: number; start: number; targets: number[] }
-export const FRUIT_PAINT_LIFETIME = 3100;
+export interface FruitPaint { target: number; originX: number; originY: number; start: number }
+export const FRUIT_PAINT_LIFETIME = 3000;
 const TAU = Math.PI * 2;
 const hash = (seed: number) => {
   const n = Math.sin(seed * 127.1 + 311.7) * 43758.5453;
@@ -27,19 +27,19 @@ const palette: Record<FruitKind, { body: string; accent: string; detail: string 
   kiwi: { body: '#a6b66d', accent: '#7c8950', detail: '#e9e2a3' },
 };
 
-/* Loose, offset rows leave breathing room for the Map stops and make each
- * silhouette recognizable; the pattern has no time- or random-dependent state. */
+/* Dense but unobtrusive offset rows. The positions, sizes, and fruit variety
+ * stay deterministic so the scene never jumps when the map is repainted. */
 const fruits: readonly Fruit[] = (() => {
   const result: Fruit[] = [];
-  for (let row = 0; row < Math.ceil(H / 122); row++) {
-    for (let col = 0; col < Math.ceil(W / 132); col++) {
+  for (let row = 0; row < Math.ceil(H / 83); row++) {
+    for (let col = 0; col < Math.ceil(W / 89); col++) {
       const seed = 97 * row + 31 * col;
-      const x = 68 + col * 132 + (row % 2) * 47 + (hash(seed + 1) - .5) * 29;
-      const y = 65 + row * 122 + (hash(seed + 2) - .5) * 28;
-      if (x > W - 28 || y > H - 27) continue;
+      const x = 39 + col * 89 + (row % 2) * 28 + (hash(seed + 1) - .5) * 21;
+      const y = 38 + row * 83 + (hash(seed + 2) - .5) * 20;
+      if (x > W - 20 || y > H - 21) continue;
       result.push({
         x, y,
-        scale: .56 + hash(seed + 3) * .18,
+        scale: .40 + hash(seed + 3) * .14,
         angle: (hash(seed + 4) - .5) * .62,
         kind: KINDS[(row * 5 + col * 7 + Math.floor(hash(seed + 5) * 4)) % KINDS.length],
       });
@@ -61,22 +61,22 @@ function drawFruit(ctx: CanvasRenderingContext2D, fruit: Fruit,
   ctx.lineJoin = 'round';
   const fill = (color: string) => {
     ctx.fillStyle = neutral ? ink : color;
-    ctx.globalAlpha = alpha * (neutral ? .075 : .86);
+    ctx.globalAlpha = alpha * (neutral ? .034 : .86);
     ctx.fill();
     ctx.strokeStyle = neutral ? ink : color;
-    ctx.globalAlpha = alpha * (neutral ? .24 : .94);
+    ctx.globalAlpha = alpha * (neutral ? .115 : .94);
     ctx.lineWidth = 2.3;
     ctx.stroke();
   };
   const stroke = (color: string, thickness = 2.7) => {
     ctx.strokeStyle = neutral ? ink : color;
-    ctx.globalAlpha = alpha * (neutral ? .30 : .85);
+    ctx.globalAlpha = alpha * (neutral ? .14 : .85);
     ctx.lineWidth = thickness;
     ctx.stroke();
   };
   const dots = (points: readonly [number, number][], color: string, radius = 2.1) => {
     ctx.fillStyle = neutral ? ink : color;
-    ctx.globalAlpha = alpha * (neutral ? .23 : .85);
+    ctx.globalAlpha = alpha * (neutral ? .11 : .85);
     for (const [x, y] of points) {
       ctx.beginPath(); ctx.arc(x, y, radius, 0, TAU); ctx.fill();
     }
@@ -201,7 +201,7 @@ function drawFruit(ctx: CanvasRenderingContext2D, fruit: Fruit,
       ctx.beginPath(); ctx.ellipse(0,2,29,33,0,0,TAU); fill(colors.body);
       ctx.beginPath(); ctx.ellipse(0,2,11,13,0,0,TAU); fill(colors.detail);
       ctx.fillStyle = neutral ? ink : '#5d5d38';
-      ctx.globalAlpha = alpha * (neutral ? .28 : .8);
+      ctx.globalAlpha = alpha * (neutral ? .135 : .8);
       for(let i=0;i<11;i++){
         const angle = i*TAU/11;
         ctx.beginPath();ctx.ellipse(Math.cos(angle)*20,2+Math.sin(angle)*23,
@@ -216,66 +216,104 @@ export function drawFruitsBase(ctx: CanvasRenderingContext2D, ink: string): void
   for (const fruit of fruits) drawFruit(ctx, fruit, ink, false);
 }
 
-/** A click sends a local radial wash: nearest fruit first, then a few neighbors. */
+/** Each click selects exactly one fruit; repeat clicks restart its paint animation. */
 export function triggerFruitPaint(x: number, y: number, now: number, effects: FruitPaint[]): void {
-  const nearest = fruits.map((fruit,index) => ({
-    index, distance: Math.hypot(fruit.x - x, fruit.y - y),
-  })).sort((a,b) => a.distance - b.distance);
-  const targets = nearest.filter((entry,index) => index===0 || entry.distance < 270)
-    .slice(0,5).map(entry=>entry.index);
-  effects.push({ x, y, start: now, targets });
-  if (effects.length > 4) effects.shift();
+  let target = -1;
+  let nearestDistance = Infinity;
+  for (let index = 0; index < fruits.length; index++) {
+    const fruit = fruits[index];
+    const distance = (fruit.x - x) ** 2 + (fruit.y - y) ** 2;
+    if (distance < nearestDistance) { nearestDistance = distance; target = index; }
+  }
+  const fruit = fruits[target];
+  if (!fruit) return;
+  const dx = x - fruit.x, dy = y - fruit.y;
+  const distance = Math.hypot(dx, dy);
+  // A click directly on a fruit begins at that point. A click in the gap
+  // begins slightly inside the nearest fruit so no color crosses empty space.
+  const reach = fruit.scale * 45;
+  const projection = distance > reach ? fruit.scale * 17 / distance : 1;
+  const originX = fruit.x + dx * projection;
+  const originY = fruit.y + dy * projection;
+  const existing = effects.findIndex(effect => effect.target === target);
+  if (existing >= 0) effects.splice(existing, 1);
+  effects.push({ target, originX, originY, start: now });
+  if (effects.length > 5) effects.shift();
 }
 
-function drawDrip(ctx: CanvasRenderingContext2D, fruit: Fruit,
-  elapsed: number, distance: number, opacity: number) {
-  const afterArrival = elapsed - distance / .40 - 130;
-  if (afterArrival <= 0 || afterArrival > 1600) return;
-  const growth = clamp(afterArrival / 440,0,1);
-  const fade = clamp((1600-afterArrival)/650,0,1);
-  const x = fruit.x + fruit.scale * 8;
-  const y = fruit.y + fruit.scale * 43;
-  const length = growth * 19;
-  ctx.fillStyle = palette[fruit.kind].body;
-  ctx.globalAlpha = opacity * fade * .85;
-  ctx.beginPath();
-  ctx.moveTo(x-2.4,y-2);
-  ctx.quadraticCurveTo(x+2.5,y+3,x+2.2,y+length-2);
-  ctx.arc(x,y+length,3.1,0,TAU);
-  ctx.quadraticCurveTo(x-2.5,y+2,x-2.4,y-2);
-  ctx.fill();
-}
+const bottoms: Record<FruitKind, number> = {
+  banana: 29, apple: 39, strawberry: 44, orange: 39, lemon: 33,
+  pear: 47, grapes: 51, cherries: 36, watermelon: 31,
+  pineapple: 47, kiwi: 41,
+};
 
-/** Color is drawn only to the transparent motion layer and fades back to gray. */
-export function drawFruitsMotion(ctx: CanvasRenderingContext2D, now: number,
-  effects: readonly FruitPaint[], ink: string): void {
+/** Two narrow wet trails form at the bottom of the painted fruit, with droplets. */
+function drawPaintDrips(ctx: CanvasRenderingContext2D, fruit: Fruit,
+  elapsed: number, opacity: number): void {
+  const progress = clamp((elapsed - 590) / 490, 0, 1);
+  if (progress <= 0) return;
+  const fade = clamp((2200 - elapsed) / 600, 0, 1) * opacity;
+  if (fade <= 0) return;
   ctx.save();
-  for (const effect of effects) {
-    const elapsed = now-effect.start;
-    if (elapsed < 0 || elapsed >= FRUIT_PAINT_LIFETIME) continue;
-    const progress = clamp(elapsed / 990,0,1);
-    const radius = 5 + progress * 395;
-    const opacity = clamp((FRUIT_PAINT_LIFETIME-elapsed)/1100,0,1);
-    const first = fruits[effect.targets[0]];
-    if (!first) continue;
-    // Thin circular sweep makes it clear that the coloring starts at the tap.
-    if (progress < 1) {
-      ctx.beginPath();ctx.arc(effect.x,effect.y,radius,0,TAU);
-      ctx.strokeStyle=palette[first.kind].body;
-      ctx.lineWidth=1.5;
-      ctx.globalAlpha=.21*(1-progress);
-      ctx.stroke();
-    }
-    ctx.save();
-    ctx.beginPath();ctx.arc(effect.x,effect.y,radius,0,TAU);ctx.clip();
-    for (const index of effect.targets) {
-      const fruit = fruits[index];
-      if (fruit) drawFruit(ctx,fruit,ink,true,opacity);
-    }
-    ctx.restore();
-    const distance = Math.hypot(first.x-effect.x,first.y-effect.y);
-    if (radius > distance + first.scale*20)
-      drawDrip(ctx,first,elapsed,distance,opacity);
+  ctx.fillStyle = ctx.strokeStyle = palette[fruit.kind].body;
+  ctx.lineCap = 'round';
+  for (let i = 0; i < 3; i++) {
+    const length = 8 + hash(fruit.x * .31 + fruit.y * .12 + i) * 11;
+    const delay = i * .19;
+    const growth = clamp((progress - delay) / (1 - delay), 0, 1);
+    if (!growth) continue;
+    const x = fruit.x + (i - 1) * fruit.scale * 18;
+    const y = fruit.y + fruit.scale * (bottoms[fruit.kind] - 3);
+    const bend = (i - 1) * 3.3;
+    const endY = y + length * growth;
+    ctx.globalAlpha = fade * (i === 1 ? .80 : .58);
+    ctx.lineWidth = i === 1 ? 2.8 : 1.8;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.quadraticCurveTo(x + bend, y + length * .6, x + bend, endY);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(x + bend, endY, i === 1 ? 2.9 : 2.1, 0, TAU);
+    ctx.fill();
   }
   ctx.restore();
+}
+
+/** An uneven wet paint front advances from the click, but is only visible
+ * wherever this ONE fruit has colored artwork. No map-wide rings or neighbors. */
+function clipPaintFront(ctx: CanvasRenderingContext2D, x: number, y: number,
+  radius: number): void {
+  const steps = 48;
+  ctx.beginPath();
+  for (let i = 0; i <= steps; i++) {
+    const angle = i / steps * TAU;
+    const ripple = 1 + .055 * Math.sin(angle * 5 + .8) +
+      .037 * Math.sin(angle * 9 - .6) + .025 * Math.cos(angle * 13 + .3);
+    const px = x + Math.cos(angle) * radius * ripple;
+    const py = y + Math.sin(angle) * radius * ripple;
+    if (i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+  ctx.clip();
+}
+
+/** Only the clicked fruit paints in, holds briefly, then returns to grayscale. */
+export function drawFruitsMotion(ctx: CanvasRenderingContext2D, now: number,
+  effects: readonly FruitPaint[], ink: string): void {
+  for (const effect of effects) {
+    const fruit = fruits[effect.target];
+    const elapsed = now - effect.start;
+    if (!fruit || elapsed < 0 || elapsed >= FRUIT_PAINT_LIFETIME) continue;
+    const progress = clamp(elapsed / 820, 0, 1);
+    const ease = 1 - (1 - progress) ** 2.4;
+    const radius = 2 + ease * fruit.scale * 148;
+    const opacity = clamp((FRUIT_PAINT_LIFETIME - elapsed) / 1050, 0, 1);
+    ctx.save();
+    clipPaintFront(ctx, effect.originX, effect.originY, radius);
+    drawFruit(ctx, fruit, ink, true, opacity);
+    ctx.restore();
+    // A few tiny runoffs emerge only after the fruit has substantially filled.
+    drawPaintDrips(ctx, fruit, elapsed, opacity);
+  }
 }

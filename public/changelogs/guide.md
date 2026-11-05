@@ -1,3 +1,16 @@
+## v2.15.1
+
+<small data-utc="2026-11-05T01:37:23.714Z">November 4, 2026</small>
+
+- **Fruit Scenery:** More than doubled the fruit density while reducing illustration size and grayscale contrast for a quieter, more varied background.
+- **Paint Interaction:** Each click now colors only its nearest fruit, spreading from the click point through that fruit with a soft, uneven paint edge—without affecting neighboring fruits or drawing a large circular ripple.
+- **Paint Details:** Added several delicate dripping paint trails and droplets that appear briefly before the fruit returns to grayscale.
+
+<details>
+<summary>View 1 commit</summary>
+<ol><li>Release commit link pending.</li></ol>
+</details>
+
 ## v2.15.0
 
 <small data-utc="2026-11-05T01:30:54.509Z">November 4, 2026</small>
