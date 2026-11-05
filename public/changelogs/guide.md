@@ -8,7 +8,7 @@
 
 <details>
 <summary>View 1 commit</summary>
-<ol><li>Release commit link pending.</li></ol>
+<ol><li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/8edabda358a04d9a0a4d3003b5996132d792cfd0">8edabda3</a> — fix(guide): replace onion peel and clarify chili pepper silhouette (v2.16.1)</li></ol>
 </details>
 
 ## v2.16.0
