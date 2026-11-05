@@ -493,3 +493,6 @@
 
 /* Keep resting fruit sketches subtle in either palette; color appears only on click. */
 .guide-map-surface.is-pattern-fruits .guide-map-backdrop{color:var(--text-secondary)}
+
+/* Vegetables retain the same understated monochrome treatment when animated. */
+.guide-map-surface.is-pattern-vegetables .guide-map-backdrop{color:var(--text-secondary)}

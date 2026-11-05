@@ -1,3 +1,17 @@
+## v2.16.0
+
+<small data-utc="2026-11-05T01:44:07.551Z">November 4, 2026</small>
+
+- **Vegetables Background:** Added a quiet, grayscale garden pattern with eleven illustrated vegetables and a unique click-triggered animation for each.
+- **Playful Interactions:** Asparagus boils in a tiny saucepan, celery leaves wiggle, carrots hop, broccoli shakes, mushrooms bounce, peas jiggle, and other vegetables have their own small motions—without adding color.
+- **Map Backgrounds:** Kept Power Lines as the final background picker option and added Vegetables to Guide's AI import validation and background guidance.
+- **Performance:** Uses the existing static/motion canvas layers, bounded animation effects, and pause/reduced-motion safeguards.
+
+<details>
+<summary>View 1 commit</summary>
+<ol><li>Release commit link pending.</li></ol>
+</details>
+
 ## v2.15.1
 
 <small data-utc="2026-11-05T01:37:23.714Z">November 4, 2026</small>
