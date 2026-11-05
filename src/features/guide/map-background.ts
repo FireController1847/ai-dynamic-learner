@@ -8,6 +8,10 @@ import { drawProgrammingHudBase, drawProgrammingHudMotion } from './map-programm
 import { drawPowerLinesBase, drawPowerLinesMotion, type PowerPulse } from './map-power-lines.ts';
 import { clearPowerLinesInteractions, createPowerLinesInteractions,
   drawPowerLinesInteractions, triggerPowerLinesAt } from './map-power-lines-interactions.ts';
+import { drawFruitsBase, drawFruitsMotion, triggerFruitPaint,
+  FRUIT_PAINT_LIFETIME, type FruitPaint } from './map-fruits.ts';
+import { drawVegetablesBase, drawVegetablesMotion, triggerVegetableMotion,
+  VEGETABLE_MOTION_LIFETIME, type VegetableMotion } from './map-vegetables.ts';
 
 export const GUIDE_MAP_PATTERNS: readonly { value: GuideMapPattern; label: string }[] = [
   { value: 'water', label: 'Water · varied wave crests' },
@@ -17,6 +21,8 @@ export const GUIDE_MAP_PATTERNS: readonly { value: GuideMapPattern; label: strin
   { value: 'fireflies', label: 'Fireflies · drifting lights' },
   { value: 'circuit', label: 'Circuit Board · electrical traces' },
   { value: 'programming', label: 'Programming · binary and hex' },
+  { value: 'fruits', label: 'Fruits · paint the orchard' },
+  { value: 'vegetables', label: 'Vegetables · playful garden sketches' },
   { value: 'power-lines', label: 'Power Lines · desert railway and wires' },
 ];
 
@@ -278,6 +284,8 @@ export const GuideMapBackdrop = defineComponent({
     const circuitSignals: CircuitSignal[] = [];
     const powerPulses: PowerPulse[] = [];
     const powerInteractions = createPowerLinesInteractions();
+    const fruitPaints: FruitPaint[] = [];
+    const vegetableMotions: VegetableMotion[] = [];
     let mounted = false, active = true, visible = true;
     let frame = 0, lastPaint = 0, animationTime = 0, lastTick = 0;
     let ink = '', waterSprite: HTMLCanvasElement | null = null;
@@ -314,7 +322,9 @@ export const GuideMapBackdrop = defineComponent({
       ctx.setTransform(scale, 0, 0, scale, 0, 0);
       ctx.clearRect(0, 0, W, H);
       ctx.strokeStyle = ink;
-      drawTexture(ctx, props.pattern, [], 0);
+      if (props.pattern === 'fruits') drawFruitsBase(ctx, ink);
+      else if (props.pattern === 'vegetables') drawVegetablesBase(ctx, ink);
+      else drawTexture(ctx, props.pattern, [], 0);
       // Firefly glows and water foam are colored/rasterized once, then reused.
       glowSprite = document.createElement('canvas');
       glowSprite.width = glowSprite.height = 40;
@@ -343,6 +353,12 @@ export const GuideMapBackdrop = defineComponent({
       for (let i = effects.length - 1; i >= 0; i--) {
         if (now - effects[i].start >= lifetime(props.pattern)) effects.splice(i, 1);
       }
+      for (let i = fruitPaints.length - 1; i >= 0; i--) {
+        if (now - fruitPaints[i].start >= FRUIT_PAINT_LIFETIME) fruitPaints.splice(i, 1);
+      }
+      for (let i = vegetableMotions.length - 1; i >= 0; i--) {
+        if (now - vegetableMotions[i].start >= VEGETABLE_MOTION_LIFETIME) vegetableMotions.splice(i, 1);
+      }
       const running = canAnimate();
       if (running && props.pattern === 'circuit')
         drawCircuitMotion(ctx, now / 1000, circuitSignals);
@@ -352,6 +368,10 @@ export const GuideMapBackdrop = defineComponent({
       } else if (running && props.pattern === 'power-lines') {
         drawPowerLinesMotion(ctx, now / 1000, powerPulses);
         drawPowerLinesInteractions(ctx, now / 1000, powerInteractions);
+      } else if (running && props.pattern === 'fruits') {
+        drawFruitsMotion(ctx, now, fruitPaints, ink);
+      } else if (running && props.pattern === 'vegetables') {
+        drawVegetablesMotion(ctx, now, vegetableMotions, ink);
       }
       // Draw still whitecaps in reduced-motion mode, too.
       if (running || props.pattern === 'water') {
@@ -396,6 +416,10 @@ export const GuideMapBackdrop = defineComponent({
         launchCircuitSignals(clamp(x, 0, W), clamp(y, 0, H), animationTime, circuitSignals);
       } else if (props.pattern === 'power-lines') {
         triggerPowerLinesAt(clamp(x, 0, W), clamp(y, 0, H), animationTime, powerInteractions, powerPulses);
+      } else if (props.pattern === 'fruits') {
+        triggerFruitPaint(clamp(x, 0, W), clamp(y, 0, H), animationTime, fruitPaints);
+      } else if (props.pattern === 'vegetables') {
+        triggerVegetableMotion(clamp(x, 0, W), clamp(y, 0, H), animationTime, vegetableMotions);
       } else {
         effects.push({ x: clamp(x, 0, W), y: clamp(y, 0, H), start: animationTime });
         if (effects.length > 5) effects.shift();
@@ -421,12 +445,15 @@ export const GuideMapBackdrop = defineComponent({
       refresh();
     });
     onActivated(() => { active = true; updateActivity(); });
-    onDeactivated(() => { active = false; cancelLoop(); effects.splice(0); circuitSignals.splice(0); powerPulses.splice(0); clearPowerLinesInteractions(powerInteractions); });
-    watch(() => props.pattern, () => { effects.splice(0); circuitSignals.splice(0); powerPulses.splice(0); clearPowerLinesInteractions(powerInteractions); refresh(); });
+    onDeactivated(() => { active = false; cancelLoop(); effects.splice(0); circuitSignals.splice(0); powerPulses.splice(0); fruitPaints.splice(0); vegetableMotions.splice(0); clearPowerLinesInteractions(powerInteractions); });
+    watch(() => props.pattern, () => { effects.splice(0); circuitSignals.splice(0); powerPulses.splice(0); fruitPaints.splice(0); vegetableMotions.splice(0); clearPowerLinesInteractions(powerInteractions); refresh(); });
     watch(() => props.paused, paused => {
       if (paused) {
         cancelLoop();
         effects.splice(0);
+        fruitPaints.splice(0);
+        vegetableMotions.splice(0);
+        paintOverlay(animationTime);
       } else updateActivity();
     });
     onBeforeUnmount(() => {
@@ -440,6 +467,8 @@ export const GuideMapBackdrop = defineComponent({
       effects.splice(0);
       circuitSignals.splice(0);
       powerPulses.splice(0);
+      fruitPaints.splice(0);
+      vegetableMotions.splice(0);
       clearPowerLinesInteractions(powerInteractions);
       glowSprite = waterSprite = null;
     });

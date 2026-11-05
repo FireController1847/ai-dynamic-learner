@@ -1,3 +1,56 @@
+## v2.16.1
+
+<small data-utc="2026-11-05T01:47:52.683Z">November 4, 2026</small>
+
+- **Onion Animation:** Removed the worm-like peeling strand; clicking now gives the onion a gentle squish and two small falling teardrops.
+- **Pepper Illustration:** Replaced the pumpkin-like bell pepper with an unmistakable curved chili pepper, a visible stem and a soft hopping motion.
+- **Consistency:** Both vegetables remain monochrome, with other backgrounds and vegetable animations unchanged.
+
+<details>
+<summary>View 1 commit</summary>
+<ol><li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/8edabda358a04d9a0a4d3003b5996132d792cfd0">8edabda3</a> — fix(guide): replace onion peel and clarify chili pepper silhouette (v2.16.1)</li></ol>
+</details>
+
+## v2.16.0
+
+<small data-utc="2026-11-05T01:44:07.551Z">November 4, 2026</small>
+
+- **Vegetables Background:** Added a quiet, grayscale garden pattern with eleven illustrated vegetables and a unique click-triggered animation for each.
+- **Playful Interactions:** Asparagus boils in a tiny saucepan, celery leaves wiggle, carrots hop, broccoli shakes, mushrooms bounce, peas jiggle, and other vegetables have their own small motions—without adding color.
+- **Map Backgrounds:** Kept Power Lines as the final background picker option and added Vegetables to Guide's AI import validation and background guidance.
+- **Performance:** Uses the existing static/motion canvas layers, bounded animation effects, and pause/reduced-motion safeguards.
+
+<details>
+<summary>View 1 commit</summary>
+<ol><li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/e0c1c1b138e35c0d051de4f8de171ebcf2ae5359">e0c1c1b1</a> — feat(guide): introduce monochrome animated vegetables background (v2.16.0)</li></ol>
+</details>
+
+## v2.15.1
+
+<small data-utc="2026-11-05T01:37:23.714Z">November 4, 2026</small>
+
+- **Fruit Scenery:** More than doubled the fruit density while reducing illustration size and grayscale contrast for a quieter, more varied background.
+- **Paint Interaction:** Each click now colors only its nearest fruit, spreading from the click point through that fruit with a soft, uneven paint edge—without affecting neighboring fruits or drawing a large circular ripple.
+- **Paint Details:** Added several delicate dripping paint trails and droplets that appear briefly before the fruit returns to grayscale.
+
+<details>
+<summary>View 1 commit</summary>
+<ol><li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/8391105f4b13065e38db87d08f32ffb59d474f59">8391105f</a> — fix(guide): soften and densify fruits with single-fruit paint fills (v2.15.1)</li></ol>
+</details>
+
+## v2.15.0
+
+<small data-utc="2026-11-05T01:30:54.509Z">November 4, 2026</small>
+
+- **Fruit Orchard:** Added a new Guide map background with a varied, theme-aware pattern of muted banana, apple, strawberry, citrus, grape and other fruit illustrations.
+- **Paint Interaction:** Clicking the scenery sends a gentle color wash from the click point through the nearest fruits, adds a small paint drip and then fades back to grayscale.
+- **Performance and AI:** Uses the existing cached canvas scenery and bounded, pause-aware effects; added Fruits to map selection, AI import validation and AI background suggestions.
+
+<details>
+<summary>View 1 commit</summary>
+<ol><li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/494d17ea0bd6e4f753ae84860c2a342aa8d61dc5">494d17ea</a> — feat(guide): add interactive fruit orchard paint background (v2.15.0)</li></ol>
+</details>
+
 ## v2.14.2
 
 <small data-utc="2026-10-31T23:30:07.361Z">October 31, 2026</small>
