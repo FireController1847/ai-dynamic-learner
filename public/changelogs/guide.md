@@ -8,7 +8,7 @@
 
 <details>
 <summary>View 1 commit</summary>
-<ol><li>Release commit link pending.</li></ol>
+<ol><li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/494d17ea0bd6e4f753ae84860c2a342aa8d61dc5">494d17ea</a> — feat(guide): add interactive fruit orchard paint background (v2.15.0)</li></ol>
 </details>
 
 ## v2.14.2
