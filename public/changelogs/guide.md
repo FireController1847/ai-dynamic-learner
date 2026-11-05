@@ -9,7 +9,7 @@
 
 <details>
 <summary>View 1 commit</summary>
-<ol><li>Release commit link pending.</li></ol>
+<ol><li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/e0c1c1b138e35c0d051de4f8de171ebcf2ae5359">e0c1c1b1</a> — feat(guide): introduce monochrome animated vegetables background (v2.16.0)</li></ol>
 </details>
 
 ## v2.15.1
