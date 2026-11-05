@@ -8,7 +8,7 @@
 
 <details>
 <summary>View 1 commit</summary>
-<ol><li>Release commit link pending.</li></ol>
+<ol><li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/8391105f4b13065e38db87d08f32ffb59d474f59">8391105f</a> — fix(guide): soften and densify fruits with single-fruit paint fills (v2.15.1)</li></ol>
 </details>
 
 ## v2.15.0
