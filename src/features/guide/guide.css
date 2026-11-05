@@ -490,3 +490,6 @@
   display:inline-flex;flex:0 0 auto;align-items:center;color:var(--success);
 }
 .guide-library-complete .ui-icon{width:16px;height:16px}
+
+/* Keep resting fruit sketches subtle in either palette; color appears only on click. */
+.guide-map-surface.is-pattern-fruits .guide-map-backdrop{color:var(--text-secondary)}

@@ -1,3 +1,16 @@
+## v2.15.0
+
+<small data-utc="2026-11-05T01:30:54.509Z">November 4, 2026</small>
+
+- **Fruit Orchard:** Added a new Guide map background with a varied, theme-aware pattern of muted banana, apple, strawberry, citrus, grape and other fruit illustrations.
+- **Paint Interaction:** Clicking the scenery sends a gentle color wash from the click point through the nearest fruits, adds a small paint drip and then fades back to grayscale.
+- **Performance and AI:** Uses the existing cached canvas scenery and bounded, pause-aware effects; added Fruits to map selection, AI import validation and AI background suggestions.
+
+<details>
+<summary>View 1 commit</summary>
+<ol><li>Release commit link pending.</li></ol>
+</details>
+
 ## v2.14.2
 
 <small data-utc="2026-10-31T23:30:07.361Z">October 31, 2026</small>
