@@ -23,3 +23,9 @@ jobs:
         run: npm run typecheck
       - name: Production build
         run: npm run build
+      - name: Install Worker dependencies
+        run: npm ci --prefix api
+      - name: Worker TypeScript check
+        run: npm run check --prefix api
+      - name: Worker tests
+        run: npm run test:ci --prefix api

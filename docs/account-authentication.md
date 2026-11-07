@@ -1,44 +1,36 @@
-# Account authentication — server-independent groundwork
+# Dynamic Learner accounts — Cloudflare authentication
 
-The Profile experience now has two distinct systems:
+Dynamic Learner uses separate systems for browser-local workspaces and online authentication. Online accounts do **not** enable learning-data synchronization yet.
 
-1. **Device-local identity** (existing Stage 1): a workspace selector, tied to a stable browser-only ID and local IndexedDB records. There is no proof of identity, password or account ownership.
-2. **Remote authenticated identity** (Stage 2 adapter): an independently verified account provided by a trusted service. **No authentication provider is configured in this build**, so remote sign-in, registration and recovery are not offered yet.
+## Server implementation
 
-These concerns must never be conflated. A profile email address, user-entered password, localStorage flag, or local identity label is not evidence of remote authentication.
+The Cloudflare Worker in `api/` serves `https://api.dynlearn.org`, using the existing D1 binding `env.dynlearn_data` and database `dynlearn-data`. The migration `api/migrations/0001_auth.sql` creates separate accounts, password credentials, OAuth identities, hashed sessions, one-use email tokens, pending OAuth flows, and rate-limit records. `account_workspace_links` is reserved for future explicit, server-authorized synchronization; no API presently writes it.
 
-## Authentication provider contract
+`api/src/auth/` implements:
+- Email/password registration and sign-in with salted PBKDF2-SHA256 hashes and secret pepper, 12-character minimum, rate limiting, email verification, and reset links that revoke existing sessions.
+- Google and Microsoft sign-in using authorization-code flow, PKCE, one-time state and browser-bound OAuth CSRF cookie, token exchange inside the Worker, provider UserInfo over HTTPS, and stable `sub` identities.
+- Random, hashed D1 session tokens sent via Secure, HttpOnly, SameSite=Lax cookies, exact-origin CORS and POST Origin checks, and generic account-recovery responses.
+- An optional Resend email-delivery adapter. Email/password registration is disabled until mail configuration is supplied. OAuth methods become available independently once their client credentials are configured.
 
-- `src/core/auth/provider.ts` specifies a provider's `restore`, `signIn`, `register`, `requestPasswordReset`, and `signOut` methods. A provider returns validated remote account metadata or a verification-required state; it must establish authenticity with its trusted service before returning `authenticated`.
-- `src/app/auth-provider.ts` is the single configuration point. It intentionally exports `null` until a secure service has been selected and implemented. Do not substitute a browser-only password database.
-- `src/app/auth-session.ts` handles asynchronous session restoration, sign-in/registration, password recovery and sign-out without persisting credentials or bearer tokens. Provider sessions, refresh tokens and revocation are the provider's responsibility.
-- Session states distinguish **unavailable**, **checking**, **signed out**, **authenticated**, **verification required**, and **connection required**. An unverifiable/offline session is never displayed as a verified online login.
-- `src/app/account-access-panel.ts` supplies the account experience. When no provider is configured, it explains the limitation without displaying forms that cannot work. Once a real provider is wired in, email/password sign-in, registration with password confirmation, recovery and sign-out use the same interface.
+The app-side `src/app/auth-provider.ts` calls the Worker with credentialed HTTPS fetch; `auth-session.ts` preserves the distinctions between authenticated, signed-out, unreachable, checking, verification-required, and unconfigured sessions. The Profile account panel supports sign-in, registration, verification links, password recovery and Google/Microsoft redirects. Existing guest/local workspaces are unaffected by sign-in or sign-out.
 
-## Local identity lifecycle
+The Worker is **not deployed by merging the PR**. Follow `api/README.md` to run reviewed local/remote D1 migrations, configure Google/Microsoft app registrations and Resend sender domain, set Worker secrets, and deploy. Never commit or share secrets. The frontend will show that authentication is unavailable if the Worker isn't configured or reachable.
 
-The Profile page also supports renaming local identity labels and deleting **inactive non-Guest** identities. Deletion has two confirmations and removes only the identity's owned IndexedDB generations in a guarded transaction; it also tries to remove the corresponding browser-local profile after the commit. Guest cannot be deleted, and the currently selected local identity must be switched away from before deletion. Old tabs or malformed ownership records block destructive operations.
+## Account identity boundaries
 
-**Be aware:** none of these local identities are secure user accounts, and clearing browser data still removes them. Backup downloads continue to represent the active learning workspace, not a remote account and not the identity directory or profile photo.
+Google and Microsoft accounts are identified by provider-issued `sub` values, not email. A password account and a Google/Microsoft account that share an address are **not automatically merged**. They remain independent until an explicit, trusted account-linking mechanism is implemented. A locally entered email or identity label never establishes remote ownership.
 
-## Linking verified accounts later
+A verified online account is also **not yet associated with a specific browser workspace**. The local IndexedDB data model remains separate from D1 accounts. Implementing cloud sync will require user-confirmed selection of existing local/remote workspaces, server authorization of workspace access, operation queues, deletion tombstones, revisions, idempotency, and conflict reconciliation.
 
-An authenticated account and an active local workspace must remain **separate** until an explicit linking flow obtains the user's choice and an authorized server confirms ownership. Do not automatically change `workspaceMeta.ownerId` to a remote account ID, upload data, or merge study records on sign-in. The future flow needs to:
+## Deployment and security checklist
 
-1. Verify the account with a trusted provider; determine whether remote data already exists.
-2. Show the locally owned workspace and available remote workspace without assuming which one wins.
-3. Obtain explicit confirmation for keeping both, uploading local data, or resolving conflicts.
-4. Preserve both sources/recovery copies while performing any remote mutation. Use idempotent requests and revision checks.
-5. Commit a durable workspace/account mapping only after the server acknowledges the operation.
-6. Provide clear rollback/retry behavior and preserve offline Guest access.
+1. Apply the D1 migration locally; verify existing IndexedDB data is unchanged.
+2. Configure independent `AUTH_PEPPER` and `AUTH_RATE_SECRET` (each >=32 chars). Keep backups of the pepper.
+3. Configure sender-domain verification and `RESEND_API_KEY`/`EMAIL_FROM` for email/password.
+4. Set Google web OAuth credentials with redirect URL `https://api.dynlearn.org/v1/auth/oauth/google/callback`.
+5. Set Microsoft web OAuth credentials with redirect URL `https://api.dynlearn.org/v1/auth/oauth/microsoft/callback`.
+6. Apply remote D1 migrations explicitly, deploy the existing `api` Worker, and check `/v1/health` and `/v1/auth/config`.
+7. Perform live integration tests for email delivery, verified and unverified credentials, wrong passwords, expired/replayed tokens, session revocation, Google/Microsoft flows, OAuth denial, CORS and CSRF rejection, and offline/failed-backend behavior.
+8. Add Cloudflare WAF/Turnstile/bot protection, consider breach-password checks, and complete an independent security review before opening registration publicly. Long PBKDF2 work may exceed free-tier Worker CPU limits.
 
-Cloud sync (outbox, cursors, tombstones, replay and conflicts) remains a separate stage.
-
-## Manual acceptance checks
-
-- Create, rename and switch local identities. Confirm profile display names are independent of identity labels.
-- Switch away and delete a local identity; verify its content disappears, Guest and other identities remain untouched, and a reload does not resurrect it.
-- Verify deletion is blocked for Guest, the active identity, stale tabs, unsupported newer databases and mismatched workspace ownership.
-- Enter/cancel both deletion confirmations; no operation should occur on cancel.
-- With no provider configured, confirm no sign-in claims or fake authentication forms appear, and all study apps keep working offline.
-- With a future test provider (never wired to production), exercise success, verification-required, failed/offline restore, expired session, sign-out, recovery, and password clearing.
+The repository CI now runs Worker typecheck and tests alongside the existing frontend checks. This is an authentication foundation, not an assertion that production sign-in has already been configured or externally tested.

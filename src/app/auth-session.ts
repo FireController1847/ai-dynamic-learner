@@ -1,5 +1,5 @@
 import { ref, shallowRef } from 'vue';
-import { validAccount, type AuthProvider, type AuthResult, type VerifiedAccount } from '../core/auth/provider.ts';
+import { validAccount, type AuthProvider, type AuthResult, type VerifiedAccount, type AuthCapabilities, type OAuthProvider } from '../core/auth/provider.ts';
 
 export type AccountSessionState =
   | { status: 'unavailable' }
@@ -22,6 +22,7 @@ function assertResult(result: AuthResult): void {
 /** Browser-only adapter around a future trusted provider. No credentials are persisted here. */
 export function useAccountSession(provider: AuthProvider | null) {
   const state = shallowRef<AccountSessionState>(provider ? { status: 'checking' } : { status: 'unavailable' });
+  const capabilities = shallowRef<AuthCapabilities>({ ready: false, email: false, google: false, microsoft: false });
   const busy = ref(false);
   const error = ref('');
   const notice = ref('');
@@ -36,6 +37,13 @@ export function useAccountSession(provider: AuthProvider | null) {
     error.value = '';
     notice.value = '';
     try {
+      const options = await provider.capabilities();
+      if (current !== generation) return;
+      capabilities.value = options;
+      if (!options.ready) {
+        state.value = { status: 'unavailable' };
+        return;
+      }
       const result = await provider.restore();
       if (current !== generation) return;
       if (result.status === 'authenticated' || result.status === 'verification-required') {
@@ -104,6 +112,53 @@ export function useAccountSession(provider: AuthProvider | null) {
     } finally { busy.value = false; }
   }
 
+  function oauthStart(providerName: OAuthProvider): void {
+    if (!provider || !capabilities.value[providerName] || busy.value) return;
+    window.location.assign(provider.oauthStart(providerName));
+  }
+
+  async function verifyEmail(token: string): Promise<void> {
+    if (!provider || !capabilities.value.ready) throw new Error('Online accounts are not available.');
+    if (busy.value) throw new Error('An account request is in progress.');
+    busy.value = true;
+    error.value = ''; notice.value = '';
+    try {
+      await provider.verifyEmail(token);
+      state.value = { status: 'signed-out' };
+      notice.value = 'Email verified. You can now sign in.';
+    } catch (cause) {
+      error.value = cause instanceof Error ? cause.message : 'Email verification failed.';
+      throw cause;
+    } finally { busy.value = false; }
+  }
+
+  async function resendVerification(email: string): Promise<void> {
+    if (!provider || !capabilities.value.email) throw new Error('Email verification is unavailable.');
+    if (busy.value) throw new Error('An account request is in progress.');
+    busy.value = true; error.value = ''; notice.value = '';
+    try {
+      await provider.resendVerification(email);
+      notice.value = 'If verification is pending, a fresh link will be sent.';
+    } catch (cause) {
+      error.value = cause instanceof Error ? cause.message : 'Could not request verification.';
+      throw cause;
+    } finally { busy.value = false; }
+  }
+
+  async function completePasswordReset(token: string, password: string): Promise<void> {
+    if (!provider || !capabilities.value.email) throw new Error('Password recovery is unavailable.');
+    if (busy.value) throw new Error('An account request is in progress.');
+    busy.value = true; error.value = ''; notice.value = '';
+    try {
+      await provider.completePasswordReset(token, password);
+      state.value = { status: 'signed-out' };
+      notice.value = 'Password updated. All previous sessions have been revoked. Please sign in.';
+    } catch (cause) {
+      error.value = cause instanceof Error ? cause.message : 'Password reset failed.';
+      throw cause;
+    } finally { busy.value = false; }
+  }
+
   async function signOut(): Promise<void> {
     if (!provider || busy.value) return;
     busy.value = true; error.value = ''; notice.value = '';
@@ -117,7 +172,8 @@ export function useAccountSession(provider: AuthProvider | null) {
     } finally { busy.value = false; }
   }
 
-  return { state, busy, error, notice, available, restore, beginSignIn,
-    authenticate, requestPasswordReset, signOut };
+  return { state, capabilities, busy, error, notice, available, restore, beginSignIn,
+    authenticate, requestPasswordReset, resendVerification, verifyEmail, completePasswordReset,
+    oauthStart, signOut };
 }
 export type AccountSessionController = ReturnType<typeof useAccountSession>;

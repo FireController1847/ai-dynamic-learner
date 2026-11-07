@@ -1,29 +1,31 @@
-import {
-	env,
-	createExecutionContext,
-	waitOnExecutionContext,
-	SELF,
-} from "cloudflare:test";
-import { describe, it, expect } from "vitest";
-import worker from "../src/index";
+import { createExecutionContext, env, SELF } from 'cloudflare:test';
+import { describe, expect, it } from 'vitest';
+import worker from '../src/index';
+import type { RuntimeEnv } from '../src/auth/types';
 
-// For now, you'll need to do something like this to get a correctly-typed
-// `Request` to pass to `worker.fetch()`.
 const IncomingRequest = Request<unknown, IncomingRequestCfProperties>;
-
-describe("Hello World worker", () => {
-	it("responds with Hello World! (unit style)", async () => {
-		const request = new IncomingRequest("http://example.com");
-		// Create an empty context to pass to `worker.fetch()`.
-		const ctx = createExecutionContext();
-		const response = await worker.fetch(request, env, ctx);
-		// Wait for all `Promise`s passed to `ctx.waitUntil()` to settle before running test assertions
-		await waitOnExecutionContext(ctx);
-		expect(await response.text()).toMatchInlineSnapshot(`"Hello World!"`);
-	});
-
-	it("responds with Hello World! (integration style)", async () => {
-		const response = await SELF.fetch("https://example.com");
-		expect(await response.text()).toMatchInlineSnapshot(`"Hello World!"`);
-	});
+describe('Dynamic Learner API', () => {
+  it('returns a public health status without credentials', async () => {
+    const response = await worker.fetch(new IncomingRequest('https://api.dynlearn.org/v1/health'),
+      env as RuntimeEnv, createExecutionContext());
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ status: 'ok' });
+  });
+  it('does not accept requests without the trusted Origin header', async () => {
+    const response = await SELF.fetch('https://api.dynlearn.org/v1/auth/sign-in', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'person@example.com', password: 'password' }),
+    });
+    expect(response.status).toBe(403);
+  });
+  it('rejects unknown endpoints', async () => {
+    const response = await SELF.fetch('https://api.dynlearn.org/random');
+    expect(response.status).toBe(404);
+  });
+  it('requires deployment secrets before creating sessions', async () => {
+    const response = await worker.fetch(new IncomingRequest('https://api.dynlearn.org/v1/auth/session'),
+      env as RuntimeEnv, createExecutionContext());
+    expect([200, 503]).toContain(response.status);
+    if (response.status === 200) expect(await response.json()).toHaveProperty('status');
+  });
 });

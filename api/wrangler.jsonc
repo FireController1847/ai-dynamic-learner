@@ -6,11 +6,16 @@
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "api",
 	"main": "src/index.ts",
+	"vars": {
+		"FRONTEND_ORIGIN": "https://dynlearn.org",
+		"API_ORIGIN": "https://api.dynlearn.org"
+	},
 	"compatibility_date": "2026-11-04",
 	"observability": {
 		"enabled": true
 	},
 	"upload_source_maps": true,
+	"routes": [{ "pattern": "api.dynlearn.org", "custom_domain": true }],
 	"d1_databases": [
 		{
 			"binding": "dynlearn_data",

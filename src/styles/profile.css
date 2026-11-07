@@ -109,3 +109,8 @@
 .profile-account-tabs [aria-pressed="true"] { background: var(--brand-tint); color: var(--brand-text); }
 .profile-account-form-area { display: grid; gap: 12px; }
 .profile-account-form { margin: 0; padding: 0; border-top: 0; }
+
+.profile-social-login { display: flex; gap: 10px; flex-wrap: wrap; padding-top: 12px; border-top: 1px solid var(--border-color); }
+.profile-social-login .quiet-button { flex: 1 1 190px; justify-content: center; }
+.profile-account-status .profile-field-hint { text-align: left; }
+.profile-account-form h4 { margin: 0; font-size: 15px; }

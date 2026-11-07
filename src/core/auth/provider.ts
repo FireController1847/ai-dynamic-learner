@@ -21,9 +21,21 @@ export type AuthResult =
 export type RestoreResult = AuthResult
   | { status: 'signed-out' }
   | { status: 'connection-required'; emailHint?: string };
+export interface AuthCapabilities {
+  ready: boolean;
+  email: boolean;
+  google: boolean;
+  microsoft: boolean;
+}
+export type OAuthProvider = 'google' | 'microsoft';
 export interface AuthProvider {
   readonly id: string;
-  restore(): Promise<RestoreResult>;
+  capabilities(): Promise<AuthCapabilities>;
+  oauthStart(provider: OAuthProvider): string;
+  verifyEmail(token: string): Promise<void>;
+  resendVerification(email: string): Promise<void>;
+  completePasswordReset(token: string, password: string): Promise<void>;
+  restore(): Promise<RestoreResult | { status: 'unavailable' }>;
   signIn(credentials: EmailCredentials): Promise<AuthResult>;
   register(credentials: EmailCredentials): Promise<AuthResult>;
   requestPasswordReset(email: string): Promise<void>;
