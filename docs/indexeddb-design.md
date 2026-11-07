@@ -58,8 +58,8 @@ The division is intentional: Todo List and Solve-It Grid use **flat date-oriente
 
 | Store | Primary key | Essential record fields / queries | Required secondary index |
 | --- | --- | --- | --- |
-| `control` | `key`, singleton `'local'` | `activeWorkspaceId`; guard against writes by obsolete tabs after restore; app metadata | none |
-| `workspaceMeta` | `id` | `createdAt`, `commitSequence`, `authoredRevision`, `lastExportedAuthoredRevision`, `restoreEpoch`, `legacyMigration` | none |
+| `control` | `key`, records `'local'` and `'identity-directory'` | Active workspace pointer, versioned local identity directory, and stale-writer guard | none |
+| `workspaceMeta` | `id` | `ownerId` (local identity), `createdAt`, `commitSequence`, `authoredRevision`, `lastExportedAuthoredRevision`, `restoreEpoch`, `legacyMigration` | none |
 | `libraryNodes` | `[workspaceId,app,id]` | `kind`, `name`, `parentKey`, `position`, `revision` for Notebook, Index Cards, Word Search, Crossword, Guide, Review | `[workspaceId,app,parentKey,position]` |
 | `collections` | `[workspaceId,app,parentId]` | Ordered sibling ID list, `revision`; common parents, Todo sections/tasks, Index Card sets and Review questions use independent collection revisions so competing structural edits conflict | none |
 | `featureState` | `[workspaceId,app]` | Existing optional persisted `display`, `settings`, `lastSelected...` fields, presence preserved; `revision` | none |

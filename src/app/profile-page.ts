@@ -160,6 +160,7 @@ export const ProfilePage = defineComponent({
             ]),
             !editing.value ? h('button', {
               type: 'button', class: 'quiet-button profile-edit-button',
+              disabled: !props.directory,
               onClick: beginEdit,
             }, [h(Icon, { name: 'pencil' }), 'Edit profile']) : null,
           ]),
