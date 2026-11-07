@@ -19,6 +19,8 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
+      - name: Dev startup tests
+        run: npm run test:dev-start
       - name: Type check
         run: npm run typecheck
       - name: Production build

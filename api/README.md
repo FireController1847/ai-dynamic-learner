@@ -2,45 +2,32 @@
 
 Cloudflare Worker for **authentication only**, intentionally separate from Dynamic Learner's offline-first IndexedDB learning data. There is **no cloud sync** in this release. All code remains in the existing ACCOUNTS PR #30.
 
-## Local setup (PowerShell)
+## Local development: one command
 
-From the repository root:
+From the repository root, use the normal frontend launcher:
 
 ```powershell
-Set-Location api
 npm ci
-npx wrangler d1 migrations apply dynlearn-data --local
-npm run dev
-```
-
-Wrangler uses a local D1 database unless `--remote` is explicitly requested. The Worker health endpoint is `/v1/health`. The auth endpoint `/v1/auth/config` reports which sign-in methods have all their required secrets (without exposing secrets). Email/password operations need a real mail delivery provider and account secrets.
-
-### Local frontend + Worker development
-
-The live Worker at `https://api.dynlearn.org` accepts credentialed browser requests from **`https://dynlearn.org` only**. This is intentional: opening `/v1/auth/config` directly does not test cross-origin browser authorization. **Do not add localhost to the production origin allowlist** to work around a CORS error.
-
-Webpack now points `npm start` to a **local** Worker (`http://localhost:8787`) in development and always points production builds to `https://api.dynlearn.org`. No production credentials, D1 records, or sessions are used in this local workflow.
-
-From a fresh checkout, first create two private local test secrets in `api/.dev.vars`. This file is gitignored:
-
-```powershell
-Set-Location api
-$pepper = [Convert]::ToBase64String([System.Security.Cryptography.RandomNumberGenerator]::GetBytes(48))
-$rate = [Convert]::ToBase64String([System.Security.Cryptography.RandomNumberGenerator]::GetBytes(48))
-"AUTH_PEPPER=$pepper`nAUTH_RATE_SECRET=$rate" | Set-Content -Path .dev.vars -Encoding utf8
-npx wrangler d1 migrations apply dynlearn-data --local
-npx wrangler dev --ip 127.0.0.1 --var "FRONTEND_ORIGIN:http://localhost:3000" --var "API_ORIGIN:http://localhost:8787"
-```
-
-In a **second** PowerShell terminal at the repository root:
-
-```powershell
 npm start
 ```
 
-Open `http://localhost:3000/profile/` (use **localhost**, not `127.0.0.1`, for both browser URLs). The frontend can now make credentialed requests to `http://localhost:8787`. If no email/OAuth local credentials are configured, `/v1/auth/config` reports `ready: true` with individual methods set to `false`; that's expected. To exercise the full registration flows locally, add separate private development credentials and register localhost OAuth redirect URIs in the provider consoles.
+On each start, the launcher ensures `api/node_modules` is installed, creates only **missing** `AUTH_PEPPER` and `AUTH_RATE_SECRET` values in the ignored `api/.dev.vars`, applies **local-only** migrations to D1/SQLite, starts the local Wrangler Worker, and starts webpack. It prints the Profile URL after both servers respond. Press Ctrl+C to stop them. Existing local credentials and the persisted database are never reset or rotated.
 
-For now, the simplest way to test against the *deployed production* authentication API is a frontend deployed at the approved `https://dynlearn.org` origin. A local HTTP frontend cannot safely reuse production host-only session cookies and OAuth callbacks. Keep production CORS strict and do not put Cloudflare secrets into the GitHub repository.
+Local URLs: `http://localhost:3000/profile/` for Dynamic Learner and `http://localhost:8787/v1/auth/config` for the Worker. Local SQLite data lives in `api/.wrangler/state/`. Cloudflare production settings and `dynlearn-data` remote records are **never modified** by `npm start`.
+
+Override ports when necessary (PowerShell):
+
+```powershell
+$env:PORT = '3100'
+$env:DL_AUTH_API_PORT = '8888'
+npm start
+```
+
+Optional Resend, Google, and Microsoft local test credentials may be added manually to `api/.dev.vars`; the launcher will preserve them. Do not copy production secrets into a local checkout. Email registration requires a working Resend key and sender. Google/Microsoft sign-in also requires localhost callback URLs registered with those providers; without those credentials, the respective buttons remain unavailable. `ready: true` with `email/google/microsoft: false` is expected with only the auto-generated local secrets.
+
+To run just webpack without the API (for UI-only work), use `npm run start:frontend`.
+
+The production Worker accepts browser credentials from `https://dynlearn.org` only. Local development uses a local Worker and never loosens production CORS; opening the production `/v1/auth/config` directly does not test browser CORS.
 
 ### Production configuration
 
