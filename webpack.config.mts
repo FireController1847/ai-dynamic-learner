@@ -17,13 +17,13 @@ export default (_env: unknown, argv: { mode?: Configuration['mode'] }): Configur
   const site = siteConfig();
   // Production always uses its fixed, trusted API origin. During local development,
   // use a local Worker rather than weakening credentialed CORS on the live API.
-  const devAuthApiOrigin = process.env.DL_AUTH_API_ORIGIN?.trim() || 'http://localhost:8787';
+  const devAuthApiOrigin = process.env.DL_AUTH_API_ORIGIN?.trim() || 'http://127.0.0.1:8787';
   const authApiUrl = new URL(production ? 'https://api.dynlearn.org' : devAuthApiOrigin);
   if (!production && (authApiUrl.protocol !== 'http:' ||
-    !['localhost', '127.0.0.1'].includes(authApiUrl.hostname) ||
+    authApiUrl.hostname !== '127.0.0.1' ||
     authApiUrl.username || authApiUrl.password || authApiUrl.pathname !== '/' ||
     authApiUrl.search || authApiUrl.hash)) {
-    throw new Error('DL_AUTH_API_ORIGIN must be an HTTP loopback origin (example: http://localhost:8787).');
+    throw new Error('DL_AUTH_API_ORIGIN must use http://127.0.0.1 (example: http://127.0.0.1:8787).');
   }
   const authApiOrigin = authApiUrl.origin;
   const publicRoutes = new Set(site.routes.map((route) => `${site.basePath}${route.slice(1)}`));
@@ -114,7 +114,7 @@ export default (_env: unknown, argv: { mode?: Configuration['mode'] }): Configur
         middlewares.unshift({
           name: 'canonical-page-paths',
           middleware(request: IncomingMessage, response: ServerResponse, next: () => void) {
-            const url = new URL(request.url ?? '/', 'http://localhost');
+            const url = new URL(request.url ?? '/', 'http://127.0.0.1');
             if (['GET', 'HEAD'].includes(request.method ?? '') && !url.pathname.endsWith('/') &&
                 publicRoutes.has(`${url.pathname}/`)) {
               response.writeHead(308, { Location: `${url.pathname}/${url.search}` });

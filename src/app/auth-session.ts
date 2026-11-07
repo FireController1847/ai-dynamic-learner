@@ -56,9 +56,9 @@ export function useAccountSession(provider: AuthProvider | null) {
       if (current === generation) {
         state.value = { status: 'connection-required' };
         if (cause instanceof TypeError) {
-          const local = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+          const local = window.location.hostname === '127.0.0.1';
           error.value = local
-            ? 'The local account API is unavailable. Start the local Wrangler Worker and use the same localhost hostname for both apps.'
+            ? 'The local account API is unavailable. Run npm start and open Dynamic Learner at http://127.0.0.1:3000/.'
             : 'The browser could not reach the account API. Check the network request and allowed Origin in developer tools.';
         } else {
           error.value = cause instanceof Error ? cause.message : 'The account session could not be verified.';

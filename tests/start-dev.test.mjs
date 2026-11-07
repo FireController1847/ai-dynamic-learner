@@ -52,8 +52,10 @@ describe('one-command development startup', () => {
       'exec', '--', 'wrangler', 'd1', 'migrations', 'apply', 'dynlearn-data', '--local',
     ]);
     const args = workerArgs(3200, 8888).join(' ');
-    assert.match(args, /FRONTEND_ORIGIN:http:\/\/localhost:3200/);
-    assert.match(args, /API_ORIGIN:http:\/\/localhost:8888/);
+    assert.match(args, /--ip 127\.0\.0\.1/);
+    assert.match(args, /FRONTEND_ORIGIN:http:\/\/127\.0\.0\.1:3200/);
+    assert.match(args, /API_ORIGIN:http:\/\/127\.0\.0\.1:8888/);
+    assert.doesNotMatch(args, /localhost/);
     assert.match(args, /--local/);
     assert.doesNotMatch(args, /--remote|deploy/);
   });

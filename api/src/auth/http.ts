@@ -5,13 +5,13 @@ export class ApiError extends Error {
 export function apiOrigin(env: RuntimeEnv): string {
   const value = env.API_ORIGIN ?? 'https://api.dynlearn.org';
   const url = new URL(value);
-  if (url.protocol !== 'https:' && url.hostname !== 'localhost') throw new ApiError(503, 'Invalid API origin.');
+  if (url.protocol !== 'https:' && !(url.protocol === 'http:' && url.hostname === '127.0.0.1')) throw new ApiError(503, 'Invalid API origin.');
   return url.origin;
 }
 export function frontendOrigin(env: RuntimeEnv): string {
   const value = env.FRONTEND_ORIGIN ?? 'https://dynlearn.org';
   const url = new URL(value);
-  if (url.protocol !== 'https:' && url.hostname !== 'localhost') throw new ApiError(503, 'Invalid frontend origin.');
+  if (url.protocol !== 'https:' && !(url.protocol === 'http:' && url.hostname === '127.0.0.1')) throw new ApiError(503, 'Invalid frontend origin.');
   return url.origin;
 }
 export function frontendProfileUrl(env: RuntimeEnv, fragment?: string): string {

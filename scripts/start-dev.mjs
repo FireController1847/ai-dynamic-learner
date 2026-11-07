@@ -54,9 +54,9 @@ export function migrationArgs() {
 }
 
 export function workerArgs(frontPort, apiPort) {
-  return ['run', 'dev', '--', '--local', '--ip', 'localhost', '--port', String(apiPort),
-    '--var', 'FRONTEND_ORIGIN:http://localhost:' + frontPort,
-    '--var', 'API_ORIGIN:http://localhost:' + apiPort];
+  return ['run', 'dev', '--', '--local', '--ip', '127.0.0.1', '--port', String(apiPort),
+    '--var', 'FRONTEND_ORIGIN:http://127.0.0.1:' + frontPort,
+    '--var', 'API_ORIGIN:http://127.0.0.1:' + apiPort];
 }
 
 function npmSync(args, cwd) {
@@ -131,8 +131,8 @@ export async function start() {
   process.once('SIGINT', () => { process.exitCode = 130; shutdown('SIGINT'); });
   process.once('SIGTERM', () => { process.exitCode = 143; shutdown('SIGTERM'); });
   try {
-    const apiUrl = 'http://localhost:' + apiPort;
-    const frontUrl = 'http://localhost:' + frontPort;
+    const apiUrl = 'http://127.0.0.1:' + apiPort;
+    const frontUrl = 'http://127.0.0.1:' + frontPort;
     console.log('[dev] Starting local Worker: ' + apiUrl);
     worker = npmChild(workerArgs(frontPort, apiPort), apiDir, process.env);
     worker.once('exit', code => {
@@ -155,7 +155,7 @@ export async function start() {
     console.log('[dev] Starting local frontend: ' + frontUrl);
     frontend = npmChild(['run', 'start:frontend'], root, {
       ...process.env,
-      HOST: 'localhost',
+      HOST: '127.0.0.1',
       PORT: String(frontPort),
       DL_AUTH_API_ORIGIN: apiUrl,
     });

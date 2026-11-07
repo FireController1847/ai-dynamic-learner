@@ -13,7 +13,7 @@ npm start
 
 On each start, the launcher ensures `api/node_modules` is installed, creates only **missing** `AUTH_PEPPER` and `AUTH_RATE_SECRET` values in the ignored `api/.dev.vars`, applies **local-only** migrations to D1/SQLite, starts the local Wrangler Worker, and starts webpack. It prints the Profile URL after both servers respond. Press Ctrl+C to stop them. Existing local credentials and the persisted database are never reset or rotated.
 
-Local URLs: `http://localhost:3000/profile/` for Dynamic Learner and `http://localhost:8787/v1/auth/config` for the Worker. Local SQLite data lives in `api/.wrangler/state/`. Cloudflare production settings and `dynlearn-data` remote records are **never modified** by `npm start`.
+Local URLs: `http://127.0.0.1:3000/profile/` for Dynamic Learner and `http://127.0.0.1:8787/v1/auth/config` for the Worker. Only `127.0.0.1` is supported in development; `localhost` is not an accepted frontend Origin. Local SQLite data lives in `api/.wrangler/state/`. Cloudflare production settings and `dynlearn-data` remote records are **never modified** by `npm start`.
 
 Override ports when necessary (PowerShell):
 
@@ -23,7 +23,7 @@ $env:DL_AUTH_API_PORT = '8888'
 npm start
 ```
 
-Optional Resend, Google, and Microsoft local test credentials may be added manually to `api/.dev.vars`; the launcher will preserve them. Do not copy production secrets into a local checkout. Email registration requires a working Resend key and sender. Google/Microsoft sign-in also requires localhost callback URLs registered with those providers; without those credentials, the respective buttons remain unavailable. `ready: true` with `email/google/microsoft: false` is expected with only the auto-generated local secrets.
+Optional Resend, Google, and Microsoft local test credentials may be added manually to `api/.dev.vars`; the launcher will preserve them. Do not copy production secrets into a local checkout. Email registration requires a working Resend key and sender. Google/Microsoft sign-in also requires `127.0.0.1` callback URLs registered with those providers; without those credentials, the respective buttons remain unavailable. `ready: true` with `email/google/microsoft: false` is expected with only the auto-generated local secrets.
 
 To run just webpack without the API (for UI-only work), use `npm run start:frontend`.
 
@@ -52,7 +52,7 @@ npx wrangler secret put EMAIL_FROM
 [Convert]::ToBase64String([System.Security.Cryptography.RandomNumberGenerator]::GetBytes(48))
 ```
 
-Treat the resulting strings as secrets; never paste them into ChatGPT, Git, issue comments, logs, or application code. For local development, place private values in a locally ignored `.dev.vars` file and configure `FRONTEND_ORIGIN` and `API_ORIGIN` appropriately for localhost if you test the Worker and UI together. The current frontend's API origin is `https://api.dynlearn.org`; local browser testing requires either a local API override in the frontend or using the deployed Worker.
+Treat the resulting strings as secrets; never paste them into ChatGPT, Git, issue comments, logs, or application code. For local development, place private values in a locally ignored `.dev.vars` file and configure `FRONTEND_ORIGIN` and `API_ORIGIN` appropriately for `127.0.0.1` if you test the Worker and UI together. The current frontend's API origin is `https://api.dynlearn.org`; the local development launcher supplies the loopback API origin automatically.
 
 **Email:** Verify a sender domain through Resend, set `EMAIL_FROM` to a sender address approved for that domain, and create a scoped Resend API key. Registration is disabled unless email delivery is configured. Verification and password-reset emails use short-lived, single-use links whose tokens appear only in the frontend URL *fragment*, not server request logs. The frontend sends the token to the Worker over a credentialed POST. If delivery fails during first registration, the account remains unverified; the UI can request a new verification message.
 
