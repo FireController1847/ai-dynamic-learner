@@ -198,7 +198,7 @@ export class WorkspaceDataApi {
       ...WORKSPACE_RECORD_STORES, 'collections', 'control', 'workspaceMeta',
     ];
     const snapshot = await this.store.snapshot<IndexedRow>(stores, workspaceId);
-    if (snapshot.get('control')?.[0]?.activeWorkspaceId !== workspaceId) {
+    if (snapshot.get('control')?.find(row => row.key === 'local')?.activeWorkspaceId !== workspaceId) {
       throw new DataApiError('conflict', 'The workspace changed while it was being loaded. Reload this tab.');
     }
     const meta = snapshot.get('workspaceMeta')?.find(value => value.id === workspaceId);
@@ -574,7 +574,7 @@ export class WorkspaceDataApi {
     const workspaceId = this.active();
     const snapshots = await this.store.snapshot<IndexedRow>(
       [...WORKSPACE_RECORD_STORES, 'control', 'workspaceMeta'], workspaceId);
-    const control = snapshots.get('control')?.[0];
+    const control = snapshots.get('control')?.find(row => row.key === 'local');
     if (control?.activeWorkspaceId !== workspaceId) {
       throw new DataApiError('conflict', 'The workspace was replaced in another tab. Reload before exporting.');
     }
