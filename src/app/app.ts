@@ -13,6 +13,10 @@ import { ThemeMenu, type ThemeMenuHandle } from './theme-menu.ts';
 import { initializeTheme } from './theme.ts';
 import { HomePage } from './home-page.ts';
 import { ChangelogPage } from './changelog-page.ts';
+import { ProfilePage } from './profile-page.ts';
+import { configuredAuthProvider } from './auth-provider.ts';
+import { useAccountSession } from './auth-session.ts';
+import { useCloudSync } from './cloud-sync.ts';
 import { TipsExperience } from '../../packages/tips/src/index.ts';
 import { tipsCatalog } from './tips-content.ts';
 import { Icon } from '../components/icon.ts';
@@ -38,7 +42,11 @@ if (!document.title) document.title = appConfig.name;
 const App = defineComponent({
   name: 'App',
   setup() {
+    const accountSession = useAccountSession(configuredAuthProvider);
+    const oauthNewAccount = new URL(window.location.href).searchParams.get('auth') === 'created';
+    onMounted(() => { void accountSession.restore(oauthNewAccount); });
     const workspace = useWorkspace();
+    const cloudSync = useCloudSync(accountSession, workspace);
     // Reminder delivery lives in the app shell, not in the grid view, so
     // navigating to another Dynamic Learner app does not stop notifications.
     function checkDueReminders() {
@@ -163,6 +171,9 @@ const App = defineComponent({
     const { currentPath, navigate } = useNavigation(onNavigate);
     const activeFeature = computed(() => features.find((feature) => feature.path === currentPath.value));
     const isChangelog = computed(() => currentPath.value === '/changelog/');
+    const isProfile = computed(() => currentPath.value === '/profile/');
+    const guestAccount = computed(() => accountSession.state.value.status !== 'authenticated');
+    const isStandalonePage = computed(() => isChangelog.value || isProfile.value);
     const tipsFeature = computed(() => {
       if (!TIPS_ENABLED) return null;
       const feature = activeFeature.value ?? (currentPath.value === '/' ? homeTipsFeature : null);
@@ -219,8 +230,8 @@ const App = defineComponent({
             : h(Icon, { name: activeFeature.value.icon, class: 'app-logo app-header-logo' })
           : currentPath.value === '/'
             ? h(AppIcon, { name: 'dynamic-learner', imageClass: 'app-logo app-header-logo' })
-            : h(Icon, { name: isChangelog.value ? 'history-settings' : 'document' }),
-        h('h1', isChangelog.value ? 'Changelog'
+            : h(Icon, { name: isChangelog.value ? 'history-settings' : isProfile.value ? (guestAccount.value ? 'log-in' : 'user-round') : 'document' }),
+        h('h1', isChangelog.value ? 'Changelog' : isProfile.value ? (guestAccount.value ? 'Sign in' : 'Profile')
           : activeFeature.value?.label ?? (currentPath.value === '/' ? appConfig.name : 'Page not found')),
         h('div', { class: 'app-header-actions' }, [
           compatibilityNoticeHidden.value ? h('button', {
@@ -257,6 +268,17 @@ const App = defineComponent({
           }, [
             h(Icon, { name: 'theme' }),
             h('span', { class: 'app-header-action-label' }, 'Theme'),
+          ]),
+          h('a', {
+            href: pageHref('/profile/'),
+            class: 'quiet-button app-header-action profile-trigger',
+            title: guestAccount.value ? 'Sign in to Dynamic Learner' : 'Your profile',
+            'aria-label': guestAccount.value ? 'Sign in to Dynamic Learner' : 'Open your profile',
+            'aria-current': isProfile.value ? 'page' : undefined,
+            onClick: (event: MouseEvent) => navigate(event, '/profile/'),
+          }, [
+            h(Icon, { name: guestAccount.value ? 'log-in' : 'user-round' }),
+            h('span', { class: 'app-header-action-label' }, guestAccount.value ? 'Sign in' : 'Profile'),
           ]),
           tipsFeature.value ? h('button', {
             type: 'button',
@@ -363,10 +385,13 @@ const App = defineComponent({
             'app-content--workspace': ['notebook', 'todo-list', 'solve-it-grid', 'index-cards', 'word-search', 'crossword', 'guide', 'knowledge-check'].includes(activeFeature.value?.id ?? ''),
           }],
           tabindex: -1,
-          inert: isChangelog.value ? false : (workspace.compatibility.value?.readOnly ?? false),
-          'aria-busy': !isChangelog.value && !workspace.ready.value && !workspace.storageProblem.value,
+          inert: isStandalonePage.value ? false : (workspace.compatibility.value?.readOnly ?? false),
+          'aria-busy': !isStandalonePage.value && !workspace.ready.value && !workspace.storageProblem.value,
         }, [
-          isChangelog.value ? h(ChangelogPage) : !workspace.ready.value
+          isChangelog.value ? h(ChangelogPage) : isProfile.value ? h(ProfilePage, {
+            session: accountSession,
+            cloudSync,
+          }) : !workspace.ready.value
             ? workspace.storageProblem.value
               ? h('section', { class: 'workspace-loading', role: 'alert' }, [
                 h('h2', 'Workspace unavailable'),

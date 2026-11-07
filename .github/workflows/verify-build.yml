@@ -19,7 +19,17 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
+      - name: Dev startup tests
+        run: npm run test:dev-start
       - name: Type check
         run: npm run typecheck
       - name: Production build
         run: npm run build
+      - name: Install Worker dependencies
+        run: npm ci --prefix api
+      - name: Worker TypeScript check
+        run: npm run check --prefix api
+      - name: Local Wrangler HTTP smoke test
+        run: npm run smoke:local --prefix api
+      - name: Worker tests
+        run: npm run test:ci --prefix api

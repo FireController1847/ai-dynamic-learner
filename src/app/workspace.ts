@@ -2,6 +2,7 @@ import { nextTick, onBeforeUnmount, ref } from 'vue';
 import { emptyWorkspace, parseWorkspace, validateWorkspaceValue, MAX_BACKUP_BYTES, type Workspace } from './workspace-format.ts';
 import { downloadText } from '../core/file-download.ts';
 import { useBackupReminders } from './backup-reminders.ts';
+import type { IdentityDirectory } from '../core/data/local-identities.ts';
 import { WorkspaceDataApi } from './data/data-api.ts';
 import type { WorkspaceCompatibility } from './data/workspace-compatibility.ts';
 import { observeWorkspace } from './data/workspace-observer.ts';
@@ -30,7 +31,9 @@ export function useWorkspace() {
   const storageProblem = ref('');
   const needsReconcile = ref(false);
   const revision = ref(0);
+  const committedRevision = ref(0);
   const backup = useBackupReminders();
+  const identityDirectory = ref<IdentityDirectory | null>(null);
   const api = new WorkspaceDataApi();
   const stopUnavailable = api.subscribeUnavailable(message => {
     // Keep in-memory drafts accessible. This connection cannot be reopened
@@ -49,6 +52,7 @@ export function useWorkspace() {
   let disposed = false;
 
   const updateBackup = (authoredRevision: number, commitSequence: number) => {
+    committedRevision.value = commitSequence;
     backup.workspaceChanged(api.workspaceIdentity(), authoredRevision, populated(state.value));
     // Only advance past commits we actually observed. Looking up the latest
     // database sequence here can accidentally skip unseen remote edits.
@@ -85,6 +89,33 @@ export function useWorkspace() {
       await observer?.flush();
       const result = await api.refresh(lastSequence);
       if (!result.replaced && result.events?.length === 0) {
+        // Guest adoption can change the owner while keeping the same
+        // workspaceId. Do not let an old guest editor continue writing into
+        // the newly adopted identity.
+        const directory = await api.identityDirectory();
+        if (directory.activeIdentityId !== identityDirectory.value?.activeIdentityId) {
+          if (observer?.hasPendingChanges() ||
+              (document.activeElement instanceof HTMLElement &&
+                document.activeElement.matches('input,textarea,[contenteditable="true"]'))) {
+            observer?.stop();
+            needsReconcile.value = true;
+            remotePending = true;
+            storageProblem.value = 'Another tab transferred the active identity. Download any unsaved draft before reloading.';
+            return;
+          }
+          observer?.stop();
+          api.adoptIdentityContext(directory);
+          identityDirectory.value = directory;
+          revision.value += 1;
+          const snapshot = await api.initialSnapshot();
+          state.value = snapshot.workspace;
+          compatibility.value = snapshot.compatibility;
+          lastSequence = snapshot.revisions.commitSequence;
+      committedRevision.value = snapshot.revisions.commitSequence;
+          await startObserver(snapshot.records);
+        } else {
+          identityDirectory.value = directory;
+        }
         remotePending = false;
         return;
       }
@@ -125,6 +156,8 @@ export function useWorkspace() {
       // Revisions and content were captured together. Adopt only once the
       // local editor has been verified clean and its observer stopped.
       if (replaced) api.adoptWorkspaceSnapshot(snapshot.workspaceId);
+      identityDirectory.value = await api.identityDirectory();
+      api.adoptIdentityContext(identityDirectory.value);
       if (replaced) {
         state.value = snapshot.workspace;
         revision.value += 1;
@@ -134,6 +167,7 @@ export function useWorkspace() {
         applyWorkspaceSnapshot(state.value, snapshot.workspace);
       }
       lastSequence = snapshot.revisions.commitSequence;
+      committedRevision.value = snapshot.revisions.commitSequence;
       remotePending = false;
       needsReconcile.value = false;
       compatibility.value = snapshot.compatibility;
@@ -175,8 +209,10 @@ export function useWorkspace() {
       await api.ready();
       if (disposed) return;
       const snapshot = await api.initialSnapshot();
+      identityDirectory.value = await api.identityDirectory();
       state.value = snapshot.workspace;
       lastSequence = snapshot.revisions.commitSequence;
+      committedRevision.value = snapshot.revisions.commitSequence;
       compatibility.value = snapshot.compatibility;
       await startObserver(snapshot.records);
       if (disposed) return;
@@ -213,9 +249,11 @@ export function useWorkspace() {
       await api.restoreWorkspace(replacement);
       observer?.stop();
       const snapshot = await api.initialSnapshot();
+      identityDirectory.value = await api.identityDirectory();
       state.value = snapshot.workspace;
       revision.value += 1;
       lastSequence = snapshot.revisions.commitSequence;
+      committedRevision.value = snapshot.revisions.commitSequence;
       compatibility.value = snapshot.compatibility;
       await startObserver(snapshot.records);
       backup.workspaceRestored(api.workspaceIdentity(), snapshot.revisions.authoredRevision, populated(snapshot.workspace));
@@ -233,7 +271,7 @@ export function useWorkspace() {
 
   /**
    * Destructive, separately confirmed reset. Unlike restoreWorkspace, this
-   * removes every IDB workspace generation, including inactive restore copies.
+   * removes generations owned by the selected identity, not other identities.
    * Stop editors before the guarded transaction so delayed saves cannot
    * repopulate the new workspace. UI preferences are left alone.
    */
@@ -253,9 +291,11 @@ export function useWorkspace() {
       await previousObserver?.settle();
       await api.clearWorkspace();
       const snapshot = await api.initialSnapshot();
+      identityDirectory.value = await api.identityDirectory();
       state.value = snapshot.workspace;
       revision.value += 1;
       lastSequence = snapshot.revisions.commitSequence;
+      committedRevision.value = snapshot.revisions.commitSequence;
       remotePending = false;
       needsReconcile.value = false;
       compatibility.value = snapshot.compatibility;
@@ -273,13 +313,11 @@ export function useWorkspace() {
     // The old migration source and browser-local saved review sessions must
     // not silently restore deleted learning content on a future load.
     try {
-      const removable = ['dynamic-learner.workspace.v1',
-        'dynamic-learner.ui.index-cards.category-history.v1'];
-      for (let index = 0; index < localStorage.length; index += 1) {
-        const key = localStorage.key(index);
-        if (key?.startsWith('dynamic-learner.review.generated-session.v1:')) removable.push(key);
+      // Old unscoped UI preferences and generated sessions may belong to
+      // another identity. Only remove the legacy workspace migration copy.
+      if (identityDirectory.value?.activeIdentityId === 'guest') {
+        localStorage.removeItem('dynamic-learner.workspace.v1');
       }
-      for (const key of removable) localStorage.removeItem(key);
     } catch {
       throw new Error('The workspace was cleared, but some old localStorage learning data could not be removed. Check browser storage permissions before assuming all local copies are gone.');
     }
@@ -313,9 +351,12 @@ export function useWorkspace() {
       await previousObserver?.settle();
       const snapshot = await api.initialSnapshot(true);
       api.adoptWorkspaceSnapshot(snapshot.workspaceId);
+      identityDirectory.value = await api.identityDirectory();
+      api.adoptIdentityContext(identityDirectory.value);
       state.value = snapshot.workspace;
       revision.value++;
       lastSequence = snapshot.revisions.commitSequence;
+      committedRevision.value = snapshot.revisions.commitSequence;
       remotePending = false;
       compatibility.value = snapshot.compatibility;
       await startObserver(snapshot.records);
@@ -329,6 +370,88 @@ export function useWorkspace() {
       needsReconcile.value = true;
     } finally {
       refreshing = false;
+    }
+  }
+
+  /** Cloud sync reads the same validated, durable snapshot as a manual backup.
+   * Never expose an unsaved Vue draft or a partial compatibility projection.
+   */
+  async function cloudSnapshot(): Promise<{ json: string; workspaceId: string; authoredRevision: number; commitSequence: number }> {
+    if (!ready.value || disposed || refreshing || needsReconcile.value ||
+      compatibility.value?.mode !== 'normal') {
+      throw new Error('Finish loading and saving this workspace before cloud synchronization.');
+    }
+    await nextTick();
+    await observer?.flush();
+    await observer?.settle();
+    if (observer?.hasFailed() || needsReconcile.value) {
+      throw new Error('Local changes could not be saved; cloud synchronization is paused.');
+    }
+    const result = await api.exportSnapshot();
+    if (result.workspaceId !== api.workspaceIdentity()) {
+      throw new Error('The selected workspace changed during synchronization.');
+    }
+    return result;
+  }
+
+  /**
+   * User-confirmed handoff from separate local data to a verified cloud copy.
+   * Only the selected identity is affected; all writes are drained, and
+   * IndexedDB rejects late changes before deleting local workspace history.
+   */
+  async function useCloudWorkspace(value: unknown, expected: {
+    json: string; workspaceId: string; commitSequence: number
+  }): Promise<void> {
+    if (!ready.value || disposed || refreshing || needsReconcile.value ||
+        compatibility.value?.mode !== 'normal') {
+      throw new Error('The local workspace is not safe to replace.');
+    }
+    const replacement = validateWorkspaceValue(value);
+    ready.value = false;
+    await nextTick();
+    const previousObserver = observer;
+    try {
+      // A user may have typed while the cloud download was in progress.
+      // Flush before stopping watchers so that a late local edit causes a
+      // revision mismatch rather than being silently discarded.
+      await previousObserver?.flush();
+      await previousObserver?.settle();
+      if (previousObserver?.hasFailed()) throw new Error('Unsaved local changes must be resolved first.');
+      const current = await api.exportSnapshot();
+      if (current.workspaceId !== expected.workspaceId ||
+          current.commitSequence !== expected.commitSequence || current.json !== expected.json) {
+        throw new Error('Local changes were saved during the handoff. Nothing was erased.');
+      }
+      previousObserver?.stop();
+      observer = null;
+      await api.replaceWorkspaceAndClear(replacement, expected.workspaceId, expected.commitSequence);
+      const snapshot = await api.initialSnapshot();
+      identityDirectory.value = await api.identityDirectory();
+      state.value = snapshot.workspace;
+      revision.value += 1;
+      lastSequence = snapshot.revisions.commitSequence;
+      committedRevision.value = snapshot.revisions.commitSequence;
+      remotePending = false;
+      needsReconcile.value = false;
+      compatibility.value = snapshot.compatibility;
+      await startObserver(snapshot.records);
+      backup.workspaceChanged(api.workspaceIdentity(), snapshot.revisions.authoredRevision, populated(snapshot.workspace));
+      storageProblem.value = '';
+      ready.value = true;
+      watchRemoteChanges();
+    } catch (error) {
+      if (observer === previousObserver && !previousObserver?.hasFailed()) {
+        // No destructive transaction started. The live editor is safe to
+        // resume after a cancelled handoff or a late local write.
+        ready.value = true;
+      } else {
+        // A transaction may have succeeded before a subsequent read failed.
+        // Stay fail-closed until a reload verifies the saved workspace.
+        storageProblem.value = 'Cloud workspace handoff could not finish safely: ' + errorMessage(error) +
+          ' Reload to verify the active workspace before editing.';
+        needsReconcile.value = true;
+      }
+      throw error;
     }
   }
 
@@ -427,7 +550,7 @@ export function useWorkspace() {
     window.removeEventListener('pagehide', flushOnHide);
   });
 
-  return { state, ready, revision, compatibility, storageProblem, needsReconcile,
+  return { state, ready, revision, committedRevision, cloudSnapshot, useCloudWorkspace, compatibility, storageProblem, needsReconcile,
     readBackup, replaceWorkspace, clearWorkspace, downloadBackup, downloadRawRescue,
     downloadLocalDraft, reloadSavedWorkspace, backup };
 }

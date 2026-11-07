@@ -1,6 +1,7 @@
 import type { Workspace } from '../workspace-format.ts';
 import { emptyWorkspace, parseWorkspace } from '../workspace-format.ts';
 import { createId, isValidId } from '../../core/ids.ts';
+import { selectedIdentity, type IdentityDirectory } from '../../core/data/local-identities.ts';
 import {
   IndexedDataStore, DataApiError, dataPrimaryKey, DATABASE_VERSION, exportRawIndexedDb, type DataChange, type DataCommit,
   type DataOperation, type DataStoreName, type IndexedRow,
@@ -101,13 +102,65 @@ export class WorkspaceDataApi {
     // A feature that this build cannot read is not necessarily corrupt.
     // Validate a compatibility projection before granting any edit access.
     this.workspaceId = workspaceId;
-    try { await this.initialSnapshot(); }
-    catch (error) { this.workspaceId = null; throw error; }
+    try {
+      await this.initialSnapshot();
+      await this.store.ensureIdentityDirectory();
+    } catch (error) { this.workspaceId = null; throw error; }
   }
 
   private active(): string {
     if (!this.workspaceId) throw new DataApiError('unavailable', 'The data API is not initialized.');
     return this.workspaceId;
+  }
+
+  async identityDirectory(): Promise<IdentityDirectory> {
+    await this.ready();
+    return this.store.identityDirectory();
+  }
+
+  adoptIdentityContext(directory: IdentityDirectory): void {
+    this.store.adoptIdentityContext(directory);
+  }
+
+  async selectIdentity(identityId: string): Promise<IdentityDirectory> {
+    await this.ready();
+    const directory = await this.store.identityDirectory();
+    const target = directory.identities.find(item => item.id === identityId);
+    if (!target) throw new DataApiError('not-found', 'The local identity does not exist.');
+    if (selectedIdentity(directory).workspaceId !== this.active()) {
+      throw new DataApiError('conflict', 'Another tab changed the active identity.');
+    }
+    // Reject an invalid target without exposing it as the active workspace.
+    await hydrateWorkspace(this.store, target.workspaceId);
+    const next = await this.store.selectIdentity(identityId, this.active());
+    this.workspaceId = selectedIdentity(next).workspaceId;
+    return next;
+  }
+
+  async createLocalIdentity(label: string, transferGuest = false): Promise<IdentityDirectory> {
+    await this.ready();
+    const previous = this.active();
+    const stagedId = createId();
+    const identityId = createId();
+    const parsedLabel = label.trim();
+    if (!parsedLabel || parsedLabel.length > 64) {
+      throw new DataApiError('validation', 'Identity names must be between 1 and 64 characters.');
+    }
+    await this.store.stageRows(workspaceRows(stagedId, emptyWorkspace()));
+    await hydrateWorkspace(this.store, stagedId);
+    const next = await this.store.createLocalIdentity(identityId, parsedLabel, stagedId, previous, transferGuest);
+    this.workspaceId = selectedIdentity(next).workspaceId;
+    return next;
+  }
+
+  async renameLocalIdentity(id: string, label: string, expectedLabel: string): Promise<IdentityDirectory> {
+    await this.ready();
+    return this.store.renameLocalIdentity(id, label, expectedLabel, this.active());
+  }
+
+  async deleteLocalIdentity(id: string, expectedTargetWorkspaceId: string): Promise<IdentityDirectory> {
+    await this.ready();
+    return this.store.deleteLocalIdentity(id, expectedTargetWorkspaceId, this.active());
   }
 
   subscribe(listener: DataListener): () => void {
@@ -155,7 +208,7 @@ export class WorkspaceDataApi {
       ...WORKSPACE_RECORD_STORES, 'collections', 'control', 'workspaceMeta',
     ];
     const snapshot = await this.store.snapshot<IndexedRow>(stores, workspaceId);
-    if (snapshot.get('control')?.[0]?.activeWorkspaceId !== workspaceId) {
+    if (snapshot.get('control')?.find(row => row.key === 'local')?.activeWorkspaceId !== workspaceId) {
       throw new DataApiError('conflict', 'The workspace changed while it was being loaded. Reload this tab.');
     }
     const meta = snapshot.get('workspaceMeta')?.find(value => value.id === workspaceId);
@@ -489,6 +542,7 @@ export class WorkspaceDataApi {
     // is deleted; only a successfully verified new pointer is activated.
     await this.store.open();
     const previous = await this.store.activeWorkspaceId();
+    if (previous !== this.active()) throw new DataApiError('conflict', 'The active identity changed in another tab.');
     const stagedId = createId();
     await this.store.stageRows(workspaceRows(stagedId, parsed));
     const hydrated = await hydrateWorkspace(this.store, stagedId);
@@ -504,6 +558,27 @@ export class WorkspaceDataApi {
    * active pointer as ordinary backup restoration does. No valid old model is
    * needed, so this also works when stored content fails hydration.
    */
+  /**
+   * Explicitly confirmed cloud handoff. The downloaded workspace is validated
+   * first, and its records replace this selected identity's workspace history
+   * atomically. A late local commit or identity switch aborts the transaction.
+   */
+  async replaceWorkspaceAndClear(payload: unknown, expectedWorkspaceId: string,
+    expectedCommitSequence: number): Promise<void> {
+    if (this.compatibility?.mode !== 'normal' && this.compatibility !== null) {
+      throw new DataApiError('validation', 'Cannot erase an incompatible local workspace.');
+    }
+    const parsed = parseWorkspace(JSON.stringify(payload));
+    await this.store.open();
+    const previous = await this.store.activeWorkspaceId();
+    if (previous !== this.active() || previous !== expectedWorkspaceId) {
+      throw new DataApiError('conflict', 'The active local workspace changed.');
+    }
+    const next = createId();
+    await this.store.clearAndActivate(next, previous, workspaceRows(next, parsed), expectedCommitSequence);
+    this.workspaceId = next;
+  }
+
   async clearWorkspace(): Promise<void> {
     await this.store.open();
     if (this.compatibility?.mode !== 'normal' && this.compatibility !== null) {
@@ -523,19 +598,19 @@ export class WorkspaceDataApi {
    * transaction. Otherwise an edit from another tab between two reads might
    * cause us to incorrectly mark newer content as backed up.
    */
-  async exportSnapshot(): Promise<{ json: string; workspaceId: string; authoredRevision: number }> {
+  async exportSnapshot(): Promise<{ json: string; workspaceId: string; authoredRevision: number; commitSequence: number }> {
     if (this.compatibility?.mode !== 'normal' && this.compatibility !== null) {
       throw new DataApiError('validation', 'The standard backup would omit unsupported content. Download a raw IndexedDB rescue copy instead.');
     }
     const workspaceId = this.active();
     const snapshots = await this.store.snapshot<IndexedRow>(
       [...WORKSPACE_RECORD_STORES, 'control', 'workspaceMeta'], workspaceId);
-    const control = snapshots.get('control')?.[0];
+    const control = snapshots.get('control')?.find(row => row.key === 'local');
     if (control?.activeWorkspaceId !== workspaceId) {
       throw new DataApiError('conflict', 'The workspace was replaced in another tab. Reload before exporting.');
     }
     const meta = snapshots.get('workspaceMeta')?.find(row => row.id === workspaceId);
-    if (!meta || typeof meta.authoredRevision !== 'number') {
+    if (!meta || typeof meta.authoredRevision !== 'number' || typeof meta.commitSequence !== 'number') {
       throw new DataApiError('unavailable', 'Workspace backup metadata is missing.');
     }
     const reader = {
@@ -543,7 +618,8 @@ export class WorkspaceDataApi {
         (snapshots.get(store) ?? []) as T[],
     };
     const workspace = await hydrateWorkspace(reader, workspaceId);
-    return { json: JSON.stringify(workspace), workspaceId, authoredRevision: meta.authoredRevision };
+    return { json: JSON.stringify(workspace), workspaceId, authoredRevision: meta.authoredRevision,
+      commitSequence: meta.commitSequence };
   }
 
   async exportWorkspaceJson(): Promise<string> {

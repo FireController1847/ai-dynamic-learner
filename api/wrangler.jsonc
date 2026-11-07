@@ -1,0 +1,64 @@
+/**
+ * For more details on how to configure Wrangler, refer to:
+ * https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "api",
+	"main": "src/index.ts",
+	"vars": {
+		"FRONTEND_ORIGIN": "https://dynlearn.org",
+		"API_ORIGIN": "https://api.dynlearn.org",
+		"EMAIL_FROM": "Dynamic Learner <noreply@mail.dynlearn.org>",
+		"GOOGLE_CLIENT_ID": "861160455468-8shtk83ur52vpp881e5vr9lt4o2q59m7.apps.googleusercontent.com",
+		"MICROSOFT_CLIENT_ID": "94e16468-f7ec-4626-97b9-9c927fe685a0"
+	},
+	"compatibility_date": "2026-11-04",
+	"observability": {
+		"enabled": true
+	},
+	"upload_source_maps": true,
+	"routes": [
+		{
+			"pattern": "api.dynlearn.org",
+			"custom_domain": true
+		}
+	],
+	"d1_databases": [
+		{
+			"binding": "dynlearn_data",
+			"database_name": "dynlearn-data",
+			"database_id": "5378a2d7-4c7a-47e6-8416-793ec684038b"
+		}
+	],
+	"workers_dev": true,
+	"preview_urls": true
+	/**
+	 * Smart Placement
+	 * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
+	 */
+	// "placement": {  "mode": "smart" }
+	/**
+	 * Bindings
+	 * Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
+	 * databases, object storage, AI inference, real-time communication and more.
+	 * https://developers.cloudflare.com/workers/runtime-apis/bindings/
+	 */
+	/**
+	 * Environment Variables
+	 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
+	 * Note: Use secrets to store sensitive data.
+	 * https://developers.cloudflare.com/workers/configuration/secrets/
+	 */
+	// "vars": {  "MY_VARIABLE": "production_value" }
+	/**
+	 * Static Assets
+	 * https://developers.cloudflare.com/workers/static-assets/binding/
+	 */
+	// "assets": {  "directory": "./public/",  "binding": "ASSETS" }
+	/**
+	 * Service Bindings (communicate between multiple Workers)
+	 * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
+	 */
+	// "services": [  {   "binding": "MY_SERVICE",   "service": "my-service"  } ]
+}

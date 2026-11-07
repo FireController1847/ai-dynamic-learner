@@ -1,3 +1,6 @@
+import { GUEST_ID, IDENTITY_DIRECTORY_KEY, MAX_IDENTITY_LABEL, MAX_LOCAL_IDENTITIES,
+  readIdentityDirectory, selectedIdentity, type IdentityDirectory } from './local-identities.ts';
+
 /**
  * Browser-native persistence primitives for the Dynamic Learner Data API.
  * No Vue or feature-model dependencies belong in this module.
@@ -244,6 +247,9 @@ export class IndexedDataStore {
   private readonly remoteListeners = new Set<(change: DataChange) => void>();
   private readonly unavailableListeners = new Set<(message: string) => void>();
   private closed = false;
+  // This connection's last confirmed identity. Blocks stale tabs from writing
+  // after another tab transfers ownership without changing workspaceId.
+  private observedIdentityId: string | null = null;
 
   async open(): Promise<void> {
     if (this.closed) throw new DataApiError('unavailable', 'This data connection is closed.');
@@ -385,6 +391,331 @@ export class IndexedDataStore {
     return control?.activeWorkspaceId ?? null;
   }
 
+
+  /** One-time, lossless adoption of the old single workspace into the guest identity. */
+  async ensureIdentityDirectory(): Promise<IdentityDirectory> {
+    if (this.databaseVersion > DATABASE_VERSION) {
+      const existing = await this.get<unknown>('control', IDENTITY_DIRECTORY_KEY);
+      if (existing) return readIdentityDirectory(existing);
+      throw new DataApiError('unavailable', 'A newer database must be opened by a compatible build before identities can be initialized.');
+    }
+    const tx = this.db().transaction(['control', 'workspaceMeta'], 'readwrite');
+    const completion = transactionDone(tx);
+    const controls = tx.objectStore('control');
+    const metadata = tx.objectStore('workspaceMeta');
+    let failure: Error | null = null;
+    let result: IdentityDirectory | null = null;
+    const abort = (reason: string) => {
+      failure = new DataApiError('validation', reason);
+      tx.abort();
+    };
+    const pointerRequest = controls.get('local');
+    pointerRequest.onsuccess = () => {
+      const pointer = (pointerRequest.result as { activeWorkspaceId?: unknown } | undefined)?.activeWorkspaceId;
+      if (typeof pointer !== 'string') {
+        abort('The active workspace pointer is missing. Existing data has not been modified.');
+        return;
+      }
+      const directoryRequest = controls.get(IDENTITY_DIRECTORY_KEY);
+      directoryRequest.onsuccess = () => {
+        if (directoryRequest.result !== undefined) {
+          try {
+            const found = readIdentityDirectory(directoryRequest.result);
+            if (selectedIdentity(found).workspaceId !== pointer) {
+              abort('The active workspace does not match the selected identity. Reload before editing.');
+              return;
+            }
+            result = found;
+          } catch (error) {
+            abort(error instanceof Error ? error.message : 'Invalid identity directory.');
+          }
+          return;
+        }
+        const allRequest = metadata.getAll();
+        allRequest.onsuccess = () => {
+          const rows = allRequest.result as Array<{ id: string; ownerId?: unknown }>;
+          if (!rows.some(row => row.id === pointer)) {
+            abort('The active workspace has no metadata. Saved records remain untouched.');
+            return;
+          }
+          if (rows.some(row => row.ownerId !== undefined && row.ownerId !== GUEST_ID)) {
+            abort('Unrecognized existing workspace ownership; no identity migration was applied.');
+            return;
+          }
+          result = { key: IDENTITY_DIRECTORY_KEY, version: 1, activeIdentityId: GUEST_ID,
+            identities: [{ id: GUEST_ID, kind: 'guest', label: 'Guest', workspaceId: pointer }] };
+          for (const row of rows) metadata.put({ ...row, ownerId: GUEST_ID });
+          controls.put(result);
+        };
+      };
+    };
+    try { await completion; } catch (error) { throw failure ?? error; }
+    const initialized = result as IdentityDirectory | null;
+    if (!initialized) throw new DataApiError('unavailable', 'Local identity initialization did not finish.');
+    this.observedIdentityId = initialized.activeIdentityId;
+    return initialized;
+  }
+
+  async identityDirectory(): Promise<IdentityDirectory> {
+    const value = await this.get<unknown>('control', IDENTITY_DIRECTORY_KEY);
+    if (!value) throw new DataApiError('not-found', 'The local identity directory is missing.');
+    return readIdentityDirectory(value);
+  }
+
+  adoptIdentityContext(directory: IdentityDirectory): void {
+    this.observedIdentityId = selectedIdentity(directory).id;
+  }
+
+  /** A single atomic pointer and identity change. Never switch while a local editor is dirty. */
+  async selectIdentity(identityId: string, expectedWorkspaceId: string): Promise<IdentityDirectory> {
+    if (this.databaseVersion > DATABASE_VERSION) throw new DataApiError('validation', 'This database is newer than this build.');
+    const tx = this.db().transaction(['control', 'workspaceMeta'], 'readwrite');
+    const completion = transactionDone(tx);
+    const controls = tx.objectStore('control');
+    const metadata = tx.objectStore('workspaceMeta');
+    let failure: Error | null = null;
+    let result: IdentityDirectory | null = null;
+    const abort = (message: string) => { failure = new DataApiError('conflict', message); tx.abort(); };
+    const pointerRequest = controls.get('local');
+    pointerRequest.onsuccess = () => {
+      const pointer = pointerRequest.result as { key: string; activeWorkspaceId?: string } | undefined;
+      if (pointer?.activeWorkspaceId !== expectedWorkspaceId) {
+        abort('Another tab switched workspaces. Reload before switching identities.');
+        return;
+      }
+      const directoryRequest = controls.get(IDENTITY_DIRECTORY_KEY);
+      directoryRequest.onsuccess = () => {
+        let directory: IdentityDirectory;
+        try { directory = readIdentityDirectory(directoryRequest.result); }
+        catch (error) { abort(error instanceof Error ? error.message : 'Invalid identity directory.'); return; }
+        if (selectedIdentity(directory).workspaceId !== expectedWorkspaceId) {
+          abort('The selected identity does not own the current workspace.');
+          return;
+        }
+        const target = directory.identities.find(item => item.id === identityId);
+        if (!target) { abort('That local identity no longer exists.'); return; }
+        const metaRequest = metadata.get(target.workspaceId);
+        metaRequest.onsuccess = () => {
+          const meta = metaRequest.result as { id: string; ownerId?: string } | undefined;
+          if (!meta || meta.ownerId !== target.id) {
+            abort('The destination workspace ownership is invalid.');
+            return;
+          }
+          result = { ...directory, activeIdentityId: identityId };
+          controls.put({ ...pointer, activeWorkspaceId: target.workspaceId });
+          controls.put(result);
+        };
+      };
+    };
+    try { await completion; } catch (error) { throw failure ?? error; }
+    if (!result) throw new DataApiError('unavailable', 'The identity switch did not complete.');
+    const selected = selectedIdentity(result);
+    this.observedIdentityId = selected.id;
+    const revisions = await this.workspaceRevisions(selected.workspaceId);
+    this.publish({ workspaceId: selected.workspaceId, commitSequence: revisions?.commitSequence ?? 0,
+      authoredRevision: revisions?.authoredRevision ?? 0,
+      scopes: ['identity-changed', 'workspace-replaced'] }, true);
+    return result;
+  }
+
+  /** Add a device-local identity, optionally transferring the existing guest workspace to it. */
+  async createLocalIdentity(
+    identityId: string, label: string, stagedWorkspaceId: string,
+    expectedWorkspaceId: string, transferGuest: boolean,
+  ): Promise<IdentityDirectory> {
+    if (this.databaseVersion > DATABASE_VERSION) throw new DataApiError('validation', 'This database is newer than this build.');
+    if (identityId === GUEST_ID || !identityId || label.trim().length < 1 ||
+      label.length > MAX_IDENTITY_LABEL || stagedWorkspaceId === expectedWorkspaceId) {
+      throw new DataApiError('validation', 'Invalid local identity details.');
+    }
+    const tx = this.db().transaction(['control', 'workspaceMeta'], 'readwrite');
+    const completion = transactionDone(tx);
+    const controls = tx.objectStore('control');
+    const metadata = tx.objectStore('workspaceMeta');
+    let failure: Error | null = null;
+    let result: IdentityDirectory | null = null;
+    let selectedWorkspaceId = stagedWorkspaceId;
+    const abort = (message: string) => { failure = new DataApiError('conflict', message); tx.abort(); };
+    const pointerRequest = controls.get('local');
+    pointerRequest.onsuccess = () => {
+      const pointer = pointerRequest.result as { key: string; activeWorkspaceId?: string } | undefined;
+      if (pointer?.activeWorkspaceId !== expectedWorkspaceId) {
+        abort('Another tab changed the active workspace. Reload before creating an identity.');
+        return;
+      }
+      const directoryRequest = controls.get(IDENTITY_DIRECTORY_KEY);
+      directoryRequest.onsuccess = () => {
+        let directory: IdentityDirectory;
+        try { directory = readIdentityDirectory(directoryRequest.result); }
+        catch (error) { abort(error instanceof Error ? error.message : 'Invalid identity directory.'); return; }
+        if (selectedIdentity(directory).workspaceId !== expectedWorkspaceId ||
+          directory.identities.length >= MAX_LOCAL_IDENTITIES ||
+          directory.identities.some(item => item.id === identityId || item.workspaceId === stagedWorkspaceId)) {
+          abort('Local identity directory changed or is full.');
+          return;
+        }
+        if (transferGuest && directory.activeIdentityId !== GUEST_ID) {
+          abort('Only the active guest workspace can be transferred.');
+          return;
+        }
+        const metaRequest = metadata.getAll();
+        metaRequest.onsuccess = () => {
+          const rows = metaRequest.result as Array<{ id: string; ownerId?: string; commitSequence?: number; authoredRevision?: number }>;
+          if (rows.some(row => row.id === stagedWorkspaceId) ||
+            !rows.some(row => row.id === expectedWorkspaceId && row.ownerId === directory.activeIdentityId)) {
+            abort('The workspace ownership has changed.');
+            return;
+          }
+          const now = new Date().toISOString();
+          const ownerId = transferGuest ? GUEST_ID : identityId;
+          metadata.put({ id: stagedWorkspaceId, ownerId, createdAt: now, commitSequence: 0,
+            authoredRevision: 0, restoreEpoch: Date.now(), legacyMigration: false });
+          const identities = directory.identities.map(item => ({ ...item }));
+          if (transferGuest) {
+            const guest = identities.find(item => item.id === GUEST_ID);
+            if (!guest) { abort('The guest identity is missing.'); return; }
+            guest.workspaceId = stagedWorkspaceId;
+            for (const row of rows) {
+              if (row.ownerId === GUEST_ID) metadata.put({ ...row, ownerId: identityId });
+            }
+            selectedWorkspaceId = expectedWorkspaceId;
+          }
+          identities.push({ id: identityId, kind: 'local', label: label.trim(), workspaceId: selectedWorkspaceId });
+          result = { ...directory, activeIdentityId: identityId, identities };
+          controls.put({ ...pointer, activeWorkspaceId: selectedWorkspaceId });
+          controls.put(result);
+        };
+      };
+    };
+    try { await completion; } catch (error) { throw failure ?? error; }
+    if (!result) throw new DataApiError('unavailable', 'Local identity creation did not complete.');
+    this.observedIdentityId = identityId;
+    const revisions = await this.workspaceRevisions(selectedWorkspaceId);
+    this.publish({ workspaceId: selectedWorkspaceId, commitSequence: revisions?.commitSequence ?? 0,
+      authoredRevision: revisions?.authoredRevision ?? 0,
+      scopes: ['identity-changed', 'workspace-replaced'] }, true);
+    return result;
+  }
+
+
+  /** Rename only a local identity label; the workspace and profile are unchanged. */
+  async renameLocalIdentity(id: string, label: string, expectedLabel: string,
+    activeWorkspaceId: string): Promise<IdentityDirectory> {
+    if (this.databaseVersion > DATABASE_VERSION) throw new DataApiError('validation', 'A newer database cannot be modified.');
+    const name = label.trim();
+    if (id === GUEST_ID || !name || name.length > MAX_IDENTITY_LABEL) {
+      throw new DataApiError('validation', 'Enter a local identity name of up to 64 characters.');
+    }
+    const tx = this.db().transaction('control', 'readwrite');
+    const done = transactionDone(tx);
+    const control = tx.objectStore('control');
+    let result: IdentityDirectory | null = null;
+    let failure: Error | null = null;
+    const abort = (message: string) => { failure = new DataApiError('conflict', message); tx.abort(); };
+    const pointer = control.get('local');
+    pointer.onsuccess = () => {
+      if ((pointer.result as { activeWorkspaceId?: string } | undefined)?.activeWorkspaceId !== activeWorkspaceId) {
+        abort('Another tab switched workspaces. Reload before renaming.');
+        return;
+      }
+      const request = control.get(IDENTITY_DIRECTORY_KEY);
+      request.onsuccess = () => {
+        let directory: IdentityDirectory;
+        try { directory = readIdentityDirectory(request.result); }
+        catch (error) { abort(error instanceof Error ? error.message : 'Invalid identity directory.'); return; }
+        if (directory.activeIdentityId !== this.observedIdentityId ||
+            selectedIdentity(directory).workspaceId !== activeWorkspaceId) {
+          abort('The selected identity changed in another tab.');
+          return;
+        }
+        const identity = directory.identities.find(item => item.id === id);
+        if (!identity || identity.kind !== 'local' || identity.label !== expectedLabel) {
+          abort('This identity was renamed or removed in another tab.');
+          return;
+        }
+        result = { ...directory, identities: directory.identities.map(item =>
+          item.id === id ? { ...item, label: name } : item) };
+        control.put(result);
+      };
+    };
+    try { await done; } catch (error) { throw failure ?? error; }
+    const directory = result as IdentityDirectory | null;
+    if (!directory) throw new DataApiError('unavailable', 'The identity rename did not complete.');
+    const revisions = await this.workspaceRevisions(activeWorkspaceId);
+    this.publish({ workspaceId: activeWorkspaceId, commitSequence: revisions?.commitSequence ?? 0,
+      authoredRevision: revisions?.authoredRevision ?? 0, scopes: ['identity-directory-changed'] }, true);
+    return directory;
+  }
+
+  /** Permanently delete an inactive non-Guest identity and only its known workspace generations. */
+  async deleteLocalIdentity(id: string, expectedTargetWorkspaceId: string,
+    activeWorkspaceId: string): Promise<IdentityDirectory> {
+    if (id === GUEST_ID || id === this.observedIdentityId ||
+        this.databaseVersion !== DATABASE_VERSION ||
+        this.db().objectStoreNames.length !== Object.keys(definitions).length) {
+      throw new DataApiError('validation', 'This identity cannot safely be deleted.');
+    }
+    const stores = Object.keys(definitions) as DataStoreName[];
+    const tx = this.db().transaction(stores, 'readwrite');
+    const done = transactionDone(tx);
+    const control = tx.objectStore('control');
+    const meta = tx.objectStore('workspaceMeta');
+    let result: IdentityDirectory | null = null;
+    let failure: Error | null = null;
+    const abort = (message: string) => { failure = new DataApiError('conflict', message); tx.abort(); };
+    const pointer = control.get('local');
+    pointer.onsuccess = () => {
+      if ((pointer.result as { activeWorkspaceId?: string } | undefined)?.activeWorkspaceId !== activeWorkspaceId) {
+        abort('Another tab switched workspaces. Reload before deleting.');
+        return;
+      }
+      const request = control.get(IDENTITY_DIRECTORY_KEY);
+      request.onsuccess = () => {
+        let directory: IdentityDirectory;
+        try { directory = readIdentityDirectory(request.result); }
+        catch (error) { abort(error instanceof Error ? error.message : 'Invalid identity directory.'); return; }
+        if (directory.activeIdentityId !== this.observedIdentityId ||
+            selectedIdentity(directory).workspaceId !== activeWorkspaceId) {
+          abort('The active identity changed in another tab.');
+          return;
+        }
+        const target = directory.identities.find(item => item.id === id);
+        if (!target || target.kind !== 'local' || target.id === directory.activeIdentityId ||
+          target.workspaceId !== expectedTargetWorkspaceId) {
+          abort('This identity changed in another tab. Reload before deleting.');
+          return;
+        }
+        const requestMetas = meta.getAll();
+        requestMetas.onsuccess = () => {
+          const all = requestMetas.result as Array<{ id: string; ownerId?: string }>;
+          const owned = all.filter(row => row.ownerId === id).map(row => row.id);
+          if (!owned.includes(target.workspaceId) ||
+              all.some(row => row.id === target.workspaceId && row.ownerId !== id)) {
+            abort('The identity workspace ownership is inconsistent. Nothing was deleted.');
+            return;
+          }
+          for (const workspaceId of owned) {
+            for (const storeName of stores) {
+              if (storeName === 'control') continue;
+              const store = tx.objectStore(storeName);
+              if (storeName === 'workspaceMeta' || storeName === 'statisticsMeta') store.delete(workspaceId);
+              else store.delete(IDBKeyRange.bound([workspaceId], [workspaceId, []]));
+            }
+          }
+          result = { ...directory, identities: directory.identities.filter(item => item.id !== id) };
+          control.put(result);
+        };
+      };
+    };
+    try { await done; } catch (error) { throw failure ?? error; }
+    const directory = result as IdentityDirectory | null;
+    if (!directory) throw new DataApiError('unavailable', 'The identity removal did not finish.');
+    const revisions = await this.workspaceRevisions(activeWorkspaceId);
+    this.publish({ workspaceId: activeWorkspaceId, commitSequence: revisions?.commitSequence ?? 0,
+      authoredRevision: revisions?.authoredRevision ?? 0, scopes: ['identity-directory-changed'] }, true);
+    return directory;
+  }
+
   async workspaceRevisions(workspaceId: string): Promise<{ commitSequence: number; authoredRevision: number } | null> {
     const meta = await this.get<{ commitSequence: number; authoredRevision: number }>('workspaceMeta', workspaceId);
     return meta ? { commitSequence: meta.commitSequence, authoredRevision: meta.authoredRevision } : null;
@@ -436,11 +767,31 @@ export class IndexedDataStore {
         tx.abort();
         return;
       }
-      controlStore.put({ key: 'local', activeWorkspaceId: workspaceId });
-      tx.objectStore('workspaceMeta').put({
-        id: workspaceId, createdAt: initializedAt, commitSequence: 0,
-        authoredRevision: 0, restoreEpoch: Date.now(), legacyMigration: true,
-      });
+      const dirRequest = controlStore.get(IDENTITY_DIRECTORY_KEY);
+      dirRequest.onsuccess = () => {
+        let ownerId = GUEST_ID;
+        if (dirRequest.result !== undefined) {
+          let directory: IdentityDirectory;
+          try { directory = readIdentityDirectory(dirRequest.result); }
+          catch (error) {
+            failure = error instanceof Error ? error : new Error('Invalid identity directory.');
+            tx.abort(); return;
+          }
+          const active = selectedIdentity(directory);
+          if (active.workspaceId !== expectedWorkspaceId) {
+            failure = new DataApiError('conflict', 'The identity changed while restoring the workspace.');
+            tx.abort(); return;
+          }
+          ownerId = active.id;
+          controlStore.put({ ...directory, identities: directory.identities.map(item =>
+            item.id === ownerId ? { ...item, workspaceId } : item) });
+        }
+        controlStore.put({ key: 'local', activeWorkspaceId: workspaceId });
+        tx.objectStore('workspaceMeta').put({
+          id: workspaceId, ownerId, createdAt: initializedAt, commitSequence: 0,
+          authoredRevision: 0, restoreEpoch: Date.now(), legacyMigration: true,
+        });
+      };
     };
     try { await completion; }
     catch (error) { throw failure ?? error; }
@@ -448,13 +799,14 @@ export class IndexedDataStore {
   }
 
   /**
-   * User-confirmed destructive reset. Clear all workspace generations and
-   * their records in the same transaction that installs a new empty workspace.
-   * A failed transaction leaves the previous database untouched.
+   * User-confirmed destructive reset for the selected identity only. Clear its
+   * workspace generations in the transaction that installs a new empty workspace.
+   * Other identities and unrecognized records are preserved on failure or success.
    */
   async clearAndActivate(
     workspaceId: string, expectedWorkspaceId: string | null,
     rows: readonly Extract<DataOperation, { type: 'put' }>[],
+    expectedCommitSequence?: number,
   ): Promise<void> {
     if (this.databaseVersion > DATABASE_VERSION ||
         this.db().objectStoreNames.length !== Object.keys(definitions).length) {
@@ -478,13 +830,53 @@ export class IndexedDataStore {
         tx.abort();
         return;
       }
-      for (const name of names) tx.objectStore(name).clear();
-      for (const row of rows) tx.objectStore(row.store).put({ ...row.value, revision: 1 });
-      tx.objectStore('control').put({ key: 'local', activeWorkspaceId: workspaceId });
-      tx.objectStore('workspaceMeta').put({
-        id: workspaceId, createdAt: new Date().toISOString(), commitSequence: 0,
-        authoredRevision: 0, restoreEpoch: Date.now(), legacyMigration: false,
-      });
+      const dirRequest = tx.objectStore('control').get(IDENTITY_DIRECTORY_KEY);
+      dirRequest.onsuccess = () => {
+        let directory: IdentityDirectory;
+        try { directory = readIdentityDirectory(dirRequest.result); }
+        catch (error) {
+          failure = error instanceof Error ? error : new Error('Invalid identity directory.');
+          tx.abort(); return;
+        }
+        const active = selectedIdentity(directory);
+        if (active.workspaceId !== expectedWorkspaceId) {
+          failure = new DataApiError('conflict', 'The selected identity changed. Reload before clearing.');
+          tx.abort(); return;
+        }
+        const metaRequest = tx.objectStore('workspaceMeta').getAll();
+        metaRequest.onsuccess = () => {
+          const metas = metaRequest.result as Array<{ id: string; ownerId?: string; commitSequence?: number }>;
+          if (expectedCommitSequence !== undefined &&
+              metas.find(meta => meta.id === expectedWorkspaceId)?.commitSequence !== expectedCommitSequence) {
+            failure = new DataApiError('conflict', 'Local work changed before cloud replacement. Nothing was erased.');
+            tx.abort();
+            return;
+          }
+          const owned = metas.filter(meta => meta.ownerId === active.id).map(meta => meta.id);
+          if (!expectedWorkspaceId || !owned.includes(expectedWorkspaceId)) {
+            failure = new DataApiError('validation', 'The active workspace is not owned by this identity.');
+            tx.abort(); return;
+          }
+          // Delete this identity's generations only. Never wipe other identities
+          // or unknown/orphan records while performing an ordinary reset.
+          for (const id of owned) {
+            for (const name of names) {
+              if (name === 'control') continue;
+              const store = tx.objectStore(name);
+              if (name === 'workspaceMeta' || name === 'statisticsMeta') store.delete(id);
+              else store.delete(IDBKeyRange.bound([id], [id, []]));
+            }
+          }
+          for (const row of rows) tx.objectStore(row.store).put({ ...row.value, revision: 1 });
+          tx.objectStore('control').put({ key: 'local', activeWorkspaceId: workspaceId });
+          tx.objectStore('control').put({ ...directory, identities: directory.identities.map(item =>
+            item.id === active.id ? { ...item, workspaceId } : item) });
+          tx.objectStore('workspaceMeta').put({
+            id: workspaceId, ownerId: active.id, createdAt: new Date().toISOString(), commitSequence: 0,
+            authoredRevision: 0, restoreEpoch: Date.now(), legacyMigration: false,
+          });
+        };
+      };
     };
     try { await completion; }
     catch (error) { throw failure ?? error; }
@@ -537,8 +929,21 @@ export class IndexedDataStore {
         abort(new DataApiError('conflict', 'The active workspace changed in another tab.'));
         return;
       }
-      const metaRequest = metaStore.get(workspaceId);
-      metaRequest.onsuccess = () => {
+      const identityRequest = tx.objectStore('control').get(IDENTITY_DIRECTORY_KEY);
+      identityRequest.onsuccess = () => {
+        let directory: IdentityDirectory;
+        try { directory = readIdentityDirectory(identityRequest.result); }
+        catch (error) {
+          abort(error instanceof Error ? error : new Error('Invalid identity directory.'));
+          return;
+        }
+        if (directory.activeIdentityId !== this.observedIdentityId ||
+          selectedIdentity(directory).workspaceId !== workspaceId) {
+          abort(new DataApiError('conflict', 'The active identity changed in another tab.'));
+          return;
+        }
+        const metaRequest = metaStore.get(workspaceId);
+        metaRequest.onsuccess = () => {
         const meta = metaRequest.result as { id: string; commitSequence: number; authoredRevision: number } | undefined;
         if (!meta) { abort(new DataApiError('not-found', 'Workspace metadata is missing.')); return; }
         const run = (index: number) => {
@@ -606,6 +1011,7 @@ export class IndexedDataStore {
           };
         };
         run(0);
+        };
       };
     };
     try { await completion; }

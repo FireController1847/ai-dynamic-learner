@@ -1,0 +1,136 @@
+.profile-page {
+  width: min(100%, 740px);
+  margin: 0 auto;
+  padding: 22px 0 48px;
+  display: grid;
+  align-content: start;
+  gap: 20px;
+}
+.profile-page--sign-in { width: min(100%, 440px); padding-top: clamp(4px, 2vh, 18px); padding-bottom: 22px; }
+.profile-account-shell { display: grid; gap: 10px; min-width: 0; }
+.profile-account-title { margin: 0; font-size: clamp(23px, 3vw, 28px); letter-spacing: -.02em; line-height: 1.25; }
+.profile-intro { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.profile-intro h2 { margin: 0; font-size: clamp(23px, 3vw, 28px); letter-spacing: -.02em; }
+.profile-card, .profile-account-access, .account-handoff {
+  min-width: 0;
+  padding: clamp(20px, 3.5vw, 30px);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-dialog);
+  background: var(--page-background);
+}
+.profile-card-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; }
+.profile-avatar {
+  display: grid; place-items: center; overflow: hidden;
+  flex: 0 0 64px; width: 64px; height: 64px; border-radius: 50%;
+  color: var(--brand-text); background: var(--brand-tint);
+  font-size: 22px; font-weight: 600; user-select: none;
+}
+.profile-avatar-image { display: block; width: 100%; height: 100%; object-fit: cover; }
+.profile-identity { flex: 1 1 160px; min-width: 0; display: grid; gap: 4px; }
+.profile-identity h3 { margin: 0; font-size: 20px; line-height: 26px; }
+.profile-identity p { margin: 0; color: var(--text-secondary); font-size: 13px; }
+.profile-edit-button { flex-shrink: 0; }
+.profile-details { display: grid; gap: 18px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border-color); }
+.profile-detail { display: grid; gap: 6px; min-width: 0; }
+.profile-detail-label, .profile-field label { font-weight: 600; }
+.profile-detail p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.profile-form { display: grid; gap: 15px; margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--border-color); }
+.profile-field { display: grid; gap: 7px; min-width: 0; }
+.profile-field input, .profile-field textarea {
+  width: 100%; min-width: 0; padding: 11px 12px;
+  border: 1px solid var(--control-border); border-radius: var(--radius);
+  background: var(--page-background); color: var(--text-primary);
+}
+.profile-field input:focus-visible, .profile-field textarea:focus-visible { outline: 2px solid var(--brand-text); outline-offset: 2px; }
+.profile-field textarea { resize: vertical; min-height: 100px; line-height: 1.5; }
+.profile-field-hint { color: var(--text-secondary); font-size: 12px; }
+.profile-form-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.profile-error { margin: 0; color: var(--danger); }
+.profile-feedback { margin: 0; color: var(--text-secondary); }
+.profile-photo-field { display: grid; gap: 8px; }
+.profile-field-title { font-weight: 600; }
+.profile-photo-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.profile-identities { display: grid; gap: 14px; padding: 24px; border: 1px solid var(--border-color); border-radius: var(--radius-dialog); }
+.profile-cloud-sync-heading { display: flex; align-items: center; gap: 8px; }
+.profile-cloud-sync-heading h3 { margin: 0; font-size: 16px; }
+.profile-cloud-sync > p { margin: 0; color: var(--text-secondary); font-size: 13px; line-height: 1.6; }
+.profile-account-access {
+  gap: 11px; padding: clamp(16px, 2.5vw, 22px);
+  box-shadow: 0 6px 28px rgba(0, 0, 0, .025);
+}
+.profile-account-form-area { display: grid; gap: 12px; }
+.profile-account-form { margin: 0; padding: 0; border: 0; gap: 11px; }
+.profile-account-form .profile-field { gap: 5px; }
+.profile-account-form .profile-field input { min-height: 39px; padding: 8px 11px; }
+.profile-account-form .profile-form-actions { display: grid; gap: 7px; }
+.profile-account-form .profile-account-register-actions { margin-top: 7px; }
+.profile-account-form .card-primary-button { width: 100%; justify-content: center; min-height: 40px; }
+.profile-account-text-link {
+  display: inline; width: auto; min-height: 0; padding: 0; border: 0; border-radius: 2px;
+  background: transparent; color: var(--brand-text);
+  font-size: inherit; font-weight: 600; line-height: inherit; text-align: inherit;
+  text-decoration: none; text-underline-offset: 3px;
+}
+.profile-account-text-link:hover:not(:disabled) { text-decoration: underline; }
+.profile-account-text-link:focus-visible { outline: 2px solid var(--brand-text); outline-offset: 3px; }
+.profile-account-forgot { justify-self: end; margin: -4px 0 0; font-size: 12px; }
+.profile-account-back { justify-self: center; font-size: 12px; }
+.profile-account-switch {
+  display: flex; justify-content: center; align-items: baseline; flex-wrap: wrap;
+  column-gap: 5px; row-gap: 2px; margin: 0; text-align: center; font-size: 12px;
+}
+.profile-account-status { display: grid; justify-items: start; gap: 14px; }
+.profile-account-status p, .profile-account-unavailable { margin: 0; color: var(--text-secondary); line-height: 1.6; }
+.profile-account-privacy-note {
+  padding-top: 9px; border-top: 1px solid var(--border-color);
+  font-size: 10px; color: var(--text-secondary); line-height: 1.45; text-align: center;
+}
+.profile-social-login { display: grid; grid-template-columns: 1fr; gap: 7px; }
+.profile-social-login .quiet-button {
+  display: flex; justify-content: center; align-items: center; gap: 10px;
+  width: 100%; min-height: 39px; border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+}
+.profile-brand-icon {
+  display: inline-flex; flex: 0 0 24px; width: 24px; height: 24px;
+  align-items: center; justify-content: center;
+}
+.profile-brand-icon svg { display: block; flex-shrink: 0; }
+.profile-brand-icon--google { border-radius: 3px; background: #fff; }
+.profile-social-divider {
+  position: relative; text-align: center; margin: 0; color: var(--text-secondary);
+  font-size: 12px;
+}
+.profile-social-divider::before, .profile-social-divider::after {
+  content: ''; position: absolute; top: 50%; width: 43%; height: 1px;
+  background: var(--border-color);
+}
+.profile-social-divider::before { left: 0; }
+.profile-social-divider::after { right: 0; }
+.account-handoff { display: grid; justify-items: start; gap: 14px; }
+.account-handoff-emblem {
+  display: grid; place-items: center; width: 46px; height: 46px; border-radius: 14px;
+  color: var(--brand-text); background: var(--brand-tint);
+}
+.account-handoff h2 { margin: 0; font-size: 23px; }
+.account-handoff p { margin: 0; line-height: 1.6; color: var(--text-secondary); }
+.account-handoff-actions { display: grid; grid-template-columns: 1fr; gap: 10px; width: 100%; }
+.account-handoff-actions .quiet-button, .account-handoff-actions .card-primary-button {
+  min-height: 44px; display: flex; align-items: center; justify-content: center; gap: 9px; width: 100%;
+}
+.account-handoff-actions .quiet-button { border: 1px solid var(--border-color); border-radius: var(--radius); }
+.account-handoff-confirm {
+  display: grid; gap: 11px; width: 100%; padding: 16px;
+  border: 1px solid var(--danger); border-radius: var(--radius);
+}
+.account-handoff-confirm strong { font-size: 15px; }
+.account-handoff-confirm p { font-size: 13px; }
+.account-handoff-hint, .account-handoff-note { font-size: 12px; }
+@media (max-width: 560px) {
+  .profile-page { padding-top: 10px; }
+  .profile-card, .profile-identities, .account-handoff { padding: 18px; }
+  .profile-account-access { padding: 16px; }
+  .profile-card-heading { gap: 12px; }
+  .profile-avatar { flex-basis: 52px; width: 52px; height: 52px; font-size: 18px; }
+  .profile-identity h3 { font-size: 18px; }
+}
