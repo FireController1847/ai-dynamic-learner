@@ -3,11 +3,17 @@ import { ApiError, assertConfigured, readJson, respond } from './http';
 import { actionToken, activeSession, consumeAction, db, issueSession, now, publicSession, rateLimit,
   revokeSession } from './db';
 import { expireSessionCookie } from './http';
-import { configuredEmail, localMailPreview, sendAccountMail } from './mail';
+import { configuredEmail, sendAccountMail } from './mail';
 import type { AccountRow, PasswordRow, RuntimeEnv } from './types';
 
 function requireMail(env: RuntimeEnv, request: Request): void {
   if (!configuredEmail(env, request)) throw new ApiError(503, 'Email verification and recovery are not configured.');
+}
+function rejectDuplicateRegistration(): never {
+  // Do not include email/account identifiers in logs or public responses.
+  // Verification resend and password recovery are separate endpoints.
+  console.warn('[auth] Registration rejected: account already exists.');
+  throw new ApiError(500, 'Internal server error.');
 }
 export async function register(request: Request, env: RuntimeEnv): Promise<Response> {
   assertConfigured(env);
@@ -19,44 +25,30 @@ export async function register(request: Request, env: RuntimeEnv): Promise<Respo
   }
   await rateLimit(env, request, 'register-ip', '', 5, 3600);
   await rateLimit(env, request, 'register-email', email, 5, 3600);
-  const previous = await db(env).prepare('SELECT account_id FROM password_credentials WHERE email=?')
-    .bind(email).first<{ account_id: string }>();
-  if (!previous) {
-    const id = crypto.randomUUID();
-    const passwordHash = await hashPassword(data.password, env.AUTH_PEPPER!);
-    try {
-      await db(env).batch([
-        db(env).prepare('INSERT INTO accounts(id,email,email_verified,created_at,updated_at) VALUES(?,?,0,?,?)')
-          .bind(id, email, now(), now()),
-        db(env).prepare('INSERT INTO password_credentials(email,account_id,password_hash,created_at) VALUES(?,?,?,?)')
-          .bind(email, id, passwordHash, now()),
-      ]);
-      const token = await actionToken(env, id, 'verify', 3600);
-      await sendAccountMail(env, request, email, 'verify', token);
-    } catch (error) {
-      // The account may already exist due to a concurrent registration. Never
-      // expose database details or pretend a verification email was delivered.
-      if (error instanceof ApiError) throw error;
-      const raced = await db(env).prepare('SELECT account_id FROM password_credentials WHERE email=?')
-        .bind(email).first<{ account_id: string }>();
-      if (!raced) throw error;
-    }
-  } else {
-    // Registration remains non-enumerating, but an existing unverified account
-    // should be able to get a fresh verification link. The former code
-    // silently returned 202 without creating any link for repeat attempts.
-    const existing = await db(env).prepare('SELECT email_verified FROM accounts WHERE id=?')
-      .bind(previous.account_id).first<{ email_verified: number }>();
-    if (existing?.email_verified === 0) {
-      await rateLimit(env, request, 'verify-email', email, 3, 3600);
-      const token = await actionToken(env, previous.account_id, 'verify', 3600);
-      await sendAccountMail(env, request, email, 'verify', token);
-    } else if (existing?.email_verified === 1 && localMailPreview(env, request)) {
-      // Useful when reusing a development account. Never expose this account
-      // existence detail to the browser or the production Worker.
-      console.info('[local-auth] This account is already verified; sign in or reset its password. No new verification link was generated.');
-    }
+  // Accounts from either password or OAuth providers must not be recreated.
+  // Do not implicitly link identities based only on matching email addresses.
+  const existing = await db(env).prepare('SELECT id FROM accounts WHERE email=? COLLATE NOCASE LIMIT 1')
+    .bind(email).first<{ id: string }>();
+  if (existing) rejectDuplicateRegistration();
+  const id = crypto.randomUUID();
+  const passwordHash = await hashPassword(data.password, env.AUTH_PEPPER!);
+  try {
+    await db(env).batch([
+      db(env).prepare('INSERT INTO accounts(id,email,email_verified,created_at,updated_at) VALUES(?,?,0,?,?)')
+        .bind(id, email, now(), now()),
+      db(env).prepare('INSERT INTO password_credentials(email,account_id,password_hash,created_at) VALUES(?,?,?,?)')
+        .bind(email, id, passwordHash, now()),
+    ]);
+  } catch (error) {
+    // A concurrent password registration can win during hashing. Return the
+    // same generic error, never a detailed SQLite uniqueness violation.
+    const raced = await db(env).prepare('SELECT account_id FROM password_credentials WHERE email=?')
+      .bind(email).first<{ account_id: string }>();
+    if (raced) rejectDuplicateRegistration();
+    throw error;
   }
+  const token = await actionToken(env, id, 'verify', 3600);
+  await sendAccountMail(env, request, email, 'verify', token);
   return respond({ status: 'verification-required', email }, 202);
 }
 export async function signIn(request: Request, env: RuntimeEnv): Promise<Response> {

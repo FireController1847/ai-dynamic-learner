@@ -30,6 +30,7 @@ const token = randomBytes(32).toString('base64url');
 const tokenHash = createHash('sha256').update(token).digest('base64url');
 const testAccount = randomUUID();
 const verifiedAccount = randomUUID();
+const socialAccount = randomUUID();
 const verificationToken = randomBytes(32).toString('base64url');
 const verificationHash = createHash('sha256').update(verificationToken).digest('base64url');
 const seconds = Math.floor(Date.now() / 1000);
@@ -42,6 +43,10 @@ const setupSql = [
     "'" + verifiedAccount + "','new-ci@example.test',0," + seconds + "," + seconds + ");",
   "INSERT INTO password_credentials(email,account_id,password_hash,created_at) VALUES(" +
     "'new-ci@example.test','" + verifiedAccount + "','test-credential-hash'," + seconds + ");",
+  "INSERT INTO accounts(id,email,email_verified,created_at,updated_at) VALUES(" +
+    "'" + socialAccount + "','social-ci@example.test',1," + seconds + "," + seconds + ");",
+  "INSERT INTO oauth_identities(provider,subject,account_id,created_at) VALUES(" +
+    "'google','ci-social-account','" + socialAccount + "'," + seconds + ");",
   "INSERT INTO auth_actions(token_hash,account_id,kind,expires_at,created_at) VALUES(" +
     "'" + verificationHash + "','" + verifiedAccount + "','verify'," + (seconds + 3600) + "," + seconds + ");",
 ].join(' ');
@@ -103,23 +108,46 @@ async function exerciseProfile() {
   if (missingOrigin.status !== 403) throw new Error('Profile update succeeded without trusted Origin.');
   console.log('Live D1 account profile synchronization and CAS test PASSED.');
 }
-async function exerciseRepeatedRegistration() {
-  const response = await fetch(api + '/v1/auth/register', {
+async function exerciseDuplicateRegistration() {
+  const registeredAccounts = ['new-ci@example.test', 'ci@example.test', 'social-ci@example.test'];
+  const logMarker = '[auth] Registration rejected: account already exists.';
+  const baseCount = (logs.match(/\[local-auth\] verify link for new-ci@example\.test:/g) ?? []).length;
+  for (const email of registeredAccounts) {
+    const response = await fetch(api + '/v1/auth/register', {
+      method: 'POST',
+      headers: { Origin: frontend, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: 'test-password-123456' }),
+    });
+    const result = await response.json();
+    if (response.status !== 500 || result.error !== 'Internal server error.' ||
+        JSON.stringify(result).includes(email)) {
+      throw new Error('Duplicate registration exposed the account or succeeded: ' +
+        JSON.stringify({ status: response.status, result }));
+    }
+  }
+  const until = Date.now() + 3000;
+  while (!logs.includes(logMarker) && Date.now() < until) await sleep(100);
+  if (!logs.includes(logMarker)) throw new Error('Duplicate registration was not logged on the Worker.');
+  const nextCount = (logs.match(/\[local-auth\] verify link for new-ci@example\.test:/g) ?? []).length;
+  if (nextCount !== baseCount) throw new Error('Duplicate registration incorrectly sent a new verification link.');
+
+  // An existing unverified account can still request a new link via the
+  // dedicated resend endpoint; registration itself never resends.
+  const resendResponse = await fetch(api + '/v1/auth/resend-verification', {
     method: 'POST',
     headers: { Origin: frontend, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: 'new-ci@example.test', password: 'test-password-123456' }),
+    body: JSON.stringify({ email: 'new-ci@example.test' }),
   });
-  const result = await response.json();
-  if (response.status !== 202 || result.status !== 'verification-required') {
-    throw new Error('Repeat registration did not succeed: ' + JSON.stringify(result));
+  if (resendResponse.status !== 200 || (await resendResponse.json()).sent !== true) {
+    throw new Error('Unverified account could not request a verification resend.');
   }
-  const marker = '[local-auth] verify link for new-ci@example.test:';
-  const until = Date.now() + 3000;
-  while (!logs.includes(marker) && Date.now() < until) await sleep(100);
-  if (!logs.includes(marker)) {
-    throw new Error('Repeat registration failed to print local verification link. Worker output:\n' + logs);
+  const printUntil = Date.now() + 3000;
+  while ((logs.match(/\[local-auth\] verify link for new-ci@example\.test:/g) ?? []).length <= baseCount &&
+         Date.now() < printUntil) await sleep(100);
+  if ((logs.match(/\[local-auth\] verify link for new-ci@example\.test:/g) ?? []).length <= baseCount) {
+    throw new Error('Verification resend failed to print a new local link.');
   }
-  console.log('Live local repeated-registration verification preview PASSED.');
+  console.log('Live duplicate account privacy and verification resend tests PASSED.');
 }
 async function exerciseVerification() {
   const response = await fetch(api + '/v1/auth/verify', {
@@ -207,7 +235,7 @@ async function verify() {
       if (response.headers.get('access-control-allow-origin') !== frontend) {
         throw new Error('Local CORS header is missing or incorrect.');
       }
-      await exerciseRepeatedRegistration();
+      await exerciseDuplicateRegistration();
       await exerciseVerification();
       await exerciseSync();
       await exerciseProfile();
