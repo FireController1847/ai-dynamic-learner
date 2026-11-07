@@ -1,6 +1,7 @@
 import type { Workspace } from '../workspace-format.ts';
 import { emptyWorkspace, parseWorkspace } from '../workspace-format.ts';
 import { createId, isValidId } from '../../core/ids.ts';
+import { selectedIdentity, type IdentityDirectory } from '../../core/data/local-identities.ts';
 import {
   IndexedDataStore, DataApiError, dataPrimaryKey, DATABASE_VERSION, exportRawIndexedDb, type DataChange, type DataCommit,
   type DataOperation, type DataStoreName, type IndexedRow,
@@ -101,13 +102,51 @@ export class WorkspaceDataApi {
     // A feature that this build cannot read is not necessarily corrupt.
     // Validate a compatibility projection before granting any edit access.
     this.workspaceId = workspaceId;
-    try { await this.initialSnapshot(); }
-    catch (error) { this.workspaceId = null; throw error; }
+    try {
+      await this.initialSnapshot();
+      await this.store.ensureIdentityDirectory();
+    } catch (error) { this.workspaceId = null; throw error; }
   }
 
   private active(): string {
     if (!this.workspaceId) throw new DataApiError('unavailable', 'The data API is not initialized.');
     return this.workspaceId;
+  }
+
+  async identityDirectory(): Promise<IdentityDirectory> {
+    await this.ready();
+    return this.store.identityDirectory();
+  }
+
+  async selectIdentity(identityId: string): Promise<IdentityDirectory> {
+    await this.ready();
+    const directory = await this.store.identityDirectory();
+    const target = directory.identities.find(item => item.id === identityId);
+    if (!target) throw new DataApiError('not-found', 'The local identity does not exist.');
+    if (selectedIdentity(directory).workspaceId !== this.active()) {
+      throw new DataApiError('conflict', 'Another tab changed the active identity.');
+    }
+    // Reject an invalid target without exposing it as the active workspace.
+    await hydrateWorkspace(this.store, target.workspaceId);
+    const next = await this.store.selectIdentity(identityId, this.active());
+    this.workspaceId = selectedIdentity(next).workspaceId;
+    return next;
+  }
+
+  async createLocalIdentity(label: string, transferGuest = false): Promise<IdentityDirectory> {
+    await this.ready();
+    const previous = this.active();
+    const stagedId = createId();
+    const identityId = createId();
+    const parsedLabel = label.trim();
+    if (!parsedLabel || parsedLabel.length > 64) {
+      throw new DataApiError('validation', 'Identity names must be between 1 and 64 characters.');
+    }
+    await this.store.stageRows(workspaceRows(stagedId, emptyWorkspace()));
+    await hydrateWorkspace(this.store, stagedId);
+    const next = await this.store.createLocalIdentity(identityId, parsedLabel, stagedId, previous, transferGuest);
+    this.workspaceId = selectedIdentity(next).workspaceId;
+    return next;
   }
 
   subscribe(listener: DataListener): () => void {
@@ -489,6 +528,7 @@ export class WorkspaceDataApi {
     // is deleted; only a successfully verified new pointer is activated.
     await this.store.open();
     const previous = await this.store.activeWorkspaceId();
+    if (previous !== this.active()) throw new DataApiError('conflict', 'The active identity changed in another tab.');
     const stagedId = createId();
     await this.store.stageRows(workspaceRows(stagedId, parsed));
     const hydrated = await hydrateWorkspace(this.store, stagedId);
