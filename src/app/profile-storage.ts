@@ -27,10 +27,17 @@ export function emptyLocalProfile(): LocalProfile {
   return { displayName: 'Local learner', about: '', email: '', phone: '', avatarDataUrl: null };
 }
 
-export function readLocalProfile(): LocalProfile {
+
+export const PROFILE_SCOPED_PREFIX = 'dynamic-learner.profile.identity.v1:';
+
+export function profileStorageKey(identityId: string): string {
+  if (!/^[\\w-]{1,128}$/.test(identityId)) throw new Error('Invalid local identity.');
+  return PROFILE_SCOPED_PREFIX + identityId;
+}
+
+function parseLocalProfile(stored: string | null): LocalProfile {
+  if (stored === null) return emptyLocalProfile();
   try {
-    const stored = localStorage.getItem(PROFILE_STORAGE_KEY);
-    if (stored === null) return emptyLocalProfile();
     const value: unknown = JSON.parse(stored);
     if (!isRecord(value) || value.version !== 1 ||
       typeof value.displayName !== 'string' || !value.displayName.trim() ||
@@ -38,36 +45,46 @@ export function readLocalProfile(): LocalProfile {
       typeof value.about !== 'string' || value.about.length > PROFILE_ABOUT_LIMIT) {
       return emptyLocalProfile();
     }
-
-    // The original v1 profile only had displayName and about.
     const email = value.email === undefined ? '' : value.email;
     const phone = value.phone === undefined ? '' : value.phone;
     const avatarDataUrl = value.avatarDataUrl === undefined ? null : value.avatarDataUrl;
     if (typeof email !== 'string' || email.length > PROFILE_EMAIL_LIMIT ||
       typeof phone !== 'string' || phone.length > PROFILE_PHONE_LIMIT ||
       !validAvatar(avatarDataUrl)) return emptyLocalProfile();
-
     return { displayName: value.displayName, about: value.about, email, phone, avatarDataUrl };
-  } catch {
-    // Local preferences must never block the app or the study workspace.
-    return emptyLocalProfile();
-  }
+  } catch { return emptyLocalProfile(); }
 }
 
-export function writeLocalProfile(profile: LocalProfile): void {
-  if (!profile.displayName.trim() || profile.displayName.length > PROFILE_NAME_LIMIT ||
-    profile.about.length > PROFILE_ABOUT_LIMIT ||
-    profile.email.length > PROFILE_EMAIL_LIMIT ||
-    profile.phone.length > PROFILE_PHONE_LIMIT ||
-    !validAvatar(profile.avatarDataUrl)) {
-    throw new Error('Invalid profile data.');
-  }
-  localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify({
-    version: 1,
-    displayName: profile.displayName,
-    about: profile.about,
-    email: profile.email,
-    phone: profile.phone,
-    avatarDataUrl: profile.avatarDataUrl,
-  }));
+export interface ProfileRepository {
+  read(identityId: string): LocalProfile;
+  write(identityId: string, profile: LocalProfile): void;
+  transferGuest(identityId: string): void;
 }
+
+export const localProfileRepository: ProfileRepository = {
+  read(identityId) {
+    try {
+      const stored = localStorage.getItem(profileStorageKey(identityId));
+      return parseLocalProfile(stored ?? (identityId === 'guest' ? localStorage.getItem(PROFILE_STORAGE_KEY) : null));
+    } catch { return emptyLocalProfile(); }
+  },
+  write(identityId, profile) {
+    if (!profile.displayName.trim() || profile.displayName.length > PROFILE_NAME_LIMIT ||
+      profile.about.length > PROFILE_ABOUT_LIMIT ||
+      profile.email.length > PROFILE_EMAIL_LIMIT ||
+      profile.phone.length > PROFILE_PHONE_LIMIT ||
+      !validAvatar(profile.avatarDataUrl)) {
+      throw new Error('Invalid profile data.');
+    }
+    localStorage.setItem(profileStorageKey(identityId), JSON.stringify({
+      version: 1, displayName: profile.displayName, about: profile.about,
+      email: profile.email, phone: profile.phone, avatarDataUrl: profile.avatarDataUrl,
+    }));
+  },
+  transferGuest(identityId) {
+    const profile = this.read('guest');
+    this.write(identityId, profile);
+    localStorage.removeItem(profileStorageKey('guest'));
+    localStorage.removeItem(PROFILE_STORAGE_KEY);
+  },
+};

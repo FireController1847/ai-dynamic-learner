@@ -197,8 +197,8 @@ export const WorkspaceTools = defineComponent({
         itemName: 'Dynamic Learner workspace',
         title: clearStep.value === 1 ? 'Clear workspace data?' : 'Are you sure?',
         detail: clearStep.value === 1
-          ? 'This removes all notebooks, tasks, cards, puzzles, guides, Review questions, and saved statistics from this browser. Download a backup before continuing if you want to keep anything.'
-          : 'This deletes every saved workspace and its browser-local study sessions, including old recovery copies. The data is unrecoverable from this browser after clearing. Only a previously downloaded backup can restore it.',
+          ? 'This removes the selected identity’s notebooks, tasks, cards, puzzles, guides, Review questions, and statistics from this browser. Other local identities are not affected.'
+          : 'This deletes the selected identity’s workspace and its recovery generations. Other identities and their work remain intact. Only a previously downloaded backup can restore the deleted data.',
         confirmLabel: clearStep.value === 1 ? 'Continue' : 'Yes, clear everything',
         onCancel: () => { clearStep.value = 0; },
         onConfirm: () => {

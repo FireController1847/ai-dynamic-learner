@@ -2,6 +2,8 @@ import { nextTick, onBeforeUnmount, ref } from 'vue';
 import { emptyWorkspace, parseWorkspace, validateWorkspaceValue, MAX_BACKUP_BYTES, type Workspace } from './workspace-format.ts';
 import { downloadText } from '../core/file-download.ts';
 import { useBackupReminders } from './backup-reminders.ts';
+import { localProfileRepository } from './profile-storage.ts';
+import { selectedIdentity, type IdentityDirectory } from '../core/data/local-identities.ts';
 import { WorkspaceDataApi } from './data/data-api.ts';
 import type { WorkspaceCompatibility } from './data/workspace-compatibility.ts';
 import { observeWorkspace } from './data/workspace-observer.ts';
@@ -31,6 +33,7 @@ export function useWorkspace() {
   const needsReconcile = ref(false);
   const revision = ref(0);
   const backup = useBackupReminders();
+  const identityDirectory = ref<IdentityDirectory | null>(null);
   const api = new WorkspaceDataApi();
   const stopUnavailable = api.subscribeUnavailable(message => {
     // Keep in-memory drafts accessible. This connection cannot be reopened
@@ -85,6 +88,8 @@ export function useWorkspace() {
       await observer?.flush();
       const result = await api.refresh(lastSequence);
       if (!result.replaced && result.events?.length === 0) {
+        // Adoption can change identity ownership without changing workspace ID.
+        identityDirectory.value = await api.identityDirectory();
         remotePending = false;
         return;
       }
@@ -125,6 +130,7 @@ export function useWorkspace() {
       // Revisions and content were captured together. Adopt only once the
       // local editor has been verified clean and its observer stopped.
       if (replaced) api.adoptWorkspaceSnapshot(snapshot.workspaceId);
+      identityDirectory.value = await api.identityDirectory();
       if (replaced) {
         state.value = snapshot.workspace;
         revision.value += 1;
@@ -175,6 +181,7 @@ export function useWorkspace() {
       await api.ready();
       if (disposed) return;
       const snapshot = await api.initialSnapshot();
+      identityDirectory.value = await api.identityDirectory();
       state.value = snapshot.workspace;
       lastSequence = snapshot.revisions.commitSequence;
       compatibility.value = snapshot.compatibility;
@@ -193,6 +200,76 @@ export function useWorkspace() {
     }
   }
   void initialize();
+
+  /** Switch a device-only identity after flushing and unmounting active editors. */
+  async function changeIdentity(action: () => Promise<IdentityDirectory>): Promise<IdentityDirectory> {
+    if (disposed || refreshing || !ready.value || needsReconcile.value ||
+      compatibility.value?.readOnly) {
+      throw new Error('Finish loading or resolve unsaved workspace changes before switching identities.');
+    }
+    refreshing = true;
+    ready.value = false;
+    let pointerChanged = false;
+    try {
+      await nextTick();
+      await observer?.flush();
+      await observer?.settle();
+      if (observer?.hasFailed()) throw new Error('The current workspace has unsaved changes. Download a draft first.');
+      const directory = await action();
+      pointerChanged = true;
+      observer?.stop();
+      observer = null;
+      const snapshot = await api.initialSnapshot();
+      state.value = snapshot.workspace;
+      identityDirectory.value = directory;
+      revision.value += 1;
+      lastSequence = snapshot.revisions.commitSequence;
+      compatibility.value = snapshot.compatibility;
+      remotePending = false;
+      needsReconcile.value = false;
+      await startObserver(snapshot.records);
+      backup.workspaceChanged(api.workspaceIdentity(), snapshot.revisions.authoredRevision, populated(snapshot.workspace));
+      storageProblem.value = '';
+      ready.value = true;
+      watchRemoteChanges();
+      return directory;
+    } catch (error) {
+      if (pointerChanged) {
+        storageProblem.value = 'The identity changed, but its workspace could not be opened: ' +
+          errorMessage(error) + '. Reload the page to recover.';
+        needsReconcile.value = true;
+      } else if (!observer?.hasFailed()) {
+        ready.value = true;
+      } else {
+        storageProblem.value = 'The workspace has unsaved changes. Download a draft before reloading.';
+        needsReconcile.value = true;
+      }
+      throw error;
+    } finally {
+      refreshing = false;
+    }
+  }
+
+  async function selectIdentity(identityId: string): Promise<void> {
+    if (identityDirectory.value?.activeIdentityId === identityId) return;
+    await changeIdentity(() => api.selectIdentity(identityId));
+  }
+
+  async function createLocalIdentity(label: string, transferGuest: boolean): Promise<void> {
+    const previous = identityDirectory.value;
+    if (!previous || (transferGuest && previous.activeIdentityId !== 'guest')) {
+      throw new Error('Only the active guest workspace can be transferred.');
+    }
+    const directory = await changeIdentity(() => api.createLocalIdentity(label, transferGuest));
+    if (transferGuest) {
+      // The guest copy stays available if browser-local profile migration fails.
+      try { localProfileRepository.transferGuest(selectedIdentity(directory).id); }
+      catch (error) {
+        throw new Error('Your workspace was transferred, but the guest profile could not be copied: ' +
+          errorMessage(error) + '. The original guest profile is still stored locally.');
+      }
+    }
+  }
 
   async function readBackup(file: File): Promise<Workspace> {
     if (file.size > MAX_BACKUP_BYTES) throw new Error('The backup file exceeds the supported size.');
@@ -213,6 +290,7 @@ export function useWorkspace() {
       await api.restoreWorkspace(replacement);
       observer?.stop();
       const snapshot = await api.initialSnapshot();
+      identityDirectory.value = await api.identityDirectory();
       state.value = snapshot.workspace;
       revision.value += 1;
       lastSequence = snapshot.revisions.commitSequence;
@@ -233,7 +311,7 @@ export function useWorkspace() {
 
   /**
    * Destructive, separately confirmed reset. Unlike restoreWorkspace, this
-   * removes every IDB workspace generation, including inactive restore copies.
+   * removes generations owned by the selected identity, not other identities.
    * Stop editors before the guarded transaction so delayed saves cannot
    * repopulate the new workspace. UI preferences are left alone.
    */
@@ -253,6 +331,7 @@ export function useWorkspace() {
       await previousObserver?.settle();
       await api.clearWorkspace();
       const snapshot = await api.initialSnapshot();
+      identityDirectory.value = await api.identityDirectory();
       state.value = snapshot.workspace;
       revision.value += 1;
       lastSequence = snapshot.revisions.commitSequence;
@@ -273,13 +352,9 @@ export function useWorkspace() {
     // The old migration source and browser-local saved review sessions must
     // not silently restore deleted learning content on a future load.
     try {
-      const removable = ['dynamic-learner.workspace.v1',
-        'dynamic-learner.ui.index-cards.category-history.v1'];
-      for (let index = 0; index < localStorage.length; index += 1) {
-        const key = localStorage.key(index);
-        if (key?.startsWith('dynamic-learner.review.generated-session.v1:')) removable.push(key);
-      }
-      for (const key of removable) localStorage.removeItem(key);
+      // Old unscoped UI preferences and generated sessions may belong to
+      // another identity. Only remove the legacy workspace migration copy.
+      localStorage.removeItem('dynamic-learner.workspace.v1');
     } catch {
       throw new Error('The workspace was cleared, but some old localStorage learning data could not be removed. Check browser storage permissions before assuming all local copies are gone.');
     }
@@ -313,6 +388,7 @@ export function useWorkspace() {
       await previousObserver?.settle();
       const snapshot = await api.initialSnapshot(true);
       api.adoptWorkspaceSnapshot(snapshot.workspaceId);
+      identityDirectory.value = await api.identityDirectory();
       state.value = snapshot.workspace;
       revision.value++;
       lastSequence = snapshot.revisions.commitSequence;
@@ -428,6 +504,7 @@ export function useWorkspace() {
   });
 
   return { state, ready, revision, compatibility, storageProblem, needsReconcile,
+    identityDirectory, selectIdentity, createLocalIdentity,
     readBackup, replaceWorkspace, clearWorkspace, downloadBackup, downloadRawRescue,
     downloadLocalDraft, reloadSavedWorkspace, backup };
 }
