@@ -299,6 +299,25 @@ export function useWorkspace() {
     }
   }
 
+
+  async function renameLocalIdentity(id: string, label: string, expectedLabel: string): Promise<void> {
+    if (disposed || refreshing || !ready.value || needsReconcile.value || compatibility.value?.readOnly) {
+      throw new Error('Resolve outstanding workspace changes before renaming an identity.');
+    }
+    identityDirectory.value = await api.renameLocalIdentity(id, label, expectedLabel);
+  }
+
+  async function deleteLocalIdentity(id: string, expectedWorkspaceId: string): Promise<void> {
+    if (disposed || refreshing || !ready.value || needsReconcile.value || compatibility.value?.readOnly) {
+      throw new Error('Resolve outstanding workspace changes before deleting an identity.');
+    }
+    identityDirectory.value = await api.deleteLocalIdentity(id, expectedWorkspaceId);
+    try { localProfileRepository.clear(id); }
+    catch {
+      throw new Error('The identity and its workspace were deleted, but its browser-local profile could not be cleaned up.');
+    }
+  }
+
   async function readBackup(file: File): Promise<Workspace> {
     if (file.size > MAX_BACKUP_BYTES) throw new Error('The backup file exceeds the supported size.');
     return parseWorkspace(await file.text());
@@ -536,6 +555,7 @@ export function useWorkspace() {
 
   return { state, ready, revision, compatibility, storageProblem, needsReconcile,
     identityDirectory, profileRevision, selectIdentity, createLocalIdentity,
+    renameLocalIdentity, deleteLocalIdentity,
     readBackup, replaceWorkspace, clearWorkspace, downloadBackup, downloadRawRescue,
     downloadLocalDraft, reloadSavedWorkspace, backup };
 }

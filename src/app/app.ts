@@ -14,6 +14,8 @@ import { initializeTheme } from './theme.ts';
 import { HomePage } from './home-page.ts';
 import { ChangelogPage } from './changelog-page.ts';
 import { ProfilePage } from './profile-page.ts';
+import { configuredAuthProvider } from './auth-provider.ts';
+import { useAccountSession } from './auth-session.ts';
 import { TipsExperience } from '../../packages/tips/src/index.ts';
 import { tipsCatalog } from './tips-content.ts';
 import { Icon } from '../components/icon.ts';
@@ -39,6 +41,8 @@ if (!document.title) document.title = appConfig.name;
 const App = defineComponent({
   name: 'App',
   setup() {
+    const accountSession = useAccountSession(configuredAuthProvider);
+    onMounted(() => { void accountSession.restore(); });
     const workspace = useWorkspace();
     // Reminder delivery lives in the app shell, not in the grid view, so
     // navigating to another Dynamic Learner app does not stop notifications.
@@ -385,6 +389,9 @@ const App = defineComponent({
             profileRevision: workspace.profileRevision.value,
             onSwitch: workspace.selectIdentity,
             onCreate: workspace.createLocalIdentity,
+            onRename: workspace.renameLocalIdentity,
+            onDelete: workspace.deleteLocalIdentity,
+            session: accountSession,
           }) : !workspace.ready.value
             ? workspace.storageProblem.value
               ? h('section', { class: 'workspace-loading', role: 'alert' }, [

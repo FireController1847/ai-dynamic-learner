@@ -1,6 +1,8 @@
 import { defineComponent, h, onBeforeUnmount, onMounted, ref, watch, type PropType } from 'vue';
 import type { IdentityDirectory } from '../core/data/local-identities.ts';
 import { LocalIdentityPanel } from './local-identity-panel.ts';
+import { AccountAccessPanel } from './account-access-panel.ts';
+import type { AccountSessionController } from './auth-session.ts';
 import { Icon } from '../components/icon.ts';
 import { prepareProfilePhoto } from './profile-photo.ts';
 import { PROFILE_ABOUT_LIMIT, PROFILE_EMAIL_LIMIT, PROFILE_NAME_LIMIT,
@@ -17,6 +19,9 @@ export const ProfilePage = defineComponent({
     profileRevision: { type: Number, default: 0 },
     onSwitch: { type: Function as PropType<(id: string) => Promise<void>>, required: true },
     onCreate: { type: Function as PropType<(label: string, transferGuest: boolean) => Promise<void>>, required: true },
+    onRename: { type: Function as PropType<(id: string, label: string, oldLabel: string) => Promise<void>>, required: true },
+    onDelete: { type: Function as PropType<(id: string, workspaceId: string) => Promise<void>>, required: true },
+    session: { type: Object as PropType<AccountSessionController>, required: true },
   },
   setup(props) {
     const identityId = () => props.directory?.activeIdentityId ?? 'guest';
@@ -264,7 +269,10 @@ export const ProfilePage = defineComponent({
           disabled: editing.value || photoBusy.value,
           onSwitch: props.onSwitch,
           onCreate: props.onCreate,
+          onRename: props.onRename,
+          onDelete: props.onDelete,
         }),
+        h(AccountAccessPanel, { session: props.session }),
         h('p', { class: 'profile-storage-note' }, [
           h(Icon, { name: 'lock' }),
           'Your picture and contact details stay in this browser. This is not an online account, does not sync between devices, and is not included in workspace backups.',
