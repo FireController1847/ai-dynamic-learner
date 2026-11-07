@@ -2,6 +2,7 @@ import { defineComponent, h, onMounted, ref, watch, type PropType } from 'vue';
 import { requestLeave } from '../core/leave-guards.ts';
 import type { OAuthProvider } from '../core/auth/provider.ts';
 import type { AccountSessionController } from './auth-session.ts';
+import { googleBrandMark, microsoftBrandMark } from './auth-brand-marks.ts';
 
 type AccessMode = 'sign-in' | 'register' | 'reset' | 'reset-confirm';
 
@@ -232,8 +233,8 @@ export const AccountAccessPanel = defineComponent({
                 title: !options.google ? 'Google sign-in is not configured in this environment' : undefined,
                 onClick: () => socialLogin('google'),
               }, [
-                h('span', { class: 'profile-social-mark', 'aria-hidden': 'true' }, 'G'),
-                mode.value === 'register' ? 'Sign up with Google' : 'Continue with Google',
+                googleBrandMark(),
+                mode.value === 'register' ? 'Sign up with Google' : 'Sign in with Google',
               ]) : null,
               options.microsoft || __DYNLEARN_AUTH_DEV_PREVIEW__ ? h('button', {
                 type: 'button', class: 'quiet-button',
@@ -241,8 +242,8 @@ export const AccountAccessPanel = defineComponent({
                 title: !options.microsoft ? 'Microsoft sign-in is not configured in this environment' : undefined,
                 onClick: () => socialLogin('microsoft'),
               }, [
-                h('span', { class: 'profile-social-mark', 'aria-hidden': 'true' }, 'M'),
-                mode.value === 'register' ? 'Sign up with Microsoft' : 'Continue with Microsoft',
+                microsoftBrandMark(),
+                'Sign in with Microsoft',
               ]) : null,
             ]) : null,
             !options.email && !options.google && !options.microsoft

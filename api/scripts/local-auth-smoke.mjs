@@ -40,6 +40,8 @@ const setupSql = [
     "'" + tokenHash + "','" + testAccount + "'," + (seconds + 3600) + "," + seconds + ");",
   "INSERT INTO accounts(id,email,email_verified,created_at,updated_at) VALUES(" +
     "'" + verifiedAccount + "','new-ci@example.test',0," + seconds + "," + seconds + ");",
+  "INSERT INTO password_credentials(email,account_id,password_hash,created_at) VALUES(" +
+    "'new-ci@example.test','" + verifiedAccount + "','test-credential-hash'," + seconds + ");",
   "INSERT INTO auth_actions(token_hash,account_id,kind,expires_at,created_at) VALUES(" +
     "'" + verificationHash + "','" + verifiedAccount + "','verify'," + (seconds + 3600) + "," + seconds + ");",
 ].join(' ');
@@ -100,6 +102,24 @@ async function exerciseProfile() {
   });
   if (missingOrigin.status !== 403) throw new Error('Profile update succeeded without trusted Origin.');
   console.log('Live D1 account profile synchronization and CAS test PASSED.');
+}
+async function exerciseRepeatedRegistration() {
+  const response = await fetch(api + '/v1/auth/register', {
+    method: 'POST',
+    headers: { Origin: frontend, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: 'new-ci@example.test', password: 'test-password-123456' }),
+  });
+  const result = await response.json();
+  if (response.status !== 202 || result.status !== 'verification-required') {
+    throw new Error('Repeat registration did not succeed: ' + JSON.stringify(result));
+  }
+  const marker = '[local-auth] verify link for new-ci@example.test:';
+  const until = Date.now() + 3000;
+  while (!logs.includes(marker) && Date.now() < until) await sleep(100);
+  if (!logs.includes(marker)) {
+    throw new Error('Repeat registration failed to print local verification link. Worker output:\n' + logs);
+  }
+  console.log('Live local repeated-registration verification preview PASSED.');
 }
 async function exerciseVerification() {
   const response = await fetch(api + '/v1/auth/verify', {
@@ -187,6 +207,7 @@ async function verify() {
       if (response.headers.get('access-control-allow-origin') !== frontend) {
         throw new Error('Local CORS header is missing or incorrect.');
       }
+      await exerciseRepeatedRegistration();
       await exerciseVerification();
       await exerciseSync();
       await exerciseProfile();

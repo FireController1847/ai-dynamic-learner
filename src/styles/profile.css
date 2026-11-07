@@ -6,8 +6,8 @@
   align-content: start;
   gap: 20px;
 }
-.profile-page--sign-in { width: min(100%, 440px); padding-top: clamp(12px, 6vh, 56px); }
-.profile-account-shell { display: grid; gap: 20px; min-width: 0; }
+.profile-page--sign-in { width: min(100%, 440px); padding-top: clamp(4px, 2vh, 18px); padding-bottom: 22px; }
+.profile-account-shell { display: grid; gap: 10px; min-width: 0; }
 .profile-account-title { margin: 0; font-size: clamp(23px, 3vw, 28px); letter-spacing: -.02em; line-height: 1.25; }
 .profile-intro { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .profile-intro h2 { margin: 0; font-size: clamp(23px, 3vw, 28px); letter-spacing: -.02em; }
@@ -54,11 +54,16 @@
 .profile-cloud-sync-heading { display: flex; align-items: center; gap: 8px; }
 .profile-cloud-sync-heading h3 { margin: 0; font-size: 16px; }
 .profile-cloud-sync > p { margin: 0; color: var(--text-secondary); font-size: 13px; line-height: 1.6; }
-.profile-account-access { gap: 16px; box-shadow: 0 6px 28px rgba(0, 0, 0, .025); }
-.profile-account-form-area { display: grid; gap: 18px; }
-.profile-account-form { margin: 0; padding: 0; border: 0; gap: 15px; }
-.profile-account-form .profile-form-actions { display: grid; gap: 12px; }
-.profile-account-form .card-primary-button { width: 100%; justify-content: center; min-height: 42px; }
+.profile-account-access {
+  gap: 11px; padding: clamp(16px, 2.5vw, 22px);
+  box-shadow: 0 6px 28px rgba(0, 0, 0, .025);
+}
+.profile-account-form-area { display: grid; gap: 12px; }
+.profile-account-form { margin: 0; padding: 0; border: 0; gap: 11px; }
+.profile-account-form .profile-field { gap: 5px; }
+.profile-account-form .profile-field input { min-height: 39px; padding: 8px 11px; }
+.profile-account-form .profile-form-actions { display: grid; gap: 7px; }
+.profile-account-form .card-primary-button { width: 100%; justify-content: center; min-height: 40px; }
 .profile-account-text-link {
   display: inline; width: auto; min-height: 0; padding: 0; border: 0; border-radius: 2px;
   background: transparent; color: var(--brand-text);
@@ -76,20 +81,21 @@
 .profile-account-status { display: grid; justify-items: start; gap: 14px; }
 .profile-account-status p, .profile-account-unavailable { margin: 0; color: var(--text-secondary); line-height: 1.6; }
 .profile-account-privacy-note {
-  padding-top: 12px; border-top: 1px solid var(--border-color);
+  padding-top: 9px; border-top: 1px solid var(--border-color);
   font-size: 10px; color: var(--text-secondary); line-height: 1.45; text-align: center;
 }
-.profile-social-login { display: grid; grid-template-columns: 1fr; gap: 10px; }
+.profile-social-login { display: grid; grid-template-columns: 1fr; gap: 7px; }
 .profile-social-login .quiet-button {
   display: flex; justify-content: center; align-items: center; gap: 10px;
-  width: 100%; min-height: 40px; border: 1px solid var(--border-color);
+  width: 100%; min-height: 39px; border: 1px solid var(--border-color);
   border-radius: var(--radius);
 }
-.profile-social-mark {
-  display: inline-grid; place-items: center; width: 20px; height: 20px;
-  font-size: 12px; font-weight: 700; border-radius: 5px;
-  background: var(--brand-tint); color: var(--brand-text);
+.profile-brand-icon {
+  display: inline-flex; flex: 0 0 24px; width: 24px; height: 24px;
+  align-items: center; justify-content: center;
 }
+.profile-brand-icon svg { display: block; flex-shrink: 0; }
+.profile-brand-icon--google { border-radius: 3px; background: #fff; }
 .profile-social-divider {
   position: relative; text-align: center; margin: 0; color: var(--text-secondary);
   font-size: 12px;
@@ -121,7 +127,8 @@
 .account-handoff-hint, .account-handoff-note { font-size: 12px; }
 @media (max-width: 560px) {
   .profile-page { padding-top: 10px; }
-  .profile-card, .profile-account-access, .profile-identities, .account-handoff { padding: 18px; }
+  .profile-card, .profile-identities, .account-handoff { padding: 18px; }
+  .profile-account-access { padding: 16px; }
   .profile-card-heading { gap: 12px; }
   .profile-avatar { flex-basis: 52px; width: 52px; height: 52px; font-size: 18px; }
   .profile-identity h3 { font-size: 18px; }

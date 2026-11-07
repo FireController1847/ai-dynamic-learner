@@ -99,7 +99,9 @@ export function useAccountSession(provider: AuthProvider | null) {
       if (result.status === 'authenticated') {
         notice.value = 'Signed in. Your local workspace is not yet linked or synchronized.';
       } else {
-        notice.value = 'Check your email for the next verification step.';
+        notice.value = window.location.hostname === '127.0.0.1'
+          ? 'Open the verification link printed in the npm start terminal.'
+          : 'Check your email for the verification link.';
       }
     } catch (cause) {
       if (current === generation) error.value = cause instanceof Error ? cause.message : 'Authentication failed.';
@@ -152,7 +154,9 @@ export function useAccountSession(provider: AuthProvider | null) {
     busy.value = true; error.value = ''; notice.value = '';
     try {
       await provider.resendVerification(email);
-      notice.value = 'If verification is pending, a fresh link will be sent.';
+      notice.value = window.location.hostname === '127.0.0.1'
+        ? 'If this account is unverified, a new link is printed in the npm start terminal.'
+        : 'If verification is pending, a fresh link will be sent.';
     } catch (cause) {
       error.value = cause instanceof Error ? cause.message : 'Could not request verification.';
       throw cause;

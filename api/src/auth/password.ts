@@ -3,7 +3,7 @@ import { ApiError, assertConfigured, readJson, respond } from './http';
 import { actionToken, activeSession, consumeAction, db, issueSession, now, publicSession, rateLimit,
   revokeSession } from './db';
 import { expireSessionCookie } from './http';
-import { configuredEmail, sendAccountMail } from './mail';
+import { configuredEmail, localMailPreview, sendAccountMail } from './mail';
 import type { AccountRow, PasswordRow, RuntimeEnv } from './types';
 
 function requireMail(env: RuntimeEnv, request: Request): void {
@@ -40,6 +40,21 @@ export async function register(request: Request, env: RuntimeEnv): Promise<Respo
       const raced = await db(env).prepare('SELECT account_id FROM password_credentials WHERE email=?')
         .bind(email).first<{ account_id: string }>();
       if (!raced) throw error;
+    }
+  } else {
+    // Registration remains non-enumerating, but an existing unverified account
+    // should be able to get a fresh verification link. The former code
+    // silently returned 202 without creating any link for repeat attempts.
+    const existing = await db(env).prepare('SELECT email_verified FROM accounts WHERE id=?')
+      .bind(previous.account_id).first<{ email_verified: number }>();
+    if (existing?.email_verified === 0) {
+      await rateLimit(env, request, 'verify-email', email, 3, 3600);
+      const token = await actionToken(env, previous.account_id, 'verify', 3600);
+      await sendAccountMail(env, request, email, 'verify', token);
+    } else if (existing?.email_verified === 1 && localMailPreview(env, request)) {
+      // Useful when reusing a development account. Never expose this account
+      // existence detail to the browser or the production Worker.
+      console.info('[local-auth] This account is already verified; sign in or reset its password. No new verification link was generated.');
     }
   }
   return respond({ status: 'verification-required', email }, 202);
