@@ -20,6 +20,18 @@ export function localMailPreview(env: RuntimeEnv, request: Request): boolean {
       actual.origin === api.origin;
   } catch { return false; }
 }
+export function localMailPreviewChecks(env: RuntimeEnv, request: Request) {
+  const api = new URL(apiOrigin(env));
+  const frontend = new URL(frontendOrigin(env));
+  const actual = new URL(request.url);
+  return {
+    flagEnabled: env.LOCAL_MAIL_PREVIEW === '1',
+    apiLoopback: api.protocol === 'http:' && api.hostname === '127.0.0.1',
+    frontendLoopback: frontend.protocol === 'http:' && frontend.hostname === '127.0.0.1',
+    requestMatchesApi: actual.origin === api.origin,
+    requestOrigin: actual.origin,
+  };
+}
 export function configuredEmail(env: RuntimeEnv, request: Request): boolean {
   return localMailPreview(env, request) || !!(env.RESEND_API_KEY && env.EMAIL_FROM);
 }
