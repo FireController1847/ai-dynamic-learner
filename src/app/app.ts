@@ -283,8 +283,11 @@ const App = defineComponent({
             onClick: (event: MouseEvent) => navigate(event, '/profile/'),
           }, [
             h(Icon, { name: accountChecking.value ? 'loading' : guestAccount.value ? 'log-in' : 'user-round' }),
-            h('span', { class: 'app-header-action-label' },
-              accountChecking.value ? 'Checking…' : guestAccount.value ? 'Sign in' : 'Profile'),
+            h('span', { class: 'app-header-action-label profile-trigger-labels' }, [
+              h('span', accountChecking.value ? '' : guestAccount.value ? 'Sign in' : 'Profile'),
+              h('span', { class: 'profile-trigger-measure', 'aria-hidden': 'true' }, 'Sign in'),
+              h('span', { class: 'profile-trigger-measure', 'aria-hidden': 'true' }, 'Profile'),
+            ]),
           ]),
           tipsFeature.value ? h('button', {
             type: 'button',

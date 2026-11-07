@@ -27,8 +27,11 @@
 .app-header h1 { min-width: 0; overflow: hidden; font-size: 16px; line-height: 22px; text-overflow: ellipsis; white-space: nowrap; }
 .app-header-actions { display: flex; align-items: center; gap: 4px; margin-left: auto; }
 .app-header-action { border-color: transparent; background: transparent; font-weight: 500; }
-.profile-trigger { width: 128px; flex: 0 0 128px; }
+.profile-trigger { flex: 0 0 auto; }
 .profile-trigger .ui-icon { flex-shrink: 0; }
+.profile-trigger-labels { display: grid; }
+.profile-trigger-labels > span { grid-area: 1 / 1; white-space: nowrap; }
+.profile-trigger-measure { visibility: hidden; }
 .profile-trigger--checking .ui-icon { animation: profile-session-spin 1s linear infinite; }
 @keyframes profile-session-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .profile-trigger--checking .ui-icon { animation: none; } }
@@ -203,7 +206,6 @@ body:has(.navigation-drawer[open]) { overflow: hidden; }
     padding-inline: 0;
   }
   .app-header-action-label { display: none; }
-  .profile-trigger { width: var(--control-height); flex-basis: var(--control-height); }
 }
 
 @media (pointer: coarse) {
