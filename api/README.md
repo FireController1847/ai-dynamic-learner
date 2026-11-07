@@ -1,12 +1,12 @@
 # Dynamic Learner authentication API
 
-Cloudflare Worker for authenticated Dynamic Learner accounts and **opt-in cloud synchronization** of validated workspace snapshots. Local IndexedDB remains the editable source for each device, and other local identities and personal profile details remain device-only. All changes are under ACCOUNTS PR #30.
+Cloudflare Worker for authenticated Dynamic Learner accounts and **cloud synchronization** of validated workspace snapshots and account profiles. Local IndexedDB remains the editable source for workspaces; signed-in profile details are stored in D1. All changes are under ACCOUNTS PR #30.
 
 ## Cloud workspace synchronization
 
 Newly verified email accounts now establish an authenticated session automatically and request cloud synchronization of the **current local workspace**. Newly created Google/Microsoft accounts request the same after their first OAuth callback. Existing accounts synchronize automatically when a device has a previously linked workspace, or when a new device has an empty workspace and a saved cloud copy. Other existing sign-ins can enable sync from Profile.
 
-The API stores validated client workspace snapshots in D1 chunks and publishes a per-account revision only after every chunk is present. Uploads use conditional revisions to avoid overwriting concurrent edits. Different local and cloud edits **are not automatically merged**: the UI reports a conflict, preserving both copies. Only the active selected workspace syncs; local profile picture, contact fields, and other device-only identities do not sync. Do not assume an unverified account or a session with connection errors has synchronized anything.
+The API stores validated client workspace snapshots in D1 chunks and publishes a per-account revision only after every chunk is present. Uploads use conditional revisions to avoid overwriting concurrent edits. Different local and cloud edits **are not automatically merged**. If an account already has a saved cloud workspace and this browser has separate local data, the Profile page offers **Sign out**, **Download local workspace**, and **Use synced workspace instead**. Replacement requires two explicit clicks, validates the remote data, and atomically deletes the selected local identity's generations before activating the cloud copy. Other legacy local identities remain untouched but are no longer exposed in Profile. Display name, avatar, contact email, phone and bio are saved to D1 per account and sync across devices. Do not assume an unverified account or a session with connection errors has synchronized anything.
 
 **Required production migration before enabling the new UI:**
 
@@ -16,7 +16,7 @@ npx wrangler d1 migrations apply dynlearn-data --remote
 npx wrangler deploy
 ```
 
-Review the migration `api/migrations/0002_cloud_sync.sql` before applying it. The Worker and frontend deployments are independent. Local `npm start` applies the migration only to local SQLite. No remote data is migrated automatically. Snapshot size is limited to 128 MiB; large uploads are split into 64 KiB units and may take time or hit hosting quotas. A failed sync does not delete local data. Cloud snapshots are stored as account-authenticated data in D1; this is not end-to-end encrypted.
+Review migrations `api/migrations/0002_cloud_sync.sql` and `api/migrations/0003_account_profiles.sql` before applying them. Account profile updates use optimistic revisions to reject stale writes from other devices. The Worker and frontend deployments are independent. Local `npm start` applies the migration only to local SQLite. No remote data is migrated automatically. Snapshot size is limited to 128 MiB; large uploads are split into 64 KiB units and may take time or hit hosting quotas. A failed sync does not delete local data. Cloud snapshots are stored as account-authenticated data in D1; this is not end-to-end encrypted.
 
 ## Local development: one command
 
@@ -120,6 +120,8 @@ https://api.dynlearn.org/v1/auth/config
 | POST | `/v1/auth/reset-complete` | Consume reset token, update password, revoke all sessions |
 | GET | `/v1/auth/oauth/{google|microsoft}/start` | OAuth redirect with state, PKCE |
 | GET | `/v1/auth/oauth/{google|microsoft}/callback` | Verify callback and create server session |
+| GET | `/v1/account/profile` | Read the signed-in account's profile stored in D1 |
+| POST | `/v1/account/profile` | Update an account profile using a conditional revision |
 | GET | `/v1/sync/manifest` | Read the signed-in account's current cloud revision and snapshot manifest |
 | GET | `/v1/sync/chunk?id=…&index=…` | Read one published snapshot chunk, account-scoped |
 | POST | `/v1/sync/start` | Start a chunked upload against an expected cloud revision |
@@ -134,6 +136,6 @@ All credentialed POST requests require the exact configured frontend Origin. Coo
 - Large password hashing workloads may require a paid Workers CPU allocation. Do **not** lower password hashing strength merely to fit a free tier.
 - Resend and Google/Microsoft may have their own provider quotas, email-domain validation, consent-screen review and subscription costs.
 - Password reset revokes existing sessions. Browser local workspaces remain stored regardless of login or logout.
-- Auth email changes, account deletion, merging OAuth identities with password accounts, MFA, automatic merging of concurrent workspace changes, and cloud synchronization of device-only profile fields have not been built. Never merge account identities by unverified email addresses.
+- Auth email changes, account deletion, merging OAuth identities with password accounts, MFA, and automatic merging of concurrent workspace changes have not been built. Never merge account identities by unverified email addresses.
 - Keep `AUTH_PEPPER` secure and backed up: losing it makes existing password hashes unverifiable. Rotating it needs a planned migration.
 - Cloudflare account-level D1 is not the same as per-device IndexedDB. No server-side data API exists for learning records yet.

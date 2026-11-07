@@ -1,4 +1,4 @@
-import { PROFILE_AVATAR_DATA_LIMIT } from './profile-storage.ts';
+import { PROFILE_AVATAR_DATA_LIMIT } from './cloud-profile.ts';
 
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
 const AVATAR_SIZE = 256;
@@ -44,7 +44,7 @@ export async function prepareProfilePhoto(file: File): Promise<string> {
     const result = canvas.toDataURL('image/jpeg', 0.82);
     if (!result.startsWith('data:image/jpeg;base64,') ||
       result.length > PROFILE_AVATAR_DATA_LIMIT) {
-      throw new Error('This photo is too large to keep locally.');
+      throw new Error('This photo is too large for your account profile.');
     }
     return result;
   } finally {

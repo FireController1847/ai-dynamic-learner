@@ -558,6 +558,27 @@ export class WorkspaceDataApi {
    * active pointer as ordinary backup restoration does. No valid old model is
    * needed, so this also works when stored content fails hydration.
    */
+  /**
+   * Explicitly confirmed cloud handoff. The downloaded workspace is validated
+   * first, and its records replace this selected identity's workspace history
+   * atomically. A late local commit or identity switch aborts the transaction.
+   */
+  async replaceWorkspaceAndClear(payload: unknown, expectedWorkspaceId: string,
+    expectedCommitSequence: number): Promise<void> {
+    if (this.compatibility?.mode !== 'normal' && this.compatibility !== null) {
+      throw new DataApiError('validation', 'Cannot erase an incompatible local workspace.');
+    }
+    const parsed = parseWorkspace(JSON.stringify(payload));
+    await this.store.open();
+    const previous = await this.store.activeWorkspaceId();
+    if (previous !== this.active() || previous !== expectedWorkspaceId) {
+      throw new DataApiError('conflict', 'The active local workspace changed.');
+    }
+    const next = createId();
+    await this.store.clearAndActivate(next, previous, workspaceRows(next, parsed), expectedCommitSequence);
+    this.workspaceId = next;
+  }
+
   async clearWorkspace(): Promise<void> {
     await this.store.open();
     if (this.compatibility?.mode !== 'normal' && this.compatibility !== null) {
@@ -577,7 +598,7 @@ export class WorkspaceDataApi {
    * transaction. Otherwise an edit from another tab between two reads might
    * cause us to incorrectly mark newer content as backed up.
    */
-  async exportSnapshot(): Promise<{ json: string; workspaceId: string; authoredRevision: number }> {
+  async exportSnapshot(): Promise<{ json: string; workspaceId: string; authoredRevision: number; commitSequence: number }> {
     if (this.compatibility?.mode !== 'normal' && this.compatibility !== null) {
       throw new DataApiError('validation', 'The standard backup would omit unsupported content. Download a raw IndexedDB rescue copy instead.');
     }
@@ -589,7 +610,7 @@ export class WorkspaceDataApi {
       throw new DataApiError('conflict', 'The workspace was replaced in another tab. Reload before exporting.');
     }
     const meta = snapshots.get('workspaceMeta')?.find(row => row.id === workspaceId);
-    if (!meta || typeof meta.authoredRevision !== 'number') {
+    if (!meta || typeof meta.authoredRevision !== 'number' || typeof meta.commitSequence !== 'number') {
       throw new DataApiError('unavailable', 'Workspace backup metadata is missing.');
     }
     const reader = {
@@ -597,7 +618,8 @@ export class WorkspaceDataApi {
         (snapshots.get(store) ?? []) as T[],
     };
     const workspace = await hydrateWorkspace(reader, workspaceId);
-    return { json: JSON.stringify(workspace), workspaceId, authoredRevision: meta.authoredRevision };
+    return { json: JSON.stringify(workspace), workspaceId, authoredRevision: meta.authoredRevision,
+      commitSequence: meta.commitSequence };
   }
 
   async exportWorkspaceJson(): Promise<string> {

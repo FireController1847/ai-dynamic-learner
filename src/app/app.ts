@@ -389,12 +389,6 @@ const App = defineComponent({
           'aria-busy': !isStandalonePage.value && !workspace.ready.value && !workspace.storageProblem.value,
         }, [
           isChangelog.value ? h(ChangelogPage) : isProfile.value ? h(ProfilePage, {
-            directory: workspace.identityDirectory.value,
-            profileRevision: workspace.profileRevision.value,
-            onSwitch: workspace.selectIdentity,
-            onCreate: workspace.createLocalIdentity,
-            onRename: workspace.renameLocalIdentity,
-            onDelete: workspace.deleteLocalIdentity,
             session: accountSession,
             cloudSync,
           }) : !workspace.ready.value

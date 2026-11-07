@@ -22,7 +22,9 @@ type RemoteManifest = {
   updatedAt: number;
 };
 type LocalLink = { remoteRevision: number; digest: string };
-type SavedSnapshot = { json: string; workspaceId: string; authoredRevision: number };
+type SavedSnapshot = {
+  json: string; workspaceId: string; authoredRevision: number; commitSequence: number
+};
 
 function linkKey(accountId: string, workspaceId: string): string {
   return LINK_PREFIX + accountId + '.' + workspaceId;
@@ -146,6 +148,7 @@ export function useCloudSync(session: AccountSessionController, workspace: Works
   const status = ref<CloudSyncStatus>('off');
   const message = ref('Sign in to enable cloud synchronization.');
   const lastSyncedAt = ref<string | null>(null);
+  const handoffRequired = ref(false);
   let timer: number | undefined;
   let polling: number | undefined;
   let running = false;
@@ -162,6 +165,7 @@ export function useCloudSync(session: AccountSessionController, workspace: Works
     timer = window.setTimeout(() => { timer = undefined; void synchronize(); }, ms);
   }
   function setSynced() {
+    handoffRequired.value = false;
     status.value = 'synced';
     lastSyncedAt.value = new Date().toISOString();
     message.value = 'Cloud sync is on. Your saved workspace is backed up and checked for changes automatically.';
@@ -176,6 +180,7 @@ export function useCloudSync(session: AccountSessionController, workspace: Works
     const id = accountId();
     if (!id) {
       status.value = 'off';
+      handoffRequired.value = false;
       message.value = 'Sign in to enable cloud synchronization.';
       return;
     }
@@ -206,7 +211,8 @@ export function useCloudSync(session: AccountSessionController, workspace: Works
       if (!linked && remote.revision > 0) {
         if (!emptyLearningData(local.json)) {
           status.value = 'conflict';
-          message.value = 'This account already has a cloud workspace, and this device has separate local work. Neither has been overwritten. Download a local backup before choosing how to combine them.';
+          handoffRequired.value = true;
+          message.value = 'Your browser and account have separate workspaces. Choose which workspace to keep.';
           return;
         }
         status.value = 'syncing';
@@ -230,7 +236,8 @@ export function useCloudSync(session: AccountSessionController, workspace: Works
       if (linked && remote.revision !== linked.remoteRevision) {
         if (remote.revision < linked.remoteRevision || localDigest !== linked.digest) {
           status.value = 'conflict';
-          message.value = 'Both this device and the cloud changed. Sync is paused to protect both copies; no changes were overwritten.';
+          handoffRequired.value = true;
+          message.value = 'Your local and cloud workspaces changed independently. Choose which copy to keep.';
           return;
         }
         status.value = 'syncing';
@@ -275,6 +282,65 @@ export function useCloudSync(session: AccountSessionController, workspace: Works
       running = false;
     }
   }
+  async function downloadLocal(): Promise<void> {
+    try {
+      await workspace.downloadBackup();
+      if (status.value === 'conflict') {
+        message.value = 'Local backup download initiated. Confirm it is saved before replacing the workspace.';
+      }
+    } catch (cause) {
+      message.value = (cause instanceof Error ? cause.message : 'Could not export local workspace.') +
+        ' Your local data has not been changed.';
+      throw cause;
+    }
+  }
+
+  /**
+   * A signed-in user must explicitly confirm discarding a distinct local
+   * workspace. Do not delete anything until we have a complete validated
+   * cloud snapshot, and then use atomic local pointer/record replacement.
+   */
+  async function useCloudWorkspace(): Promise<void> {
+    const id = accountId();
+    if (!id || running || status.value !== 'conflict') return;
+    running = true;
+    status.value = 'syncing';
+    message.value = 'Preparing cloud workspace…';
+    try {
+      const local = await workspace.cloudSnapshot();
+      const remote = await getManifest();
+      ensureStillSignedIn(id);
+      if (remote.revision < 1) {
+        throw new Error('This account no longer has a cloud workspace.');
+      }
+      const json = await download(remote, done => {
+        message.value = 'Downloading synced workspace (' + done + '/' + remote.chunks + ')…';
+      });
+      ensureStillSignedIn(id);
+      const latest = await getManifest();
+      if (latest.revision !== remote.revision || latest.digest !== remote.digest ||
+          latest.uploadId !== remote.uploadId) {
+        throw new Error('The cloud workspace changed while downloading. Please retry the handoff.');
+      }
+      message.value = 'Replacing the selected local workspace…';
+      await workspace.useCloudWorkspace(parseWorkspace(json), local);
+      const restored = await workspace.cloudSnapshot();
+      writeLink(id, restored.workspaceId, {
+        remoteRevision: remote.revision, digest: await digest(restored.json),
+      });
+      clearPending(id);
+      session.autoSyncAccountId.value = null;
+      handoffRequired.value = false;
+      setSynced();
+    } catch (cause) {
+      handoffRequired.value = true;
+      status.value = 'conflict';
+      message.value = (cause instanceof Error ? cause.message : 'Could not complete cloud handoff.') +
+        ' Your existing local data was not intentionally replaced; check your workspace before retrying.';
+      throw cause;
+    } finally { running = false; }
+  }
+
   function enable() {
     const id = accountId();
     if (!id) return;
@@ -329,6 +395,7 @@ export function useCloudSync(session: AccountSessionController, workspace: Works
     if (timer !== undefined) clearTimeout(timer);
     if (polling !== undefined) clearInterval(polling);
   });
-  return { status, message, lastSyncedAt, enable, retry };
+  return { status, message, lastSyncedAt, handoffRequired,
+    enable, retry, downloadLocal, useCloudWorkspace };
 }
 export type CloudSyncController = ReturnType<typeof useCloudSync>;

@@ -58,6 +58,49 @@ child.stdout.on('data', part => { logs += String(part); logs = logs.slice(-18000
 child.stderr.on('data', part => { logs += String(part); logs = logs.slice(-18000); });
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+async function exerciseProfile() {
+  const headers = { Origin: frontend, Cookie: 'dl_dev_session=' + token };
+  const first = await fetch(api + '/v1/account/profile', { headers });
+  const initial = await first.json();
+  if (first.status !== 200 || initial.revision !== 0 ||
+      !initial.profile || initial.profile.displayName !== 'ci') {
+    throw new Error('Could not load a default account profile: ' + JSON.stringify(initial));
+  }
+  async function save(revision, name, about) {
+    const response = await fetch(api + '/v1/account/profile', {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        revision, displayName: name, about, contactEmail: 'contact@example.test',
+        phone: '555-0100', avatarDataUrl: null,
+      }),
+    });
+    return { status: response.status, data: await response.json() };
+  }
+  const firstSave = await save(0, 'Cloud learner', 'Synced bio');
+  if (firstSave.status !== 200 || firstSave.data.revision !== 1) {
+    throw new Error('Could not create cloud account profile: ' + JSON.stringify(firstSave));
+  }
+  const changed = await save(1, 'Another name', 'Updated on device two');
+  if (changed.status !== 200 || changed.data.revision !== 2) {
+    throw new Error('Could not update cloud account profile: ' + JSON.stringify(changed));
+  }
+  const stale = await save(1, 'Stale name', 'This must be rejected');
+  if (stale.status !== 409) throw new Error('Stale account profile update was not rejected.');
+  const restored = await (await fetch(api + '/v1/account/profile', { headers })).json();
+  if (restored.revision !== 2 || restored.profile.displayName !== 'Another name' ||
+      restored.profile.about !== 'Updated on device two') {
+    throw new Error('Account profile could not be restored from D1.');
+  }
+  const rejected = await fetch(api + '/v1/account/profile');
+  if (rejected.status !== 401) throw new Error('Unauthenticated account profile read succeeded.');
+  const missingOrigin = await fetch(api + '/v1/account/profile', {
+    method: 'POST', headers: { Cookie: 'dl_dev_session=' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ revision: 2, displayName: 'Bad', about: '', contactEmail: '', phone: '', avatarDataUrl: null }),
+  });
+  if (missingOrigin.status !== 403) throw new Error('Profile update succeeded without trusted Origin.');
+  console.log('Live D1 account profile synchronization and CAS test PASSED.');
+}
 async function exerciseVerification() {
   const response = await fetch(api + '/v1/auth/verify', {
     method: 'POST',
@@ -146,6 +189,7 @@ async function verify() {
       }
       await exerciseVerification();
       await exerciseSync();
+      await exerciseProfile();
       console.log('Live local Wrangler auth/config smoke test PASSED:', JSON.stringify({
         ready: result.ready, email: result.email, google: result.google, microsoft: result.microsoft,
       }));

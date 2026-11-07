@@ -111,25 +111,21 @@ export const AccountAccessPanel = defineComponent({
       const showRecovery = mode.value === 'reset-confirm' && resetToken.value !== null &&
         options.email && options.ready;
       return h('section', { class: 'profile-identities profile-account-access', 'aria-label': 'Online account' }, [
-        h('div', { class: 'profile-identities-intro' }, [
-          h('h3', 'Online account'),
-          h('p', 'Sign in to access your account. New accounts start syncing this device’s workspace after verification; existing cloud data is never overwritten silently.'),
-        ]),
         (!auth.available || current.status === 'unavailable')
           ? h('p', { class: 'profile-account-unavailable', role: 'status' },
-            'Online authentication is not configured on the API yet. Local identities and studying remain available.')
+            'Sign-in is temporarily unavailable. You can keep studying offline.')
           : null,
         current.status === 'checking' ? h('p', { role: 'status' }, 'Checking your account session…') : null,
         current.status === 'connection-required'
           ? h('div', { class: 'profile-account-status' }, [
-            h('p', 'The online session could not be verified. This may be a local-development origin mismatch, a network problem, or an API error. Your local work is still available.'),
+            h('p', 'Could not connect to your account. Your local work is safe.'),
             h('button', { type: 'button', class: 'quiet-button', disabled: auth.busy.value,
               onClick: () => { void auth.restore(); },
             }, 'Try again'),
           ]) : null,
         current.status === 'verification-required' && !showRecovery
           ? h('div', { class: 'profile-account-status' }, [
-            h('p', 'Email verification is pending for ' + current.email + '.'),
+            h('p', 'Verify ' + current.email + ' to finish creating your account.'),
             h('button', { type: 'button', class: 'quiet-button', disabled: auth.busy.value,
               onClick: () => { void auth.resendVerification(current.email).catch(() => undefined); },
             }, 'Resend verification email'),
@@ -152,7 +148,9 @@ export const AccountAccessPanel = defineComponent({
         options.ready && current.status !== 'authenticated' &&
           (current.status === 'signed-out' || showRecovery)
           ? h('div', { class: 'profile-account-form-area' }, [
-            options.email && !showRecovery ? h('h4', mode.value === 'register' ? 'Create your account' : mode.value === 'reset' ? 'Reset your password' : 'Welcome back') : null,
+            options.email && !showRecovery && mode.value !== 'sign-in'
+              ? h('h3', { class: 'profile-account-form-heading' },
+                mode.value === 'register' ? 'Create account' : 'Reset password') : null,
             options.email ? h('form', { class: 'profile-form profile-account-form',
               onSubmit: (event: Event) => { void submit(event); },
             }, [
@@ -189,6 +187,11 @@ export const AccountAccessPanel = defineComponent({
                     },
                   }),
                 ]) : null,
+              mode.value === 'sign-in' ? h('button', { type: 'button',
+                class: 'quiet-button profile-account-forgot',
+                disabled: submitting.value || auth.busy.value,
+                onClick: () => changeMode('reset'),
+              }, 'Forgot password?') : null,
               formError.value ? h('p', { class: 'profile-error', role: 'alert' }, formError.value) : null,
               h('div', { class: 'profile-form-actions' }, [
                 h('button', { type: 'submit', class: 'card-primary-button',
@@ -199,11 +202,7 @@ export const AccountAccessPanel = defineComponent({
                       : mode.value === 'reset' ? 'Request reset' : 'Set new password'),
                 mode.value === 'reset' ? h('button', { type: 'button', class: 'quiet-button',
                   onClick: () => changeMode('sign-in'), disabled: submitting.value,
-                }, 'Back to sign in')
-                  : mode.value === 'reset-confirm' ? null
-                    : h('button', { type: 'button', class: 'quiet-button',
-                      onClick: () => changeMode('reset'), disabled: submitting.value,
-                    }, 'Forgot password?'),
+                }, 'Back to sign in') : null,
               ]),
             ]) : null,
             options.email && !showRecovery && (mode.value === 'sign-in' || mode.value === 'register')
@@ -217,14 +216,21 @@ export const AccountAccessPanel = defineComponent({
             !showRecovery && (options.google || options.microsoft) ? h('div', {
               class: 'profile-social-login', role: 'group', 'aria-label': 'Other sign-in providers',
             }, [
+              options.email ? h('p', { class: 'profile-social-divider' }, 'or') : null,
               options.google ? h('button', { type: 'button', class: 'quiet-button',
                 disabled: auth.busy.value || submitting.value,
                 onClick: () => socialLogin('google'),
-              }, 'Continue with Google') : null,
+              }, [
+                h('span', { class: 'profile-social-mark', 'aria-hidden': 'true' }, 'G'),
+                mode.value === 'register' ? 'Sign up with Google' : 'Continue with Google',
+              ]) : null,
               options.microsoft ? h('button', { type: 'button', class: 'quiet-button',
                 disabled: auth.busy.value || submitting.value,
                 onClick: () => socialLogin('microsoft'),
-              }, 'Continue with Microsoft') : null,
+              }, [
+                h('span', { class: 'profile-social-mark', 'aria-hidden': 'true' }, 'M'),
+                mode.value === 'register' ? 'Sign up with Microsoft' : 'Continue with Microsoft',
+              ]) : null,
             ]) : null,
             !options.email && !options.google && !options.microsoft
               ? h('p', { class: 'profile-field-hint' }, 'No sign-in methods have been configured yet.') : null,
@@ -233,6 +239,8 @@ export const AccountAccessPanel = defineComponent({
         callbackError.value ? h('p', { class: 'profile-error', role: 'alert' }, callbackError.value) : null,
         auth.error.value ? h('p', { class: 'profile-error', role: 'alert' }, auth.error.value) : null,
         auth.notice.value ? h('p', { class: 'profile-feedback', role: 'status' }, auth.notice.value) : null,
+        h('footer', { class: 'profile-account-privacy-note' },
+          'On the live site, GitHub Pages serves Dynamic Learner. Account and sync requests go directly from your browser to Cloudflare Workers and D1 storage—never through a privately operated application server.'),
       ]);
     };
   },

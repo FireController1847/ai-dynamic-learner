@@ -1,302 +1,302 @@
 import { defineComponent, h, onBeforeUnmount, onMounted, ref, watch, type PropType } from 'vue';
-import type { IdentityDirectory } from '../core/data/local-identities.ts';
-import { LocalIdentityPanel } from './local-identity-panel.ts';
 import { AccountAccessPanel } from './account-access-panel.ts';
 import type { AccountSessionController } from './auth-session.ts';
 import type { CloudSyncController } from './cloud-sync.ts';
 import { Icon } from '../components/icon.ts';
 import { prepareProfilePhoto } from './profile-photo.ts';
-import { PROFILE_ABOUT_LIMIT, PROFILE_EMAIL_LIMIT, PROFILE_NAME_LIMIT,
-  PROFILE_PHONE_LIMIT, PROFILE_STORAGE_KEY, profileStorageKey, localProfileRepository } from './profile-storage.ts';
+import {
+  useCloudProfile, PROFILE_ABOUT_LIMIT, PROFILE_EMAIL_LIMIT, PROFILE_NAME_LIMIT, PROFILE_PHONE_LIMIT,
+  type CloudProfile,
+} from './cloud-profile.ts';
 
 function initials(name: string): string {
   return name.trim().split(/\s+/).slice(0, 2).map(part => part[0] ?? '').join('').toUpperCase() || 'DL';
+}
+function copyProfile(value: CloudProfile): CloudProfile {
+  return { ...value };
 }
 
 export const ProfilePage = defineComponent({
   name: 'ProfilePage',
   props: {
-    directory: { type: Object as PropType<IdentityDirectory | null>, default: null },
-    profileRevision: { type: Number, default: 0 },
-    onSwitch: { type: Function as PropType<(id: string) => Promise<void>>, required: true },
-    onCreate: { type: Function as PropType<(label: string, transferGuest: boolean) => Promise<void>>, required: true },
-    onRename: { type: Function as PropType<(id: string, label: string, oldLabel: string) => Promise<void>>, required: true },
-    onDelete: { type: Function as PropType<(id: string, workspaceId: string) => Promise<void>>, required: true },
     session: { type: Object as PropType<AccountSessionController>, required: true },
     cloudSync: { type: Object as PropType<CloudSyncController>, required: true },
   },
   setup(props) {
-    const identityId = () => props.directory?.activeIdentityId ?? 'guest';
-    const profile = ref(localProfileRepository.read(identityId()));
+    const accountProfile = useCloudProfile(props.session);
     const editing = ref(false);
-    const draftName = ref(profile.value.displayName);
-    const draftAbout = ref(profile.value.about);
-    const draftEmail = ref(profile.value.email);
-    const draftPhone = ref(profile.value.phone);
-    const draftAvatar = ref(profile.value.avatarDataUrl);
+    const draft = ref<CloudProfile | null>(null);
     const photoInput = ref<HTMLInputElement | null>(null);
     const photoBusy = ref(false);
-    const feedback = ref('');
-    const error = ref('');
-    const changedElsewhere = ref(false);
+    const confirmReplace = ref(false);
+    const profileError = ref('');
+    const downloaded = ref(false);
     let photoRequest = 0;
 
-    function handleStorage(event: StorageEvent) {
-      if (event.key !== profileStorageKey(identityId()) &&
-        (identityId() !== 'guest' || event.key !== PROFILE_STORAGE_KEY) && event.key !== null) return;
-      if (editing.value) {
-        changedElsewhere.value = true;
-        return;
-      }
-      profile.value = localProfileRepository.read(identityId());
-      feedback.value = '';
-    }
-
-    watch(() => [identityId(), props.profileRevision], () => {
-      photoRequest += 1;
-      photoBusy.value = false;
-      profile.value = localProfileRepository.read(identityId());
+    watch(() => props.session.state.value.status === 'authenticated'
+      ? props.session.state.value.account.id : null, () => {
       editing.value = false;
-      feedback.value = '';
-      error.value = '';
-      changedElsewhere.value = false;
-    });
-    onMounted(() => window.addEventListener('storage', handleStorage));
-    onBeforeUnmount(() => {
-      window.removeEventListener('storage', handleStorage);
+      draft.value = null;
+      profileError.value = '';
+      confirmReplace.value = false;
+      downloaded.value = false;
       photoRequest += 1;
     });
+
+    watch(() => props.cloudSync.status.value, status => {
+      if (status !== 'conflict') confirmReplace.value = false;
+    });
+    onMounted(() => accountProfile.beginPolling(() => !editing.value &&
+      props.cloudSync.status.value !== 'conflict'));
+    onBeforeUnmount(() => { photoRequest += 1; });
 
     function beginEdit() {
-      draftName.value = profile.value.displayName;
-      draftAbout.value = profile.value.about;
-      draftEmail.value = profile.value.email;
-      draftPhone.value = profile.value.phone;
-      draftAvatar.value = profile.value.avatarDataUrl;
-      feedback.value = '';
-      error.value = '';
-      changedElsewhere.value = false;
+      if (!accountProfile.profile.value) return;
+      draft.value = copyProfile(accountProfile.profile.value);
+      profileError.value = '';
       editing.value = true;
     }
-
     function cancelEdit() {
       photoRequest += 1;
       photoBusy.value = false;
+      profileError.value = '';
+      draft.value = null;
       editing.value = false;
-      error.value = '';
-      if (changedElsewhere.value) profile.value = localProfileRepository.read(identityId());
-      changedElsewhere.value = false;
     }
-
     async function choosePhoto(event: Event) {
       const input = event.target;
       if (!(input instanceof HTMLInputElement)) return;
       const file = input.files?.[0];
       input.value = '';
-      if (!file) return;
-
+      if (!file || !editing.value) return;
       const request = ++photoRequest;
       photoBusy.value = true;
-      error.value = '';
+      profileError.value = '';
       try {
         const dataUrl = await prepareProfilePhoto(file);
-        if (request === photoRequest && editing.value) draftAvatar.value = dataUrl;
+        if (request === photoRequest && draft.value) draft.value.avatarDataUrl = dataUrl;
       } catch (cause) {
-        if (request === photoRequest && editing.value) {
-          error.value = cause instanceof Error ? cause.message : 'The photo could not be processed.';
+        if (request === photoRequest) {
+          profileError.value = cause instanceof Error ? cause.message : 'The photo could not be processed.';
         }
       } finally {
         if (request === photoRequest) photoBusy.value = false;
       }
     }
-
-    function removePhoto() {
-      photoRequest += 1;
-      photoBusy.value = false;
-      draftAvatar.value = null;
-      error.value = '';
-    }
-
-    function save(event: Event) {
+    async function save(event: Event) {
       event.preventDefault();
-      error.value = '';
-      if (photoBusy.value) {
-        error.value = 'Finish processing your photo before saving.';
+      if (!draft.value || photoBusy.value) return;
+      profileError.value = '';
+      const next = {
+        ...draft.value,
+        displayName: draft.value.displayName.trim(),
+        about: draft.value.about.trim(),
+        contactEmail: draft.value.contactEmail.trim(),
+        phone: draft.value.phone.trim(),
+      };
+      if (!next.displayName || next.displayName.length > PROFILE_NAME_LIMIT ||
+          next.about.length > PROFILE_ABOUT_LIMIT ||
+          next.contactEmail.length > PROFILE_EMAIL_LIMIT ||
+          next.phone.length > PROFILE_PHONE_LIMIT) {
+        profileError.value = 'Check the profile fields before saving.';
         return;
       }
-      if (changedElsewhere.value) {
-        error.value = 'This profile changed in another tab. Cancel and reopen editing to see the latest version.';
-        return;
-      }
-      const displayName = draftName.value.trim();
-      const about = draftAbout.value.trim();
-      const email = draftEmail.value.trim();
-      const phone = draftPhone.value.trim();
-      if (!displayName || displayName.length > PROFILE_NAME_LIMIT || about.length > PROFILE_ABOUT_LIMIT ||
-        email.length > PROFILE_EMAIL_LIMIT || phone.length > PROFILE_PHONE_LIMIT) {
-        error.value = 'Check the field lengths and enter a display name.';
-        return;
-      }
-      const next = { displayName, about, email, phone, avatarDataUrl: draftAvatar.value };
       try {
-        localProfileRepository.write(identityId(), next);
-        profile.value = next;
+        await accountProfile.save(next);
         editing.value = false;
-        feedback.value = 'Profile saved on this device.';
-      } catch {
-        error.value = 'This browser could not save your profile. Check that site storage is available.';
+        draft.value = null;
+      } catch (cause) {
+        profileError.value = cause instanceof Error ? cause.message : 'Could not save profile.';
       }
     }
+    function profileField(label: string, value: string) {
+      return h('div', { class: 'profile-detail' }, [
+        h('span', { class: 'profile-detail-label' }, label),
+        h('p', value || 'Not provided'),
+      ]);
+    }
+    function signOut() {
+      confirmReplace.value = false;
+      void props.session.signOut().catch(() => undefined);
+    }
+    async function downloadLocal() {
+      downloaded.value = false;
+      try {
+        await props.cloudSync.downloadLocal();
+        downloaded.value = true;
+      } catch {
+        // The cloud-sync controller presents the actionable error.
+      }
+    }
+    async function replaceLocal() {
+      if (!confirmReplace.value) {
+        confirmReplace.value = true;
+        return;
+      }
+      confirmReplace.value = false;
+      await props.cloudSync.useCloudWorkspace().catch(() => undefined);
+    }
 
-    return () => {
-      const avatar = editing.value ? draftAvatar.value : profile.value.avatarDataUrl;
-      const visibleName = editing.value ? draftName.value || profile.value.displayName : profile.value.displayName;
-
-      return h('section', { class: 'profile-page', 'aria-label': 'Your profile' }, [
-        h('div', { class: 'profile-intro' }, [
-          h('h2', props.session.state.value.status === 'authenticated' ? 'Your profile' : 'Sign in'),
-          h('p', props.session.state.value.status === 'authenticated'
-            ? 'Your account and this device’s local workspace.'
-            : 'Use your account or continue studying as a guest. Your local work stays on this device until cloud sync is enabled.'),
+    function handoffScreen() {
+      const sync = props.cloudSync;
+      const busy = sync.status.value === 'syncing';
+      return h('section', { class: 'account-handoff', 'aria-label': 'Choose your workspace' }, [
+        h('div', { class: 'account-handoff-emblem' }, h(Icon, { name: 'archive' })),
+        h('h2', 'Choose your workspace'),
+        h('p', 'This browser has local work, and your account has a different synced workspace. Nothing has been replaced.'),
+        h('div', { class: 'account-handoff-actions' }, [
+          h('button', { type: 'button', class: 'quiet-button', disabled: busy || props.session.busy.value,
+            onClick: signOut,
+          }, [h(Icon, { name: 'log-in' }), 'Sign out and keep local data']),
+          h('button', { type: 'button', class: 'quiet-button', disabled: busy,
+            onClick: () => { void downloadLocal(); },
+          }, [h(Icon, { name: 'download' }), 'Download local workspace']),
+          h('button', {
+            type: 'button', class: 'card-primary-button', disabled: busy,
+            onClick: () => { void replaceLocal(); },
+          }, 'Use synced workspace instead'),
         ]),
-        props.session.state.value.status !== 'authenticated'
-          ? h(AccountAccessPanel, { session: props.session }) : null,
-        h('section', { class: 'profile-card', 'aria-label': 'Profile details' }, [
-          h('div', { class: 'profile-card-heading' }, [
-            h('div', { class: 'profile-avatar', 'aria-hidden': 'true' },
-              avatar ? h('img', { class: 'profile-avatar-image', src: avatar, alt: '' }) : initials(visibleName)),
-            h('div', { class: 'profile-identity' }, [
-              h('h3', profile.value.displayName),
-              h('p', 'Local profile'),
-            ]),
-            !editing.value ? h('button', {
-              type: 'button', class: 'quiet-button profile-edit-button',
-              disabled: !props.directory,
-              onClick: beginEdit,
-            }, [h(Icon, { name: 'pencil' }), 'Edit profile']) : null,
+        downloaded.value ? h('p', { class: 'profile-field-hint account-handoff-hint', role: 'status' },
+          'Backup download started. Confirm the file was saved before replacing your workspace.') : null,
+        confirmReplace.value ? h('div', { class: 'account-handoff-confirm', role: 'group',
+          'aria-label': 'Confirm local workspace replacement' }, [
+          h('strong', 'Replace local workspace?'),
+          h('p', 'This permanently deletes the currently selected local workspace and its previous saved generations in this browser. Any other legacy local identities are left untouched. Only your account’s cloud copy will remain active.'),
+          h('div', { class: 'profile-form-actions' }, [
+            h('button', { type: 'button', class: 'quiet-button', onClick: () => { confirmReplace.value = false; } },
+              'Keep local data'),
+            h('button', { type: 'button', class: 'card-primary-button',
+              onClick: () => { void replaceLocal(); } }, 'Yes, replace local data'),
           ]),
-          editing.value ? h('form', { class: 'profile-form', onSubmit: save }, [
+        ]) : null,
+        h('p', { class: 'account-handoff-note', role: 'status' }, sync.message.value),
+      ]);
+    }
+
+    function profileCard() {
+      const profile = accountProfile.profile.value;
+      if (accountProfile.state.value === 'loading' || !profile) {
+        return h('section', { class: 'profile-card', role: 'status' }, [
+          h('p', accountProfile.state.value === 'error' ? accountProfile.error.value : 'Loading account profile…'),
+          accountProfile.state.value === 'error' ? h('button', {
+            type: 'button', class: 'quiet-button', onClick: () => { void accountProfile.load(); },
+          }, 'Try again') : null,
+        ]);
+      }
+      const values = editing.value && draft.value ? draft.value : profile;
+      const avatar = values.avatarDataUrl;
+      return h('section', { class: 'profile-card', 'aria-label': 'Account profile' }, [
+        h('div', { class: 'profile-card-heading' }, [
+          h('div', { class: 'profile-avatar', 'aria-hidden': 'true' },
+            avatar ? h('img', { class: 'profile-avatar-image', src: avatar, alt: '' }) : initials(values.displayName)),
+          h('div', { class: 'profile-identity' }, [
+            h('h3', profile.displayName),
+            h('p', 'Synced account profile'),
+          ]),
+          !editing.value ? h('button', { type: 'button', class: 'quiet-button profile-edit-button',
+            onClick: beginEdit,
+          }, [h(Icon, { name: 'pencil' }), 'Edit profile']) : null,
+        ]),
+        editing.value && draft.value
+          ? h('form', { class: 'profile-form', onSubmit: (event: Event) => { void save(event); } }, [
             h('div', { class: 'profile-photo-field' }, [
               h('span', { class: 'profile-field-title' }, 'Profile picture'),
               h('div', { class: 'profile-photo-actions' }, [
-                h('input', {
-                  ref: photoInput, id: 'profile-photo-file', type: 'file',
+                h('input', { ref: photoInput, id: 'profile-photo-file', type: 'file',
                   class: 'visually-hidden', accept: 'image/jpeg,image/png,image/webp,image/gif',
                   tabindex: -1, 'aria-label': 'Choose a profile picture',
-                  onChange: (event: Event) => { void choosePhoto(event); },
-                }),
-                h('button', {
-                  type: 'button', class: 'quiet-button', disabled: photoBusy.value,
+                  onChange: (event: Event) => { void choosePhoto(event); } }),
+                h('button', { type: 'button', class: 'quiet-button', disabled: photoBusy.value,
                   onClick: () => photoInput.value?.click(),
                 }, [h(Icon, { name: 'upload' }), avatar ? 'Change photo' : 'Upload photo']),
-                avatar ? h('button', {
-                  type: 'button', class: 'quiet-button', onClick: removePhoto,
-                }, 'Remove photo') : null,
+                avatar ? h('button', { type: 'button', class: 'quiet-button', onClick: () => {
+                  photoRequest += 1; photoBusy.value = false;
+                  if (draft.value) draft.value.avatarDataUrl = null;
+                } }, 'Remove photo') : null,
               ]),
-              h('p', { class: 'profile-field-hint', role: photoBusy.value ? 'status' : undefined },
-                photoBusy.value ? 'Preparing photo…' : 'JPG, PNG, WebP, or GIF. Up to 8 MB; centered and resized locally.'),
+              h('p', { class: 'profile-field-hint' }, 'Images are resized to 256px before sync.'),
             ]),
-            h('div', { class: 'profile-field' }, [
-              h('label', { for: 'profile-display-name' }, 'Display name'),
-              h('input', {
-                id: 'profile-display-name', type: 'text', required: true,
-                maxlength: PROFILE_NAME_LIMIT, autocomplete: 'nickname',
-                value: draftName.value,
+            ...([
+              ['displayName', 'Display name', PROFILE_NAME_LIMIT, 'text'],
+              ['contactEmail', 'Contact email (optional)', PROFILE_EMAIL_LIMIT, 'email'],
+              ['phone', 'Phone (optional)', PROFILE_PHONE_LIMIT, 'tel'],
+            ] as const).map(([key, label, limit, type]) => h('div', { class: 'profile-field' }, [
+              h('label', { for: 'account-profile-' + key }, label),
+              h('input', { id: 'account-profile-' + key, type, maxlength: limit,
+                required: key === 'displayName', value: draft.value?.[key] ?? '',
                 onInput: (event: Event) => {
-                  if (event.target instanceof HTMLInputElement) draftName.value = event.target.value;
+                  if (event.target instanceof HTMLInputElement && draft.value) {
+                    draft.value[key] = event.target.value;
+                  }
                 },
               }),
-            ]),
-            h('div', { class: 'profile-contact-fields' }, [
-              h('div', { class: 'profile-field' }, [
-                h('label', { for: 'profile-email' }, 'Email (optional)'),
-                h('input', {
-                  id: 'profile-email', type: 'email', maxlength: PROFILE_EMAIL_LIMIT,
-                  autocomplete: 'email', placeholder: 'you@example.com',
-                  value: draftEmail.value,
-                  onInput: (event: Event) => {
-                    if (event.target instanceof HTMLInputElement) draftEmail.value = event.target.value;
-                  },
-                }),
-              ]),
-              h('div', { class: 'profile-field' }, [
-                h('label', { for: 'profile-phone' }, 'Phone number (optional)'),
-                h('input', {
-                  id: 'profile-phone', type: 'tel', maxlength: PROFILE_PHONE_LIMIT,
-                  autocomplete: 'tel', placeholder: '+1 (555) 123-4567',
-                  value: draftPhone.value,
-                  onInput: (event: Event) => {
-                    if (event.target instanceof HTMLInputElement) draftPhone.value = event.target.value;
-                  },
-                }),
-              ]),
-            ]),
+            ])),
             h('div', { class: 'profile-field' }, [
-              h('label', { for: 'profile-about' }, 'About'),
-              h('textarea', {
-                id: 'profile-about', rows: 5, maxlength: PROFILE_ABOUT_LIMIT,
-                placeholder: 'A little about yourself, your interests, or what you enjoy learning…',
-                value: draftAbout.value,
-                onInput: (event: Event) => {
-                  if (event.target instanceof HTMLTextAreaElement) draftAbout.value = event.target.value;
-                },
-              }),
-              h('span', { class: 'profile-field-hint' }, `${draftAbout.value.length} / ${PROFILE_ABOUT_LIMIT}`),
+              h('label', { for: 'account-profile-about' }, 'About'),
+              h('textarea', { id: 'account-profile-about', rows: 4, maxlength: PROFILE_ABOUT_LIMIT,
+                value: draft.value.about, onInput: (event: Event) => {
+                  if (event.target instanceof HTMLTextAreaElement && draft.value) {
+                    draft.value.about = event.target.value;
+                  }
+                } }),
             ]),
-            error.value ? h('p', { class: 'profile-error', role: 'alert' }, error.value) : null,
+            profileError.value ? h('p', { class: 'profile-error', role: 'alert' }, profileError.value) : null,
             h('div', { class: 'profile-form-actions' }, [
-              h('button', { type: 'submit', class: 'card-primary-button', disabled: photoBusy.value }, 'Save changes'),
+              h('button', { type: 'submit', class: 'card-primary-button',
+                disabled: photoBusy.value || accountProfile.state.value === 'saving',
+              }, accountProfile.state.value === 'saving' ? 'Saving…' : 'Save profile'),
               h('button', { type: 'button', class: 'quiet-button', onClick: cancelEdit }, 'Cancel'),
             ]),
           ]) : h('div', { class: 'profile-details' }, [
-            h('div', { class: 'profile-detail' }, [
-              h('span', { class: 'profile-detail-label' }, 'Display name'),
-              h('p', profile.value.displayName),
-            ]),
-            h('div', { class: 'profile-contact-fields' }, [
-              h('div', { class: 'profile-detail' }, [
-                h('span', { class: 'profile-detail-label' }, 'Email'),
-                h('p', profile.value.email || 'Not provided'),
-              ]),
-              h('div', { class: 'profile-detail' }, [
-                h('span', { class: 'profile-detail-label' }, 'Phone number'),
-                h('p', profile.value.phone || 'Not provided'),
-              ]),
-            ]),
-            h('div', { class: 'profile-detail' }, [
-              h('span', { class: 'profile-detail-label' }, 'About'),
-              h('p', profile.value.about || 'Nothing here yet.'),
-            ]),
+            profileField('Account email', props.session.state.value.status === 'authenticated'
+              ? props.session.state.value.account.email ?? '' : ''),
+            profileField('Contact email', profile.contactEmail),
+            profileField('Phone', profile.phone),
+            profileField('About', profile.about),
           ]),
-          feedback.value ? h('p', { class: 'profile-feedback', role: 'status' }, feedback.value) : null,
-        ]),
-        h(LocalIdentityPanel, {
-          directory: props.directory,
-          disabled: editing.value || photoBusy.value,
-          onSwitch: props.onSwitch,
-          onCreate: props.onCreate,
-          onRename: props.onRename,
-          onDelete: props.onDelete,
-        }),
-        props.session.state.value.status === 'authenticated'
-          ? h(AccountAccessPanel, { session: props.session }) : null,
-        props.session.state.value.status === 'authenticated'
-          ? h('section', { class: 'profile-identities profile-cloud-sync', 'aria-label': 'Cloud synchronization' }, [
-            h('h3', 'Cloud sync'),
-            h('p', { role: 'status' }, props.cloudSync.message.value),
-            props.cloudSync.status.value === 'off' ? h('button', {
-              type: 'button', class: 'card-primary-button',
-              onClick: props.cloudSync.enable,
-            }, 'Enable cloud sync for this workspace') : null,
-            props.cloudSync.status.value === 'error' || props.cloudSync.status.value === 'conflict'
-              ? h('button', { type: 'button', class: 'quiet-button',
-                onClick: props.cloudSync.retry,
-              }, 'Check again') : null,
-          ]) : null,
-        h('p', { class: 'profile-storage-note' }, [
-          h(Icon, { name: 'lock' }),
-          'Your picture and contact details remain device-local and are not part of cloud workspace synchronization.',
-        ]),
+        accountProfile.notice.value ? h('p', { class: 'profile-feedback', role: 'status' },
+          accountProfile.notice.value) : null,
+      ]);
+    }
+
+    return () => {
+      const authenticated = props.session.state.value.status === 'authenticated';
+      const sync = props.cloudSync;
+      if (!authenticated) {
+        return h('section', { class: 'profile-page profile-page--sign-in', 'aria-label': 'Sign in' }, [
+          h('div', { class: 'profile-intro' }, [
+            h('h2', 'Sign in'),
+          ]),
+          h(AccountAccessPanel, { session: props.session }),
+        ]);
+      }
+      return h('section', { class: 'profile-page', 'aria-label': 'Your account' }, [
+        sync.status.value === 'conflict' ? handoffScreen() : [
+          h('div', { class: 'profile-intro profile-intro--account' }, [
+            h('h2', 'Your account'),
+            h('button', { type: 'button', class: 'quiet-button',
+              disabled: props.session.busy.value, onClick: signOut,
+            }, 'Sign out'),
+          ]),
+          profileCard(),
+          h('section', { class: 'profile-identities profile-cloud-sync', 'aria-label': 'Cloud synchronization' }, [
+            h('div', { class: 'profile-cloud-sync-heading' }, [
+              h(Icon, { name: sync.status.value === 'synced' ? 'check' : 'refresh-cw' }),
+              h('h3', 'Cloud sync'),
+            ]),
+            h('p', { role: 'status' }, sync.message.value),
+            sync.status.value === 'off' ? h('button', { type: 'button', class: 'card-primary-button',
+              onClick: sync.enable,
+            }, 'Enable cloud sync') : null,
+            sync.status.value === 'error' ? h('button', { type: 'button', class: 'quiet-button',
+              onClick: sync.retry,
+            }, 'Retry') : null,
+          ]),
+          props.session.notice.value ? h('p', { class: 'profile-feedback', role: 'status' },
+            props.session.notice.value) : null,
+          props.session.error.value ? h('p', { class: 'profile-error', role: 'alert' },
+            props.session.error.value) : null,
+        ],
       ]);
     };
   },

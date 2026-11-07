@@ -2,8 +2,7 @@ import { nextTick, onBeforeUnmount, ref } from 'vue';
 import { emptyWorkspace, parseWorkspace, validateWorkspaceValue, MAX_BACKUP_BYTES, type Workspace } from './workspace-format.ts';
 import { downloadText } from '../core/file-download.ts';
 import { useBackupReminders } from './backup-reminders.ts';
-import { localProfileRepository } from './profile-storage.ts';
-import { selectedIdentity, type IdentityDirectory } from '../core/data/local-identities.ts';
+import type { IdentityDirectory } from '../core/data/local-identities.ts';
 import { WorkspaceDataApi } from './data/data-api.ts';
 import type { WorkspaceCompatibility } from './data/workspace-compatibility.ts';
 import { observeWorkspace } from './data/workspace-observer.ts';
@@ -35,7 +34,6 @@ export function useWorkspace() {
   const committedRevision = ref(0);
   const backup = useBackupReminders();
   const identityDirectory = ref<IdentityDirectory | null>(null);
-  const profileRevision = ref(0);
   const api = new WorkspaceDataApi();
   const stopUnavailable = api.subscribeUnavailable(message => {
     // Keep in-memory drafts accessible. This connection cannot be reopened
@@ -232,98 +230,6 @@ export function useWorkspace() {
   }
   void initialize();
 
-  /** Switch a device-only identity after flushing and unmounting active editors. */
-  async function changeIdentity(action: () => Promise<IdentityDirectory>): Promise<IdentityDirectory> {
-    if (disposed || refreshing || !ready.value || needsReconcile.value ||
-      compatibility.value?.readOnly) {
-      throw new Error('Finish loading or resolve unsaved workspace changes before switching identities.');
-    }
-    refreshing = true;
-    ready.value = false;
-    let pointerChanged = false;
-    try {
-      await nextTick();
-      await observer?.flush();
-      await observer?.settle();
-      if (observer?.hasFailed()) throw new Error('The current workspace has unsaved changes. Download a draft first.');
-      const directory = await action();
-      pointerChanged = true;
-      observer?.stop();
-      observer = null;
-      const snapshot = await api.initialSnapshot();
-      state.value = snapshot.workspace;
-      identityDirectory.value = directory;
-      revision.value += 1;
-      lastSequence = snapshot.revisions.commitSequence;
-      committedRevision.value = snapshot.revisions.commitSequence;
-      compatibility.value = snapshot.compatibility;
-      remotePending = false;
-      needsReconcile.value = false;
-      await startObserver(snapshot.records);
-      backup.workspaceChanged(api.workspaceIdentity(), snapshot.revisions.authoredRevision, populated(snapshot.workspace));
-      storageProblem.value = '';
-      ready.value = true;
-      watchRemoteChanges();
-      return directory;
-    } catch (error) {
-      if (pointerChanged) {
-        storageProblem.value = 'The identity changed, but its workspace could not be opened: ' +
-          errorMessage(error) + '. Reload the page to recover.';
-        needsReconcile.value = true;
-      } else if (!observer?.hasFailed()) {
-        ready.value = true;
-      } else {
-        storageProblem.value = 'The workspace has unsaved changes. Download a draft before reloading.';
-        needsReconcile.value = true;
-      }
-      throw error;
-    } finally {
-      refreshing = false;
-    }
-  }
-
-  async function selectIdentity(identityId: string): Promise<void> {
-    if (identityDirectory.value?.activeIdentityId === identityId) return;
-    await changeIdentity(() => api.selectIdentity(identityId));
-  }
-
-  async function createLocalIdentity(label: string, transferGuest: boolean): Promise<void> {
-    const previous = identityDirectory.value;
-    if (!previous || (transferGuest && previous.activeIdentityId !== 'guest')) {
-      throw new Error('Only the active guest workspace can be transferred.');
-    }
-    const directory = await changeIdentity(() => api.createLocalIdentity(label, transferGuest));
-    if (transferGuest) {
-      // The guest copy stays available if browser-local profile migration fails.
-      try {
-        localProfileRepository.transferGuest(selectedIdentity(directory).id);
-        profileRevision.value += 1;
-      } catch (error) {
-        throw new Error('Your workspace was transferred, but the guest profile could not be copied: ' +
-          errorMessage(error) + '. The original guest profile is still stored locally.');
-      }
-    }
-  }
-
-
-  async function renameLocalIdentity(id: string, label: string, expectedLabel: string): Promise<void> {
-    if (disposed || refreshing || !ready.value || needsReconcile.value || compatibility.value?.readOnly) {
-      throw new Error('Resolve outstanding workspace changes before renaming an identity.');
-    }
-    identityDirectory.value = await api.renameLocalIdentity(id, label, expectedLabel);
-  }
-
-  async function deleteLocalIdentity(id: string, expectedWorkspaceId: string): Promise<void> {
-    if (disposed || refreshing || !ready.value || needsReconcile.value || compatibility.value?.readOnly) {
-      throw new Error('Resolve outstanding workspace changes before deleting an identity.');
-    }
-    identityDirectory.value = await api.deleteLocalIdentity(id, expectedWorkspaceId);
-    try { localProfileRepository.clear(id); }
-    catch {
-      throw new Error('The identity and its workspace were deleted, but its browser-local profile could not be cleaned up.');
-    }
-  }
-
   async function readBackup(file: File): Promise<Workspace> {
     if (file.size > MAX_BACKUP_BYTES) throw new Error('The backup file exceeds the supported size.');
     return parseWorkspace(await file.text());
@@ -470,7 +376,7 @@ export function useWorkspace() {
   /** Cloud sync reads the same validated, durable snapshot as a manual backup.
    * Never expose an unsaved Vue draft or a partial compatibility projection.
    */
-  async function cloudSnapshot(): Promise<{ json: string; workspaceId: string; authoredRevision: number }> {
+  async function cloudSnapshot(): Promise<{ json: string; workspaceId: string; authoredRevision: number; commitSequence: number }> {
     if (!ready.value || disposed || refreshing || needsReconcile.value ||
       compatibility.value?.mode !== 'normal') {
       throw new Error('Finish loading and saving this workspace before cloud synchronization.');
@@ -486,6 +392,57 @@ export function useWorkspace() {
       throw new Error('The selected workspace changed during synchronization.');
     }
     return result;
+  }
+
+  /**
+   * User-confirmed handoff from separate local data to a verified cloud copy.
+   * Only the selected identity is affected; all writes are drained, and
+   * IndexedDB rejects late changes before deleting local workspace history.
+   */
+  async function useCloudWorkspace(value: unknown, expected: {
+    json: string; workspaceId: string; commitSequence: number
+  }): Promise<void> {
+    if (!ready.value || disposed || refreshing || needsReconcile.value ||
+        compatibility.value?.mode !== 'normal') {
+      throw new Error('The local workspace is not safe to replace.');
+    }
+    const replacement = validateWorkspaceValue(value);
+    ready.value = false;
+    await nextTick();
+    const previousObserver = observer;
+    observer = null;
+    previousObserver?.stop();
+    try {
+      await previousObserver?.settle();
+      if (previousObserver?.hasFailed()) throw new Error('Unsaved local changes must be resolved first.');
+      const current = await api.exportSnapshot();
+      if (current.workspaceId !== expected.workspaceId ||
+          current.commitSequence !== expected.commitSequence || current.json !== expected.json) {
+        throw new Error('Local changes were saved during the handoff. Nothing was erased.');
+      }
+      await api.replaceWorkspaceAndClear(replacement, expected.workspaceId, expected.commitSequence);
+      const snapshot = await api.initialSnapshot();
+      identityDirectory.value = await api.identityDirectory();
+      state.value = snapshot.workspace;
+      revision.value += 1;
+      lastSequence = snapshot.revisions.commitSequence;
+      committedRevision.value = snapshot.revisions.commitSequence;
+      remotePending = false;
+      needsReconcile.value = false;
+      compatibility.value = snapshot.compatibility;
+      await startObserver(snapshot.records);
+      backup.workspaceChanged(api.workspaceIdentity(), snapshot.revisions.authoredRevision, populated(snapshot.workspace));
+      storageProblem.value = '';
+      ready.value = true;
+      watchRemoteChanges();
+    } catch (error) {
+      // A failed transaction preserves all previous data. If activation did
+      // succeed but reopening failed, leave the app in recoverable mode.
+      storageProblem.value = 'Cloud workspace handoff could not finish safely: ' + errorMessage(error) +
+        ' Reload to verify the active workspace before editing.';
+      needsReconcile.value = true;
+      throw error;
+    }
   }
 
   async function downloadRawRescue(): Promise<void> {
@@ -583,9 +540,7 @@ export function useWorkspace() {
     window.removeEventListener('pagehide', flushOnHide);
   });
 
-  return { state, ready, revision, committedRevision, cloudSnapshot, compatibility, storageProblem, needsReconcile,
-    identityDirectory, profileRevision, selectIdentity, createLocalIdentity,
-    renameLocalIdentity, deleteLocalIdentity,
+  return { state, ready, revision, committedRevision, cloudSnapshot, useCloudWorkspace, compatibility, storageProblem, needsReconcile,
     readBackup, replaceWorkspace, clearWorkspace, downloadBackup, downloadRawRescue,
     downloadLocalDraft, reloadSavedWorkspace, backup };
 }

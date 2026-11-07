@@ -4,6 +4,7 @@ import { completeReset, currentSession, register, requestReset, resendVerificati
 import { oauthCallback, oauthStart } from './auth/oauth';
 import { configuredEmail } from './auth/mail';
 import { syncGetManifest, syncGetChunk, syncStart, syncChunk, syncPublish } from './sync';
+import { getAccountProfile, saveAccountProfile } from './account-profile';
 import type { RuntimeEnv, SocialProvider } from './auth/types';
 
 async function handle(request: Request, env: RuntimeEnv): Promise<Response> {
@@ -40,6 +41,15 @@ async function handle(request: Request, env: RuntimeEnv): Promise<Response> {
       }
     }
     return respond({ error: 'Not found.' }, 404);
+  }
+  if (path === '/v1/account/profile') {
+    assertConfigured(env);
+    if (request.method === 'GET') return getAccountProfile(request, env);
+    if (request.method === 'POST') {
+      requireOrigin(request, env);
+      return saveAccountProfile(request, env);
+    }
+    return respond({ error: 'Method not allowed.' }, 405);
   }
   const oauthRoute = /^\/v1\/auth\/oauth\/(google|microsoft)\/(start|callback)$/.exec(path);
   if (oauthRoute && request.method === 'GET') {

@@ -806,6 +806,7 @@ export class IndexedDataStore {
   async clearAndActivate(
     workspaceId: string, expectedWorkspaceId: string | null,
     rows: readonly Extract<DataOperation, { type: 'put' }>[],
+    expectedCommitSequence?: number,
   ): Promise<void> {
     if (this.databaseVersion > DATABASE_VERSION ||
         this.db().objectStoreNames.length !== Object.keys(definitions).length) {
@@ -844,7 +845,13 @@ export class IndexedDataStore {
         }
         const metaRequest = tx.objectStore('workspaceMeta').getAll();
         metaRequest.onsuccess = () => {
-          const metas = metaRequest.result as Array<{ id: string; ownerId?: string }>;
+          const metas = metaRequest.result as Array<{ id: string; ownerId?: string; commitSequence?: number }>;
+          if (expectedCommitSequence !== undefined &&
+              metas.find(meta => meta.id === expectedWorkspaceId)?.commitSequence !== expectedCommitSequence) {
+            failure = new DataApiError('conflict', 'Local work changed before cloud replacement. Nothing was erased.');
+            tx.abort();
+            return;
+          }
           const owned = metas.filter(meta => meta.ownerId === active.id).map(meta => meta.id);
           if (!expectedWorkspaceId || !owned.includes(expectedWorkspaceId)) {
             failure = new DataApiError('validation', 'The active workspace is not owned by this identity.');
