@@ -154,6 +154,7 @@ export function useCloudSync(session: AccountSessionController, workspace: Works
   let running = false;
   let disposed = false;
   let retryAfter = 0;
+  let lastAccountId: string | null = null;
 
   function accountId(): string | null {
     const state = session.state.value;
@@ -190,6 +191,9 @@ export function useCloudSync(session: AccountSessionController, workspace: Works
       message.value = 'Cloud sync is paused until the local workspace is safely loaded and saved.';
       return;
     }
+    // Keep the user-facing workspace decision stable while it is being made;
+    // normal background polling must never hide the confirmation screen.
+    if (handoffRequired.value && status.value === 'conflict') return;
     if (Date.now() < retryAfter) return;
     running = true;
     status.value = 'checking';
@@ -304,6 +308,7 @@ export function useCloudSync(session: AccountSessionController, workspace: Works
     const id = accountId();
     if (!id || running || status.value !== 'conflict') return;
     running = true;
+    let replaced = false;
     status.value = 'syncing';
     message.value = 'Preparing cloud workspace…';
     try {
@@ -324,6 +329,7 @@ export function useCloudSync(session: AccountSessionController, workspace: Works
       }
       message.value = 'Replacing the selected local workspace…';
       await workspace.useCloudWorkspace(parseWorkspace(json), local);
+      replaced = true;
       const restored = await workspace.cloudSnapshot();
       writeLink(id, restored.workspaceId, {
         remoteRevision: remote.revision, digest: await digest(restored.json),
@@ -333,10 +339,12 @@ export function useCloudSync(session: AccountSessionController, workspace: Works
       handoffRequired.value = false;
       setSynced();
     } catch (cause) {
-      handoffRequired.value = true;
-      status.value = 'conflict';
+      handoffRequired.value = !replaced;
+      status.value = replaced ? 'error' : 'conflict';
       message.value = (cause instanceof Error ? cause.message : 'Could not complete cloud handoff.') +
-        ' Your existing local data was not intentionally replaced; check your workspace before retrying.';
+        (replaced
+          ? ' The cloud workspace was activated; reload before making another selection.'
+          : ' Local workspace replacement was not completed.');
       throw cause;
     } finally { running = false; }
   }
@@ -369,6 +377,11 @@ export function useCloudSync(session: AccountSessionController, workspace: Works
   ], () => {
     if (disposed) return;
     const id = accountId();
+    if (lastAccountId !== id) {
+      lastAccountId = id;
+      handoffRequired.value = false;
+      status.value = 'off';
+    }
     if (!id) {
       status.value = 'off';
       message.value = 'Sign in to enable cloud synchronization.';

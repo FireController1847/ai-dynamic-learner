@@ -410,9 +410,11 @@ export function useWorkspace() {
     ready.value = false;
     await nextTick();
     const previousObserver = observer;
-    observer = null;
-    previousObserver?.stop();
     try {
+      // A user may have typed while the cloud download was in progress.
+      // Flush before stopping watchers so that a late local edit causes a
+      // revision mismatch rather than being silently discarded.
+      await previousObserver?.flush();
       await previousObserver?.settle();
       if (previousObserver?.hasFailed()) throw new Error('Unsaved local changes must be resolved first.');
       const current = await api.exportSnapshot();
@@ -420,6 +422,8 @@ export function useWorkspace() {
           current.commitSequence !== expected.commitSequence || current.json !== expected.json) {
         throw new Error('Local changes were saved during the handoff. Nothing was erased.');
       }
+      previousObserver?.stop();
+      observer = null;
       await api.replaceWorkspaceAndClear(replacement, expected.workspaceId, expected.commitSequence);
       const snapshot = await api.initialSnapshot();
       identityDirectory.value = await api.identityDirectory();
@@ -436,11 +440,17 @@ export function useWorkspace() {
       ready.value = true;
       watchRemoteChanges();
     } catch (error) {
-      // A failed transaction preserves all previous data. If activation did
-      // succeed but reopening failed, leave the app in recoverable mode.
-      storageProblem.value = 'Cloud workspace handoff could not finish safely: ' + errorMessage(error) +
-        ' Reload to verify the active workspace before editing.';
-      needsReconcile.value = true;
+      if (observer === previousObserver && !previousObserver?.hasFailed()) {
+        // No destructive transaction started. The live editor is safe to
+        // resume after a cancelled handoff or a late local write.
+        ready.value = true;
+      } else {
+        // A transaction may have succeeded before a subsequent read failed.
+        // Stay fail-closed until a reload verifies the saved workspace.
+        storageProblem.value = 'Cloud workspace handoff could not finish safely: ' + errorMessage(error) +
+          ' Reload to verify the active workspace before editing.';
+        needsReconcile.value = true;
+      }
       throw error;
     }
   }
