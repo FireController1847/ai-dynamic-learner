@@ -1,8 +1,10 @@
-import { defineComponent, h, onBeforeUnmount, onMounted, ref } from 'vue';
+import { defineComponent, h, onBeforeUnmount, onMounted, ref, watch, type PropType } from 'vue';
+import type { IdentityDirectory } from '../core/data/local-identities.ts';
+import { LocalIdentityPanel } from './local-identity-panel.ts';
 import { Icon } from '../components/icon.ts';
 import { prepareProfilePhoto } from './profile-photo.ts';
 import { PROFILE_ABOUT_LIMIT, PROFILE_EMAIL_LIMIT, PROFILE_NAME_LIMIT,
-  PROFILE_PHONE_LIMIT, PROFILE_STORAGE_KEY, readLocalProfile, writeLocalProfile } from './profile-storage.ts';
+  PROFILE_PHONE_LIMIT, PROFILE_STORAGE_KEY, profileStorageKey, localProfileRepository } from './profile-storage.ts';
 
 function initials(name: string): string {
   return name.trim().split(/\s+/).slice(0, 2).map(part => part[0] ?? '').join('').toUpperCase() || 'DL';
@@ -10,8 +12,14 @@ function initials(name: string): string {
 
 export const ProfilePage = defineComponent({
   name: 'ProfilePage',
-  setup() {
-    const profile = ref(readLocalProfile());
+  props: {
+    directory: { type: Object as PropType<IdentityDirectory | null>, default: null },
+    onSwitch: { type: Function as PropType<(id: string) => Promise<void>>, required: true },
+    onCreate: { type: Function as PropType<(label: string, transferGuest: boolean) => Promise<void>>, required: true },
+  },
+  setup(props) {
+    const identityId = () => props.directory?.activeIdentityId ?? 'guest';
+    const profile = ref(localProfileRepository.read(identityId()));
     const editing = ref(false);
     const draftName = ref(profile.value.displayName);
     const draftAbout = ref(profile.value.about);
@@ -26,15 +34,25 @@ export const ProfilePage = defineComponent({
     let photoRequest = 0;
 
     function handleStorage(event: StorageEvent) {
-      if (event.key !== PROFILE_STORAGE_KEY && event.key !== null) return;
+      if (event.key !== profileStorageKey(identityId()) &&
+        (identityId() !== 'guest' || event.key !== PROFILE_STORAGE_KEY) && event.key !== null) return;
       if (editing.value) {
         changedElsewhere.value = true;
         return;
       }
-      profile.value = readLocalProfile();
+      profile.value = localProfileRepository.read(identityId());
       feedback.value = '';
     }
 
+    watch(identityId, () => {
+      photoRequest += 1;
+      photoBusy.value = false;
+      profile.value = localProfileRepository.read(identityId());
+      editing.value = false;
+      feedback.value = '';
+      error.value = '';
+      changedElsewhere.value = false;
+    });
     onMounted(() => window.addEventListener('storage', handleStorage));
     onBeforeUnmount(() => {
       window.removeEventListener('storage', handleStorage);
@@ -58,7 +76,7 @@ export const ProfilePage = defineComponent({
       photoBusy.value = false;
       editing.value = false;
       error.value = '';
-      if (changedElsewhere.value) profile.value = readLocalProfile();
+      if (changedElsewhere.value) profile.value = localProfileRepository.read(identityId());
       changedElsewhere.value = false;
     }
 
@@ -113,7 +131,7 @@ export const ProfilePage = defineComponent({
       }
       const next = { displayName, about, email, phone, avatarDataUrl: draftAvatar.value };
       try {
-        writeLocalProfile(next);
+        localProfileRepository.write(identityId(), next);
         profile.value = next;
         editing.value = false;
         feedback.value = 'Profile saved on this device.';
@@ -239,6 +257,12 @@ export const ProfilePage = defineComponent({
           ]),
           feedback.value ? h('p', { class: 'profile-feedback', role: 'status' }, feedback.value) : null,
         ]),
+        h(LocalIdentityPanel, {
+          directory: props.directory,
+          disabled: editing.value || photoBusy.value,
+          onSwitch: props.onSwitch,
+          onCreate: props.onCreate,
+        }),
         h('p', { class: 'profile-storage-note' }, [
           h(Icon, { name: 'lock' }),
           'Your picture and contact details stay in this browser. This is not an online account, does not sync between devices, and is not included in workspace backups.',

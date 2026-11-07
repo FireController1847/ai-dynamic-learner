@@ -380,7 +380,11 @@ const App = defineComponent({
           inert: isStandalonePage.value ? false : (workspace.compatibility.value?.readOnly ?? false),
           'aria-busy': !isStandalonePage.value && !workspace.ready.value && !workspace.storageProblem.value,
         }, [
-          isChangelog.value ? h(ChangelogPage) : isProfile.value ? h(ProfilePage) : !workspace.ready.value
+          isChangelog.value ? h(ChangelogPage) : isProfile.value ? h(ProfilePage, {
+            directory: workspace.identityDirectory.value,
+            onSwitch: workspace.selectIdentity,
+            onCreate: workspace.createLocalIdentity,
+          }) : !workspace.ready.value
             ? workspace.storageProblem.value
               ? h('section', { class: 'workspace-loading', role: 'alert' }, [
                 h('h2', 'Workspace unavailable'),
