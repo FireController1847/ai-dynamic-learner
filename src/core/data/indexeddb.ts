@@ -450,9 +450,10 @@ export class IndexedDataStore {
       };
     };
     try { await completion; } catch (error) { throw failure ?? error; }
-    if (!result) throw new DataApiError('unavailable', 'Local identity initialization did not finish.');
-    this.observedIdentityId = result.activeIdentityId;
-    return result;
+    const initialized = result as IdentityDirectory | null;
+    if (!initialized) throw new DataApiError('unavailable', 'Local identity initialization did not finish.');
+    this.observedIdentityId = initialized.activeIdentityId;
+    return initialized;
   }
 
   async identityDirectory(): Promise<IdentityDirectory> {
