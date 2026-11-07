@@ -300,7 +300,7 @@ export const ProfilePage = defineComponent({
                   sync.status.value === 'syncing' ? 'profile-cloud-sync-spinner' : '',
               })),
               h('h3', 'Cloud sync'),
-              h('button', { type: 'button', class: 'quiet-button profile-cloud-sync-action',
+              sync.status.value === 'synced' ? null : h('button', { type: 'button', class: 'quiet-button profile-cloud-sync-action',
                 disabled: ['loading', 'checking', 'syncing', 'conflict', 'off'].includes(sync.status.value) ||
                   sync.cooldownSeconds.value > 0,
                 title: sync.cooldownSeconds.value > 0

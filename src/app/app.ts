@@ -172,7 +172,8 @@ const App = defineComponent({
     const activeFeature = computed(() => features.find((feature) => feature.path === currentPath.value));
     const isChangelog = computed(() => currentPath.value === '/changelog/');
     const isProfile = computed(() => currentPath.value === '/profile/');
-    const guestAccount = computed(() => accountSession.state.value.status !== 'authenticated');
+    const accountChecking = computed(() => accountSession.state.value.status === 'checking');
+    const guestAccount = computed(() => !accountChecking.value && accountSession.state.value.status !== 'authenticated');
     const isStandalonePage = computed(() => isChangelog.value || isProfile.value);
     const tipsFeature = computed(() => {
       if (!TIPS_ENABLED) return null;
@@ -271,14 +272,19 @@ const App = defineComponent({
           ]),
           h('a', {
             href: pageHref('/profile/'),
-            class: 'quiet-button app-header-action profile-trigger',
-            title: guestAccount.value ? 'Sign in to Dynamic Learner' : 'Your profile',
-            'aria-label': guestAccount.value ? 'Sign in to Dynamic Learner' : 'Open your profile',
+            class: ['quiet-button app-header-action profile-trigger', {
+              'profile-trigger--checking': accountChecking.value,
+            }],
+            title: accountChecking.value ? 'Checking account session' :
+              guestAccount.value ? 'Sign in to Dynamic Learner' : 'Your profile',
+            'aria-label': accountChecking.value ? 'Checking account session' :
+              guestAccount.value ? 'Sign in to Dynamic Learner' : 'Open your profile',
             'aria-current': isProfile.value ? 'page' : undefined,
             onClick: (event: MouseEvent) => navigate(event, '/profile/'),
           }, [
-            h(Icon, { name: guestAccount.value ? 'log-in' : 'user-round' }),
-            h('span', { class: 'app-header-action-label' }, guestAccount.value ? 'Sign in' : 'Profile'),
+            h(Icon, { name: accountChecking.value ? 'loading' : guestAccount.value ? 'log-in' : 'user-round' }),
+            h('span', { class: 'app-header-action-label' },
+              accountChecking.value ? 'Checking…' : guestAccount.value ? 'Sign in' : 'Profile'),
           ]),
           tipsFeature.value ? h('button', {
             type: 'button',

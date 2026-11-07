@@ -239,7 +239,7 @@ export function useCloudSync(session: AccountSessionController, workspace: Works
       message.value = 'No cloud workspace yet. Press Sync to upload this device’s data.';
     } else if (baseline.digest === cloud.digest) {
       status.value = 'synced';
-      message.value = 'Workspace matched the cloud at the last check. Press Sync to check again.';
+      message.value = 'Workspace matched the cloud at the last check.';
     } else if (!link || link.remoteRevision !== cloud.revision ||
                link.digest !== baseline.digest) {
       status.value = 'pending';
