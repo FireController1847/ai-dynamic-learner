@@ -23,7 +23,9 @@ $env:DL_AUTH_API_PORT = '8888'
 npm start
 ```
 
-Optional Resend, Google, and Microsoft local test credentials may be added manually to `api/.dev.vars`; the launcher will preserve them. Do not copy production secrets into a local checkout. Email registration requires a working Resend key and sender. Google/Microsoft sign-in also requires `127.0.0.1` callback URLs registered with those providers; without those credentials, the respective buttons remain unavailable. `ready: true` with `email/google/microsoft: false` is expected with only the auto-generated local secrets.
+**Email/password works locally without Resend.** `npm start` enables a **loopback-only mail preview**: create an account with any test address and password (12+ characters), then follow the verification link printed as `[local-auth]` in the terminal running the Worker. Password-reset links are printed there too. These are real one-time links backed by local SQLite; no email is actually delivered and no production accounts are touched. The preview is strictly limited to a Worker request at `http://127.0.0.1` with the explicit `LOCAL_MAIL_PREVIEW` flag injected by this launcher. Never expose the dev Worker over a public tunnel or use this feature in production.
+
+Optional Resend, Google, and Microsoft test credentials may be added manually to the ignored `api/.dev.vars`; the launcher will preserve them. Do not copy production secrets into a local checkout. Google/Microsoft sign-in still requires separate OAuth development credentials and redirect URIs registered for `127.0.0.1`; without those credentials, those buttons remain unavailable. With the default local setup, `/v1/auth/config` should report `ready: true`, `email: true`, `google: false`, `microsoft: false`.
 
 To run just webpack without the API (for UI-only work), use `npm run start:frontend`.
 

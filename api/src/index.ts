@@ -2,6 +2,7 @@ import { ApiError, apiOrigin, assertConfigured, frontendOrigin, requireOrigin, r
 import { completeReset, currentSession, register, requestReset, resendVerification,
   signIn, signOut, verifyEmail } from './auth/password';
 import { oauthCallback, oauthStart } from './auth/oauth';
+import { configuredEmail } from './auth/mail';
 import type { RuntimeEnv, SocialProvider } from './auth/types';
 
 async function handle(request: Request, env: RuntimeEnv): Promise<Response> {
@@ -20,7 +21,7 @@ async function handle(request: Request, env: RuntimeEnv): Promise<Response> {
     const ready = !!(env.dynlearn_data && env.AUTH_PEPPER && env.AUTH_PEPPER.length >= 32 &&
       env.AUTH_RATE_SECRET && env.AUTH_RATE_SECRET.length >= 32);
     return respond({
-      ready, email: ready && !!(env.RESEND_API_KEY && env.EMAIL_FROM),
+      ready, email: ready && configuredEmail(env, request),
       google: ready && !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
       microsoft: ready && !!(env.MICROSOFT_CLIENT_ID && env.MICROSOFT_CLIENT_SECRET),
     });

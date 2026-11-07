@@ -9,6 +9,8 @@ export type RuntimeEnv = Env & {
   MICROSOFT_CLIENT_SECRET?: string;
   RESEND_API_KEY?: string;
   EMAIL_FROM?: string;
+  // Injected only by the local npm start runner. Not a production auth setting.
+  LOCAL_MAIL_PREVIEW?: string;
   AUTH_RATE_SECRET?: string;
   AUTH_PEPPER?: string;
 };

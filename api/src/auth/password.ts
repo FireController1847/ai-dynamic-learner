@@ -5,12 +5,12 @@ import { actionToken, activeSession, consumeAction, db, issueSession, now, publi
 import { configuredEmail, sendAccountMail } from './mail';
 import type { AccountRow, PasswordRow, RuntimeEnv } from './types';
 
-function requireMail(env: RuntimeEnv): void {
-  if (!configuredEmail(env)) throw new ApiError(503, 'Email verification and recovery are not configured.');
+function requireMail(env: RuntimeEnv, request: Request): void {
+  if (!configuredEmail(env, request)) throw new ApiError(503, 'Email verification and recovery are not configured.');
 }
 export async function register(request: Request, env: RuntimeEnv): Promise<Response> {
   assertConfigured(env);
-  requireMail(env);
+  requireMail(env, request);
   const data = await readJson(request);
   const email = normalizeEmail(data.email);
   if (!email || !isAcceptablePassword(data.password)) {
@@ -31,7 +31,7 @@ export async function register(request: Request, env: RuntimeEnv): Promise<Respo
           .bind(email, id, passwordHash, now()),
       ]);
       const token = await actionToken(env, id, 'verify', 3600);
-      await sendAccountMail(env, email, 'verify', token);
+      await sendAccountMail(env, request, email, 'verify', token);
     } catch (error) {
       // The account may already exist due to a concurrent registration. Never
       // expose database details or pretend a verification email was delivered.
@@ -76,7 +76,7 @@ export async function signOut(request: Request, env: RuntimeEnv): Promise<Respon
 }
 export async function resendVerification(request: Request, env: RuntimeEnv): Promise<Response> {
   assertConfigured(env);
-  requireMail(env);
+  requireMail(env, request);
   const body = await readJson(request);
   const email = normalizeEmail(body.email);
   if (!email) throw new ApiError(400, 'Invalid email address.');
@@ -87,7 +87,7 @@ export async function resendVerification(request: Request, env: RuntimeEnv): Pro
     .first<{ account_id: string; email_verified: number }>();
   if (found && found.email_verified === 0) {
     const token = await actionToken(env, found.account_id, 'verify', 3600);
-    await sendAccountMail(env, email, 'verify', token);
+    await sendAccountMail(env, request, email, 'verify', token);
   }
   return respond({ sent: true });
 }
@@ -103,7 +103,7 @@ export async function verifyEmail(request: Request, env: RuntimeEnv): Promise<Re
 }
 export async function requestReset(request: Request, env: RuntimeEnv): Promise<Response> {
   assertConfigured(env);
-  requireMail(env);
+  requireMail(env, request);
   const data = await readJson(request);
   const email = normalizeEmail(data.email);
   if (!email) throw new ApiError(400, 'Invalid email address.');
@@ -113,7 +113,7 @@ export async function requestReset(request: Request, env: RuntimeEnv): Promise<R
     .bind(email).first<{ account_id: string }>();
   if (found) {
     const token = await actionToken(env, found.account_id, 'reset', 1200);
-    await sendAccountMail(env, email, 'reset', token);
+    await sendAccountMail(env, request, email, 'reset', token);
   }
   return respond({ sent: true });
 }

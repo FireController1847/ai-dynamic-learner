@@ -55,6 +55,7 @@ describe('one-command development startup', () => {
     assert.match(args, /--ip 127\.0\.0\.1/);
     assert.match(args, /FRONTEND_ORIGIN:http:\/\/127\.0\.0\.1:3200/);
     assert.match(args, /API_ORIGIN:http:\/\/127\.0\.0\.1:8888/);
+    assert.match(args, /LOCAL_MAIL_PREVIEW:1/);
     assert.doesNotMatch(args, /localhost/);
     assert.match(args, /--local/);
     assert.doesNotMatch(args, /--remote|deploy/);

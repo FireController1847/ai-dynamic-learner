@@ -56,7 +56,8 @@ export function migrationArgs() {
 export function workerArgs(frontPort, apiPort) {
   return ['run', 'dev', '--', '--local', '--ip', '127.0.0.1', '--port', String(apiPort),
     '--var', 'FRONTEND_ORIGIN:http://127.0.0.1:' + frontPort,
-    '--var', 'API_ORIGIN:http://127.0.0.1:' + apiPort];
+    '--var', 'API_ORIGIN:http://127.0.0.1:' + apiPort,
+    '--var', 'LOCAL_MAIL_PREVIEW:1'];
 }
 
 function npmSync(args, cwd) {
