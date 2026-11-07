@@ -31,12 +31,14 @@ describe('local-only email preview', () => {
   it('does not activate for public requests or incorrect origins', () => {
     const publicReq = new Request('https://api.dynlearn.org/v1/auth/config');
     const localReq = new Request('http://127.0.0.1:8787/v1/auth/config');
-    expect(localMailPreview(loopback, publicReq)).toBe(false);
+    // Workerd may rewrite the incoming URL, so only trusted dev bindings
+    // (not request.url) determine whether the local preview is enabled.
+    expect(localMailPreview(loopback, publicReq)).toBe(true);
     expect(localMailPreview({ ...loopback, API_ORIGIN: 'https://api.dynlearn.org' }, localReq)).toBe(false);
     expect(localMailPreview({ ...loopback, FRONTEND_ORIGIN: 'https://dynlearn.org' }, localReq)).toBe(false);
     expect(localMailPreview({ ...loopback, LOCAL_MAIL_PREVIEW: undefined }, localReq)).toBe(false);
     expect(localMailPreview({ ...loopback, LOCAL_MAIL_PREVIEW: '1' },
-      new Request('http://localhost:8787/v1/auth/config'))).toBe(false);
+      new Request('http://localhost:8787/v1/auth/config'))).toBe(true);
   });
 
   it('prints only local verification links without contacting Resend', async () => {

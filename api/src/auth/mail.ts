@@ -3,34 +3,23 @@ import type { RuntimeEnv } from './types';
 
 /**
  * Local delivery sink: real password and one-time-token flows, but no email provider.
- * Requires the explicit dev-only flag, BOTH runtime origins on numeric loopback,
- * and an actual request received by the local Worker on that same API origin.
- * A deployed Worker cannot activate this from its ordinary production URL.
+ * Requires the explicit dev-only flag and BOTH configured origins on numeric
+ * loopback. Wrangler may internally rewrite request.url to the configured
+ * Worker origin even when the HTTP listener is on 127.0.0.1, so request.url
+ * must NOT be used to identify local mode. All POST routes still enforce the
+ * exact configured frontend Origin. The production Worker never receives
+ * LOCAL_MAIL_PREVIEW via its production Wrangler configuration.
  */
-export function localMailPreview(env: RuntimeEnv, request: Request): boolean {
+export function localMailPreview(env: RuntimeEnv, _request: Request): boolean {
   if (env.LOCAL_MAIL_PREVIEW !== '1') return false;
   try {
     const api = new URL(apiOrigin(env));
     const frontend = new URL(frontendOrigin(env));
-    const actual = new URL(request.url);
     return api.protocol === 'http:' &&
       frontend.protocol === 'http:' &&
       api.hostname === '127.0.0.1' &&
-      frontend.hostname === '127.0.0.1' &&
-      actual.origin === api.origin;
+      frontend.hostname === '127.0.0.1';
   } catch { return false; }
-}
-export function localMailPreviewChecks(env: RuntimeEnv, request: Request) {
-  const api = new URL(apiOrigin(env));
-  const frontend = new URL(frontendOrigin(env));
-  const actual = new URL(request.url);
-  return {
-    flagEnabled: env.LOCAL_MAIL_PREVIEW === '1',
-    apiLoopback: api.protocol === 'http:' && api.hostname === '127.0.0.1',
-    frontendLoopback: frontend.protocol === 'http:' && frontend.hostname === '127.0.0.1',
-    requestMatchesApi: actual.origin === api.origin,
-    requestOrigin: actual.origin,
-  };
 }
 export function configuredEmail(env: RuntimeEnv, request: Request): boolean {
   return localMailPreview(env, request) || !!(env.RESEND_API_KEY && env.EMAIL_FROM);

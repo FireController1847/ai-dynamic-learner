@@ -2,7 +2,7 @@ import { ApiError, apiOrigin, assertConfigured, frontendOrigin, requireOrigin, r
 import { completeReset, currentSession, register, requestReset, resendVerification,
   signIn, signOut, verifyEmail } from './auth/password';
 import { oauthCallback, oauthStart } from './auth/oauth';
-import { configuredEmail, localMailPreviewChecks } from './auth/mail';
+import { configuredEmail } from './auth/mail';
 import type { RuntimeEnv, SocialProvider } from './auth/types';
 
 async function handle(request: Request, env: RuntimeEnv): Promise<Response> {
@@ -20,16 +20,11 @@ async function handle(request: Request, env: RuntimeEnv): Promise<Response> {
   if (path === '/v1/auth/config' && request.method === 'GET') {
     const ready = !!(env.dynlearn_data && env.AUTH_PEPPER && env.AUTH_PEPPER.length >= 32 &&
       env.AUTH_RATE_SECRET && env.AUTH_RATE_SECRET.length >= 32);
-    const info: Record<string, unknown> = {
+    return respond({
       ready, email: ready && configuredEmail(env, request),
       google: ready && !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
       microsoft: ready && !!(env.MICROSOFT_CLIENT_ID && env.MICROSOFT_CLIENT_SECRET),
-    };
-    // Diagnostic flags only for actual local HTTP requests: no secret values.
-    if (url.protocol === 'http:' && url.hostname === '127.0.0.1') {
-      info.localMailChecks = localMailPreviewChecks(env, request);
-    }
-    return respond(info);
+    });
   }
   const oauthRoute = /^\/v1\/auth\/oauth\/(google|microsoft)\/(start|callback)$/.exec(path);
   if (oauthRoute && request.method === 'GET') {
