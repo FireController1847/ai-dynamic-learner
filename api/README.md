@@ -1,6 +1,6 @@
 # Dynamic Learner authentication API
 
-Cloudflare Worker for **authentication only**, intentionally separate from Dynamic Learner's offline-first IndexedDB learning data. There is **no cloud sync** in this release. All code remains in the existing ACCOUNTS PR #30.
+Cloudflare Worker for authenticated Dynamic Learner accounts and **opt-in cloud synchronization** of validated workspace snapshots. Local IndexedDB remains the editable source for each device, and other local identities and personal profile details remain device-only. All changes are under ACCOUNTS PR #30.
 
 ## Cloud workspace synchronization
 
@@ -120,6 +120,11 @@ https://api.dynlearn.org/v1/auth/config
 | POST | `/v1/auth/reset-complete` | Consume reset token, update password, revoke all sessions |
 | GET | `/v1/auth/oauth/{google|microsoft}/start` | OAuth redirect with state, PKCE |
 | GET | `/v1/auth/oauth/{google|microsoft}/callback` | Verify callback and create server session |
+| GET | `/v1/sync/manifest` | Read the signed-in account's current cloud revision and snapshot manifest |
+| GET | `/v1/sync/chunk?id=…&index=…` | Read one published snapshot chunk, account-scoped |
+| POST | `/v1/sync/start` | Start a chunked upload against an expected cloud revision |
+| POST | `/v1/sync/chunk` | Store one chunk of the authenticated account's pending upload |
+| POST | `/v1/sync/publish` | Atomically advance the cloud revision after all parts exist |
 
 All credentialed POST requests require the exact configured frontend Origin. Cookies are Secure, HttpOnly, SameSite=Lax, and host-only for `api.dynlearn.org` in production. Browser requests use `credentials: include` and restrictive CORS. Session tokens are random and stored in D1 **only as SHA-256 hashes**. Passwords use PBKDF2-SHA256 at 600,000 iterations with random per-account salts and an independent secret pepper. OAuth tokens are never sent to the frontend.
 
@@ -129,6 +134,6 @@ All credentialed POST requests require the exact configured frontend Origin. Coo
 - Large password hashing workloads may require a paid Workers CPU allocation. Do **not** lower password hashing strength merely to fit a free tier.
 - Resend and Google/Microsoft may have their own provider quotas, email-domain validation, consent-screen review and subscription costs.
 - Password reset revokes existing sessions. Browser local workspaces remain stored regardless of login or logout.
-- Auth email changes, account deletion, merging OAuth identities with password accounts, MFA and cloud synchronization have not been built. Implement explicit authenticated account linking rather than matching unverified email addresses.
+- Auth email changes, account deletion, merging OAuth identities with password accounts, MFA, automatic merging of concurrent workspace changes, and cloud synchronization of device-only profile fields have not been built. Never merge account identities by unverified email addresses.
 - Keep `AUTH_PEPPER` secure and backed up: losing it makes existing password hashes unverifiable. Rotating it needs a planned migration.
 - Cloudflare account-level D1 is not the same as per-device IndexedDB. No server-side data API exists for learning records yet.
