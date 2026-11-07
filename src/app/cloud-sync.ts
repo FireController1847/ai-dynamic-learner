@@ -306,6 +306,15 @@ export function useCloudSync(session: AccountSessionController, workspace: Works
     if (!id) {
       status.value = 'off';
       message.value = 'Sign in to enable cloud synchronization.';
+    } else if (session.autoSyncAccountId.value === id) {
+      // Persist the user's new-account sync intent immediately, even if the
+      // tab closes before the debounced first upload begins.
+      try { markPending(id); }
+      catch {
+        status.value = 'error';
+        message.value = 'This browser cannot save the cloud sync setting.';
+        return;
+      }
     }
     // Avoid re-entry while a remote restore is in progress; it will schedule
     // another check when revisions change.
