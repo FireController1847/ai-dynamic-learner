@@ -118,6 +118,10 @@ export class WorkspaceDataApi {
     return this.store.identityDirectory();
   }
 
+  adoptIdentityContext(directory: IdentityDirectory): void {
+    this.store.adoptIdentityContext(directory);
+  }
+
   async selectIdentity(identityId: string): Promise<IdentityDirectory> {
     await this.ready();
     const directory = await this.store.identityDirectory();

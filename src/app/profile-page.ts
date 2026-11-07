@@ -14,6 +14,7 @@ export const ProfilePage = defineComponent({
   name: 'ProfilePage',
   props: {
     directory: { type: Object as PropType<IdentityDirectory | null>, default: null },
+    profileRevision: { type: Number, default: 0 },
     onSwitch: { type: Function as PropType<(id: string) => Promise<void>>, required: true },
     onCreate: { type: Function as PropType<(label: string, transferGuest: boolean) => Promise<void>>, required: true },
   },
@@ -44,7 +45,7 @@ export const ProfilePage = defineComponent({
       feedback.value = '';
     }
 
-    watch(identityId, () => {
+    watch(() => [identityId(), props.profileRevision], () => {
       photoRequest += 1;
       photoBusy.value = false;
       profile.value = localProfileRepository.read(identityId());

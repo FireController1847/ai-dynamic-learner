@@ -34,6 +34,7 @@ export function useWorkspace() {
   const revision = ref(0);
   const backup = useBackupReminders();
   const identityDirectory = ref<IdentityDirectory | null>(null);
+  const profileRevision = ref(0);
   const api = new WorkspaceDataApi();
   const stopUnavailable = api.subscribeUnavailable(message => {
     // Keep in-memory drafts accessible. This connection cannot be reopened
@@ -88,8 +89,32 @@ export function useWorkspace() {
       await observer?.flush();
       const result = await api.refresh(lastSequence);
       if (!result.replaced && result.events?.length === 0) {
-        // Adoption can change identity ownership without changing workspace ID.
-        identityDirectory.value = await api.identityDirectory();
+        // Guest adoption can change the owner while keeping the same
+        // workspaceId. Do not let an old guest editor continue writing into
+        // the newly adopted identity.
+        const directory = await api.identityDirectory();
+        if (directory.activeIdentityId !== identityDirectory.value?.activeIdentityId) {
+          if (observer?.hasPendingChanges() ||
+              (document.activeElement instanceof HTMLElement &&
+                document.activeElement.matches('input,textarea,[contenteditable="true"]'))) {
+            observer?.stop();
+            needsReconcile.value = true;
+            remotePending = true;
+            storageProblem.value = 'Another tab transferred the active identity. Download any unsaved draft before reloading.';
+            return;
+          }
+          observer?.stop();
+          api.adoptIdentityContext(directory);
+          identityDirectory.value = directory;
+          revision.value += 1;
+          const snapshot = await api.initialSnapshot();
+          state.value = snapshot.workspace;
+          compatibility.value = snapshot.compatibility;
+          lastSequence = snapshot.revisions.commitSequence;
+          await startObserver(snapshot.records);
+        } else {
+          identityDirectory.value = directory;
+        }
         remotePending = false;
         return;
       }
@@ -131,6 +156,7 @@ export function useWorkspace() {
       // local editor has been verified clean and its observer stopped.
       if (replaced) api.adoptWorkspaceSnapshot(snapshot.workspaceId);
       identityDirectory.value = await api.identityDirectory();
+      api.adoptIdentityContext(identityDirectory.value);
       if (replaced) {
         state.value = snapshot.workspace;
         revision.value += 1;
@@ -263,8 +289,10 @@ export function useWorkspace() {
     const directory = await changeIdentity(() => api.createLocalIdentity(label, transferGuest));
     if (transferGuest) {
       // The guest copy stays available if browser-local profile migration fails.
-      try { localProfileRepository.transferGuest(selectedIdentity(directory).id); }
-      catch (error) {
+      try {
+        localProfileRepository.transferGuest(selectedIdentity(directory).id);
+        profileRevision.value += 1;
+      } catch (error) {
         throw new Error('Your workspace was transferred, but the guest profile could not be copied: ' +
           errorMessage(error) + '. The original guest profile is still stored locally.');
       }
@@ -354,7 +382,9 @@ export function useWorkspace() {
     try {
       // Old unscoped UI preferences and generated sessions may belong to
       // another identity. Only remove the legacy workspace migration copy.
-      localStorage.removeItem('dynamic-learner.workspace.v1');
+      if (identityDirectory.value?.activeIdentityId === 'guest') {
+        localStorage.removeItem('dynamic-learner.workspace.v1');
+      }
     } catch {
       throw new Error('The workspace was cleared, but some old localStorage learning data could not be removed. Check browser storage permissions before assuming all local copies are gone.');
     }
@@ -389,6 +419,7 @@ export function useWorkspace() {
       const snapshot = await api.initialSnapshot(true);
       api.adoptWorkspaceSnapshot(snapshot.workspaceId);
       identityDirectory.value = await api.identityDirectory();
+      api.adoptIdentityContext(identityDirectory.value);
       state.value = snapshot.workspace;
       revision.value++;
       lastSequence = snapshot.revisions.commitSequence;
@@ -504,7 +535,7 @@ export function useWorkspace() {
   });
 
   return { state, ready, revision, compatibility, storageProblem, needsReconcile,
-    identityDirectory, selectIdentity, createLocalIdentity,
+    identityDirectory, profileRevision, selectIdentity, createLocalIdentity,
     readBackup, replaceWorkspace, clearWorkspace, downloadBackup, downloadRawRescue,
     downloadLocalDraft, reloadSavedWorkspace, backup };
 }

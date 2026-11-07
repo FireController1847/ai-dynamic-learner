@@ -382,6 +382,7 @@ const App = defineComponent({
         }, [
           isChangelog.value ? h(ChangelogPage) : isProfile.value ? h(ProfilePage, {
             directory: workspace.identityDirectory.value,
+            profileRevision: workspace.profileRevision.value,
             onSwitch: workspace.selectIdentity,
             onCreate: workspace.createLocalIdentity,
           }) : !workspace.ready.value
