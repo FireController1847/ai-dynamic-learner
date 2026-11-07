@@ -63,6 +63,7 @@
 .profile-account-form .profile-field { gap: 5px; }
 .profile-account-form .profile-field input { min-height: 39px; padding: 8px 11px; }
 .profile-account-form .profile-form-actions { display: grid; gap: 7px; }
+.profile-account-form .profile-account-register-actions { margin-top: 7px; }
 .profile-account-form .card-primary-button { width: 100%; justify-content: center; min-height: 40px; }
 .profile-account-text-link {
   display: inline; width: auto; min-height: 0; padding: 0; border: 0; border-radius: 2px;

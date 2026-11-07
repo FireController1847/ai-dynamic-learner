@@ -202,7 +202,8 @@ export const AccountAccessPanel = defineComponent({
                 onClick: () => changeMode('reset'),
               }, 'Forgot password?') : null,
               formError.value ? h('p', { class: 'profile-error', role: 'alert' }, formError.value) : null,
-              h('div', { class: 'profile-form-actions' }, [
+              h('div', { class: mode.value === 'register'
+                ? 'profile-form-actions profile-account-register-actions' : 'profile-form-actions' }, [
                 h('button', { type: 'submit', class: 'card-primary-button',
                   disabled: submitting.value || auth.busy.value,
                 }, submitting.value ? 'Working…'
