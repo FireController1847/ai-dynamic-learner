@@ -59,6 +59,7 @@ export interface ProfileRepository {
   read(identityId: string): LocalProfile;
   write(identityId: string, profile: LocalProfile): void;
   transferGuest(identityId: string): void;
+  clear(identityId: string): void;
 }
 
 export const localProfileRepository: ProfileRepository = {
@@ -86,5 +87,8 @@ export const localProfileRepository: ProfileRepository = {
     this.write(identityId, profile);
     localStorage.removeItem(profileStorageKey('guest'));
     localStorage.removeItem(PROFILE_STORAGE_KEY);
+  },
+  clear(identityId) {
+    localStorage.removeItem(profileStorageKey(identityId));
   },
 };

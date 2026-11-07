@@ -153,6 +153,16 @@ export class WorkspaceDataApi {
     return next;
   }
 
+  async renameLocalIdentity(id: string, label: string, expectedLabel: string): Promise<IdentityDirectory> {
+    await this.ready();
+    return this.store.renameLocalIdentity(id, label, expectedLabel, this.active());
+  }
+
+  async deleteLocalIdentity(id: string, expectedTargetWorkspaceId: string): Promise<IdentityDirectory> {
+    await this.ready();
+    return this.store.deleteLocalIdentity(id, expectedTargetWorkspaceId, this.active());
+  }
+
   subscribe(listener: DataListener): () => void {
     return this.store.subscribe(listener);
   }
