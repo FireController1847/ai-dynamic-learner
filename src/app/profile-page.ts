@@ -1,4 +1,4 @@
-import { defineComponent, h, onBeforeUnmount, onMounted, ref, watch, type PropType } from 'vue';
+import { defineComponent, h, onBeforeUnmount, ref, watch, type PropType } from 'vue';
 import { AccountAccessPanel } from './account-access-panel.ts';
 import type { AccountSessionController } from './auth-session.ts';
 import type { CloudSyncController } from './cloud-sync.ts';
@@ -28,7 +28,7 @@ export const ProfilePage = defineComponent({
     const draft = ref<CloudProfile | null>(null);
     const photoInput = ref<HTMLInputElement | null>(null);
     const photoBusy = ref(false);
-    const confirmReplace = ref(false);
+    const confirmedChoice = ref<'keep' | 'replace' | null>(null);
     const profileError = ref('');
     const downloaded = ref(false);
     let photoRequest = 0;
@@ -38,16 +38,14 @@ export const ProfilePage = defineComponent({
       editing.value = false;
       draft.value = null;
       profileError.value = '';
-      confirmReplace.value = false;
+      confirmedChoice.value = null;
       downloaded.value = false;
       photoRequest += 1;
     });
 
     watch(() => props.cloudSync.status.value, status => {
-      if (status !== 'conflict') confirmReplace.value = false;
+      if (status !== 'conflict') confirmedChoice.value = null;
     });
-    onMounted(() => accountProfile.beginPolling(() => !editing.value &&
-      props.cloudSync.status.value !== 'conflict'));
     onBeforeUnmount(() => { photoRequest += 1; });
 
     function beginEdit() {
@@ -116,7 +114,7 @@ export const ProfilePage = defineComponent({
       ]);
     }
     function signOut() {
-      confirmReplace.value = false;
+      confirmedChoice.value = null;
       void props.session.signOut().catch(() => undefined);
     }
     async function downloadLocal() {
@@ -128,47 +126,65 @@ export const ProfilePage = defineComponent({
         // The cloud-sync controller presents the actionable error.
       }
     }
-    async function replaceLocal() {
-      if (!confirmReplace.value) {
-        confirmReplace.value = true;
-        return;
-      }
-      confirmReplace.value = false;
-      await props.cloudSync.useCloudWorkspace().catch(() => undefined);
+    function chooseWorkspace(choice: 'keep' | 'replace') {
+      confirmedChoice.value = confirmedChoice.value === choice ? null : choice;
+    }
+    async function confirmWorkspaceChoice() {
+      const choice = confirmedChoice.value;
+      if (!choice) return;
+      confirmedChoice.value = null;
+      if (choice === 'keep') await props.cloudSync.keepLocalWorkspace();
+      else await props.cloudSync.useCloudWorkspace();
     }
 
     function handoffScreen() {
       const sync = props.cloudSync;
-      const busy = sync.status.value === 'syncing';
+      const busy = sync.status.value === 'syncing' || props.session.busy.value;
+      const choice = confirmedChoice.value;
       return h('section', { class: 'account-handoff', 'aria-label': 'Choose your workspace' }, [
         h('div', { class: 'account-handoff-emblem' }, h(Icon, { name: 'archive' })),
         h('h2', 'Choose your workspace'),
-        h('p', 'This browser has local work, and your account has a different synced workspace. Nothing has been replaced.'),
+        h('p', 'This device and your account have different workspaces. Choose which copy to keep. The copies will not be merged.'),
+        h('div', { class: 'account-handoff-options' }, [
+          h('div', { class: 'account-handoff-choice' }, [
+            h('button', { type: 'button', class: 'card-primary-button', disabled: busy,
+              onClick: () => chooseWorkspace('keep'),
+            }, 'Keep my workspace'),
+            h('p', 'Upload this device’s data to replace the cloud copy.'),
+          ]),
+          h('div', { class: 'account-handoff-choice' }, [
+            h('button', { type: 'button', class: 'quiet-button', disabled: busy,
+              onClick: () => chooseWorkspace('replace'),
+            }, 'Replace my workspace'),
+            h('p', 'Download the cloud copy to replace this device’s data.'),
+          ]),
+        ]),
+        choice ? h('div', { class: 'account-handoff-confirm', role: 'group',
+          'aria-label': choice === 'keep' ? 'Confirm cloud workspace replacement' : 'Confirm local workspace replacement',
+        }, [
+          h('strong', choice === 'keep' ? 'Replace the cloud workspace?' : 'Replace this device’s workspace?'),
+          h('p', choice === 'keep'
+            ? 'Your local workspace will become the account’s synced copy. Cloud changes not present on this device will no longer be current. Your local data will stay here.'
+            : 'This replaces the selected local workspace and its saved generations with the cloud copy. Any local changes not in the cloud will be lost. You can download a local backup below.'),
+          h('div', { class: 'profile-form-actions' }, [
+            h('button', { type: 'button', class: 'quiet-button', disabled: busy,
+              onClick: () => { confirmedChoice.value = null; },
+            }, 'Cancel'),
+            h('button', { type: 'button', class: 'card-primary-button', disabled: busy,
+              onClick: () => { void confirmWorkspaceChoice(); },
+            }, choice === 'keep' ? 'Yes, replace cloud copy' : 'Yes, replace local data'),
+          ]),
+        ]) : null,
         h('div', { class: 'account-handoff-actions' }, [
-          h('button', { type: 'button', class: 'quiet-button', disabled: busy || props.session.busy.value,
-            onClick: signOut,
-          }, [h(Icon, { name: 'log-in' }), 'Sign out and keep local data']),
           h('button', { type: 'button', class: 'quiet-button', disabled: busy,
             onClick: () => { void downloadLocal(); },
           }, [h(Icon, { name: 'download' }), 'Download local workspace']),
-          h('button', {
-            type: 'button', class: 'card-primary-button', disabled: busy,
-            onClick: () => { void replaceLocal(); },
-          }, 'Use synced workspace instead'),
+          h('button', { type: 'button', class: 'quiet-button', disabled: busy,
+            onClick: signOut,
+          }, 'Sign out and keep local data'),
         ]),
         downloaded.value ? h('p', { class: 'profile-field-hint account-handoff-hint', role: 'status' },
-          'Backup download started. Confirm the file was saved before replacing your workspace.') : null,
-        confirmReplace.value ? h('div', { class: 'account-handoff-confirm', role: 'group',
-          'aria-label': 'Confirm local workspace replacement' }, [
-          h('strong', 'Replace local workspace?'),
-          h('p', 'This permanently deletes the currently selected local workspace and its previous saved generations in this browser. Any other legacy local identities are left untouched. Only your account’s cloud copy will remain active.'),
-          h('div', { class: 'profile-form-actions' }, [
-            h('button', { type: 'button', class: 'quiet-button', onClick: () => { confirmReplace.value = false; } },
-              'Keep local data'),
-            h('button', { type: 'button', class: 'card-primary-button',
-              onClick: () => { void replaceLocal(); } }, 'Yes, replace local data'),
-          ]),
-        ]) : null,
+          'Backup download started. Confirm the file was saved before replacing local data.') : null,
         h('p', { class: 'account-handoff-note', role: 'status' }, sync.message.value),
       ]);
     }
@@ -278,16 +294,22 @@ export const ProfilePage = defineComponent({
           profileCard(),
           h('section', { class: 'profile-identities profile-cloud-sync', 'aria-label': 'Cloud synchronization' }, [
             h('div', { class: 'profile-cloud-sync-heading' }, [
-              h(Icon, { name: sync.status.value === 'synced' ? 'check' : 'refresh-cw' }),
+              h('span', { class: 'profile-cloud-sync-icon' }, h(Icon, {
+                name: sync.status.value === 'synced' ? 'check' : 'refresh-cw',
+                class: sync.status.value === 'loading' || sync.status.value === 'checking' ||
+                  sync.status.value === 'syncing' ? 'profile-cloud-sync-spinner' : '',
+              })),
               h('h3', 'Cloud sync'),
+              h('button', { type: 'button', class: 'quiet-button profile-cloud-sync-action',
+                disabled: ['loading', 'checking', 'syncing', 'conflict', 'off'].includes(sync.status.value) ||
+                  sync.cooldownSeconds.value > 0,
+                title: sync.cooldownSeconds.value > 0
+                  ? 'Synchronization available in ' + sync.cooldownSeconds.value + ' seconds'
+                  : 'Check the latest cloud copy and synchronize manually',
+                onClick: () => { void sync.sync(); },
+              }, sync.cooldownSeconds.value > 0 ? 'Sync (' + sync.cooldownSeconds.value + 's)' : 'Sync'),
             ]),
             h('p', { role: 'status' }, sync.message.value),
-            sync.status.value === 'off' ? h('button', { type: 'button', class: 'card-primary-button',
-              onClick: sync.enable,
-            }, 'Enable cloud sync') : null,
-            sync.status.value === 'error' ? h('button', { type: 'button', class: 'quiet-button',
-              onClick: sync.retry,
-            }, 'Retry') : null,
           ]),
           props.session.notice.value ? h('p', { class: 'profile-feedback', role: 'status' },
             props.session.notice.value) : null,

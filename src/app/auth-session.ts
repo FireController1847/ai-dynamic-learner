@@ -141,7 +141,7 @@ export function useAccountSession(provider: AuthProvider | null) {
       if (result.status !== 'authenticated') throw new Error('Email verification did not establish a session.');
       state.value = result;
       autoSyncAccountId.value = result.account.id;
-      notice.value = 'Email verified. Your account is ready and cloud synchronization is starting.';
+      notice.value = 'Email verified. Press Sync on your profile to upload this workspace.';
     } catch (cause) {
       error.value = cause instanceof Error ? cause.message : 'Email verification failed.';
       throw cause;
