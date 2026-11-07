@@ -263,10 +263,7 @@ export const ProfilePage = defineComponent({
       const authenticated = props.session.state.value.status === 'authenticated';
       const sync = props.cloudSync;
       if (!authenticated) {
-        return h('section', { class: 'profile-page profile-page--sign-in', 'aria-label': 'Sign in' }, [
-          h('div', { class: 'profile-intro' }, [
-            h('h2', 'Sign in'),
-          ]),
+        return h('section', { class: 'profile-page profile-page--sign-in', 'aria-label': 'Account access' }, [
           h(AccountAccessPanel, { session: props.session }),
         ]);
       }

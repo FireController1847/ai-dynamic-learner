@@ -72,6 +72,9 @@ export default (_env: unknown, argv: { mode?: Configuration['mode'] }): Configur
         __VUE_PROD_DEVTOOLS__: false,
         __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: false,
         __DYNLEARN_AUTH_API_ORIGIN__: JSON.stringify(authApiOrigin),
+        // Local builds show unavailable OAuth actions for visual verification;
+        // production only displays providers configured on the Worker.
+        __DYNLEARN_AUTH_DEV_PREVIEW__: !production,
       }),
       new MiniCssExtractPlugin({ filename: 'assets/[name].[contenthash:8].css' }),
       ...site.routes.map((route) => new HtmlWebpackPlugin({

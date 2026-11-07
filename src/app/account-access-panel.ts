@@ -5,6 +5,9 @@ import type { AccountSessionController } from './auth-session.ts';
 
 type AccessMode = 'sign-in' | 'register' | 'reset' | 'reset-confirm';
 
+// Build-time only: disabled OAuth previews must never appear in production.
+declare const __DYNLEARN_AUTH_DEV_PREVIEW__: boolean;
+
 export const AccountAccessPanel = defineComponent({
   name: 'AccountAccessPanel',
   props: { session: { type: Object as PropType<AccountSessionController>, required: true } },
@@ -110,7 +113,16 @@ export const AccountAccessPanel = defineComponent({
 
       const showRecovery = mode.value === 'reset-confirm' && resetToken.value !== null &&
         options.email && options.ready;
-      return h('section', { class: 'profile-identities profile-account-access', 'aria-label': 'Online account' }, [
+      const title = current.status === 'verification-required' && !showRecovery
+        ? 'Verify email'
+        : mode.value === 'register' ? 'Create account'
+          : mode.value === 'reset' ? 'Reset password'
+            : mode.value === 'reset-confirm' ? 'Set new password' : 'Sign in';
+      const showSocial = (mode.value === 'sign-in' || mode.value === 'register') &&
+        (options.google || options.microsoft || __DYNLEARN_AUTH_DEV_PREVIEW__);
+      return h('section', { class: 'profile-account-shell', 'aria-label': 'Online account' }, [
+        h('h2', { class: 'profile-account-title' }, title),
+        h('div', { class: 'profile-identities profile-account-access' }, [
         (!auth.available || current.status === 'unavailable')
           ? h('p', { class: 'profile-account-unavailable', role: 'status' },
             'Sign-in is temporarily unavailable. You can keep studying offline.')
@@ -148,13 +160,9 @@ export const AccountAccessPanel = defineComponent({
         options.ready && current.status !== 'authenticated' &&
           (current.status === 'signed-out' || showRecovery)
           ? h('div', { class: 'profile-account-form-area' }, [
-            options.email && !showRecovery && mode.value !== 'sign-in'
-              ? h('h3', { class: 'profile-account-form-heading' },
-                mode.value === 'register' ? 'Create account' : 'Reset password') : null,
             options.email ? h('form', { class: 'profile-form profile-account-form',
               onSubmit: (event: Event) => { void submit(event); },
             }, [
-              mode.value === 'reset-confirm' ? h('h4', 'Choose a new password') : null,
               mode.value !== 'reset-confirm' ? h('div', { class: 'profile-field' }, [
                 h('label', { for: 'account-access-email' }, 'Email'),
                 h('input', { id: 'account-access-email', type: 'email', required: true, maxlength: 254,
@@ -188,7 +196,7 @@ export const AccountAccessPanel = defineComponent({
                   }),
                 ]) : null,
               mode.value === 'sign-in' ? h('button', { type: 'button',
-                class: 'quiet-button profile-account-forgot',
+                class: 'profile-account-text-link profile-account-forgot',
                 disabled: submitting.value || auth.busy.value,
                 onClick: () => changeMode('reset'),
               }, 'Forgot password?') : null,
@@ -200,7 +208,8 @@ export const AccountAccessPanel = defineComponent({
                   : mode.value === 'sign-in' ? 'Sign in'
                     : mode.value === 'register' ? 'Create account'
                       : mode.value === 'reset' ? 'Request reset' : 'Set new password'),
-                mode.value === 'reset' ? h('button', { type: 'button', class: 'quiet-button',
+                mode.value === 'reset' ? h('button', { type: 'button',
+                  class: 'profile-account-text-link profile-account-back',
                   onClick: () => changeMode('sign-in'), disabled: submitting.value,
                 }, 'Back to sign in') : null,
               ]),
@@ -208,24 +217,28 @@ export const AccountAccessPanel = defineComponent({
             options.email && !showRecovery && (mode.value === 'sign-in' || mode.value === 'register')
               ? h('p', { class: 'profile-field-hint profile-account-switch' }, [
                 mode.value === 'sign-in' ? "Don't have an account? " : 'Already have an account? ',
-                h('button', { type: 'button', class: 'quiet-button',
+                h('button', { type: 'button', class: 'profile-account-text-link',
                   disabled: submitting.value || auth.busy.value,
                   onClick: () => changeMode(mode.value === 'sign-in' ? 'register' : 'sign-in'),
-                }, mode.value === 'sign-in' ? 'Create one' : 'Sign in'),
+                }, mode.value === 'sign-in' ? 'Create account' : 'Sign in'),
               ]) : null,
-            !showRecovery && (options.google || options.microsoft) ? h('div', {
+            showSocial ? h('div', {
               class: 'profile-social-login', role: 'group', 'aria-label': 'Other sign-in providers',
             }, [
               options.email ? h('p', { class: 'profile-social-divider' }, 'or') : null,
-              options.google ? h('button', { type: 'button', class: 'quiet-button',
-                disabled: auth.busy.value || submitting.value,
+              options.google || __DYNLEARN_AUTH_DEV_PREVIEW__ ? h('button', {
+                type: 'button', class: 'quiet-button',
+                disabled: !options.google || auth.busy.value || submitting.value,
+                title: !options.google ? 'Google sign-in is not configured in this environment' : undefined,
                 onClick: () => socialLogin('google'),
               }, [
                 h('span', { class: 'profile-social-mark', 'aria-hidden': 'true' }, 'G'),
                 mode.value === 'register' ? 'Sign up with Google' : 'Continue with Google',
               ]) : null,
-              options.microsoft ? h('button', { type: 'button', class: 'quiet-button',
-                disabled: auth.busy.value || submitting.value,
+              options.microsoft || __DYNLEARN_AUTH_DEV_PREVIEW__ ? h('button', {
+                type: 'button', class: 'quiet-button',
+                disabled: !options.microsoft || auth.busy.value || submitting.value,
+                title: !options.microsoft ? 'Microsoft sign-in is not configured in this environment' : undefined,
                 onClick: () => socialLogin('microsoft'),
               }, [
                 h('span', { class: 'profile-social-mark', 'aria-hidden': 'true' }, 'M'),
@@ -240,7 +253,8 @@ export const AccountAccessPanel = defineComponent({
         auth.error.value ? h('p', { class: 'profile-error', role: 'alert' }, auth.error.value) : null,
         auth.notice.value ? h('p', { class: 'profile-feedback', role: 'status' }, auth.notice.value) : null,
         h('footer', { class: 'profile-account-privacy-note' },
-          'On the live site, GitHub Pages serves Dynamic Learner. Account and sync requests go directly from your browser to Cloudflare Workers and D1 storage—never through a privately operated application server.'),
+          'GitHub Pages UI · Browser → Cloudflare Workers → D1 · No private server'),
+        ]),
       ]);
     };
   },
