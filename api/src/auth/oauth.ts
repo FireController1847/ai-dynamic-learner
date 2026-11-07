@@ -1,5 +1,5 @@
 import { randomToken, sha256, normalizeEmail, validToken } from './crypto';
-import { ApiError, OAUTH_COOKIE, apiOrigin, clearCookie, cookieValue,
+import { ApiError, apiOrigin, clearCookie, cookieValue, oauthCookieName, localApi,
   frontendProfileUrl, redirect, setCookie } from './http';
 import { db, issueSession, now, publicSession, rateLimit } from './db';
 import type { AccountRow, OAuthRequestRow, RuntimeEnv, SocialProvider } from './types';
@@ -48,7 +48,7 @@ export async function oauthStart(request: Request, env: RuntimeEnv,
   url.searchParams.set('code_challenge', challenge);
   url.searchParams.set('code_challenge_method', 'S256');
   url.searchParams.set('prompt', 'select_account');
-  return redirect(url.toString(), { 'Set-Cookie': setCookie(OAUTH_COOKIE, browser, 600) });
+  return redirect(url.toString(), { 'Set-Cookie': setCookie(oauthCookieName(env), browser, 600, 'Lax', !localApi(env)) });
 }
 interface UserInfo { sub?: unknown; email?: unknown; email_verified?: unknown }
 async function exchange(code: string, config: ReturnType<typeof providerConfig>,
@@ -83,7 +83,7 @@ async function fetchIdentity(token: string, config: ReturnType<typeof providerCo
   return user as UserInfo;
 }
 async function socialAccount(env: RuntimeEnv, provider: SocialProvider, subject: string,
-  email: string | null, verified: boolean): Promise<AccountRow> {
+  email: string | null, verified: boolean): Promise<{ account: AccountRow; created: boolean }> {
   const existing = await db(env).prepare(
     'SELECT a.* FROM accounts a JOIN oauth_identities i ON i.account_id=a.id WHERE i.provider=? AND i.subject=?'
   ).bind(provider, subject).first<AccountRow>();
@@ -91,9 +91,9 @@ async function socialAccount(env: RuntimeEnv, provider: SocialProvider, subject:
     if (existing.email !== email || (verified && existing.email_verified === 0)) {
       await db(env).prepare('UPDATE accounts SET email=?,email_verified=?,updated_at=? WHERE id=?')
         .bind(email, verified ? 1 : 0, now(), existing.id).run();
-      return { ...existing, email, email_verified: verified ? 1 : 0 };
+      return { account: { ...existing, email, email_verified: verified ? 1 : 0 }, created: false };
     }
-    return existing;
+    return { account: existing, created: false };
   }
   const id = crypto.randomUUID();
   try {
@@ -107,20 +107,20 @@ async function socialAccount(env: RuntimeEnv, provider: SocialProvider, subject:
     const raced = await db(env).prepare(
       'SELECT a.* FROM accounts a JOIN oauth_identities i ON i.account_id=a.id WHERE i.provider=? AND i.subject=?'
     ).bind(provider, subject).first<AccountRow>();
-    if (raced) return raced;
+    if (raced) return { account: raced, created: false };
     throw new ApiError(503, 'Account creation is temporarily unavailable.');
   }
-  return { id, email, email_verified: verified ? 1 : 0, created_at: now() };
+  return { account: { id, email, email_verified: verified ? 1 : 0, created_at: now() }, created: true };
 }
 export async function oauthCallback(request: Request, env: RuntimeEnv,
   provider: SocialProvider): Promise<Response> {
-  const cleared = clearCookie(OAUTH_COOKIE);
+  const cleared = clearCookie(oauthCookieName(env), !localApi(env));
   try {
     const config = providerConfig(provider, env);
     const url = new URL(request.url);
     const state = url.searchParams.get('state');
     const code = url.searchParams.get('code');
-    const browser = cookieValue(request, OAUTH_COOKIE);
+    const browser = cookieValue(request, oauthCookieName(env));
     if (url.searchParams.has('error') || !validToken(state) ||
         !validToken(browser) || !code || code.length > 4096) {
       return frontRedirect(env, 'error', cleared);
@@ -137,10 +137,10 @@ export async function oauthCallback(request: Request, env: RuntimeEnv,
     // Provider subject, never email, is the stable key. No automatic linking by email.
     const email = normalizeEmail(user.email);
     const verified = provider === 'google' && user.email_verified === true && email !== null;
-    const account = await socialAccount(env, provider, subject, email, verified);
+    const { account, created } = await socialAccount(env, provider, subject, email, verified);
     const cookie = await issueSession(env, account.id);
     const urlFront = new URL(frontendProfileUrl(env));
-    urlFront.searchParams.set('auth', 'success');
+    urlFront.searchParams.set('auth', created ? 'created' : 'success');
     // Append rather than combine Set-Cookie headers; each cookie must have its own header.
     const response = redirect(urlFront.toString(), { 'Set-Cookie': cookie });
     response.headers.append('Set-Cookie', cleared);

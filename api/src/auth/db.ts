@@ -1,5 +1,5 @@
 import { hmac, randomToken, sha256 } from './crypto';
-import { ApiError, SESSION_COOKIE, clearCookie, cookieValue, setCookie } from './http';
+import { ApiError, cookieValue, newSessionCookie, sessionCookieName } from './http';
 import { publicProfile, type AccountRow, type RuntimeEnv } from './types';
 export const SESSION_SECONDS = 30 * 24 * 60 * 60;
 export const now = (): number => Math.floor(Date.now() / 1000);
@@ -21,12 +21,12 @@ export async function issueSession(env: RuntimeEnv, accountId: string): Promise<
   await db(env).prepare(
     'INSERT INTO auth_sessions (token_hash,account_id,expires_at,created_at) VALUES (?,?,?,?)'
   ).bind(await sha256(token), accountId, now() + SESSION_SECONDS, now()).run();
-  return setCookie(SESSION_COOKIE, token, SESSION_SECONDS);
+  return newSessionCookie(env, token, SESSION_SECONDS);
 }
 export async function activeSession(env: RuntimeEnv, request: Request): Promise<{
   account: AccountRow; providerId: string; tokenHash: string
 } | null> {
-  const token = cookieValue(request, SESSION_COOKIE);
+  const token = cookieValue(request, sessionCookieName(env));
   if (!token || !/^[A-Za-z0-9_-]{40,100}$/.test(token)) return null;
   const tokenHash = await sha256(token);
   const row = await db(env).prepare(
@@ -39,7 +39,7 @@ export async function activeSession(env: RuntimeEnv, request: Request): Promise<
   return row ? { account: row, providerId: row.provider_id ?? 'unknown', tokenHash } : null;
 }
 export async function revokeSession(env: RuntimeEnv, request: Request): Promise<void> {
-  const token = cookieValue(request, SESSION_COOKIE);
+  const token = cookieValue(request, sessionCookieName(env));
   if (token && /^[A-Za-z0-9_-]{40,100}$/.test(token)) {
     await db(env).prepare('DELETE FROM auth_sessions WHERE token_hash=?').bind(await sha256(token)).run();
   }
@@ -60,4 +60,4 @@ export async function consumeAction(env: RuntimeEnv, token: string, kind: 'verif
   if (!found) throw new ApiError(400, 'This link is invalid or has expired.');
   return found.account_id;
 }
-export { clearCookie, SESSION_COOKIE };
+

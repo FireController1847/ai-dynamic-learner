@@ -32,7 +32,7 @@ export interface AuthProvider {
   readonly id: string;
   capabilities(): Promise<AuthCapabilities>;
   oauthStart(provider: OAuthProvider): string;
-  verifyEmail(token: string): Promise<void>;
+  verifyEmail(token: string): Promise<AuthResult>;
   resendVerification(email: string): Promise<void>;
   completePasswordReset(token: string, password: string): Promise<void>;
   restore(): Promise<RestoreResult | { status: 'unavailable' }>;

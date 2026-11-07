@@ -3,6 +3,7 @@ import { completeReset, currentSession, register, requestReset, resendVerificati
   signIn, signOut, verifyEmail } from './auth/password';
 import { oauthCallback, oauthStart } from './auth/oauth';
 import { configuredEmail } from './auth/mail';
+import { syncGetManifest, syncGetChunk, syncStart, syncChunk, syncPublish } from './sync';
 import type { RuntimeEnv, SocialProvider } from './auth/types';
 
 async function handle(request: Request, env: RuntimeEnv): Promise<Response> {
@@ -25,6 +26,20 @@ async function handle(request: Request, env: RuntimeEnv): Promise<Response> {
       google: ready && !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
       microsoft: ready && !!(env.MICROSOFT_CLIENT_ID && env.MICROSOFT_CLIENT_SECRET),
     });
+  }
+  if (path.startsWith('/v1/sync/')) {
+    assertConfigured(env);
+    if (request.method === 'GET' && path === '/v1/sync/manifest') return syncGetManifest(request, env);
+    if (request.method === 'GET' && path === '/v1/sync/chunk') return syncGetChunk(request, env);
+    if (request.method === 'POST') {
+      requireOrigin(request, env);
+      switch (path) {
+        case '/v1/sync/start': return syncStart(request, env);
+        case '/v1/sync/chunk': return syncChunk(request, env);
+        case '/v1/sync/publish': return syncPublish(request, env);
+      }
+    }
+    return respond({ error: 'Not found.' }, 404);
   }
   const oauthRoute = /^\/v1\/auth\/oauth\/(google|microsoft)\/(start|callback)$/.exec(path);
   if (oauthRoute && request.method === 'GET') {

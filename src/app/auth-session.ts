@@ -26,10 +26,12 @@ export function useAccountSession(provider: AuthProvider | null) {
   const busy = ref(false);
   const error = ref('');
   const notice = ref('');
+  // First-time verification/creation requests a safe initial cloud upload.
+  const autoSyncAccountId = ref<string | null>(null);
   const available = !!provider;
   let generation = 0;
 
-  async function restore(): Promise<void> {
+  async function restore(newOAuthAccount = false): Promise<void> {
     if (!provider || busy.value) return;
     const current = ++generation;
     busy.value = true;
@@ -50,6 +52,7 @@ export function useAccountSession(provider: AuthProvider | null) {
         assertResult(result);
       }
       state.value = result;
+      if (newOAuthAccount && result.status === 'authenticated') autoSyncAccountId.value = result.account.id;
     } catch (cause) {
       // CORS, a missing local Worker, and an API 503 are not the same as a
       // signed-in session. Preserve the safely returned error when available.
@@ -131,9 +134,12 @@ export function useAccountSession(provider: AuthProvider | null) {
     busy.value = true;
     error.value = ''; notice.value = '';
     try {
-      await provider.verifyEmail(token);
-      state.value = { status: 'signed-out' };
-      notice.value = 'Email verified. You can now sign in.';
+      const result = await provider.verifyEmail(token);
+      assertResult(result);
+      if (result.status !== 'authenticated') throw new Error('Email verification did not establish a session.');
+      state.value = result;
+      autoSyncAccountId.value = result.account.id;
+      notice.value = 'Email verified. Your account is ready and cloud synchronization is starting.';
     } catch (cause) {
       error.value = cause instanceof Error ? cause.message : 'Email verification failed.';
       throw cause;
@@ -173,6 +179,7 @@ export function useAccountSession(provider: AuthProvider | null) {
     try {
       await provider.signOut();
       state.value = { status: 'signed-out' };
+      autoSyncAccountId.value = null;
       notice.value = 'Signed out of the online account. Device-local workspaces remain here.';
     } catch (cause) {
       error.value = cause instanceof Error ? cause.message : 'Could not sign out.';
@@ -180,7 +187,7 @@ export function useAccountSession(provider: AuthProvider | null) {
     } finally { busy.value = false; }
   }
 
-  return { state, capabilities, busy, error, notice, available, restore, beginSignIn,
+  return { state, capabilities, busy, error, notice, autoSyncAccountId, available, restore, beginSignIn,
     authenticate, requestPasswordReset, resendVerification, verifyEmail, completePasswordReset,
     oauthStart, signOut };
 }

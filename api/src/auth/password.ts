@@ -1,7 +1,8 @@
 import { checkPassword, hashPassword, isAcceptablePassword, normalizeEmail, validToken } from './crypto';
 import { ApiError, assertConfigured, readJson, respond } from './http';
 import { actionToken, activeSession, consumeAction, db, issueSession, now, publicSession, rateLimit,
-  revokeSession, clearCookie, SESSION_COOKIE } from './db';
+  revokeSession } from './db';
+import { expireSessionCookie } from './http';
 import { configuredEmail, sendAccountMail } from './mail';
 import type { AccountRow, PasswordRow, RuntimeEnv } from './types';
 
@@ -72,7 +73,7 @@ export async function currentSession(request: Request, env: RuntimeEnv): Promise
 export async function signOut(request: Request, env: RuntimeEnv): Promise<Response> {
   assertConfigured(env);
   await revokeSession(env, request);
-  return respond({ status: 'signed-out' }, 200, { 'Set-Cookie': clearCookie(SESSION_COOKIE) });
+  return respond({ status: 'signed-out' }, 200, { 'Set-Cookie': expireSessionCookie(env) });
 }
 export async function resendVerification(request: Request, env: RuntimeEnv): Promise<Response> {
   assertConfigured(env);
@@ -99,7 +100,10 @@ export async function verifyEmail(request: Request, env: RuntimeEnv): Promise<Re
   const id = await consumeAction(env, data.token, 'verify');
   await db(env).prepare('UPDATE accounts SET email_verified=1,updated_at=? WHERE id=?')
     .bind(now(), id).run();
-  return respond({ verified: true });
+  const account = await db(env).prepare('SELECT * FROM accounts WHERE id=?').bind(id).first<AccountRow>();
+  if (!account) throw new ApiError(503, 'The verified account could not be loaded.');
+  const cookie = await issueSession(env, id);
+  return respond(publicSession(account, 'email'), 200, { 'Set-Cookie': cookie });
 }
 export async function requestReset(request: Request, env: RuntimeEnv): Promise<Response> {
   assertConfigured(env);
@@ -131,5 +135,5 @@ export async function completeReset(request: Request, env: RuntimeEnv): Promise<
     db(env).prepare('DELETE FROM auth_sessions WHERE account_id=?').bind(accountId),
     db(env).prepare('DELETE FROM auth_actions WHERE account_id=? AND kind=?').bind(accountId, 'reset'),
   ]);
-  return respond({ reset: true }, 200, { 'Set-Cookie': clearCookie(SESSION_COOKIE) });
+  return respond({ reset: true }, 200, { 'Set-Cookie': expireSessionCookie(env) });
 }

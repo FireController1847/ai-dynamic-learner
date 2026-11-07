@@ -19,6 +19,7 @@ const paths: Record<string, string> = {
   coffee: 'M4 8h12v7a6 6 0 0 1-12 0ZM16 8h2a3 3 0 0 1 0 6h-2M3 22h15M7 3v2M12 3v2',
   statistics: 'M3 21h18M5 21V12h3v9M11 21V7h3v14M17 21V3h3v18',
   'user-round': 'M20 21a8 8 0 0 0-16 0M12 13a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z',
+  'log-in': 'M10 17l5-5-5-5M15 12H3M12 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7',
   checklist: 'M9 5h12M9 12h12M9 19h12M2 5l2 2 3-4M2 12l2 2 3-4M2 19l2 2 3-4',
   grid: 'M3 3h18v18H3ZM12 3v18M3 12h18',
   tag: 'M3 3h8l10 10-8 8L3 11ZM7 7h.01',

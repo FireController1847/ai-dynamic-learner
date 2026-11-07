@@ -16,6 +16,7 @@ import { ChangelogPage } from './changelog-page.ts';
 import { ProfilePage } from './profile-page.ts';
 import { configuredAuthProvider } from './auth-provider.ts';
 import { useAccountSession } from './auth-session.ts';
+import { useCloudSync } from './cloud-sync.ts';
 import { TipsExperience } from '../../packages/tips/src/index.ts';
 import { tipsCatalog } from './tips-content.ts';
 import { Icon } from '../components/icon.ts';
@@ -42,8 +43,10 @@ const App = defineComponent({
   name: 'App',
   setup() {
     const accountSession = useAccountSession(configuredAuthProvider);
-    onMounted(() => { void accountSession.restore(); });
+    const oauthNewAccount = new URL(window.location.href).searchParams.get('auth') === 'created';
+    onMounted(() => { void accountSession.restore(oauthNewAccount); });
     const workspace = useWorkspace();
+    const cloudSync = useCloudSync(accountSession, workspace);
     // Reminder delivery lives in the app shell, not in the grid view, so
     // navigating to another Dynamic Learner app does not stop notifications.
     function checkDueReminders() {
@@ -169,6 +172,7 @@ const App = defineComponent({
     const activeFeature = computed(() => features.find((feature) => feature.path === currentPath.value));
     const isChangelog = computed(() => currentPath.value === '/changelog/');
     const isProfile = computed(() => currentPath.value === '/profile/');
+    const guestAccount = computed(() => accountSession.state.value.status !== 'authenticated');
     const isStandalonePage = computed(() => isChangelog.value || isProfile.value);
     const tipsFeature = computed(() => {
       if (!TIPS_ENABLED) return null;
@@ -226,8 +230,8 @@ const App = defineComponent({
             : h(Icon, { name: activeFeature.value.icon, class: 'app-logo app-header-logo' })
           : currentPath.value === '/'
             ? h(AppIcon, { name: 'dynamic-learner', imageClass: 'app-logo app-header-logo' })
-            : h(Icon, { name: isChangelog.value ? 'history-settings' : isProfile.value ? 'user-round' : 'document' }),
-        h('h1', isChangelog.value ? 'Changelog' : isProfile.value ? 'Profile'
+            : h(Icon, { name: isChangelog.value ? 'history-settings' : isProfile.value ? (guestAccount.value ? 'log-in' : 'user-round') : 'document' }),
+        h('h1', isChangelog.value ? 'Changelog' : isProfile.value ? (guestAccount.value ? 'Sign in' : 'Profile')
           : activeFeature.value?.label ?? (currentPath.value === '/' ? appConfig.name : 'Page not found')),
         h('div', { class: 'app-header-actions' }, [
           compatibilityNoticeHidden.value ? h('button', {
@@ -268,13 +272,13 @@ const App = defineComponent({
           h('a', {
             href: pageHref('/profile/'),
             class: 'quiet-button app-header-action profile-trigger',
-            title: 'Your profile',
-            'aria-label': 'Open your profile',
+            title: guestAccount.value ? 'Sign in to Dynamic Learner' : 'Your profile',
+            'aria-label': guestAccount.value ? 'Sign in to Dynamic Learner' : 'Open your profile',
             'aria-current': isProfile.value ? 'page' : undefined,
             onClick: (event: MouseEvent) => navigate(event, '/profile/'),
           }, [
-            h(Icon, { name: 'user-round' }),
-            h('span', { class: 'app-header-action-label' }, 'Profile'),
+            h(Icon, { name: guestAccount.value ? 'log-in' : 'user-round' }),
+            h('span', { class: 'app-header-action-label' }, guestAccount.value ? 'Sign in' : 'Profile'),
           ]),
           tipsFeature.value ? h('button', {
             type: 'button',
@@ -392,6 +396,7 @@ const App = defineComponent({
             onRename: workspace.renameLocalIdentity,
             onDelete: workspace.deleteLocalIdentity,
             session: accountSession,
+            cloudSync,
           }) : !workspace.ready.value
             ? workspace.storageProblem.value
               ? h('section', { class: 'workspace-loading', role: 'alert' }, [

@@ -32,6 +32,7 @@ export function useWorkspace() {
   const storageProblem = ref('');
   const needsReconcile = ref(false);
   const revision = ref(0);
+  const committedRevision = ref(0);
   const backup = useBackupReminders();
   const identityDirectory = ref<IdentityDirectory | null>(null);
   const profileRevision = ref(0);
@@ -53,6 +54,7 @@ export function useWorkspace() {
   let disposed = false;
 
   const updateBackup = (authoredRevision: number, commitSequence: number) => {
+    committedRevision.value = commitSequence;
     backup.workspaceChanged(api.workspaceIdentity(), authoredRevision, populated(state.value));
     // Only advance past commits we actually observed. Looking up the latest
     // database sequence here can accidentally skip unseen remote edits.
@@ -111,6 +113,7 @@ export function useWorkspace() {
           state.value = snapshot.workspace;
           compatibility.value = snapshot.compatibility;
           lastSequence = snapshot.revisions.commitSequence;
+      committedRevision.value = snapshot.revisions.commitSequence;
           await startObserver(snapshot.records);
         } else {
           identityDirectory.value = directory;
@@ -166,6 +169,7 @@ export function useWorkspace() {
         applyWorkspaceSnapshot(state.value, snapshot.workspace);
       }
       lastSequence = snapshot.revisions.commitSequence;
+      committedRevision.value = snapshot.revisions.commitSequence;
       remotePending = false;
       needsReconcile.value = false;
       compatibility.value = snapshot.compatibility;
@@ -210,6 +214,7 @@ export function useWorkspace() {
       identityDirectory.value = await api.identityDirectory();
       state.value = snapshot.workspace;
       lastSequence = snapshot.revisions.commitSequence;
+      committedRevision.value = snapshot.revisions.commitSequence;
       compatibility.value = snapshot.compatibility;
       await startObserver(snapshot.records);
       if (disposed) return;
@@ -250,6 +255,7 @@ export function useWorkspace() {
       identityDirectory.value = directory;
       revision.value += 1;
       lastSequence = snapshot.revisions.commitSequence;
+      committedRevision.value = snapshot.revisions.commitSequence;
       compatibility.value = snapshot.compatibility;
       remotePending = false;
       needsReconcile.value = false;
@@ -341,6 +347,7 @@ export function useWorkspace() {
       state.value = snapshot.workspace;
       revision.value += 1;
       lastSequence = snapshot.revisions.commitSequence;
+      committedRevision.value = snapshot.revisions.commitSequence;
       compatibility.value = snapshot.compatibility;
       await startObserver(snapshot.records);
       backup.workspaceRestored(api.workspaceIdentity(), snapshot.revisions.authoredRevision, populated(snapshot.workspace));
@@ -382,6 +389,7 @@ export function useWorkspace() {
       state.value = snapshot.workspace;
       revision.value += 1;
       lastSequence = snapshot.revisions.commitSequence;
+      committedRevision.value = snapshot.revisions.commitSequence;
       remotePending = false;
       needsReconcile.value = false;
       compatibility.value = snapshot.compatibility;
@@ -442,6 +450,7 @@ export function useWorkspace() {
       state.value = snapshot.workspace;
       revision.value++;
       lastSequence = snapshot.revisions.commitSequence;
+      committedRevision.value = snapshot.revisions.commitSequence;
       remotePending = false;
       compatibility.value = snapshot.compatibility;
       await startObserver(snapshot.records);
@@ -456,6 +465,27 @@ export function useWorkspace() {
     } finally {
       refreshing = false;
     }
+  }
+
+  /** Cloud sync reads the same validated, durable snapshot as a manual backup.
+   * Never expose an unsaved Vue draft or a partial compatibility projection.
+   */
+  async function cloudSnapshot(): Promise<{ json: string; workspaceId: string; authoredRevision: number }> {
+    if (!ready.value || disposed || refreshing || needsReconcile.value ||
+      compatibility.value?.mode !== 'normal') {
+      throw new Error('Finish loading and saving this workspace before cloud synchronization.');
+    }
+    await nextTick();
+    await observer?.flush();
+    await observer?.settle();
+    if (observer?.hasFailed() || needsReconcile.value) {
+      throw new Error('Local changes could not be saved; cloud synchronization is paused.');
+    }
+    const result = await api.exportSnapshot();
+    if (result.workspaceId !== api.workspaceIdentity()) {
+      throw new Error('The selected workspace changed during synchronization.');
+    }
+    return result;
   }
 
   async function downloadRawRescue(): Promise<void> {
@@ -553,7 +583,7 @@ export function useWorkspace() {
     window.removeEventListener('pagehide', flushOnHide);
   });
 
-  return { state, ready, revision, compatibility, storageProblem, needsReconcile,
+  return { state, ready, revision, committedRevision, cloudSnapshot, compatibility, storageProblem, needsReconcile,
     identityDirectory, profileRevision, selectIdentity, createLocalIdentity,
     renameLocalIdentity, deleteLocalIdentity,
     readBackup, replaceWorkspace, clearWorkspace, downloadBackup, downloadRawRescue,

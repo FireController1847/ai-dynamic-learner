@@ -107,14 +107,13 @@ export const AccountAccessPanel = defineComponent({
       const auth = props.session;
       const current = auth.state.value;
       const options = auth.capabilities.value;
-      const showLogin = current.status === 'signed-out' ||
-        (current.status === 'verification-required' && mode.value === 'reset-confirm');
+
       const showRecovery = mode.value === 'reset-confirm' && resetToken.value !== null &&
         options.email && options.ready;
       return h('section', { class: 'profile-identities profile-account-access', 'aria-label': 'Online account' }, [
         h('div', { class: 'profile-identities-intro' }, [
           h('h3', 'Online account'),
-          h('p', 'Account sign-in does not automatically upload or replace your local workspace. Cloud sync is not enabled.'),
+          h('p', 'Sign in to access your account. New accounts start syncing this device’s workspace after verification; existing cloud data is never overwritten silently.'),
         ]),
         (!auth.available || current.status === 'unavailable')
           ? h('p', { class: 'profile-account-unavailable', role: 'status' },
@@ -144,7 +143,7 @@ export const AccountAccessPanel = defineComponent({
         current.status === 'authenticated'
           ? h('div', { class: 'profile-account-status' }, [
             h('p', 'Signed in as ' + (current.account.email ?? 'account ' + current.account.id) +
-              '. Your local workspace has not been linked or uploaded.'),
+              '.'),
             h('p', { class: 'profile-field-hint' }, 'Provider: ' + current.account.providerId),
             h('button', { type: 'button', class: 'quiet-button', disabled: auth.busy.value,
               onClick: () => { void auth.signOut().catch(() => undefined); },
@@ -153,16 +152,7 @@ export const AccountAccessPanel = defineComponent({
         options.ready && current.status !== 'authenticated' &&
           (current.status === 'signed-out' || showRecovery)
           ? h('div', { class: 'profile-account-form-area' }, [
-            options.email && !showRecovery ? h('div', {
-              class: 'profile-account-tabs', role: 'group', 'aria-label': 'Account action',
-            }, [
-              h('button', { type: 'button', class: 'quiet-button', 'aria-pressed': mode.value === 'sign-in',
-                onClick: () => changeMode('sign-in'), disabled: submitting.value,
-              }, 'Sign in'),
-              h('button', { type: 'button', class: 'quiet-button', 'aria-pressed': mode.value === 'register',
-                onClick: () => changeMode('register'), disabled: submitting.value,
-              }, 'Create account'),
-            ]) : null,
+            options.email && !showRecovery ? h('h4', mode.value === 'register' ? 'Create your account' : mode.value === 'reset' ? 'Reset your password' : 'Welcome back') : null,
             options.email ? h('form', { class: 'profile-form profile-account-form',
               onSubmit: (event: Event) => { void submit(event); },
             }, [
@@ -216,6 +206,14 @@ export const AccountAccessPanel = defineComponent({
                     }, 'Forgot password?'),
               ]),
             ]) : null,
+            options.email && !showRecovery && (mode.value === 'sign-in' || mode.value === 'register')
+              ? h('p', { class: 'profile-field-hint profile-account-switch' }, [
+                mode.value === 'sign-in' ? "Don't have an account? " : 'Already have an account? ',
+                h('button', { type: 'button', class: 'quiet-button',
+                  disabled: submitting.value || auth.busy.value,
+                  onClick: () => changeMode(mode.value === 'sign-in' ? 'register' : 'sign-in'),
+                }, mode.value === 'sign-in' ? 'Create one' : 'Sign in'),
+              ]) : null,
             !showRecovery && (options.google || options.microsoft) ? h('div', {
               class: 'profile-social-login', role: 'group', 'aria-label': 'Other sign-in providers',
             }, [

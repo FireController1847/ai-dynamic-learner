@@ -2,6 +2,22 @@
 
 Cloudflare Worker for **authentication only**, intentionally separate from Dynamic Learner's offline-first IndexedDB learning data. There is **no cloud sync** in this release. All code remains in the existing ACCOUNTS PR #30.
 
+## Cloud workspace synchronization
+
+Newly verified email accounts now establish an authenticated session automatically and request cloud synchronization of the **current local workspace**. Newly created Google/Microsoft accounts request the same after their first OAuth callback. Existing accounts synchronize automatically when a device has a previously linked workspace, or when a new device has an empty workspace and a saved cloud copy. Other existing sign-ins can enable sync from Profile.
+
+The API stores validated client workspace snapshots in D1 chunks and publishes a per-account revision only after every chunk is present. Uploads use conditional revisions to avoid overwriting concurrent edits. Different local and cloud edits **are not automatically merged**: the UI reports a conflict, preserving both copies. Only the active selected workspace syncs; local profile picture, contact fields, and other device-only identities do not sync. Do not assume an unverified account or a session with connection errors has synchronized anything.
+
+**Required production migration before enabling the new UI:**
+
+```powershell
+Set-Location api
+npx wrangler d1 migrations apply dynlearn-data --remote
+npx wrangler deploy
+```
+
+Review the migration `api/migrations/0002_cloud_sync.sql` before applying it. The Worker and frontend deployments are independent. Local `npm start` applies the migration only to local SQLite. No remote data is migrated automatically. Snapshot size is limited to 128 MiB; large uploads are split into 64 KiB units and may take time or hit hosting quotas. A failed sync does not delete local data. Cloud snapshots are stored as account-authenticated data in D1; this is not end-to-end encrypted.
+
 ## Local development: one command
 
 From the repository root, use the normal frontend launcher:

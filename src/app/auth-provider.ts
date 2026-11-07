@@ -26,6 +26,9 @@ async function request<T>(path: string, payload?: Record<string, unknown>): Prom
   return body as T;
 }
 
+// Reuse the authenticated, credentialed API transport for cloud snapshots.
+export { request as accountApiRequest };
+
 export const configuredAuthProvider: AuthProvider = {
   id: 'dynamic-learner-cloudflare',
   async capabilities(): Promise<AuthCapabilities> {
@@ -54,8 +57,8 @@ export const configuredAuthProvider: AuthProvider = {
   async resendVerification(email: string): Promise<void> {
     await request('/v1/auth/resend-verification', { email });
   },
-  async verifyEmail(token: string): Promise<void> {
-    await request('/v1/auth/verify', { token });
+  async verifyEmail(token: string): Promise<AuthResult> {
+    return request('/v1/auth/verify', { token });
   },
   async completePasswordReset(token: string, password: string): Promise<void> {
     await request('/v1/auth/reset-complete', { token, password });

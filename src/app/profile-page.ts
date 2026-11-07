@@ -3,6 +3,7 @@ import type { IdentityDirectory } from '../core/data/local-identities.ts';
 import { LocalIdentityPanel } from './local-identity-panel.ts';
 import { AccountAccessPanel } from './account-access-panel.ts';
 import type { AccountSessionController } from './auth-session.ts';
+import type { CloudSyncController } from './cloud-sync.ts';
 import { Icon } from '../components/icon.ts';
 import { prepareProfilePhoto } from './profile-photo.ts';
 import { PROFILE_ABOUT_LIMIT, PROFILE_EMAIL_LIMIT, PROFILE_NAME_LIMIT,
@@ -22,6 +23,7 @@ export const ProfilePage = defineComponent({
     onRename: { type: Function as PropType<(id: string, label: string, oldLabel: string) => Promise<void>>, required: true },
     onDelete: { type: Function as PropType<(id: string, workspaceId: string) => Promise<void>>, required: true },
     session: { type: Object as PropType<AccountSessionController>, required: true },
+    cloudSync: { type: Object as PropType<CloudSyncController>, required: true },
   },
   setup(props) {
     const identityId = () => props.directory?.activeIdentityId ?? 'guest';
@@ -152,9 +154,13 @@ export const ProfilePage = defineComponent({
 
       return h('section', { class: 'profile-page', 'aria-label': 'Your profile' }, [
         h('div', { class: 'profile-intro' }, [
-          h('h2', 'Your profile'),
-          h('p', 'A place for your personal details while account support is being developed.'),
+          h('h2', props.session.state.value.status === 'authenticated' ? 'Your profile' : 'Sign in'),
+          h('p', props.session.state.value.status === 'authenticated'
+            ? 'Your account and this device’s local workspace.'
+            : 'Use your account or continue studying as a guest. Your local work stays on this device until cloud sync is enabled.'),
         ]),
+        props.session.state.value.status !== 'authenticated'
+          ? h(AccountAccessPanel, { session: props.session }) : null,
         h('section', { class: 'profile-card', 'aria-label': 'Profile details' }, [
           h('div', { class: 'profile-card-heading' }, [
             h('div', { class: 'profile-avatar', 'aria-hidden': 'true' },
@@ -272,10 +278,24 @@ export const ProfilePage = defineComponent({
           onRename: props.onRename,
           onDelete: props.onDelete,
         }),
-        h(AccountAccessPanel, { session: props.session }),
+        props.session.state.value.status === 'authenticated'
+          ? h(AccountAccessPanel, { session: props.session }) : null,
+        props.session.state.value.status === 'authenticated'
+          ? h('section', { class: 'profile-identities profile-cloud-sync', 'aria-label': 'Cloud synchronization' }, [
+            h('h3', 'Cloud sync'),
+            h('p', { role: 'status' }, props.cloudSync.message.value),
+            props.cloudSync.status.value === 'off' ? h('button', {
+              type: 'button', class: 'card-primary-button',
+              onClick: props.cloudSync.enable,
+            }, 'Enable cloud sync for this workspace') : null,
+            props.cloudSync.status.value === 'error' || props.cloudSync.status.value === 'conflict'
+              ? h('button', { type: 'button', class: 'quiet-button',
+                onClick: props.cloudSync.retry,
+              }, 'Check again') : null,
+          ]) : null,
         h('p', { class: 'profile-storage-note' }, [
           h(Icon, { name: 'lock' }),
-          'Your picture and contact details stay in this browser. This is not an online account, does not sync between devices, and is not included in workspace backups.',
+          'Your picture and contact details remain device-local and are not part of cloud workspace synchronization.',
         ]),
       ]);
     };
