@@ -34,6 +34,7 @@ export function useAccountSession(provider: AuthProvider | null) {
     busy.value = true;
     state.value = { status: 'checking' };
     error.value = '';
+    notice.value = '';
     try {
       const result = await provider.restore();
       if (current !== generation) return;
@@ -50,6 +51,15 @@ export function useAccountSession(provider: AuthProvider | null) {
     } finally {
       if (current === generation) busy.value = false;
     }
+  }
+
+  /** Show sign-in instead of a stale/offline session hint; this does not authenticate anyone. */
+  function beginSignIn(): void {
+    if (!provider || busy.value) return;
+    ++generation;
+    state.value = { status: 'signed-out' };
+    error.value = '';
+    notice.value = '';
   }
 
   async function authenticate(operation: 'signIn' | 'register', email: string, password: string): Promise<void> {
@@ -107,6 +117,7 @@ export function useAccountSession(provider: AuthProvider | null) {
     } finally { busy.value = false; }
   }
 
-  return { state, busy, error, notice, available, restore, authenticate, requestPasswordReset, signOut };
+  return { state, busy, error, notice, available, restore, beginSignIn,
+    authenticate, requestPasswordReset, signOut };
 }
 export type AccountSessionController = ReturnType<typeof useAccountSession>;

@@ -33,3 +33,5 @@ Cloud sync remains separate work: define an initial upload/merge process, transa
 4. Restore/clear one identity; confirm all other identities and raw rescue retain their data.
 5. Switch and transfer between multiple tabs while another editor is typing. Confirm stale writes fail safely and drafts are not silently replaced.
 6. Exercise corrupted directory metadata, blocked upgrades, restricted storage, and light/dark/mobile Profile UI.
+
+Stage 2 browser-only authentication interfaces and local identity maintenance are detailed in [Account authentication](account-authentication.md). Device-local identity labels can be renamed; inactive non-Guest identities can be deleted with two confirmations and ownership-guarded storage cleanup.

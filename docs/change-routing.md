@@ -25,6 +25,7 @@ Use this as a starting-file index, not a feature specification. Follow imports o
 | Answer matching / morphology / semantics | `packages/@dynamic-learner/answer-matching/`; `src/core/answer-matching.ts` is the legacy-behavior adapter |
 | Fill-in-the-blanks parsing | `src/core/fill-blank.ts` |
 | Leave warnings | `src/core/leave-guards.ts` |
+| Authentication/session adapters | `src/core/auth/provider.ts`, `src/app/auth-provider.ts`, `src/app/auth-session.ts`, `src/app/account-access-panel.ts`; see `docs/account-authentication.md` |
 | Local identities and ownership | `src/core/data/local-identities.ts`, `src/core/data/indexeddb.ts`, `src/app/data/data-api.ts`, `src/app/workspace.ts`, `src/app/local-identity-panel.ts`, `src/app/profile-storage.ts`; see `docs/account-identities.md` |
 | Workspace save/load/backups | `src/app/workspace.ts`, `workspace-format.ts`, `workspace-tools.ts` |
 | Workspace feature compatibility / recovery projection | `src/app/data/workspace-compatibility.ts`, `workspace-mapping.ts`, `workspace-observer.ts`, `src/core/data/indexeddb.ts` |

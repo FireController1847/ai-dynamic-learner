@@ -65,6 +65,9 @@ export const AccountAccessPanel = defineComponent({
             h('button', { type: 'button', class: 'quiet-button', disabled: auth.busy.value,
               onClick: () => { void auth.restore(); },
             }, 'Try again'),
+            h('button', { type: 'button', class: 'quiet-button', disabled: auth.busy.value,
+              onClick: auth.beginSignIn,
+            }, 'Sign in instead'),
           ]) : null,
         auth.available && current.status === 'verification-required'
           ? h('div', { class: 'profile-account-status' }, [
@@ -72,6 +75,9 @@ export const AccountAccessPanel = defineComponent({
             h('button', { type: 'button', class: 'quiet-button', disabled: auth.busy.value,
               onClick: () => { void auth.restore(); },
             }, 'Check verification'),
+            h('button', { type: 'button', class: 'quiet-button', disabled: auth.busy.value,
+              onClick: auth.beginSignIn,
+            }, 'Use another account'),
           ]) : null,
         auth.available && current.status === 'authenticated'
           ? h('div', { class: 'profile-account-status' }, [
