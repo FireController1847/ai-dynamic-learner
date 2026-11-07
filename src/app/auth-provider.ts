@@ -1,8 +1,10 @@
 import type { AuthProvider, AuthCapabilities, AuthResult, RestoreResult, EmailCredentials, OAuthProvider } from '../core/auth/provider.ts';
 
-// The backend is independently deployed. This URL is never a credentials store.
-// Requests use HttpOnly, Secure, SameSite cookies on api.dynlearn.org.
-const API_ORIGIN = 'https://api.dynlearn.org';
+// Injected at build time: production always uses api.dynlearn.org, whereas
+// local development uses a local Wrangler Worker with its own D1 database.
+// Never allow local UI previews to bypass production origin/CSRF restrictions.
+declare const __DYNLEARN_AUTH_API_ORIGIN__: string;
+const API_ORIGIN = __DYNLEARN_AUTH_API_ORIGIN__;
 
 async function request<T>(path: string, payload?: Record<string, unknown>): Promise<T> {
   const response = await fetch(API_ORIGIN + path, {

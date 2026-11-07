@@ -123,7 +123,7 @@ export const AccountAccessPanel = defineComponent({
         current.status === 'checking' ? h('p', { role: 'status' }, 'Checking your account session…') : null,
         current.status === 'connection-required'
           ? h('div', { class: 'profile-account-status' }, [
-            h('p', 'The account service is unreachable. Your local work is available, but your online session is not verified.'),
+            h('p', 'The online session could not be verified. This may be a local-development origin mismatch, a network problem, or an API error. Your local work is still available.'),
             h('button', { type: 'button', class: 'quiet-button', disabled: auth.busy.value,
               onClick: () => { void auth.restore(); },
             }, 'Try again'),

@@ -15,6 +15,17 @@ const root = fileURLToPath(new URL('.', import.meta.url));
 export default (_env: unknown, argv: { mode?: Configuration['mode'] }): Configuration & { devServer: DevServerConfiguration } => {
   const production = argv.mode === 'production';
   const site = siteConfig();
+  // Production always uses its fixed, trusted API origin. During local development,
+  // use a local Worker rather than weakening credentialed CORS on the live API.
+  const devAuthApiOrigin = process.env.DL_AUTH_API_ORIGIN?.trim() || 'http://localhost:8787';
+  const authApiUrl = new URL(production ? 'https://api.dynlearn.org' : devAuthApiOrigin);
+  if (!production && (authApiUrl.protocol !== 'http:' ||
+    !['localhost', '127.0.0.1'].includes(authApiUrl.hostname) ||
+    authApiUrl.username || authApiUrl.password || authApiUrl.pathname !== '/' ||
+    authApiUrl.search || authApiUrl.hash)) {
+    throw new Error('DL_AUTH_API_ORIGIN must be an HTTP loopback origin (example: http://localhost:8787).');
+  }
+  const authApiOrigin = authApiUrl.origin;
   const publicRoutes = new Set(site.routes.map((route) => `${site.basePath}${route.slice(1)}`));
   const port = Number(process.env.PORT ?? 3000);
   if (!Number.isInteger(port) || port < 0 || port > 65535) {
@@ -60,6 +71,7 @@ export default (_env: unknown, argv: { mode?: Configuration['mode'] }): Configur
         __VUE_OPTIONS_API__: true,
         __VUE_PROD_DEVTOOLS__: false,
         __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: false,
+        __DYNLEARN_AUTH_API_ORIGIN__: JSON.stringify(authApiOrigin),
       }),
       new MiniCssExtractPlugin({ filename: 'assets/[name].[contenthash:8].css' }),
       ...site.routes.map((route) => new HtmlWebpackPlugin({

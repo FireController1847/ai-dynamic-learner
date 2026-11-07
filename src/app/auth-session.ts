@@ -50,11 +50,19 @@ export function useAccountSession(provider: AuthProvider | null) {
         assertResult(result);
       }
       state.value = result;
-    } catch {
-      // A failure to verify a session must never be treated as a logged-in state.
+    } catch (cause) {
+      // CORS, a missing local Worker, and an API 503 are not the same as a
+      // signed-in session. Preserve the safely returned error when available.
       if (current === generation) {
         state.value = { status: 'connection-required' };
-        error.value = 'The account session could not be verified. Local study data remains available.';
+        if (cause instanceof TypeError) {
+          const local = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+          error.value = local
+            ? 'The local account API is unavailable. Start the local Wrangler Worker and use the same localhost hostname for both apps.'
+            : 'The browser could not reach the account API. Check the network request and allowed Origin in developer tools.';
+        } else {
+          error.value = cause instanceof Error ? cause.message : 'The account session could not be verified.';
+        }
       }
     } finally {
       if (current === generation) busy.value = false;

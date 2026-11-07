@@ -15,6 +15,33 @@ npm run dev
 
 Wrangler uses a local D1 database unless `--remote` is explicitly requested. The Worker health endpoint is `/v1/health`. The auth endpoint `/v1/auth/config` reports which sign-in methods have all their required secrets (without exposing secrets). Email/password operations need a real mail delivery provider and account secrets.
 
+### Local frontend + Worker development
+
+The live Worker at `https://api.dynlearn.org` accepts credentialed browser requests from **`https://dynlearn.org` only**. This is intentional: opening `/v1/auth/config` directly does not test cross-origin browser authorization. **Do not add localhost to the production origin allowlist** to work around a CORS error.
+
+Webpack now points `npm start` to a **local** Worker (`http://localhost:8787`) in development and always points production builds to `https://api.dynlearn.org`. No production credentials, D1 records, or sessions are used in this local workflow.
+
+From a fresh checkout, first create two private local test secrets in `api/.dev.vars`. This file is gitignored:
+
+```powershell
+Set-Location api
+$pepper = [Convert]::ToBase64String([System.Security.Cryptography.RandomNumberGenerator]::GetBytes(48))
+$rate = [Convert]::ToBase64String([System.Security.Cryptography.RandomNumberGenerator]::GetBytes(48))
+"AUTH_PEPPER=$pepper`nAUTH_RATE_SECRET=$rate" | Set-Content -Path .dev.vars -Encoding utf8
+npx wrangler d1 migrations apply dynlearn-data --local
+npx wrangler dev --ip 127.0.0.1 --var "FRONTEND_ORIGIN:http://localhost:3000" --var "API_ORIGIN:http://localhost:8787"
+```
+
+In a **second** PowerShell terminal at the repository root:
+
+```powershell
+npm start
+```
+
+Open `http://localhost:3000/profile/` (use **localhost**, not `127.0.0.1`, for both browser URLs). The frontend can now make credentialed requests to `http://localhost:8787`. If no email/OAuth local credentials are configured, `/v1/auth/config` reports `ready: true` with individual methods set to `false`; that's expected. To exercise the full registration flows locally, add separate private development credentials and register localhost OAuth redirect URIs in the provider consoles.
+
+For now, the simplest way to test against the *deployed production* authentication API is a frontend deployed at the approved `https://dynlearn.org` origin. A local HTTP frontend cannot safely reuse production host-only session cookies and OAuth callbacks. Keep production CORS strict and do not put Cloudflare secrets into the GitHub repository.
+
 ### Production configuration
 
 The Worker retains the starter Worker name **`api`** so deploying does not create an unrelated Worker, and has a custom-domain route for `api.dynlearn.org`. The D1 binding is `env.dynlearn_data` and the existing account-level D1 resource is `dynlearn-data`.
