@@ -1,3 +1,16 @@
+## v1.47.5
+
+<small data-utc="2026-11-13T01:40:00Z">November 12, 2026 at 6:40 PM MST</small>
+
+- **AI Import:** Removed the 20-solver-package limit from AI imports so larger parameterized knowledge sets can be imported.
+
+<details>
+<summary>View 1 commit</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/3f2dcdf19a31d8852b0894fe8f6716e7561dace1">3f2dcdf1</a> — Remove AI solver package count limit (Review v1.47.5, Guide v2.16.2)</li>
+</ol>
+</details>
+
 ## v1.47.4
 
 <small data-utc="2026-10-30T18:40:22Z">October 30, 2026 at 12:40 PM MDT</small>
