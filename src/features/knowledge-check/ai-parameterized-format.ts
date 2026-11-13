@@ -31,7 +31,7 @@ Parameterized questions:
 `;
 export function parseAiSolvers(value: unknown): SolverPackage[] {
   if (value === undefined) return [];
-  if (!Array.isArray(value) || value.length > 20) throw new Error('AI responses may include at most 20 solver packages.');
+  if (!Array.isArray(value)) throw new Error('AI solver packages must be an array.');
   const packages: SolverPackage[] = [], identities = new Set<string>();
   for (const pkg of value as unknown[]) {
     validateSolverPackage(pkg); const identity = `${pkg.id}:${pkg.solverVersion}`;
