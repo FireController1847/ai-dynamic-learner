@@ -28,6 +28,8 @@ export interface Question {
   explanation: string;
   context?: string;
   choices: string[];
+  /** Number of sessions in which this authored question has been displayed; absent means zero. */
+  shownCount?: number;
   /** When present, Multiple Choice uses checkboxes; legacy single-answer questions omit this. */
   correctAnswers?: string[];
   choicePool?: ChoicePool;
@@ -241,7 +243,8 @@ export function validateQuestions(
   for (const question of value as unknown[]) {
     if (!isRecord(question) || !isValidId(question.id) || ids.has(question.id) ||
         !QUESTION_TYPES.some((type) => type.id === question.type) ||
-        Object.keys(question).some((key) => !['id', 'type', 'prompt', 'answer', 'explanation', 'choices', 'correctAnswers', 'choicePool', 'matches', 'context', 'parameters'].includes(key)) ||
+        Object.keys(question).some((key) => !['id', 'type', 'prompt', 'answer', 'explanation', 'choices', 'correctAnswers', 'choicePool', 'matches', 'context', 'parameters', 'shownCount'].includes(key)) ||
+        (Object.hasOwn(question, 'shownCount') && (typeof question.shownCount !== 'number' || !Number.isSafeInteger(question.shownCount) || question.shownCount < 0)) ||
         (Object.hasOwn(question, 'context') && (typeof question.context !== 'string' || question.context.length > MAX_QUESTION_CONTEXT)) ||
         [question.prompt, question.answer, question.explanation].some((text) => typeof text !== 'string' || text.length > MAX_TEXT) ||
         !Array.isArray(question.choices) || question.choices.length > (question.type === 'dropdown' ? MAX_DROPDOWN_CHOICES : 8) ||

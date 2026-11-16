@@ -8,6 +8,7 @@ import { inputValue } from '../../core/dom.ts';
 import { Icon } from '../../components/icon.ts';
 import { MarkdownContent } from '../../components/markdown-content.ts';
 import { SessionIntro } from './session-intro.ts';
+import { SessionQuestionCoverage } from './session-question-coverage.ts';
 import { StudySessionReview } from './study-session-review.ts';
 import { reviewedStudyQuestions } from './last-study-session.ts';
 import type { ReviewAttempt } from './attempt-history.ts';
@@ -613,7 +614,7 @@ export const KnowledgeSession = defineComponent({
       if (props.mode === 'study' && reviewingStudy.value) {
         return h(StudySessionReview, {
           key: 'study-review',
-          questions: questions.value, attempts: attempts.value,
+          bank: props.item.questions, questions: questions.value, attempts: attempts.value,
           feedbackResponses: feedbackResponses.value,
           hints: hints.value, revealed: state.studyAnswersSeen.value,
           studyChecks: studyChecks.value, studyCorrectChecks: studyCorrectChecks.value,
@@ -657,6 +658,7 @@ export const KnowledgeSession = defineComponent({
               : h('p', { class: 'knowledge-score' }, 'No scored questions'),
             finalScored ? h('p', `${Math.round(finalScore / finalScored * 100)}% correct`) : null,
             expired.value ? h('p', { role: 'status' }, 'Time ran out. Your entered answers were submitted automatically.') : null]),
+          !props.historyAttempt ? h(SessionQuestionCoverage, { questions: props.item.questions, selected: questions.value.length }) : null,
           h('div', { class: 'knowledge-results-top-actions' }, [doneReviewingButton()]),
           showAnswers ? [
             h('div', { class: 'knowledge-results-tabs', role: 'tablist', 'aria-label': 'Filter reviewed responses' },

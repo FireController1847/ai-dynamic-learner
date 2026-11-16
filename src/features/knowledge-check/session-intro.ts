@@ -49,10 +49,8 @@ export const SessionIntro = defineComponent({
                 : `${settings.quizAttempts} ${settings.quizAttempts === 1 ? 'attempt' : 'attempts'} per question`),
         ]),
         h(SessionQuestionCoverage, {
-          available: props.item.questions.length,
+          questions: props.item.questions,
           selected: props.count,
-          mode: props.mode,
-          order: settings.order,
         }),
         options.description ? h('p', { class: 'knowledge-description' }, options.description) : null,
         h('div', { class: 'knowledge-intro-details' }, [

@@ -15,6 +15,7 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
   const context = useStatistics();
   const statistics = statisticsEnabled ? context : null;
   let studyVisited = new Set<string>();
+  let shownQuestionIds = new Set<string>();
   let studyPassRecorded = false;
   const availableQuestions = computed(() => item.questions.filter(questionReady));
   const questions = ref<ReturnType<typeof prepareSessionQuestions>>([]);
@@ -91,7 +92,7 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
         revealed: [...revealed.value], studyAnswersSeen: [...studyAnswersSeen.value], hints: [...hints.value], flagged: [...flagged.value],
         attempts: { ...attempts.value }, submitted: submitted.value,
         expired: expired.value, deadline: deadline.value, studyChecks: studyChecks.value, studyCorrectChecks: studyCorrectChecks.value, studyUncreditedChecks: studyUncreditedChecks.value,
-        studyVisited: [...studyVisited], studyPassRecorded,
+        studyVisited: [...studyVisited], studyPassRecorded, shownQuestionIds: [...shownQuestionIds],
       };
       writeSession(storageKey, snapshot);
       saved = snapshot; resumable.value = true; savedCompleted.value = snapshot.submitted; storageMessage.value = '';
@@ -135,6 +136,19 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
     generationController.abort(); generationController = new AbortController(); epoch++;
     inFlight.clear(); generatedIds.clear(); generating.value = false; submitting.value = false; generationError.value = '';
   }
+  /** Count a question once when presented in this run, never on retries or history views. */
+  function recordDisplayedQuestions() {
+    if (!statisticsEnabled || !started.value || submitted.value || submitting.value) return;
+    const displayed = options.value.presentation === 'scroll'
+      ? templates : templates.slice(position.value, position.value + 1);
+    const newIds = new Set(displayed.map(question => question.id).filter(id => !shownQuestionIds.has(id)));
+    if (!newIds.size) return;
+    for (const question of item.questions) {
+      if (!newIds.has(question.id)) continue;
+      question.shownCount = Math.min(Number.MAX_SAFE_INTEGER, (question.shownCount ?? 0) + 1);
+      shownQuestionIds.add(question.id);
+    }
+  }
   async function resume() {
     if (!saved) return;
     const snapshot = saved;
@@ -156,8 +170,10 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
     attempts.value = { ...snapshot.attempts }; studyChecks.value = snapshot.studyChecks; studyCorrectChecks.value = snapshot.studyCorrectChecks;
     studyUncreditedChecks.value = snapshot.studyUncreditedChecks ?? 0;
     studyVisited = new Set(snapshot.studyVisited); studyPassRecorded = snapshot.studyPassRecorded;
+    shownQuestionIds = new Set(snapshot.shownQuestionIds ?? []);
     submitted.value = snapshot.submitted; expired.value = snapshot.expired; deadline.value = snapshot.deadline;
     ended.value = false; paused.value = false; started.value = true; tick();
+    recordDisplayedQuestions();
     if (templates.some(question => question.type === 'parameterized')) {
       persist();
     } else {
@@ -239,6 +255,7 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
     const index = position.value, currentEpoch = epoch;
     if (!started.value || !await ensureQuestion(index, true) || currentEpoch !== epoch) return;
     if (mode === 'study' && started.value && questions.value[index]) studyVisited.add(questions.value[index]!.id);
+    if (index === position.value && options.value.presentation === 'one-at-a-time') recordDisplayedQuestions();
     persist();
   }, { flush: 'sync' });
   function tick() {
@@ -248,6 +265,7 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
   async function start() {
     if (generating.value || submitting.value) return;
     resetGeneration(); started.value = false; paused.value = false;
+    shownQuestionIds = new Set();
     // Starting fresh replaces any paused static snapshot from an earlier run.
     if (saved?.paused && !saved.templates.some(question => question.type === 'parameterized')) {
       try { localStorage.removeItem(storageKey); saved = null; resumable.value = false; savedCompleted.value = false; }
@@ -266,7 +284,7 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
       }
     }
     templates = prepareSessionQuestions(
-      availableQuestions.value, { ...settings, shuffleChoices: false }, mode === 'study',
+      availableQuestions.value, { ...settings, shuffleChoices: false },
     ).map(cloneQuestion);
     instances = {};
     seeds = Object.fromEntries(templates.map(question => [question.id, newVariantSeed()])); generatedIds.clear();
@@ -279,6 +297,7 @@ export function useKnowledgeSession(item: CheckItem, mode: CheckModeId, settings
     }
     position.value = 0; submitted.value = false; expired.value = false; ended.value = false; clearCelebration();
     now.value = Date.now(); started.value = true;
+    recordDisplayedQuestions();
     if (mode === 'study') statistics?.record('knowledge-check', item.id, 'studyStarts');
     resetStudyPass();
     deadline.value = mode === 'test' && options.value.timeLimitMinutes !== null ? now.value + options.value.timeLimitMinutes * 60_000 : null;

@@ -69,12 +69,11 @@ export const SessionSetup = defineComponent({
           `Set up Study · ${Math.min(props.questionCount, defaults.questionLimit ?? props.questionCount)} questions per session · ${props.questionCount} available`),
         h('h2', 'What order should the questions use?'),
         h(SessionQuestionCoverage, {
-          available: props.questionCount, selected: Math.min(props.questionCount, defaults.questionLimit ?? props.questionCount),
-          mode: 'study', order: studyOrder.value,
+          questions: props.item.questions, selected: Math.min(props.questionCount, defaults.questionLimit ?? props.questionCount),
         }),
         h('p', { class: 'knowledge-session-setup-description' },
           defaults.questionLimit !== null && props.questionCount > defaults.questionLimit
-            ? `A balanced sample of ${defaults.questionLimit} questions will be randomly selected across the whole set. Choose their display order below.`
+            ? `A balanced sample of ${defaults.questionLimit} questions will be selected across the whole set, favoring questions shown less often. Choose their display order below.`
             : 'Choose an order for this Study session. Answer strictness comes from this knowledge set’s saved options.'),
         h('fieldset', { class: 'knowledge-session-choices' }, [
           h('legend', { class: 'visually-hidden' }, 'Study question order'),
@@ -95,8 +94,7 @@ export const SessionSetup = defineComponent({
           h('p', { class: 'knowledge-session-setup-step' }, `Set up Quiz · ${props.questionCount} ${props.questionCount === 1 ? 'question' : 'questions'} available`),
           h('h2', 'How should this Quiz run?'),
           h(SessionQuestionCoverage, {
-            available: props.questionCount, selected: Math.min(props.questionCount, defaults.questionLimit ?? props.questionCount),
-            mode: 'quiz', order: defaults.order,
+            questions: props.item.questions, selected: Math.min(props.questionCount, defaults.questionLimit ?? props.questionCount),
           }),
           h('p', { class: 'knowledge-session-setup-description' }, 'Use the settings saved with this knowledge set, or customize only this Quiz session.'),
           h('fieldset', { class: 'knowledge-session-choices' }, [

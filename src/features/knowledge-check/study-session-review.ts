@@ -3,12 +3,14 @@ import {
   answerCorrect, questionDisplayPrompt, questionScored, type Question, type QuestionResponse,
 } from './question-model.ts';
 import { answerStrictnessForQuestion, type SessionSettings } from './session-settings.ts';
+import { SessionQuestionCoverage } from './session-question-coverage.ts';
 
 /** Read-only summary of the active Study round. No grading side effects. */
 export const StudySessionReview = defineComponent({
   name: 'StudySessionReview',
   props: {
     questions: { type: Array as PropType<Question[]>, required: true },
+    bank: { type: Array as PropType<Question[]>, default: undefined },
     attempts: { type: Object as PropType<Record<string, number>>, required: true },
     feedbackResponses: { type: Object as PropType<Record<string, QuestionResponse>>, required: true },
     hints: { type: Object as PropType<Set<string>>, required: true },
@@ -78,6 +80,7 @@ export const StudySessionReview = defineComponent({
             : null,
         ]),
         reviewActions(),
+        props.bank ? h(SessionQuestionCoverage, { questions: props.bank, selected: props.questions.length }) : null,
         h('div', { class: 'knowledge-study-review-overview' }, [
           h('div', { class: 'knowledge-study-review-accuracy' }, [
             h('span', { class: 'knowledge-study-review-accuracy-value' }, accuracy === null ? '—' : accuracy + '%'),

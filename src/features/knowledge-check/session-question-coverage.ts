@@ -1,37 +1,47 @@
 import { defineComponent, h, type PropType } from 'vue';
 import { Icon } from '../../components/icon.ts';
-import type { CheckModeId } from './check-types.ts';
-import type { QuestionOrder } from './set-options.ts';
+import { questionReady, type Question } from './question-model.ts';
 
-/** Explain that the saved question bank and a single session are different sizes. */
+const PASS_COLORS = ['#1675c2', '#24834e', '#cc7900', '#c53c48', '#8450b6', '#161616'];
+const SEGMENTS = 12;
+
+/** Show actual bank coverage across Study, Quiz and Test, not just this session's size. */
 export const SessionQuestionCoverage = defineComponent({
   name: 'SessionQuestionCoverage',
   props: {
-    available: { type: Number, required: true },
+    questions: { type: Array as PropType<readonly Question[]>, required: true },
     selected: { type: Number, required: true },
-    mode: { type: String as PropType<CheckModeId>, required: true },
-    order: { type: String as PropType<QuestionOrder>, required: true },
   },
   setup(props) {
     return () => {
-      if (props.available <= props.selected || props.selected < 1) return null;
-      const isStudy = props.mode === 'study';
-      const shuffled = props.order === 'shuffle';
-      const explanation = isStudy
-        ? 'Study draws a fresh, balanced sample from across the full question bank. A new Study session can show different questions.'
-        : shuffled
-          ? 'This session takes questions after shuffling the bank. Another session can give you a different mix.'
-          : 'This session takes questions in the selected order. Shuffling the order in set options can vary which questions appear.';
-      return h('section', { class: 'knowledge-question-coverage', 'aria-label': 'How questions are selected' }, [
+      const bank = props.questions.filter(questionReady);
+      const available = bank.length;
+      if (!available || props.selected < 1) return null;
+      const completed = bank.reduce((least, question) => Math.min(least, question.shownCount ?? 0), Infinity);
+      const covered = bank.filter(question => (question.shownCount ?? 0) > completed).length;
+      const previousColor = completed > 0 ? PASS_COLORS[(completed - 1) % PASS_COLORS.length]! : 'var(--border-color)';
+      const nextColor = PASS_COLORS[completed % PASS_COLORS.length]!;
+      const segments = SEGMENTS * covered / available;
+      return h('section', { class: 'knowledge-question-coverage', 'aria-label': 'Question bank coverage' }, [
         h('div', { class: 'knowledge-question-coverage-heading' }, [
-          h(Icon, { name: 'shuffle' }), h('strong', `${props.selected} of ${props.available} questions this time`),
+          h(Icon, { name: 'shuffle' }), h('strong', `${props.selected} of ${available} questions this time`),
         ]),
-        h('div', { class: 'knowledge-question-coverage-track', 'aria-hidden': 'true' },
-          Array.from({ length: 12 }, (_, i) => h('span', {
-            class: i < Math.round(12 * props.selected / props.available) ? 'is-picked' : '',
-          }))),
-        h('p', explanation),
-        h('p', 'Your other questions are still saved. Repeating sessions reinforces learning; with shuffled questions or a different session limit, you can cover more of the bank.'),
+        h('div', { class: 'knowledge-question-coverage-track', role: 'progressbar',
+          'aria-label': 'Current coverage pass', 'aria-valuemin': 0, 'aria-valuemax': available,
+          'aria-valuenow': covered, 'aria-valuetext': `${completed} full passes; ${covered} of ${available} questions in the next pass`,
+        }, Array.from({ length: SEGMENTS }, (_, i) => {
+          const fill = Math.max(0, Math.min(1, segments - i)) * 100;
+          return h('span', { key: i, style: {
+            background: fill === 0 ? previousColor : fill === 100 ? nextColor :
+              `linear-gradient(to right, ${nextColor} ${fill}%, ${previousColor} ${fill}%)`,
+          } });
+        })),
+        h('p', { class: 'knowledge-question-coverage-count' }, [
+          h('strong', `${completed} full ${completed === 1 ? 'pass' : 'passes'} completed`),
+          ` · Pass ${completed + 1}: ${covered} of ${available} questions shown`,
+        ]),
+        h('p', 'Each session samples evenly across the bank, preferring the least-shown questions in each group and randomly choosing among ties. Progress is shared across Study, Quiz and Test.'),
+        h('p', 'The bar changes color each time every available question has been shown another time. Questions count once per session, not per answer attempt.'),
       ]);
     };
   },
