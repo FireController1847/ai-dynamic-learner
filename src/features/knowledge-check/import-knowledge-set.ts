@@ -11,7 +11,6 @@ import {
   fillBlankCardsWithoutBlanks,
   findIndexCardSet,
   importIndexCardSet,
-  importQuestionLimitProblem,
   indexCardMappings,
   indexCardPotentialImportCount,
   intermixQuestionGroups,
@@ -93,12 +92,10 @@ export const ImportKnowledgeSet = defineComponent({
         item.blanklessActions,
       ) : count;
     }, 0));
-    const limitProblem = computed(() => unresolvedCount.value ? '' : importQuestionLimitProblem(questionCount.value));
-    const potentialLimitProblem = computed(() => importQuestionLimitProblem(potentialCount.value));
     const canContinue = computed(() => items.value.length > 0 && items.value.every(sourceReady) &&
-      potentialCount.value > 0 && !potentialLimitProblem.value);
+      potentialCount.value > 0);
     const canCreate = computed(() => Boolean(name.value.trim()) && items.value.length > 0 &&
-      items.value.every(sourceReady) && potentialCount.value > 0 && !limitProblem.value);
+      items.value.every(sourceReady) && potentialCount.value > 0);
     const resolutionItem = computed(() =>
       resolutionItemId.value ? items.value.find((item) => item.id === resolutionItemId.value) ?? null : null);
 
@@ -192,11 +189,6 @@ export const ImportKnowledgeSet = defineComponent({
         message.value = 'None of the selected cards can become questions. Choose another set or keep a card as a Statement.';
         return;
       }
-      const problem = importQuestionLimitProblem(questionCount.value);
-      if (problem) {
-        message.value = problem;
-        return;
-      }
       setStep('options');
     }
 
@@ -209,11 +201,6 @@ export const ImportKnowledgeSet = defineComponent({
       }
       if (!questionCount.value) {
         message.value = 'The current decisions discard every importable card. Keep at least one card or remove this source.';
-        return;
-      }
-      const problem = importQuestionLimitProblem(questionCount.value);
-      if (problem) {
-        message.value = problem;
         return;
       }
       const orderedGroups = groups.value;
@@ -478,8 +465,6 @@ export const ImportKnowledgeSet = defineComponent({
             : step.value === 'options' ? renderOptions() : renderReview()]),
       }),
       pickerItemId.value === undefined ? [
-        potentialLimitProblem.value && step.value === 'sources'
-          ? h('p', { class: 'knowledge-message', role: 'alert' }, potentialLimitProblem.value) : null,
         message.value ? h('p', { class: 'knowledge-message', role: 'alert' }, message.value) : null,
         h('footer', { class: 'knowledge-import-flow-footer' }, [
           h('span', { class: 'knowledge-import-footer-count' }, items.value.length

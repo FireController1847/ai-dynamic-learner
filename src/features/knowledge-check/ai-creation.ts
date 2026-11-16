@@ -14,7 +14,7 @@ import { parseReviewAiImport, reviewAiPrompt, type ReviewAiImport, type ReviewAi
 import { REVIEW_AI_FOCUSES, type ReviewAiFocus } from './ai-focus.ts';
 import { AiFocusChoices } from '../../components/ai-focus-choices.ts';
 import { AI_QUESTION_TYPES, allocateQuestions, DEFAULT_AI_WEIGHTS, equalizeQuestionWeights, normalizeQuestionWeights, questionCountProblem, questionMixProblem, questionTypeLabel, rebalanceQuestionWeights, type QuestionWeights, type AiQuestionType } from './ai-question-mix.ts';
-import { MAX_QUESTIONS, questionDisplayPrompt, type Question } from './question-model.ts';
+import { questionDisplayPrompt, type Question } from './question-model.ts';
 
 export const ReviewAiCreation = defineComponent({
   name: 'ReviewAiCreation',
@@ -109,7 +109,7 @@ export const ReviewAiCreation = defineComponent({
         ['Overall coverage', c.overallCoverage], ['Exam confidence', c.examConfidence],
         ['Subject confidence', c.subjectConfidence], ['Study confidence', c.studyConfidence],
       ].filter(([, value]) => Number(value) < 80).map(([name, value]) => name + ': ' + value + '%');
-      const suggested = Math.min(MAX_QUESTIONS, Math.max(preferences.value.count + 10, Math.ceil(preferences.value.count * 1.5)));
+      const suggested = Math.min(Number.MAX_SAFE_INTEGER, Math.max(preferences.value.count + 10, Math.ceil(preferences.value.count * 1.5)));
       return 'Please improve the existing Dynamic Learner Review knowledge set using the original source. These AI-estimated scores fell below 80%: ' +
         low.join('; ') + '. Re-evaluate WHY each is low. If more questions would genuinely increase coverage or study value, regenerate up to ' +
         suggested + ' meaningful questions (never exceed this limit), including underrepresented subjects; preserve accurate existing material and avoid filler. ' +
@@ -184,7 +184,7 @@ export const ReviewAiCreation = defineComponent({
           ]),
         ] : stage.value === 'configure' ? [
           h('div', { class: 'review-ai-settings' }, [
-            h('label', [h('span', 'Total questions'), h('input', { type: 'number', min: 1, max: MAX_QUESTIONS, step: 1, value: preferences.value.count,
+            h('label', [h('span', 'Total questions'), h('input', { type: 'number', min: 1, step: 1, value: preferences.value.count,
               onInput: (event: Event) => { preferences.value.count = Number(inputValue(event)); } }), h('small', { class: 'study-ai-muted' }, 'Number of questions the AI should make.')]),
             h('label', [h('span', 'Coverage'), h('select', { value: preferences.value.coverage, onChange: (event: Event) => {
               const value = inputValue(event); if (value === 'essentials' || value === 'balanced' || value === 'comprehensive') preferences.value.coverage = value;

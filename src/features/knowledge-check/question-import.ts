@@ -4,9 +4,9 @@ import { MarkdownContent } from '../../components/markdown-content.ts';
 import { MAX_AI_IMPORT_LENGTH } from '../../core/ai-json.ts';
 import { parseFillBlankTemplate } from '../../core/fill-blank.ts';
 import { inputValue } from '../../core/dom.ts';
-import { DEFAULT_AI_WEIGHTS, questionTypeLabel } from './ai-question-mix.ts';
+import { DEFAULT_AI_WEIGHTS, questionCountProblem, questionTypeLabel } from './ai-question-mix.ts';
 import { parseReviewQuestionsImport, reviewAiPrompt, type ReviewAiImport } from './ai-import-format.ts';
-import { MAX_QUESTIONS, questionDisplayPrompt, type Question } from './question-model.ts';
+import { questionDisplayPrompt, type Question } from './question-model.ts';
 
 export const ReviewQuestionImport = defineComponent({
   name: 'ReviewQuestionImport',
@@ -19,13 +19,12 @@ export const ReviewQuestionImport = defineComponent({
     append: (_questions: Question[]) => true,
   },
   setup(props, { emit }) {
-    const available = computed(() => Math.max(0, MAX_QUESTIONS - props.existing.length));
-    const count = ref(Math.min(20, available.value));
+    const count = ref(20);
     const json = ref('');
     const problem = ref('');
     const candidate = ref<ReviewAiImport | null>(null);
     const prompt = computed(() => {
-      if (!count.value || count.value > available.value) return '';
+      if (questionCountProblem(count.value)) return '';
       const questionsToAvoid = props.existing
         .map(question => questionDisplayPrompt(question).trim().replace(/\s+/g, ' '))
         .filter(Boolean);
@@ -48,11 +47,7 @@ ${reviewAiPrompt({
       candidate.value = null;
       problem.value = '';
       try {
-        const parsed = parseReviewQuestionsImport(json.value, count.value);
-        if (parsed.questions.length > available.value) {
-          throw new Error(`Only ${available.value} more ${available.value === 1 ? 'question fits' : 'questions fit'} in this set. This response has ${parsed.questions.length}. Reduce the import before adding.`);
-        }
-        candidate.value = parsed;
+        candidate.value = parseReviewQuestionsImport(json.value, count.value);
       } catch (error) { problem.value = error instanceof Error ? error.message : String(error); }
     }
     function previewQuestion(question: Question, index: number) {
@@ -89,14 +84,14 @@ ${reviewAiPrompt({
         h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('back') }, 'Back to builder'),
       ]),
       h('p', { class: 'knowledge-muted' },
-        `${props.existing.length} existing · up to ${available.value} additional questions (${MAX_QUESTIONS} maximum)`),
+        `${props.existing.length} existing questions`),
       h('label', { class: 'knowledge-field knowledge-question-import-count' }, [
         'Number of new questions to request',
         h('input', {
-          type: 'number', min: 1, max: available.value, step: 1, value: count.value,
+          type: 'number', min: 1, step: 1, value: count.value,
           onInput: (event: Event) => {
             const next = Number(inputValue(event));
-            count.value = Number.isFinite(next) ? Math.max(1, Math.min(available.value, Math.trunc(next))) : 1;
+            count.value = Number.isFinite(next) ? Math.max(1, Math.min(Number.MAX_SAFE_INTEGER, Math.trunc(next))) : 1;
             candidate.value = null;
             problem.value = '';
           },

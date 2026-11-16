@@ -4,7 +4,7 @@ import { ReviewQuestionImport } from './question-import.ts';
 import { MultipleChoicePoolEditor } from './multiple-choice-pool-editor.ts';
 import type { CheckItem } from './library-model.ts';
 import { MAX_NAME_LENGTH } from './library-model.ts';
-import { cloneQuestion, createQuestion, questionDisplayPrompt, questionHasContent, questionProblem, questionsForSave, MAX_QUESTIONS, MAX_TEXT, QUESTION_TYPES, type Question, type QuestionType } from './question-model.ts';
+import { cloneQuestion, createQuestion, questionDisplayPrompt, questionHasContent, questionProblem, questionsForSave, MAX_TEXT, QUESTION_TYPES, type Question, type QuestionType } from './question-model.ts';
 import type { SolverPackage } from '../../core/parameterized/solver-package.ts';
 import { ParameterizedEditor } from './parameterized-editor.ts';
 import { DropdownEditor } from './dropdown-editor.ts';
@@ -72,13 +72,13 @@ export const CheckBuilder = defineComponent({
     const pendingDelete = ref<Question | null>(null);
 
     function addQuestion() {
-      if (questions.value.length >= MAX_QUESTIONS || !canLeaveQuestion()) return;
+      if (!canLeaveQuestion()) return;
       questions.value.push(createQuestion());
       selected.value = questions.value.length - 1;
     }
     function appendQuestions(incoming: Question[]) {
-      if (!incoming.length || questions.value.length + incoming.length > MAX_QUESTIONS) {
-        message.value = 'This import exceeds the maximum number of questions.';
+      if (!incoming.length) {
+        message.value = 'This import contains no questions.';
         return;
       }
       const used = new Set(questions.value.map(question => question.id));
@@ -94,7 +94,7 @@ export const CheckBuilder = defineComponent({
         return { ...copy, id };
       });
       const first = questions.value.length;
-      questions.value.push(...added);
+      questions.value = questions.value.concat(added);
       selected.value = first;
       tab.value = 'questions';
       importing.value = false;
@@ -144,7 +144,6 @@ export const CheckBuilder = defineComponent({
           h('div', { class: 'knowledge-actions' }, [
             h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel') }, 'Cancel'),
             h('button', { type: 'button', class: 'quiet-button',
-              disabled: questions.value.length >= MAX_QUESTIONS,
               onClick: () => { importNotice.value = ''; importing.value = true; },
             }, 'Import questions'),
             h('button', { type: 'button', class: 'card-primary-button', disabled: !name.value.trim() || invalid.value >= 0 || Boolean(optionsProblem.value) || Object.values(draftProblems.value).some(Boolean),
@@ -168,7 +167,7 @@ export const CheckBuilder = defineComponent({
           h('aside', { class: 'knowledge-question-list', 'aria-label': 'Questions' }, [
             h('div', { class: 'knowledge-builder-header' }, [h('h3', `Questions (${questions.value.length})`),
               h('button', { type: 'button', class: 'icon-button', title: 'Add question', 'aria-label': 'Add question',
-                disabled: questions.value.length >= MAX_QUESTIONS, onClick: addQuestion }, [h(Icon, { name: 'plus' })])]),
+                onClick: addQuestion }, [h(Icon, { name: 'plus' })])]),
             h('div', { ref: questionStrip, class: 'knowledge-question-strip', role: 'group', 'aria-label': 'Select a question to edit' }, [
               ...questions.value.map((entry, index) => h('button', { key: entry.id, type: 'button',
                 class: ['knowledge-question-row', { 'is-selected': index === selected.value }],

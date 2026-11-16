@@ -4,7 +4,7 @@ import {
   type AnswerStrictness,
 } from '../../../packages/@dynamic-learner/answer-matching/src/index.ts';
 import { isRecord } from '../../core/validation.ts';
-import { MAX_QUESTIONS, MAX_TEXT } from './question-model.ts';
+import { MAX_TEXT } from './question-model.ts';
 
 export const DEFAULT_QUIZ_ATTEMPTS = 3;
 export const DEFAULT_SESSION_QUESTION_LIMIT = 25;
@@ -51,8 +51,7 @@ export function defaultSetOptions(): SetOptions {
 }
 
 function validQuestionLimit(value: unknown): value is number | null {
-  return value === null || (typeof value === 'number' && Number.isInteger(value) &&
-    value >= 1 && value <= MAX_QUESTIONS);
+  return value === null || (typeof value === 'number' && Number.isSafeInteger(value) && value >= 1);
 }
 
 export function validateSetOptions(value: unknown): asserts value is SetOptions {

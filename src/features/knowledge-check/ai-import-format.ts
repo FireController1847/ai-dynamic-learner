@@ -5,7 +5,7 @@ import { parseFillBlankTemplate } from '../../core/fill-blank.ts';
 import { isRecord } from '../../core/validation.ts';
 import { AI_MARKDOWN_CONTEXT_GUIDANCE } from '../../core/ai-formatting-guidance.ts';
 import { MAX_NAME_LENGTH } from './library-model.ts';
-import { createQuestion, MAX_TEXT, MAX_QUESTION_CONTEXT, questionProblem, questionReady, validateQuestions, MAX_QUESTIONS, type Question } from './question-model.ts';
+import { createQuestion, MAX_TEXT, MAX_QUESTION_CONTEXT, questionProblem, questionReady, validateQuestions, type Question } from './question-model.ts';
 import { MAX_DROPDOWN_CHOICES, MAX_DROPDOWN_ROWS, validateDropdownMatches } from './dropdown-model.ts';
 import { AI_QUESTION_TYPES, DEFAULT_AI_WEIGHTS, allocateQuestions, questionCountProblem, questionTypeLabel, type QuestionWeights } from './ai-question-mix.ts';
 import { reviewAiFocusPrompt, type ReviewAiFocus } from './ai-focus.ts';
@@ -167,12 +167,20 @@ export function parseReviewAiImport(text: string, preferences: ReviewAiPreferenc
   if (countProblem) throw new Error(countProblem);
   const expected = preferences.mixMode === 'ai' ? null : allocateQuestions(preferences.weights, preferences.count);
   const value = parseAiImportJson(text);
-  if (!isRecord(value) || Object.keys(value).some(key => !['format', 'version', 'title', 'description', 'questions', 'solvers', 'coverage', 'confidence'].includes(key)) ||
-      value.format !== REVIEW_AI_FORMAT || value.version !== 1 || typeof value.title !== 'string' ||
-      !value.title.trim() || value.title.trim().length > MAX_NAME_LENGTH ||
-      typeof value.description !== 'string' || value.description.length > MAX_TEXT ||
-      !Array.isArray(value.questions) || value.questions.length < 1 || value.questions.length > MAX_QUESTIONS) {
-    throw new Error(`Paste a supported Review response with 1–${MAX_QUESTIONS} items, a title, and a description.`);
+  if (!isRecord(value) || value.format !== REVIEW_AI_FORMAT || value.version !== 1) {
+    throw new Error('Paste a dynamic-learner-review version-1 JSON object.');
+  }
+  if (Object.keys(value).some(key => !['format', 'version', 'title', 'description', 'questions', 'solvers', 'coverage', 'confidence'].includes(key))) {
+    throw new Error('The Review response contains unsupported top-level fields.');
+  }
+  if (typeof value.title !== 'string' || !value.title.trim() || value.title.trim().length > MAX_NAME_LENGTH) {
+    throw new Error(`Review title must contain 1–${MAX_NAME_LENGTH} characters.`);
+  }
+  if (typeof value.description !== 'string' || value.description.length > MAX_TEXT) {
+    throw new Error(`Review description must be a string of at most ${MAX_TEXT} characters.`);
+  }
+  if (!Array.isArray(value.questions) || !value.questions.length) {
+    throw new Error('Review questions must be a nonempty array.');
   }
   const warnings: string[] = [];
   if (value.questions.length !== preferences.count) warnings.push(`Requested ${preferences.count} questions; the AI response contains ${value.questions.length}.`);
@@ -257,8 +265,8 @@ export function parseReviewAiImport(text: string, preferences: ReviewAiPreferenc
   }
   let coverage: ReviewAiSubjectCoverage[] | null = null;
   if (value.coverage !== undefined) {
-    if (!Array.isArray(value.coverage) || !value.coverage.length || value.coverage.length > MAX_QUESTIONS) {
-      throw new Error('Coverage must list 1–200 source subjects and their scored question numbers.');
+    if (!Array.isArray(value.coverage) || !value.coverage.length) {
+      throw new Error('Coverage must list at least one source subject and its scored question numbers.');
     }
     const seen = new Set<string>();
     coverage = value.coverage.map((entry: unknown, index): ReviewAiSubjectCoverage => {

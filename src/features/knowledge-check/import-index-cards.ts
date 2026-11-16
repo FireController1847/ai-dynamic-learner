@@ -2,7 +2,7 @@ import type { Card, CardSide } from '../index-cards/card-model.ts';
 import type { CardSet, LibraryItem as IndexCardLibraryItem } from '../index-cards/tree-model.ts';
 import { DEFAULT_SET_MODE, type SetModeId } from '../index-cards/set-modes.ts';
 import { parseFillBlankTemplate } from '../../core/fill-blank.ts';
-import { createQuestion, MAX_QUESTIONS, MAX_TEXT, type Question } from './question-model.ts';
+import { createQuestion, MAX_TEXT, type Question } from './question-model.ts';
 
 export type IndexCardImportMapping = 'front-to-back' | 'back-to-front' | 'preserve-blanks';
 export type BlanklessFillCardAction = 'statement' | 'discard';
@@ -164,6 +164,3 @@ export function shuffleQuestions(questions: Question[]): Question[] {
   return shuffled;
 }
 
-export function importQuestionLimitProblem(count: number): string {
-  return count > MAX_QUESTIONS ? `This import would create ${count} questions. Review knowledge sets support up to ${MAX_QUESTIONS}.` : '';
-}

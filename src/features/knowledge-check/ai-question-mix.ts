@@ -1,4 +1,4 @@
-import { MAX_QUESTIONS, QUESTION_TYPES, type QuestionType } from './question-model.ts';
+import { QUESTION_TYPES, type QuestionType } from './question-model.ts';
 
 export type AiQuestionType = QuestionType;
 export type QuestionWeights = Record<AiQuestionType, number>;
@@ -54,8 +54,8 @@ export function equalizeQuestionWeights(weights: QuestionWeights): QuestionWeigh
 }
 
 export function questionCountProblem(count: number): string {
-  return Number.isInteger(count) && count >= 1 && count <= MAX_QUESTIONS
-    ? '' : `Choose 1–${MAX_QUESTIONS} questions.`;
+  return Number.isSafeInteger(count) && count >= 1
+    ? '' : 'Choose a positive whole number of questions within the safe integer range.';
 }
 
 export function questionMixProblem(weights: QuestionWeights, count: number): string {
@@ -71,10 +71,12 @@ export function allocateQuestions(weights: QuestionWeights, count: number): Ques
   const problem = questionMixProblem(weights, count);
   if (problem) throw new Error(problem);
   const result: QuestionWeights = { 'multiple-choice': 0, 'true-false': 0, 'fill-in-the-blanks': 0, dropdown: 0, 'short-answer': 0, statement: 0, parameterized: 0 };
+  // Split the count before multiplying to keep allocation exact even for large safe integers.
+  const hundreds = Math.floor(count / 100), units = count % 100;
   const remainders = AI_QUESTION_TYPES.map((type, order) => {
-    const exact = weights[type] * count / 100;
-    result[type] = Math.floor(exact);
-    return { type, order, remainder: exact - result[type] };
+    const tail = weights[type] * units;
+    result[type] = weights[type] * hundreds + Math.floor(tail / 100);
+    return { type, order, remainder: tail % 100 };
   }).sort((left, right) => right.remainder - left.remainder || left.order - right.order);
   const remaining = count - AI_QUESTION_TYPES.reduce((sum, type) => sum + result[type], 0);
   for (const entry of remainders.slice(0, remaining)) result[entry.type] += 1;

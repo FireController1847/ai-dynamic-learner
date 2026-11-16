@@ -46,7 +46,6 @@ export const QUESTION_TYPES: readonly { id: QuestionType; label: string }[] = [
   { id: 'parameterized', label: 'Parameterized' },
   { id: 'statement', label: 'Statement' },
 ];
-export const MAX_QUESTIONS = 200;
 export const MAX_TEXT = 2000;
 export const MAX_QUESTION_CONTEXT = 12000;
 
@@ -237,7 +236,7 @@ export function validateQuestions(
   value: unknown,
   options: { allowGeneratedHistorySnapshots?: boolean } = {},
 ): asserts value is Question[] {
-  if (!Array.isArray(value) || value.length > MAX_QUESTIONS) throw new Error(`A knowledge set supports up to ${MAX_QUESTIONS} questions.`);
+  if (!Array.isArray(value)) throw new Error('Knowledge set questions must be an array.');
   const ids = new Set<string>();
   for (const question of value as unknown[]) {
     if (!isRecord(question) || !isValidId(question.id) || ids.has(question.id) ||

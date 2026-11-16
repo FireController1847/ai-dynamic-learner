@@ -2,7 +2,7 @@ import type { AnswerStrictness } from '../../../packages/@dynamic-learner/answer
 import { defineComponent, h, type PropType } from 'vue';
 import { AnswerStrictnessField } from '../../components/answer-strictness-field.ts';
 import { inputValue } from '../../core/dom.ts';
-import { MAX_QUESTIONS, MAX_TEXT } from './question-model.ts';
+import { MAX_TEXT } from './question-model.ts';
 import { DEFAULT_SESSION_QUESTION_LIMIT, DEFAULT_TEST_QUESTION_LIMIT, type QuestionOrder, type QuestionPresentation, type SetOptions } from './set-options.ts';
 
 export const SetOptionsEditor = defineComponent({
@@ -25,7 +25,7 @@ export const SetOptionsEditor = defineComponent({
         props.options[key] !== null ? h('label', { class: 'knowledge-field' }, [
           `Maximum ${label} questions`,
           h('input', {
-            type: 'number', min: 1, max: MAX_QUESTIONS, step: 1, required: true,
+            type: 'number', min: 1, step: 1, required: true,
             value: props.options[key],
             onInput: (event: Event) => { props.options[key] = Number(inputValue(event)); },
           }),
