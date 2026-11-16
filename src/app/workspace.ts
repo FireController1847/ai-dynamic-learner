@@ -71,7 +71,7 @@ export function useWorkspace() {
   }
 
   async function syncOtherTabs() {
-    if (!ready.value || refreshing || disposed) return;
+    if (!ready.value || refreshing || disposed || needsReconcile.value) return;
     // Study session state is transient; changing its question pool while a
     // session is active could invalidate an in-progress answer. Synchronize
     // automatically as soon as the session ends.
@@ -373,6 +373,82 @@ export function useWorkspace() {
     }
   }
 
+  /**
+   * Explicitly keep the current draft instead of the conflicting saved copy.
+   * Do not flush the stale observer or erase the previous workspace generation.
+   */
+  async function overwriteSavedWorkspace(): Promise<void> {
+    if (disposed || refreshing || !ready.value || !needsReconcile.value || compatibility.value?.mode !== 'normal') {
+      throw new Error('The draft is not currently safe to save. Download it before reloading.');
+    }
+    const expectedIdentityId = identityDirectory.value?.activeIdentityId;
+    if (!expectedIdentityId) throw new Error('The draft’s local identity is unavailable.');
+    const expectedWorkspaceId = api.workspaceIdentity();
+    refreshing = true;
+    const generationAtStart = remoteGeneration;
+    const previousObserver = observer;
+    previousObserver?.stop();
+    observer = null;
+    ready.value = false;
+    try {
+      // Stop editing and drain any transaction already in flight, without
+      // trying to replay stale writes. Snapshot the complete in-memory draft.
+      await nextTick();
+      await previousObserver?.settle();
+      const draft = JSON.parse(JSON.stringify(state.value)) as unknown;
+      const replacement = validateWorkspaceValue(draft);
+      const current = await api.initialSnapshot();
+      if (current.compatibility.mode !== 'normal') {
+        compatibility.value = current.compatibility;
+        throw new Error('The saved workspace contains unsupported or damaged data. Download a raw rescue first.');
+      }
+      const directory = await api.identityDirectory();
+      if (directory.activeIdentityId !== expectedIdentityId ||
+          directory.identities.find(item => item.id === expectedIdentityId)?.workspaceId !== expectedWorkspaceId ||
+          current.workspaceId !== expectedWorkspaceId) {
+        throw new Error('The active identity or workspace changed. Download your draft instead of overwriting a different workspace.');
+      }
+      await api.restoreWorkspace(replacement, {
+        identityId: expectedIdentityId, commitSequence: current.revisions.commitSequence,
+      });
+      const snapshot = await api.initialSnapshot();
+      const installedDirectory = await api.identityDirectory();
+      if (installedDirectory.activeIdentityId !== expectedIdentityId ||
+          installedDirectory.identities.find(item => item.id === expectedIdentityId)?.workspaceId !== snapshot.workspaceId ||
+          snapshot.compatibility.mode !== 'normal') {
+        throw new Error('The active workspace changed during recovery. Download your draft or reload the saved workspace.');
+      }
+      identityDirectory.value = installedDirectory;
+      api.adoptIdentityContext(installedDirectory);
+      state.value = snapshot.workspace;
+      revision.value += 1;
+      lastSequence = snapshot.revisions.commitSequence;
+      committedRevision.value = snapshot.revisions.commitSequence;
+      compatibility.value = snapshot.compatibility;
+      await startObserver(snapshot.records);
+      backup.workspaceRestored(api.workspaceIdentity(), snapshot.revisions.authoredRevision, populated(snapshot.workspace));
+      storageProblem.value = '';
+      needsReconcile.value = false;
+      remotePending = false;
+      ready.value = true;
+      watchRemoteChanges();
+    } catch (error) {
+      // Keep the draft accessible. A failed overwrite must not silently
+      // replace it with another tab’s content or resume stale autosaves.
+      observer?.stop();
+      observer = null;
+      storageProblem.value = 'The saved workspace could not be overwritten safely: ' + errorMessage(error) +
+        ' Your draft is available for download.';
+      needsReconcile.value = true;
+      remotePending = true;
+      ready.value = true;
+      throw error;
+    } finally {
+      refreshing = false;
+      if (!needsReconcile.value && remoteGeneration !== generationAtStart && !disposed) queueRemoteRefresh();
+    }
+  }
+
   /** Cloud sync reads the same validated, durable snapshot as a manual backup.
    * Never expose an unsaved Vue draft or a partial compatibility projection.
    */
@@ -552,5 +628,5 @@ export function useWorkspace() {
 
   return { state, ready, revision, committedRevision, cloudSnapshot, useCloudWorkspace, compatibility, storageProblem, needsReconcile,
     readBackup, replaceWorkspace, clearWorkspace, downloadBackup, downloadRawRescue,
-    downloadLocalDraft, reloadSavedWorkspace, backup };
+    downloadLocalDraft, reloadSavedWorkspace, overwriteSavedWorkspace, backup };
 }

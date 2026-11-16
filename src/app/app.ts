@@ -82,7 +82,7 @@ const App = defineComponent({
     const backupMessage = ref('');
     const backupBusy = ref(false);
     const recoveryBusy = ref(false);
-    const confirmReload = ref(false);
+    const recoveryChoice = ref<'reload' | 'overwrite' | null>(null);
     const compatibilityDismissed = ref<string | null>(null);
     const compatibilityIgnored = ref<string | null>((() => {
       try { return localStorage.getItem(COMPATIBILITY_NOTICE_KEY); }
@@ -116,7 +116,7 @@ const App = defineComponent({
     }
     // Never reuse a previous confirmation for a later, unrelated conflict.
     watch(() => workspace.needsReconcile.value, needed => {
-      if (!needed) confirmReload.value = false;
+      if (!needed) recoveryChoice.value = null;
     });
     async function backUpNow() {
       if (backupBusy.value) return;
@@ -137,7 +137,7 @@ const App = defineComponent({
       backupMessage.value = '';
       try {
         await workspace.downloadLocalDraft();
-        backupMessage.value = 'Unsaved workspace draft download started. Confirm the file was saved before reloading.';
+        backupMessage.value = 'Unsaved workspace draft download started. Confirm the file was saved before replacing either copy.';
       } catch (error) {
         backupMessage.value = error instanceof Error ? error.message : 'The draft could not be downloaded.';
       } finally {
@@ -152,11 +152,27 @@ const App = defineComponent({
       try {
         await workspace.reloadSavedWorkspace();
         if (!workspace.needsReconcile.value) {
-          confirmReload.value = false;
+          recoveryChoice.value = null;
           backupMessage.value = 'Loaded the latest saved workspace from IndexedDB.';
         }
       } catch (error) {
         backupMessage.value = error instanceof Error ? error.message : 'Saved data could not be loaded.';
+      } finally {
+        recoveryBusy.value = false;
+      }
+    }
+
+    async function overwriteSavedWorkspace() {
+      if (recoveryBusy.value) return;
+      recoveryBusy.value = true;
+      backupMessage.value = '';
+      try {
+        await workspace.overwriteSavedWorkspace();
+        recoveryChoice.value = null;
+        backupMessage.value = 'Your draft is now the saved workspace. Saving has resumed.';
+      } catch (error) {
+        recoveryChoice.value = null;
+        backupMessage.value = error instanceof Error ? error.message : 'The saved workspace could not be overwritten.';
       } finally {
         recoveryBusy.value = false;
       }
@@ -351,27 +367,36 @@ const App = defineComponent({
       workspace.needsReconcile.value ? h('section', {
         class: 'workspace-storage-warning', role: 'alert', 'aria-label': 'Unsaved workspace changes',
       }, [
-        h('p', 'Some changes in this tab may not be saved. Download your on-screen draft before replacing it with stored data.'),
+        h('p', 'Some changes in this tab may not be saved. Choose which workspace to keep, or download your draft.'),
         h('div', { class: 'workspace-actions' }, [
           h('button', {
             type: 'button', class: 'quiet-button', disabled: recoveryBusy.value,
             onClick: () => { void saveUnsavedDraft(); },
           }, recoveryBusy.value ? 'Working…' : 'Download unsaved draft'),
-          h('button', {
+          recoveryChoice.value !== 'overwrite' ? h('button', {
             type: 'button', class: 'quiet-button', disabled: recoveryBusy.value,
             onClick: () => {
-              if (!confirmReload.value) confirmReload.value = true;
+              if (recoveryChoice.value !== 'reload') recoveryChoice.value = 'reload';
               else void discardAndReload();
             },
-          }, confirmReload.value ? 'Discard draft and reload' : 'Reload saved workspace'),
-          confirmReload.value ? h('button', {
+          }, recoveryChoice.value === 'reload' ? 'Discard draft and reload' : 'Reload saved workspace') : null,
+          workspace.ready.value && workspace.compatibility.value?.mode === 'normal' && recoveryChoice.value !== 'reload' ? h('button', {
+            type: 'button', class: 'quiet-button delete-button', disabled: recoveryBusy.value,
+            onClick: () => {
+              if (recoveryChoice.value !== 'overwrite') recoveryChoice.value = 'overwrite';
+              else void overwriteSavedWorkspace();
+            },
+          }, recoveryChoice.value === 'overwrite' ? 'Confirm overwrite' : 'Overwrite saved workspace') : null,
+          recoveryChoice.value ? h('button', {
             type: 'button', class: 'quiet-button', disabled: recoveryBusy.value,
-            onClick: () => { confirmReload.value = false; },
+            onClick: () => { recoveryChoice.value = null; },
           }, 'Cancel') : null,
         ]),
-        confirmReload.value
+        recoveryChoice.value === 'reload'
           ? h('p', 'Reloading discards unsaved changes in this tab. Make sure your draft has been downloaded.')
-          : null,
+          : recoveryChoice.value === 'overwrite'
+            ? h('p', 'Overwrite uses this tab’s entire draft as the saved workspace. Changes saved in other tabs that are missing from this draft will no longer be active. The previous workspace is retained for recovery.')
+            : null,
       ]) : null,
       workspace.backup.problem.value ? h('p', {
         class: 'workspace-storage-warning', role: 'alert',

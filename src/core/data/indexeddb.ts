@@ -754,7 +754,8 @@ export class IndexedDataStore {
    * Activates a fully validated staging workspace. If an active ID is already
    * set, callers must supply it as the expected pointer for restore.
    */
-  async activate(workspaceId: string, expectedWorkspaceId: string | null, initializedAt: string): Promise<void> {
+  async activate(workspaceId: string, expectedWorkspaceId: string | null, initializedAt: string,
+    recovery?: { identityId: string; commitSequence: number }): Promise<void> {
     const tx = this.db().transaction(['control', 'workspaceMeta'], 'readwrite');
     const completion = transactionDone(tx);
     const controlStore = tx.objectStore('control');
@@ -770,8 +771,8 @@ export class IndexedDataStore {
       const dirRequest = controlStore.get(IDENTITY_DIRECTORY_KEY);
       dirRequest.onsuccess = () => {
         let ownerId = GUEST_ID;
+        let directory: IdentityDirectory | undefined;
         if (dirRequest.result !== undefined) {
-          let directory: IdentityDirectory;
           try { directory = readIdentityDirectory(dirRequest.result); }
           catch (error) {
             failure = error instanceof Error ? error : new Error('Invalid identity directory.');
@@ -783,14 +784,30 @@ export class IndexedDataStore {
             tx.abort(); return;
           }
           ownerId = active.id;
-          controlStore.put({ ...directory, identities: directory.identities.map(item =>
-            item.id === ownerId ? { ...item, workspaceId } : item) });
         }
-        controlStore.put({ key: 'local', activeWorkspaceId: workspaceId });
-        tx.objectStore('workspaceMeta').put({
-          id: workspaceId, ownerId, createdAt: initializedAt, commitSequence: 0,
-          authoredRevision: 0, restoreEpoch: Date.now(), legacyMigration: true,
-        });
+        const activatePointer = () => {
+          if (directory) controlStore.put({ ...directory, identities: directory.identities.map(item =>
+            item.id === ownerId ? { ...item, workspaceId } : item) });
+          controlStore.put({ key: 'local', activeWorkspaceId: workspaceId });
+          tx.objectStore('workspaceMeta').put({
+            id: workspaceId, ownerId, createdAt: initializedAt, commitSequence: 0,
+            authoredRevision: 0, restoreEpoch: Date.now(), legacyMigration: true,
+          });
+        };
+        if (!recovery) { activatePointer(); return; }
+        if (!directory || !expectedWorkspaceId || ownerId !== recovery.identityId) {
+          failure = new DataApiError('conflict', 'The active identity changed before overwriting the workspace.');
+          tx.abort(); return;
+        }
+        const metaRequest = tx.objectStore('workspaceMeta').get(expectedWorkspaceId);
+        metaRequest.onsuccess = () => {
+          const meta = metaRequest.result as { ownerId?: string; commitSequence?: number } | undefined;
+          if (!meta || meta.ownerId !== ownerId || meta.commitSequence !== recovery.commitSequence) {
+            failure = new DataApiError('conflict', 'The saved workspace changed during overwrite. Confirm again to retry.');
+            tx.abort(); return;
+          }
+          activatePointer();
+        };
       };
     };
     try { await completion; }
@@ -1002,7 +1019,7 @@ export class IndexedDataStore {
               return;
             }
             if (actualRevision !== operation.expectedRevision) {
-              abort(new DataApiError('conflict', 'The record changed in another tab. Reload before saving.'));
+              abort(new DataApiError('conflict', 'The record changed in another tab.'));
               return;
             }
             if (operation.type === 'delete') store.delete(operation.key);

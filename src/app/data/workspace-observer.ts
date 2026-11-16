@@ -71,7 +71,7 @@ export async function observeWorkspace(
       failed = true;
       const message = error instanceof Error ? error.message : String(error);
       problem('Saving to IndexedDB stopped: ' + message +
-        ' Your unsaved changes remain on screen. Download a backup before reloading.');
+        ' Your unsaved changes remain on screen. Choose a recovery option below.');
     }).finally(() => { queuedActions--; });
   };
 

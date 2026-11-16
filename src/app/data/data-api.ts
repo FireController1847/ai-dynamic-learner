@@ -1,5 +1,5 @@
 import type { Workspace } from '../workspace-format.ts';
-import { emptyWorkspace, parseWorkspace } from '../workspace-format.ts';
+import { emptyWorkspace, parseWorkspace, validateWorkspaceValue } from '../workspace-format.ts';
 import { createId, isValidId } from '../../core/ids.ts';
 import { selectedIdentity, type IdentityDirectory } from '../../core/data/local-identities.ts';
 import {
@@ -531,12 +531,13 @@ export class WorkspaceDataApi {
    * Replacement installs a second verified workspace and flips the active
    * pointer; pending writes from the old workspace are rejected by the store.
    */
-  async restoreWorkspace(payload: unknown): Promise<void> {
+  async restoreWorkspace(payload: unknown, recovery?: { identityId: string; commitSequence: number }): Promise<void> {
     if (this.compatibility?.mode !== 'normal' && this.compatibility !== null) {
       throw new DataApiError('validation', 'A compatibility workspace cannot be replaced by a partial backup. Download a raw rescue copy first.');
     }
-    // Reuse the same runtime validators as the existing JSON upload path.
-    const parsed = parseWorkspace(JSON.stringify(payload));
+    // A live draft is already in memory and is not subject to the upload file-size limit.
+    const parsed = recovery ? validateWorkspaceValue(JSON.parse(JSON.stringify(payload)) as unknown)
+      : parseWorkspace(JSON.stringify(payload));
     // Explicit user-confirmed recovery is allowed when the legacy source was
     // unreadable or a prior active workspace failed validation. No old data
     // is deleted; only a successfully verified new pointer is activated.
@@ -549,7 +550,7 @@ export class WorkspaceDataApi {
     if (canonical(parsed) !== canonical(hydrated)) {
       throw new DataApiError('validation', 'The restored workspace failed integrity verification.');
     }
-    await this.store.activate(stagedId, previous, new Date().toISOString());
+    await this.store.activate(stagedId, previous, new Date().toISOString(), recovery);
     this.workspaceId = stagedId;
   }
 
