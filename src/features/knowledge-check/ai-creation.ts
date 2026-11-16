@@ -30,6 +30,17 @@ export const ReviewAiCreation = defineComponent({
     const json = ref('');
     const problem = ref('');
     const candidate = ref<ReviewAiImport | null>(null);
+    const examPrep = computed(() => !importedDirectly.value && preferences.value.coverage === 'exam-prep');
+    const selectiveCoverage = computed(() => !importedDirectly.value && preferences.value.coverage !== 'balanced');
+    const lowConfidenceMetrics = computed(() => {
+      const confidence = candidate.value?.confidence;
+      if (!confidence) return [];
+      const metrics = [
+        ['Overall coverage', confidence.overallCoverage], ['Exam confidence', confidence.examConfidence],
+        ['Subject confidence', confidence.subjectConfidence], ['Study confidence', confidence.studyConfidence],
+      ] as const;
+      return metrics.filter(([label, value]) => value < 80 && (!selectiveCoverage.value || label !== 'Overall coverage'));
+    });
 
     const validationRevision = ref(0);
     const correctionMessage = ref('');
@@ -99,20 +110,18 @@ export const ReviewAiCreation = defineComponent({
       catch (error) { problem.value = error instanceof Error ? error.message : String(error); }
     }
     function countCorrection() {
-      return `Return at most ${preferences.value.count} meaningful questions. Combine related concepts where useful; remove redundant questions without losing important distinctions. If the count prevents full coverage, identify the uncovered topics in confidence.uncoveredSubjects, adjust overallCoverage honestly, and return COMPLETE corrected JSON. Never exceed the requested question count.`;
+      const coverage = examPrep.value ? 'EXAM PREP ONLY: keep ONLY material you are almost CERTAIN WILL be tested based on explicit exam evidence. IGNORE other material. Report missing strongly evidenced exam topics; never add speculative questions to meet the count.' : selectiveCoverage.value ? 'ESSENTIALS ONLY: keep core concepts and report omitted essentials; do not add minor details.' : 'If the count prevents full coverage, identify the uncovered topics.';
+      return `Return at most ${preferences.value.count} meaningful questions. Combine related concepts where useful; remove redundant questions without losing important distinctions. ${coverage} Report relevant gaps in confidence.uncoveredSubjects, adjust overallCoverage honestly, and return COMPLETE corrected JSON. Never exceed the requested question count.`;
     }
     function lowConfidencePrompt() {
       const result = candidate.value;
       if (!result?.confidence) return '';
-      const c = result.confidence;
-      const low = [
-        ['Overall coverage', c.overallCoverage], ['Exam confidence', c.examConfidence],
-        ['Subject confidence', c.subjectConfidence], ['Study confidence', c.studyConfidence],
-      ].filter(([, value]) => Number(value) < 80).map(([name, value]) => name + ': ' + value + '%');
+      const low = lowConfidenceMetrics.value.map(([name, value]) => name + ': ' + value + '%');
+      const coverage = examPrep.value ? 'Keep EXAM PREP ONLY: EXPLICITLY focus on material you are almost CERTAIN WILL be on the exam. IGNORE other material; only add questions with strong exam evidence. ' : selectiveCoverage.value ? 'Keep ESSENTIALS ONLY: add core concepts, not minor details. ' : '';
       const suggested = Math.min(Number.MAX_SAFE_INTEGER, Math.max(preferences.value.count + 10, Math.ceil(preferences.value.count * 1.5)));
       return 'Please improve the existing Dynamic Learner Review knowledge set using the original source. These AI-estimated scores fell below 80%: ' +
-        low.join('; ') + '. Re-evaluate WHY each is low. If more questions would genuinely increase coverage or study value, regenerate up to ' +
-        suggested + ' meaningful questions (never exceed this limit), including underrepresented subjects; preserve accurate existing material and avoid filler. ' +
+        low.join('; ') + '. Re-evaluate WHY each is low. ' + coverage + 'If more questions would genuinely increase coverage or study value within the selected scope, regenerate up to ' +
+        suggested + ' meaningful questions (never exceed this limit), including underrepresented subjects within the selected scope; preserve accurate, in-scope material and avoid filler. ' +
         'If the problem is insufficient source evidence, subject mismatch, or unknown exam content, clearly identify what additional study material is needed rather than claiming more questions will fix it. ' +
         'Update all four confidence estimates, explanations and uncoveredSubjects honestly. Return the COMPLETE corrected JSON in the same schema; explanations must gently guide reasoning without giving away answers.';
     }
@@ -187,8 +196,8 @@ export const ReviewAiCreation = defineComponent({
             h('label', [h('span', 'Total questions'), h('input', { type: 'number', min: 1, step: 1, value: preferences.value.count,
               onInput: (event: Event) => { preferences.value.count = Number(inputValue(event)); } }), h('small', { class: 'study-ai-muted' }, 'Number of questions the AI should make.')]),
             h('label', [h('span', 'Coverage'), h('select', { value: preferences.value.coverage, onChange: (event: Event) => {
-              const value = inputValue(event); if (value === 'essentials' || value === 'balanced' || value === 'comprehensive') preferences.value.coverage = value;
-            } }, [h('option', { value: 'essentials' }, 'Essentials only'), h('option', { value: 'balanced' }, 'Balanced'), h('option', { value: 'comprehensive' }, 'Comprehensive')]), h('small', { class: 'study-ai-muted' }, 'Key facts, a balanced mix, or detailed coverage.')]),
+              const value = inputValue(event); if (value === 'exam-prep' || value === 'essentials' || value === 'balanced') preferences.value.coverage = value;
+            } }, [h('option', { value: 'exam-prep' }, 'Exam prep only'), h('option', { value: 'essentials' }, 'Essentials only'), h('option', { value: 'balanced' }, 'Balanced')]), h('small', { class: 'study-ai-muted' }, 'Likely exam content, essential concepts, or a balanced review.')]),
           ]),
           h('div', { class: 'review-ai-question-bank' }, [
             h('div', { class: 'review-ai-bank-counts' }, [
@@ -303,23 +312,25 @@ export const ReviewAiCreation = defineComponent({
                 ]),
               ])),
             ]),
-            h('p', { class: 'review-ai-coverage-help' }, 'Overall coverage measures how much of the supplied material or selected category these questions address. A high value means broad source coverage, not a guaranteed exam result.'),
+            h('p', { class: 'review-ai-coverage-help' }, examPrep.value
+              ? 'Overall coverage measures the full source. Lower coverage is expected when Exam prep only excludes material without strong exam evidence.'
+              : selectiveCoverage.value ? 'Overall coverage measures the full source. Lower coverage is expected when Essentials only excludes nonessential material.'
+              : 'Overall coverage measures how much of the supplied material or selected category these questions address. A high value means broad source coverage, not a guaranteed exam result.'),
             h('div', { class: 'review-ai-confidence-notes' }, [
               h('p', candidate.value.confidence.coverageExplanation),
               candidate.value.confidence.uncoveredSubjects.length
                 ? h('div', [
-                    h('strong', 'Potentially missing coverage'),
+                    h('strong', examPrep.value ? 'Potentially missing exam topics' : selectiveCoverage.value ? 'Potentially missing essentials' : 'Potentially missing coverage'),
                     h('ul', candidate.value.confidence.uncoveredSubjects.map((subject, i) => h('li', { key: i }, subject))),
                   ]) : null,
               h('p', candidate.value.confidence.confidenceExplanation),
             ]),
           ]) : h('p', { class: 'study-ai-muted' }, 'This older imported JSON does not contain confidence statistics. Its coverage has not been assessed.'),
-          candidate.value.confidence && [
-            candidate.value.confidence.overallCoverage, candidate.value.confidence.examConfidence,
-            candidate.value.confidence.subjectConfidence, candidate.value.confidence.studyConfidence,
-          ].some(value => value < 80) ? h('section', { class: 'review-ai-difference', role: 'status' }, [
+          lowConfidenceMetrics.value.length ? h('section', { class: 'review-ai-difference', role: 'status' }, [
             h('strong', 'One or more confidence estimates are below 80%'),
-            h('p', 'You can ask the AI to improve the set. It will suggest more questions when useful, or explain what additional source material is needed.'),
+            h('p', examPrep.value
+              ? 'You can ask the AI to improve the set without adding speculative exam content. It may need more explicit exam guidance.'
+              : 'You can ask the AI to improve the set. It will suggest more questions when useful, or explain what additional source material is needed.'),
             !importedDirectly.value ? h('button', { type: 'button', class: 'card-primary-button', onClick: () => {
               returningFromReview.value = false;
               go('configure', true);
@@ -337,9 +348,9 @@ export const ReviewAiCreation = defineComponent({
           ]),
           !importedDirectly.value && candidate.value.questions.length !== preferences.value.count
             ? h('section', { class: 'review-ai-difference', role: 'status' }, [
-                h('strong', 'The AI did not follow the requested question count'),
-                h('p', `Requested ${preferences.value.count}; received ${candidate.value.questions.length}. Dynamic Learner has not removed any questions. The new AI prompt enforces this limit; you can ask the AI to regenerate the response.`),
-                h('button', { type: 'button', class: 'quiet-button', onClick: requestExactCount }, 'Copy request to fit question limit'),
+                h('strong', examPrep.value && candidate.value.questions.length < preferences.value.count ? 'Fewer exam-supported questions received' : 'The AI did not follow the requested question count'),
+                h('p', `Requested ${preferences.value.count}; received ${candidate.value.questions.length}. Dynamic Learner has not removed any questions. ${examPrep.value && candidate.value.questions.length < preferences.value.count ? 'Fewer questions are acceptable when strong exam evidence does not support the requested count.' : 'You can ask the AI to regenerate within the requested limit.'}`),
+                examPrep.value && candidate.value.questions.length < preferences.value.count ? null : h('button', { type: 'button', class: 'quiet-button', onClick: requestExactCount }, 'Copy request to fit question limit'),
                 correctionMessage.value ? h('p', { role: 'status' }, correctionMessage.value) : null,
                 correctionFallback.value ? h('textarea', { readonly: true, rows: 3, value: countCorrection() }) : null,
               ]) : null,
