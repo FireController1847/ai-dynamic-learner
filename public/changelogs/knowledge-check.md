@@ -1,3 +1,17 @@
+## v1.49.2
+
+<small data-utc="2026-11-16T18:03:17Z">November 16, 2026 at 11:03 AM MST</small>
+
+- **Session Setup:** Removed duplicate coverage information from Study and Quiz setup, leaving the main preview to summarize session size and bank progress.
+- **Coverage:** Simplified the progress card to a color-coded bar, pass count, and questions shown.
+
+<details>
+<summary>View 1 commit</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/5418715782da45086ab566cebafa5dcf55010a0c">54187157</a> — Simplify Review session coverage and setup (v1.49.2)</li>
+</ol>
+</details>
+
 ## v1.49.1
 
 <small data-utc="2026-11-16T17:58:18Z">November 16, 2026 at 10:58 AM MST</small>
