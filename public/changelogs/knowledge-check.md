@@ -1,3 +1,18 @@
+## v1.49.0
+
+<small data-utc="2026-11-16T17:39:44Z">November 16, 2026 at 10:39 AM MST</small>
+
+- **Question Selection:** Balanced Study, Quiz, and Test sessions now prefer the least-shown question in each group, randomly resolving ties.
+- **Coverage:** Track question displays across sessions and show cumulative full-bank passes with a rotating six-color coverage bar.
+- **Persistence:** Preserve coverage with knowledge sets and avoid recounting questions when resuming a session.
+
+<details>
+<summary>View 1 commit</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/fd61118ccc440a6ac1d28346356b00506f989d85">fd61118c</a> — Track Review question exposure and rotate balanced session coverage (v1.49.0)</li>
+</ol>
+</details>
+
 ## v1.48.0
 
 <small data-utc="2026-11-16T17:05:24Z">November 16, 2026 at 10:05 AM MST</small>
