@@ -640,12 +640,14 @@
 
 /* A session is a sample of the full question bank, not lost questions. */
 .knowledge-question-coverage{display:grid;gap:8px;margin:12px 0 20px;padding:14px;border:1px solid var(--border-color);border-radius:var(--radius-dialog);background:var(--surface-subtle)}
-.knowledge-question-coverage-heading{display:flex;align-items:center;gap:8px}
+.knowledge-question-coverage-heading{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.knowledge-question-coverage-passes{margin-inline-start:auto;font-size:12px;color:var(--text-secondary)}
 .knowledge-question-coverage-heading>.ui-icon{width:18px;height:18px;color:var(--brand-text)}
 .knowledge-question-coverage-track{display:grid}
 .knowledge-question-coverage-track>span{height:10px;border-radius:3px;background:var(--border-color);box-shadow:inset 0 0 0 1px var(--border-color)}
-.knowledge-question-coverage-count>strong{color:var(--text-primary)}
-.knowledge-question-coverage p{margin:0;font-size:12px;line-height:18px;color:var(--text-secondary)}
+.knowledge-question-coverage-count{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px 12px;font-size:12px;line-height:18px;color:var(--text-secondary);font-variant-numeric:tabular-nums}
+.knowledge-question-coverage-pass{display:inline-flex;align-items:center;gap:6px}
+.knowledge-question-coverage-color{width:10px;height:10px;border-radius:3px;box-shadow:inset 0 0 0 1px var(--border-color)}
 
 /* Responsive question-strip navigation, keyed to the Review pane's width. */
 @container (max-width: 900px) {

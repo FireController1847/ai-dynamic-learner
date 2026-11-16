@@ -75,4 +75,4 @@ Use this as a starting-file index, not a feature specification. Follow imports o
 | Review AI creation / question mix | `ai-creation.ts`, `ai-creation.css`, `ai-import-format.ts`, `ai-question-mix.ts`, `knowledge-check.ts`, `library.ts` |
 | Responsive/touch overrides | `src/styles/mobile.css` plus the owning feature stylesheet |
 
-Review session question-bank visual: `src/features/knowledge-check/session-question-coverage.ts` (used by session setup and intro).
+Review session question-bank visual: `src/features/knowledge-check/session-question-coverage.ts` (used by session intro, Study recap, and Quiz/Test results).

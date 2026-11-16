@@ -4,7 +4,6 @@ import { AnswerStrictnessField } from '../../components/answer-strictness-field.
 import type { CheckItem } from './library-model.ts';
 import type { CheckModeId } from './check-types.ts';
 import { QUESTION_ORDER_LABELS, settingsForMode, type SessionSettings } from './session-settings.ts';
-import { SessionQuestionCoverage } from './session-question-coverage.ts';
 import type { QuestionOrder, QuestionPresentation } from './set-options.ts';
 import { inputValue } from '../../core/dom.ts';
 
@@ -15,7 +14,6 @@ export const SessionSetup = defineComponent({
   props: {
     item: { type: Object as PropType<CheckItem>, required: true },
     mode: { type: String as PropType<CheckModeId>, required: true },
-    questionCount: { type: Number, required: true },
   },
   emits: {
     back: () => true,
@@ -45,10 +43,7 @@ export const SessionSetup = defineComponent({
     }
 
     function defaultSummary() {
-      const count = defaults.questionLimit === null
-        ? 'all questions'
-        : `up to ${defaults.questionLimit} questions`;
-      return `${defaults.presentation === 'scroll' ? 'All questions' : 'One at a time'}, ${QUESTION_ORDER_LABELS[defaults.order]}, ${count}, ${defaults.shuffleChoices ? 'shuffled' : 'original'} Multiple Choice options (Dropdown options always shuffled), Short Answer strictness ${defaults.shortAnswerStrictness}, Fill in the Blanks strictness ${defaults.fillBlankAnswerStrictness}, ${defaults.quizAttempts} ${defaults.quizAttempts === 1 ? 'attempt' : 'attempts'} per question.`;
+      return `${defaults.presentation === 'scroll' ? 'All questions' : 'One at a time'}, ${QUESTION_ORDER_LABELS[defaults.order]}, ${defaults.shuffleChoices ? 'shuffled' : 'original'} Multiple Choice options (Dropdown options always shuffled), Short Answer strictness ${defaults.shortAnswerStrictness}, Fill in the Blanks strictness ${defaults.fillBlankAnswerStrictness}, ${defaults.quizAttempts} ${defaults.quizAttempts === 1 ? 'attempt' : 'attempts'} per question.`;
     }
 
     function emitStudy() {
@@ -65,16 +60,8 @@ export const SessionSetup = defineComponent({
 
     if (props.mode === 'study') {
       return () => h('section', { class: 'knowledge-session knowledge-session-setup', 'aria-label': 'Study setup' }, [
-        h('p', { class: 'knowledge-session-setup-step' },
-          `Set up Study · ${Math.min(props.questionCount, defaults.questionLimit ?? props.questionCount)} questions per session · ${props.questionCount} available`),
+        h('p', { class: 'knowledge-session-setup-step' }, 'Set up Study'),
         h('h2', 'What order should the questions use?'),
-        h(SessionQuestionCoverage, {
-          questions: props.item.questions, selected: Math.min(props.questionCount, defaults.questionLimit ?? props.questionCount),
-        }),
-        h('p', { class: 'knowledge-session-setup-description' },
-          defaults.questionLimit !== null && props.questionCount > defaults.questionLimit
-            ? `A balanced sample of ${defaults.questionLimit} questions will be selected across the whole set, favoring questions shown less often. Choose their display order below.`
-            : 'Choose an order for this Study session. Answer strictness comes from this knowledge set’s saved options.'),
         h('fieldset', { class: 'knowledge-session-choices' }, [
           h('legend', { class: 'visually-hidden' }, 'Study question order'),
           orderChoice('forward', 'In order', 'Start with the first question and continue normally.', studyOrder.value, () => { studyOrder.value = 'forward'; }, 'study-question-order'),
@@ -91,11 +78,8 @@ export const SessionSetup = defineComponent({
     return () => {
       if (!customizing.value) {
         return h('section', { class: 'knowledge-session knowledge-session-setup', 'aria-label': 'Quiz setup' }, [
-          h('p', { class: 'knowledge-session-setup-step' }, `Set up Quiz · ${props.questionCount} ${props.questionCount === 1 ? 'question' : 'questions'} available`),
+          h('p', { class: 'knowledge-session-setup-step' }, 'Set up Quiz'),
           h('h2', 'How should this Quiz run?'),
-          h(SessionQuestionCoverage, {
-            questions: props.item.questions, selected: Math.min(props.questionCount, defaults.questionLimit ?? props.questionCount),
-          }),
           h('p', { class: 'knowledge-session-setup-description' }, 'Use the settings saved with this knowledge set, or customize only this Quiz session.'),
           h('fieldset', { class: 'knowledge-session-choices' }, [
             h('legend', { class: 'visually-hidden' }, 'Quiz settings source'),

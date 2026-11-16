@@ -6,6 +6,7 @@ import type { CheckItem } from './library-model.ts';
 import { defaultSetOptions } from './set-options.ts';
 import { QUESTION_ORDER_LABELS, type SessionSettings } from './session-settings.ts';
 import { SessionQuestionCoverage } from './session-question-coverage.ts';
+import { questionReady } from './question-model.ts';
 
 export const SessionIntro = defineComponent({
   name: 'KnowledgeSessionIntro',
@@ -22,6 +23,7 @@ export const SessionIntro = defineComponent({
       const mode = CHECK_MODES.find(entry => entry.id === props.mode)!;
       const options = { ...defaultSetOptions(), ...props.item.options };
       const settings = props.settings;
+      const available = props.item.questions.filter(questionReady).length;
       const pill = (icon: string, label: string) => h('span', { class: 'knowledge-info-pill' }, [h(Icon, { name: icon }), label]);
       return h('section', { class: ['knowledge-session knowledge-session-intro', `is-${props.mode}`],
         'data-mode': props.mode, 'aria-label': `${mode.label} information` }, [
@@ -36,7 +38,7 @@ export const SessionIntro = defineComponent({
           ]),
         ]),
         h('div', { class: 'knowledge-intro-pills', 'aria-label': 'Session details' }, [
-          pill('cards', `${props.count} ${props.count === 1 ? 'question' : 'questions'}`),
+          pill('cards', props.count < available ? `${props.count} of ${available} questions` : `${props.count} ${props.count === 1 ? 'question' : 'questions'}`),
           pill('shuffle', QUESTION_ORDER_LABELS[settings.order]),
           pill('cards', settings.presentation === 'scroll' ? 'All questions visible' : 'One at a time'),
           pill(test ? 'clock' : study ? 'lightbulb' : 'check',

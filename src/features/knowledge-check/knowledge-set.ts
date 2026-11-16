@@ -13,7 +13,6 @@ import { PublicationSetup } from './publishing/publication-setup.ts';
 import { KnowledgeSession } from './knowledge-session.ts';
 import { SessionSetup } from './session-setup.ts';
 import { settingsForMode, type SessionSettings } from './session-settings.ts';
-import { questionReady } from './question-model.ts';
 import { clearSession, pausedSessionSettings } from './parameterized-session.ts';
 import { enterReviewPanel, leaveReviewPanel, restoreReviewPanel } from './review-motion.ts';
 import { defineComponent, h, onDeactivated, ref, Transition, type PropType } from 'vue';
@@ -106,7 +105,6 @@ export const KnowledgeSet = defineComponent({
         key: `setup-${revision.value}-${mode.value}`,
         item: props.item,
         mode: mode.value,
-        questionCount: props.item.questions.filter(questionReady).length,
         onBack: () => { mode.value = null; },
         onContinue: (settings: SessionSettings) => {
           resumeRequested.value = false;

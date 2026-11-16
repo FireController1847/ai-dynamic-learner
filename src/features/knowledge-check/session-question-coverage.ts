@@ -25,7 +25,8 @@ export const SessionQuestionCoverage = defineComponent({
       const segments = tickCount * covered / available;
       return h('section', { class: 'knowledge-question-coverage', 'aria-label': 'Question bank coverage' }, [
         h('div', { class: 'knowledge-question-coverage-heading' }, [
-          h(Icon, { name: 'shuffle' }), h('strong', `${props.selected} of ${available} questions this time`),
+          h(Icon, { name: 'shuffle' }), h('strong', 'Question coverage'),
+          h('span', { class: 'knowledge-question-coverage-passes' }, `${completed} full ${completed === 1 ? 'pass' : 'passes'}`),
         ]),
         h('div', { class: 'knowledge-question-coverage-track', role: 'progressbar',
           style: { gridTemplateColumns: `repeat(${tickCount}, minmax(0, 1fr))`, columnGap: `min(4px, ${20 / tickCount}%)` },
@@ -38,12 +39,13 @@ export const SessionQuestionCoverage = defineComponent({
               `linear-gradient(to right, ${nextColor} ${fill}%, ${previousColor} ${fill}%)`,
           } });
         })),
-        h('p', { class: 'knowledge-question-coverage-count' }, [
-          h('strong', `${completed} full ${completed === 1 ? 'pass' : 'passes'} completed`),
-          ` · Pass ${completed + 1}: ${covered} of ${available} questions shown`,
+        h('div', { class: 'knowledge-question-coverage-count' }, [
+          h('span', { class: 'knowledge-question-coverage-pass' }, [
+            h('span', { class: 'knowledge-question-coverage-color', style: { background: nextColor }, 'aria-hidden': 'true' }),
+            `Pass ${completed + 1}`,
+          ]),
+          h('span', `${covered} / ${available} shown`),
         ]),
-        h('p', 'Each session samples evenly across the bank, preferring the least-shown questions in each group and randomly choosing among ties. Progress is shared across Study, Quiz and Test.'),
-        h('p', 'The bar changes color each time every available question has been shown another time. Questions count once per session, not per answer attempt.'),
       ]);
     };
   },
