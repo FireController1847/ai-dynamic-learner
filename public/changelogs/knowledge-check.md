@@ -1,3 +1,17 @@
+## v1.49.4
+
+<small data-utc="2026-11-16T19:56:49Z">November 16, 2026 at 12:56 PM MST</small>
+
+- **Session Preview:** Separated upcoming session details from previous question coverage, removed duplicate completion statistics, and shortened the session recovery notes.
+- **Coverage:** Show how many questions have been seen at least once, twice, or more, instead of an ambiguous question count.
+
+<details>
+<summary>View 1 commit</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/5834ed8af6213cdf1014b03df237b5f2e53ac8f4">5834ed8a</a> — Separate upcoming Review sessions from previous coverage (v1.49.4)</li>
+</ol>
+</details>
+
 ## v1.49.3
 
 <small data-utc="2026-11-16T19:46:44Z">November 16, 2026 at 12:46 PM MST</small>
