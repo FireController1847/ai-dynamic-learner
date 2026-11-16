@@ -1,6 +1,5 @@
 import { defineComponent, h, type PropType } from 'vue';
 import { Icon } from '../../components/icon.ts';
-import { EntryStatistics } from '../../components/entry-statistics.ts';
 import { CHECK_MODES, type CheckModeId } from './check-types.ts';
 import type { CheckItem } from './library-model.ts';
 import { defaultSetOptions } from './set-options.ts';
@@ -50,10 +49,6 @@ export const SessionIntro = defineComponent({
                 ? 'Hints and retries'
                 : `${settings.quizAttempts} ${settings.quizAttempts === 1 ? 'attempt' : 'attempts'} per question`),
         ]),
-        h(SessionQuestionCoverage, {
-          questions: props.item.questions,
-          selected: props.count,
-        }),
         options.description ? h('p', { class: 'knowledge-description' }, options.description) : null,
         h('div', { class: 'knowledge-intro-details' }, [
           h('h4', 'What to expect'),
@@ -70,10 +65,11 @@ export const SessionIntro = defineComponent({
         ]),
         props.message ? h('p', { role: 'status', class: 'knowledge-message' }, props.message) : null,
         props.ended ? h('p', { role: 'status' }, study ? 'Your study session ended. Start again when ready.' : 'Your previous session ended. Start again when ready.') : null,
-        h('div', { class: 'knowledge-intro-statistics' }, [
-          h(EntryStatistics, { app: 'knowledge-check', id: props.item.id,
-            metric: study ? 'studyPasses' : test ? 'tests' : 'quizzes' }),
-        ]),
+        h(SessionQuestionCoverage, {
+          questions: props.item.questions,
+          selected: props.count,
+          beforeSession: true,
+        }),
         h('div', { class: 'knowledge-intro-actions' }, [
           h('button', { type: 'button', class: 'quiet-button',
             onClick: () => emit('back') }, 'Back'),
@@ -92,12 +88,12 @@ export const SessionIntro = defineComponent({
         ]),
         h('p', { class: 'knowledge-muted knowledge-intro-note' },
           study
-            ? 'Use Pause Studying to save current progress on this browser. Your latest Study recap is kept separately; earlier Study sessions are not archived.'
+            ? 'Pause to save progress on this browser. Only your latest Study recap is kept.'
             : !test && settings.timeLimitMinutes === null
-              ? 'Use Pause Quiz to save your answers on this browser, or End quiz to discard them.'
+              ? 'Pause to save answers on this browser. Ending discards them.'
               : props.item.questions.some(question => question.type === 'parameterized')
-                ? 'Generated questions stay stable during this session; interruption recovery is browser-local. Ending discards saved progress.'
-                : 'Leaving or switching modes ends the active Test. Test answers are not preserved after ending.'),
+                ? 'Generated questions stay fixed. Recovery is browser-local; ending discards progress.'
+                : 'Leaving or switching modes ends the Test and discards answers.'),
       ]);
     };
   },

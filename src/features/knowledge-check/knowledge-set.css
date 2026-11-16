@@ -159,7 +159,6 @@
 .knowledge-intro-details { padding-block: 16px; margin-block: 16px 24px; border-block: 1px solid var(--border-color); }
 .knowledge-intro-details h4 { margin: 0 0 8px; font-size: 14px; font-weight: 600; }
 .knowledge-intro-details p { margin: 8px 0 0; }
-.knowledge-intro-statistics { margin-bottom: 12px; }
 .knowledge-intro-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .knowledge-intro-actions > button:first-child { margin-right: auto; }
 .knowledge-intro-note { margin: 12px 0 0; }
