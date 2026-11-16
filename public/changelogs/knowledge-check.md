@@ -1,3 +1,17 @@
+## v1.47.6
+
+<small data-utc="2026-11-16T16:55:13Z">November 16, 2026 at 9:55 AM MST</small>
+
+- **Question Limits:** Removed the 200-question ceiling from knowledge sets, AI generation and imports, manual additions, and optional session limits.
+- **AI Import:** Removed the coverage subject count limit and made format, title, description, and question validation errors more specific.
+
+<details>
+<summary>View 1 commit</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/f1e48eed5a2c66bc20f97be1acb0761116fec6d6">f1e48eed</a> — Remove Review question count limits and clarify AI import validation (v1.47.6)</li>
+</ol>
+</details>
+
 ## v1.47.5
 
 <small data-utc="2026-11-13T01:40:00Z">November 12, 2026 at 6:40 PM MST</small>
