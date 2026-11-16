@@ -1,3 +1,16 @@
+## v1.49.3
+
+<small data-utc="2026-11-16T19:46:44Z">November 16, 2026 at 12:46 PM MST</small>
+
+- **Coverage:** Distinguish questions already shown from the upcoming session, and keep completed-pass colors and counts consistent until the next pass begins.
+
+<details>
+<summary>View 1 commit</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/49002953bb74b59a95376bb6cf30d67c3db4708d">49002953</a> — Clarify Review recorded coverage and next session (v1.49.3)</li>
+</ol>
+</details>
+
 ## v1.49.2
 
 <small data-utc="2026-11-16T18:03:17Z">November 16, 2026 at 11:03 AM MST</small>
