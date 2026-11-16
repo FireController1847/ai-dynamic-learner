@@ -65,6 +65,11 @@ export function useWorkspace() {
     remotePending = true;
   };
 
+  function stopObserver() {
+    observer?.stop();
+    observer = null;
+  }
+
   async function startObserver(records: Awaited<ReturnType<WorkspaceDataApi['initialSnapshot']>>['records']) {
     observer = compatibility.value?.readOnly ? null
       : await observeWorkspace(state, api, savingProblem, updateBackup, records);
@@ -435,8 +440,7 @@ export function useWorkspace() {
     } catch (error) {
       // Keep the draft accessible. A failed overwrite must not silently
       // replace it with another tab’s content or resume stale autosaves.
-      observer?.stop();
-      observer = null;
+      stopObserver();
       storageProblem.value = 'The saved workspace could not be overwritten safely: ' + errorMessage(error) +
         ' Your draft is available for download.';
       needsReconcile.value = true;
