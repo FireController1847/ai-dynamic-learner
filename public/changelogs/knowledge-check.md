@@ -1,3 +1,18 @@
+## v1.48.0
+
+<small data-utc="2026-11-16T17:05:24Z">November 16, 2026 at 10:05 AM MST</small>
+
+- **AI Coverage:** Replaced Comprehensive with Exam prep only, which prioritizes strongly evidenced exam topics. Refined Essentials only and retained Balanced as the default.
+- **AI Confidence:** Recognized deliberate coverage exclusions and evidence-limited question counts without encouraging unrelated material.
+- **Matching Questions:** Encouraged 3–5 matches per regular or parameterized matching question.
+
+<details>
+<summary>View 1 commit</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/18cc71bd709656f9d0364c08104c6f80d03a4a0c">18cc71bd</a> — Add evidence-driven Review exam preparation coverage (v1.48.0)</li>
+</ol>
+</details>
+
 ## v1.47.6
 
 <small data-utc="2026-11-16T16:55:13Z">November 16, 2026 at 9:55 AM MST</small>
