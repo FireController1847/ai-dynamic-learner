@@ -1,3 +1,16 @@
+## v1.49.1
+
+<small data-utc="2026-11-16T17:58:18Z">November 16, 2026 at 10:58 AM MST</small>
+
+- **Coverage:** Scale the coverage bar to two ticks per session needed for a full pass, keeping progress proportional to the number of questions actually shown.
+
+<details>
+<summary>View 1 commit</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/fdbbe3fe724e31c7f9d7ddd270e70edcc0515b6d">fdbbe3fe</a> — Scale Review coverage ticks to session size (v1.49.1)</li>
+</ol>
+</details>
+
 ## v1.49.0
 
 <small data-utc="2026-11-16T17:39:44Z">November 16, 2026 at 10:39 AM MST</small>
