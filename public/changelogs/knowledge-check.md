@@ -3,12 +3,14 @@
 <small data-utc="2026-11-17T00:47:40Z">November 16, 2026 at 5:47 PM MST</small>
 
 - **Review Home:** Open Review to a dedicated landing page instead of automatically selecting the first library item.
-- **Library:** Create with AI, import, create a knowledge set, or add a group from large action cards; return to the landing page from Review home in the library.
+- **Library:** Create with AI, import, create a knowledge set, or add a group at the top level from large action cards; return to the landing page from Home in the library.
+- **Recent Items:** Return to the last opened knowledge set or group directly from Home, even after reloading.
 
 <details>
-<summary>View 1 commit</summary>
+<summary>View 2 commits</summary>
 <ol>
 <li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/7f685ba34f6a1fb09393300234b2fd7267b005fb">7f685ba3</a> — Experiment with a Review home splash screen (v1.50.0)</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/abe1729116005a8935ace270f38f3de3ae002ed9">abe17291</a> — Polish Review Home and remember the last opened item</li>
 </ol>
 </details>
 
