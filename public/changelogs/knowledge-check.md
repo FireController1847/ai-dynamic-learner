@@ -9,9 +9,10 @@
 - **Confidence:** Keep valid questions even when AI estimates are unavailable, and avoid carrying estimates across incomplete or merged responses.
 
 <details>
-<summary>View 1 commit</summary>
+<summary>View 2 commits</summary>
 <ol>
 <li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/c3adbff685b42f659c2e34357c9d9c9fcadbcd56">c3adbff6</a> — Redesign Review AI creation and recover partial responses (v1.50.0)</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/1fe7beea8a1e24c830def140407ace5eed862313">1fe7beea</a> — Keep Review recovery and copy feedback in view</li>
 </ol>
 </details>
 
