@@ -1,8 +1,8 @@
-import { computed, defineComponent, h, ref, type PropType } from 'vue';
+import { computed, defineComponent, h, nextTick, ref, type PropType } from 'vue';
 import { inputValue } from '../../core/dom.ts';
 import { DEFAULT_AI_WEIGHTS, questionCountProblem } from './ai-question-mix.ts';
 import { reviewAiPrompt, type ReviewAiImport, type ReviewAiPreferences } from './ai-import-format.ts';
-import { ReviewAiResponseWorkspace } from './ai-response-workspace.ts';
+import { ReviewAiResponseWorkspace, reviewAiProgress, type ReviewAiStep } from './ai-response-workspace.ts';
 import { questionDisplayPrompt, type Question } from './question-model.ts';
 
 export const ReviewQuestionImport = defineComponent({
@@ -14,6 +14,9 @@ export const ReviewQuestionImport = defineComponent({
   emits: { back: () => true, append: (_questions: Question[]) => true },
   setup(props, { emit }) {
     const count = ref(20);
+    const step = ref<'setup' | ReviewAiStep>('setup');
+    const heading = ref<HTMLElement | null>(null);
+    function go(next: typeof step.value) { step.value = next; void nextTick(() => heading.value?.focus({ preventScroll: true })); }
     const preferences = computed<ReviewAiPreferences>(() => ({
       count: count.value, mixMode: 'ai', coverage: 'balanced', weights: { ...DEFAULT_AI_WEIGHTS },
     }));
@@ -32,12 +35,13 @@ export const ReviewQuestionImport = defineComponent({
     return () => h('section', { class: 'knowledge-set-builder knowledge-question-import review-ai-workspace', 'aria-label': 'Import additional questions' }, [
       h('header', { class: 'knowledge-builder-header' }, [
         h('div', [
-          h('h2', 'Add questions with AI'),
+          h('h2', { ref: heading, tabindex: -1 }, 'Add questions with AI'),
           h('p', props.setName + ' · ' + props.existing.length + ' existing questions'),
         ]),
         h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('back') }, 'Back to builder'),
       ]),
-      h('section', { class: 'review-ai-panel' }, [
+      reviewAiProgress(step.value),
+      h('section', { class: 'review-ai-panel', style: step.value !== 'setup' ? { display: 'none' } : undefined }, [
         h('label', { class: 'knowledge-field knowledge-question-import-count' }, [
           'Number of new questions',
           h('input', { type: 'number', min: 1, step: 1, value: count.value,
@@ -45,9 +49,17 @@ export const ReviewQuestionImport = defineComponent({
         ]),
         h('p', { class: 'study-ai-muted' }, 'Your existing questions and settings stay unchanged. Nothing is saved until you save the builder.'),
         questionCountProblem(count.value) ? h('p', { class: 'study-ai-error' }, questionCountProblem(count.value)) : null,
+        h('div', { class: 'review-ai-inline-actions review-ai-navigation' }, [
+          h('button', { type: 'button', class: 'quiet-button', onClick: () => go('response') }, 'Already have a response?'),
+          h('button', { type: 'button', class: 'card-primary-button', disabled: Boolean(questionCountProblem(count.value)), onClick: () => go('generate') }, 'Continue'),
+        ]),
       ]),
       h(ReviewAiResponseWorkspace, {
+        step: step.value === 'setup' ? 'generate' : step.value,
+        style: step.value === 'setup' ? { display: 'none' } : undefined,
         preferences: preferences.value, prompt: prompt.value, promptForCount, appendMode: true, existing: props.existing,
+        onStep: (next: ReviewAiStep) => go(next),
+        onBack: () => go('setup'),
         onComplete: (value: ReviewAiImport) => emit('append', value.questions),
       }),
     ]);

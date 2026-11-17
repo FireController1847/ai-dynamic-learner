@@ -176,3 +176,21 @@
 @media(pointer:coarse) {
   .review-ai-inline-actions>button,.review-ai-inline-actions>a,.review-ai-drop>button { min-height:44px; }
 }
+
+/* Guided Review AI flow: one task at a time, with optional details. */
+.review-ai-progress { display:grid;gap:8px;min-width:0; }
+.review-ai-progress ol { display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;list-style:none;margin:0;padding:0; }
+.review-ai-progress li { display:grid;gap:6px;color:var(--text-secondary);font-size:12px; }
+.review-ai-progress li::before { content:'';height:3px;border-radius:3px;background:var(--control-border); }
+.review-ai-progress li.is-active { color:var(--brand-text);font-weight:600; }
+.review-ai-progress li.is-active::before { background:var(--brand); }
+.review-ai-navigation { justify-content:space-between;margin-top:4px; }
+.review-ai-topic-summary { display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:12px;border:1px solid var(--border-color);border-radius:var(--radius); }
+.review-ai-topic-summary>div { min-width:0;overflow-wrap:anywhere; }
+.review-ai-topic-alternative,.review-ai-repair-summary { display:grid;gap:8px;padding:12px;border-radius:var(--radius);background:var(--surface-subtle); }
+.review-ai-topic-alternative>button,.review-ai-repair-summary>button,.review-ai-advanced>button { justify-self:start; }
+.review-ai-topic-list { display:grid;gap:8px;margin-top:8px; }
+.review-ai-topic-list>button { min-width:0;white-space:normal;text-align:left;justify-content:start; }
+.review-ai-topic-option { display:grid;gap:4px;overflow-wrap:anywhere; }
+.review-ai-copy-feedback { display:grid;gap:8px; }
+@container (max-width:460px) { .review-ai-progress li { font-size:11px; } .review-ai-topic-summary { align-items:flex-start; } }

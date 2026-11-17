@@ -1,4 +1,4 @@
-import { computed, defineComponent, h, nextTick, onBeforeUnmount, ref, type PropType } from 'vue';
+import { computed, defineComponent, h, nextTick, onBeforeUnmount, ref, watch, type PropType } from 'vue';
 import { Icon } from '../../components/icon.ts';
 import { MarkdownContent } from '../../components/markdown-content.ts';
 import { MAX_AI_IMPORT_LENGTH } from '../../core/ai-json.ts';
@@ -34,6 +34,22 @@ function previewQuestion(question: Question, index: number) {
   ]);
 }
 
+export type ReviewAiStep = 'generate' | 'response' | 'result';
+
+export function reviewAiProgress(current: 'setup' | ReviewAiStep) {
+  const steps = [
+    { id: 'setup', label: 'Set up' },
+    { id: 'generate', label: 'Generate' },
+    { id: 'response', label: 'Import' },
+    { id: 'result', label: 'Finish' },
+  ] as const;
+  return h('div', { class: 'review-ai-progress', 'aria-label': 'AI creation progress' }, [
+    h('span', { class: 'study-ai-muted' }, 'Step ' + (steps.findIndex(step => step.id === current) + 1) + ' of ' + steps.length),
+    h('ol', steps.map(step => h('li', { key: step.id, class: step.id === current ? 'is-active' : '',
+      'aria-current': step.id === current ? 'step' : undefined }, step.label))),
+  ]);
+}
+
 /** Review-only handoff: keep the accepted draft independent of the next incoming response. */
 export const ReviewAiResponseWorkspace = defineComponent({
   name: 'ReviewAiResponseWorkspace',
@@ -41,10 +57,11 @@ export const ReviewAiResponseWorkspace = defineComponent({
     preferences: { type: Object as PropType<ReviewAiPreferences>, required: true },
     prompt: { type: String, required: true },
     promptForCount: { type: Function as PropType<(count: number) => string>, required: true },
+    step: { type: String as PropType<ReviewAiStep>, required: true },
     appendMode: Boolean,
     existing: { type: Array as PropType<Question[]>, default: () => [] },
   },
-  emits: { complete: (_value: ReviewAiImport) => true },
+  emits: { complete: (_value: ReviewAiImport) => true, step: (_step: ReviewAiStep) => true, back: () => true },
   setup(props, { emit }) {
     const raw = ref('');
     const candidate = ref<ReviewAiImport | null>(null);
@@ -53,10 +70,13 @@ export const ReviewAiResponseWorkspace = defineComponent({
     const copyStatus = ref('');
     const copyContext = ref<'generate' | 'repair' | 'ready'>('generate');
     const fallback = ref('');
+    watch(() => props.prompt, () => { copyStatus.value = ''; fallback.value = ''; });
     const inputStatus = ref('');
     const fileInput = ref<HTMLInputElement | null>(null);
     const preview = ref<HTMLElement | null>(null);
     const recovery = ref<HTMLElement | null>(null);
+    const activePanel = ref<HTMLElement | null>(null);
+    watch(() => props.step, () => { void nextTick(() => activePanel.value?.focus()); });
     const dragging = ref(false);
     const reading = ref(false);
     let fileRevision = 0;
@@ -87,7 +107,8 @@ export const ReviewAiResponseWorkspace = defineComponent({
     }
 
     function showResult(hasIssues: boolean) {
-      void nextTick(() => (hasIssues ? recovery.value : preview.value)?.focus());
+      emit('step', 'result');
+      void nextTick(() => (hasIssues && !candidate.value ? recovery.value : preview.value)?.focus());
     }
 
     function copyFeedback(context: typeof copyContext.value) {
@@ -120,6 +141,7 @@ export const ReviewAiResponseWorkspace = defineComponent({
         const duplicateCount = incoming.questions.length - fresh.length;
         if (!fresh.length) {
           inputStatus.value = 'This response contains no new questions. Your draft is unchanged.';
+          showResult(report.value.issues.length > 0);
           return;
         }
         const questions = [...(old?.questions ?? []), ...fresh];
@@ -170,7 +192,7 @@ export const ReviewAiResponseWorkspace = defineComponent({
         if (text.length > MAX_AI_IMPORT_LENGTH) throw new Error('This file is too large. Ask for a smaller batch.');
         raw.value = text;
         if (!candidate.value) check(text, false);
-        else inputStatus.value = 'File loaded. Choose whether to add its questions or replace your draft.';
+        else inputStatus.value = 'File loaded. Select Add questions to draft to keep your collected questions.';
       } catch (error) {
         if (revision === fileRevision) inputStatus.value = error instanceof Error ? error.message : String(error);
       } finally {
@@ -182,27 +204,49 @@ export const ReviewAiResponseWorkspace = defineComponent({
       return h('button', { type: 'button', class: primary ? 'card-primary-button' : 'quiet-button', disabled, onClick: action }, label);
     }
 
-    return () => h('div', { class: 'review-ai-exchange' }, [
-      h('section', { class: 'review-ai-panel' }, [
-        h('div', { class: 'review-ai-panel-title' }, [h('span', { class: 'review-ai-step-number' }, '1'), h('h3', 'Generate in your AI chat')]),
-        h('p', { class: 'study-ai-muted' }, 'Copy the instructions, open ChatGPT (or another AI), attach your study material, and send them together. You can also use a chat that already contains your notes.'),
+    function goToResponse() {
+      // A failed reply can remain in the input for inspection, but the next
+      // response should have a clean field so it cannot accidentally be appended.
+      updateRaw('');
+      emit('step', 'response');
+    }
+
+    function backFromResponse() {
+      if (candidate.value) emit('step', 'result');
+      else emit('step', 'generate');
+    }
+
+    return () => h('div', { class: 'review-ai-exchange' }, props.step === 'generate' ? [
+      h('section', { class: 'review-ai-panel', ref: activePanel, tabindex: -1 }, [
+        h('h3', 'Send your instructions to AI'),
+        h('p', 'Copy the instructions below. Open your AI chat, attach your study material, and send the instructions with it. If your notes are already in the chat, use that same conversation.'),
+        h('p', { class: 'study-ai-muted' }, 'Requested: ' + props.preferences.count + ' questions.'),
         h('div', { class: 'review-ai-inline-actions' }, [
           button('Copy instructions', () => { void copy(props.prompt, 'Instructions'); }, true, !props.prompt),
-          h('a', { class: 'quiet-button', href: 'https://chatgpt.com/', target: '_blank', rel: 'noopener noreferrer' }, [h(Icon, { name: 'ai' }), 'Open ChatGPT']),
-          nextBatchPrompt.value ? button(candidate.value ? 'Copy next batch' : 'Copy smaller batch (up to 25)', () => { void copy(nextBatchPrompt.value, 'Batch instructions'); }) : null,
+          h('a', { class: 'quiet-button', href: 'https://chatgpt.com/', target: '_blank', rel: 'noopener noreferrer',
+            onClick: () => { if (copyContext.value === 'generate' && copyStatus.value && !fallback.value) emit('step', 'response'); } }, [h(Icon, { name: 'ai' }), 'Open ChatGPT']),
         ]),
         copyFeedback('generate'),
+        nextBatchPrompt.value && remaining.value > 25 ? h('details', { class: 'review-ai-secondary-details' }, [
+          h('summary', 'Other generation options'),
+          nextBatchPrompt.value && remaining.value > 25 ? h('p', { class: 'study-ai-muted' }, 'If your AI struggles with a large request, generate up to 25 questions at a time.') : null,
+          nextBatchPrompt.value && remaining.value > 25 ? button('Copy smaller batch (up to 25)', () => { void copy(nextBatchPrompt.value, 'Batch instructions'); }) : null,
+        ]) : null,
         h('details', { class: 'review-ai-secondary-details' }, [
           h('summary', 'View instructions'),
           h('textarea', { readonly: true, rows: 5, value: props.prompt, 'aria-label': 'AI generation instructions' }),
         ]),
-        h('p', { class: 'study-ai-muted' }, 'If the AI cannot make a downloadable file, its text response works too. No need to edit or understand JSON.'),
+        h('div', { class: 'review-ai-inline-actions review-ai-navigation' }, [
+          button('Back', () => emit('back')),
+          button('I have the response', () => emit('step', 'response'), true),
+        ]),
       ]),
-      h('section', { class: 'review-ai-panel' }, [
-        h('div', { class: 'review-ai-panel-title' }, [h('span', { class: 'review-ai-step-number' }, '2'), h('h3', 'Bring the response back')]),
+    ] : props.step === 'response' ? [
+      h('section', { class: 'review-ai-panel', ref: activePanel, tabindex: -1 }, [
+        h('h3', 'Bring the response back'),
         h('p', { class: 'study-ai-muted' }, candidate.value
-          ? 'Paste another response to add more questions, or replace the draft if you want to start over.'
-          : 'Upload the AI’s file or copy its entire response and paste it below. We’ll check it and recover what we can.'),
+          ? candidate.value.questions.length + ' questions are already ready. Add another response without losing them.'
+          : 'Upload the file your AI created, or copy and paste its entire response. We’ll check it and recover what we can.'),
         h('div', {
           class: ['review-ai-drop', { 'is-dragging': dragging.value }],
           onDragover: (event: DragEvent) => { event.preventDefault(); dragging.value = true; },
@@ -231,32 +275,44 @@ export const ReviewAiResponseWorkspace = defineComponent({
         }),
         h('div', { class: 'review-ai-inline-actions' }, [
           button(candidate.value ? 'Add questions to draft' : 'Check response', () => check(raw.value, Boolean(candidate.value)), true, reading.value || !raw.value.trim()),
-          candidate.value ? button('Replace draft with response', () => check(raw.value, false), false, reading.value || !raw.value.trim()) : null,
           raw.value ? button('Clear response', () => updateRaw('')) : null,
         ]),
         inputStatus.value ? h('p', { role: 'status', class: 'study-ai-muted' }, inputStatus.value) : null,
+        candidate.value && raw.value.trim() ? h('details', { class: 'review-ai-secondary-details' }, [
+          h('summary', 'Replace instead of adding'),
+          h('p', { class: 'study-ai-muted' }, 'A valid new response will replace the collected draft. Your existing saved knowledge sets are unaffected.'),
+          button('Replace draft with response', () => check(raw.value, false), false, reading.value),
+        ]) : null,
+        h('div', { class: 'review-ai-inline-actions review-ai-navigation' }, [
+          button('Back', backFromResponse),
+        ]),
       ]),
-      report.value?.issues.length ? h('section', { class: 'review-ai-panel review-ai-recovery', 'aria-label': 'Response recovery', ref: recovery, tabindex: -1 }, [
-        h('h3', candidate.value ? 'Some of the response needs attention' : 'The AI response needs a correction'),
-        h('p', candidate.value ? candidate.value.questions.length + ' questions are ready and safe. Ask the AI to fix just the unresolved items, or continue with your draft.' : 'Copy a correction request and send it in the same AI chat. You can also try a smaller batch.'),
+    ] : [
+      inputStatus.value ? h('p', { role: 'status', class: 'study-ai-muted' }, inputStatus.value) : null,
+      report.value?.issues.length && !candidate.value ? h('section', { class: 'review-ai-panel review-ai-recovery', 'aria-label': 'Response recovery', ref: recovery, tabindex: -1 }, [
+        h('h3', 'The AI response needs a correction'),
+        h('p', 'Copy a correction request and send it in the same AI chat. You can also try a smaller batch.'),
         h('div', { class: 'review-ai-inline-actions' }, [
           button('Copy repair instructions', () => { void copy(repairPrompt.value, 'Repair instructions', 'repair'); }, true),
           nextBatchPrompt.value ? button('Copy smaller request', () => { void copy(nextBatchPrompt.value, 'Batch instructions', 'repair'); }) : null,
         ]),
         copyFeedback('repair'),
-        h('p', { class: 'study-ai-muted' }, 'When the AI replies, paste or upload its new response above. Add it to your draft to keep the questions you already have.'),
+        h('div', { class: 'review-ai-inline-actions review-ai-navigation' }, [
+          button('Back to response', () => emit('step', 'response')),
+          button('I have the corrected response', goToResponse, true),
+        ]),
         h('details', { class: 'review-ai-secondary-details' }, [
           h('summary', 'See what could not be read (' + report.value.issues.length + ')'),
           h('ul', report.value.issues.map((issue, index) => h('li', { key: index }, (issue.item ? 'Question ' + issue.item + ': ' : '') + issue.message))),
         ]),
       ]) : null,
       candidate.value ? h('section', { class: 'review-ai-panel review-ai-ready', ref: preview, tabindex: -1, 'aria-label': 'Ready questions' }, [
-        h('div', { class: 'review-ai-panel-title' }, [h('span', { class: 'review-ai-step-number' }, '3'), h('h3', 'Your questions are ready')]),
+        h('h3', 'Your questions are ready'),
         h('div', { class: 'review-ai-ready-count', role: 'status' }, [
           h('strong', String(candidate.value.questions.length)), h('span', 'questions ready'),
           report.value?.recovered ? h('small', report.value.recovered + ' recovered from the latest response') : null,
         ]),
-        h('p', { class: 'study-ai-muted' }, 'Requested ' + props.preferences.count + '. You can finish now or add another response. Valid format does not guarantee factual accuracy.'),
+        h('p', { class: 'study-ai-muted' }, 'Requested ' + props.preferences.count + '. Valid format does not guarantee factual accuracy.'),
         !props.appendMode ? h('label', { class: 'review-ai-name' }, [
           h('span', 'Knowledge set name'),
           h('input', { value: candidate.value.title, maxlength: 120, onInput: (event: Event) => { if (candidate.value) candidate.value.title = inputValue(event); } }),
@@ -265,9 +321,26 @@ export const ReviewAiResponseWorkspace = defineComponent({
         h('div', { class: 'review-ai-inline-actions' }, [
           button((props.appendMode ? 'Add ' : 'Create set with ') + candidate.value.questions.length + ' questions',
             () => { if (candidate.value) emit('complete', candidate.value); }, true, !candidate.value.title.trim()),
-          nextBatchPrompt.value ? button('Copy next batch', () => { void copy(nextBatchPrompt.value, 'Batch instructions', 'ready'); }) : null,
         ]),
-        copyFeedback('ready'),
+        report.value?.issues.length ? h('section', { class: 'review-ai-recovery review-ai-repair-summary', 'aria-label': 'Response recovery' }, [
+          h('strong', report.value.issues.length + ' item(s) could not be read'),
+          h('p', { class: 'study-ai-muted' }, 'You can create your set now or ask the AI to correct just those items. The ready questions will be kept.'),
+          button('Copy repair instructions', () => { void copy(repairPrompt.value, 'Repair instructions', 'repair'); }),
+          copyFeedback('repair'),
+          copyContext.value === 'repair' && copyStatus.value ? button('I have the corrected response', goToResponse, true) : null,
+          h('details', { class: 'review-ai-secondary-details' }, [
+            h('summary', 'See what went wrong'),
+            h('ul', report.value.issues.map((issue, index) => h('li', { key: index }, (issue.item ? 'Question ' + issue.item + ': ' : '') + issue.message))),
+          ]),
+        ]) : null,
+        h('details', { class: 'review-ai-secondary-details' }, [
+          h('summary', 'Add more questions'),
+          h('div', { class: 'review-ai-advanced' }, [
+            nextBatchPrompt.value ? button('Copy next batch', () => { void copy(nextBatchPrompt.value, 'Batch instructions', 'ready'); }) : null,
+            copyFeedback('ready'),
+            button('Bring another response', goToResponse),
+          ]),
+        ]),
         h('details', { class: 'review-ai-questions-details' }, [
           h('summary', 'Preview all ' + candidate.value.questions.length + ' questions'),
           h('ol', { class: 'review-ai-preview' }, candidate.value.questions.map(previewQuestion)),
@@ -289,6 +362,9 @@ export const ReviewAiResponseWorkspace = defineComponent({
           h('summary', 'Import notes'),
           h('ul', [...new Set([...notices.value, ...candidate.value.warnings])].map(note => h('li', note))),
         ]) : null,
+        h('div', { class: 'review-ai-inline-actions review-ai-navigation' }, [
+          button('Back to response', () => emit('step', 'response')),
+        ]),
       ]) : null,
     ]);
   },

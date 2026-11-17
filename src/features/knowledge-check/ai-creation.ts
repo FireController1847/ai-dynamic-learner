@@ -1,11 +1,11 @@
-import { computed, defineComponent, h, onMounted, ref } from 'vue';
-import { AiCategoryPicker } from '../../components/ai-category-picker.ts';
+import { computed, defineComponent, h, nextTick, onMounted, ref } from 'vue';
+import { ReviewAiTopicPicker } from './ai-topic-picker.ts';
 import { inputValue } from '../../core/dom.ts';
-import type { AiCardCategories, AiCardScope } from '../../core/ai-study-categories.ts';
+import type { AiCardScope } from '../../core/ai-study-categories.ts';
 import { reviewAiPrompt, type ReviewAiImport, type ReviewAiPreferences } from './ai-import-format.ts';
 import { REVIEW_AI_FOCUSES, type ReviewAiFocus } from './ai-focus.ts';
 import { AI_QUESTION_TYPES, allocateQuestions, DEFAULT_AI_WEIGHTS, normalizeQuestionWeights, questionCountProblem, questionMixProblem, questionTypeLabel, type QuestionWeights } from './ai-question-mix.ts';
-import { ReviewAiResponseWorkspace } from './ai-response-workspace.ts';
+import { ReviewAiResponseWorkspace, reviewAiProgress, type ReviewAiStep } from './ai-response-workspace.ts';
 import { DEFAULT_SESSION_QUESTION_LIMIT } from './set-options.ts';
 
 export const ReviewAiCreation = defineComponent({
@@ -16,7 +16,11 @@ export const ReviewAiCreation = defineComponent({
     const heading = ref<HTMLElement | null>(null);
     const choosingCategory = ref(false);
     const scope = ref<AiCardScope | null>(null);
-    const categories = ref<AiCardCategories | null>(null);
+    const step = ref<'setup' | ReviewAiStep>('setup');
+    function go(next: typeof step.value) {
+      step.value = next;
+      void nextTick(() => heading.value?.focus({ preventScroll: true }));
+    }
     const preferences = ref<ReviewAiPreferences>({
       count: 50, coverage: 'balanced', mixMode: 'ai', aiFocus: 'default', weights: { ...DEFAULT_AI_WEIGHTS },
     });
@@ -37,7 +41,12 @@ export const ReviewAiCreation = defineComponent({
       ? allocateQuestions(effectivePreferences.value.weights, preferences.value.count) : null);
     function promptForCount(count: number) {
       if (problem.value || questionCountProblem(count)) return '';
-      const prompt = reviewAiPrompt({ ...effectivePreferences.value, count }, scope.value);
+      let prompt = reviewAiPrompt({ ...effectivePreferences.value, count }, scope.value);
+      if (scope.value?.category.key === 'custom-topic') {
+        prompt = prompt.replace('This is STEP 2 of our study-content workflow. Use the original source material already supplied in this same conversation and the categories you proposed earlier.',
+          'Use the original study material attached to this message or already supplied in this conversation. The user selected the topic below directly.')
+          .replace('consistent with the category analysis and across every item', 'consistent with the original source and across every item');
+      }
       // Preserve the established educational instructions and schema; allow the source
       // to be attached to this message as well as supplied earlier.
       return 'Use the study material attached to this message or already supplied in this conversation. If no study material is available, ask for it before generating questions.\n\n' +
@@ -50,11 +59,6 @@ export const ReviewAiCreation = defineComponent({
       return h('details', { class: 'review-ai-secondary-details' }, [
         h('summary', 'Advanced options'),
         h('div', { class: 'review-ai-advanced' }, [
-          h('div', { class: 'review-ai-inline-actions' }, [
-            h('span', { class: 'study-ai-muted' }, scope.value ? 'Selected topic: ' + scope.value.category.title : 'Scope: entire subject'),
-            h('button', { type: 'button', class: 'quiet-button', onClick: () => { choosingCategory.value = true; } }, scope.value ? 'Change topic' : 'Choose a specific topic'),
-            scope.value ? h('button', { type: 'button', class: 'quiet-button', onClick: () => { scope.value = null; } }, 'Use entire subject') : null,
-          ]),
           h('div', { class: 'review-ai-settings' }, [
             h('label', [
               h('span', 'Question types'),
@@ -96,26 +100,32 @@ export const ReviewAiCreation = defineComponent({
     }
 
     return () => h('div', { class: 'ai-workflow' }, [
-      choosingCategory.value ? h(AiCategoryPicker, {
-        label: 'Review', destination: props.destination, initialCategories: categories.value,
-        onBack: () => { choosingCategory.value = false; },
-        onCancel: () => { choosingCategory.value = false; },
-        onSelect: (selected: AiCardScope, list: AiCardCategories) => {
-          scope.value = selected; categories.value = list; choosingCategory.value = false;
-        },
-      }) : null,
-      // Keep the draft mounted when visiting advanced topic selection.
-      h('section', { class: 'study-ai-workspace review-ai-workspace', style: choosingCategory.value ? { display: 'none' } : undefined }, [
+      h('section', { class: 'study-ai-workspace review-ai-workspace' }, [
         h('header', { class: 'study-ai-header' }, [
           h('div', [
             h('p', { class: 'study-ai-muted' }, 'Review · Saved in ' + props.destination),
             h('h2', { ref: heading, tabindex: -1 }, 'Create with AI'),
-            h('p', 'Choose what to study, generate questions in your AI chat, and bring the response back.'),
+            h('p', step.value === 'setup' ? 'Choose what you want to study.' : 'Create a knowledge set from your study material.'),
           ]),
           h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel') }, 'Cancel'),
         ]),
-        h('section', { class: 'review-ai-panel' }, [
+        reviewAiProgress(step.value),
+        choosingCategory.value ? h(ReviewAiTopicPicker, {
+          current: scope.value,
+          onBack: () => { choosingCategory.value = false; void nextTick(() => heading.value?.focus()); },
+          onSelect: (selected: AiCardScope | null) => {
+            scope.value = selected; choosingCategory.value = false; void nextTick(() => heading.value?.focus());
+          },
+        }) : null,
+        h('section', { class: 'review-ai-panel', style: step.value !== 'setup' || choosingCategory.value ? { display: 'none' } : undefined }, [
           h('h3', 'Study preferences'),
+          h('div', { class: 'review-ai-topic-summary' }, [
+            h('div', [
+              h('strong', scope.value?.category.title ?? 'Entire subject'),
+              h('p', { class: 'study-ai-muted' }, scope.value ? 'Focus on this topic.' : 'Study all relevant topics in your material.'),
+            ]),
+            h('button', { type: 'button', class: 'quiet-button', onClick: () => { choosingCategory.value = true; } }, scope.value ? 'Change topic' : 'Choose a specific topic'),
+          ]),
           h('div', { class: 'review-ai-settings' }, [
             h('label', [
               h('span', 'Number of questions'),
@@ -137,12 +147,19 @@ export const ReviewAiCreation = defineComponent({
               h('small', { class: 'study-ai-muted' }, 'Likely exam content, core concepts, or a broad review.'),
             ]),
           ]),
-          scope.value ? h('p', { class: 'study-ai-muted' }, 'Topic: ' + scope.value.category.title) : null,
           advancedOptions(),
           problem.value ? h('p', { class: 'study-ai-error', role: 'status' }, problem.value) : null,
+          h('div', { class: 'review-ai-inline-actions review-ai-navigation' }, [
+            h('button', { type: 'button', class: 'quiet-button', onClick: () => go('response') }, 'Already have a response?'),
+            h('button', { type: 'button', class: 'card-primary-button', disabled: Boolean(problem.value), onClick: () => go('generate') }, 'Continue'),
+          ]),
         ]),
         h(ReviewAiResponseWorkspace, {
+          step: step.value === 'setup' ? 'generate' : step.value,
+          style: step.value === 'setup' ? { display: 'none' } : undefined,
           preferences: effectivePreferences.value, prompt: prompt.value, promptForCount,
+          onStep: (next: ReviewAiStep) => go(next),
+          onBack: () => go('setup'),
           onComplete: (value: ReviewAiImport) => emit('create', value),
         }),
       ]),
