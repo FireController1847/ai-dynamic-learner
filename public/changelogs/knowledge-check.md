@@ -1,48 +1,17 @@
-## v1.50.2
-
-<small data-utc="2026-11-17T01:17:44Z">November 16, 2026 at 6:17 PM MST</small>
-
-- **AI Creation:** Restored the original guided scope, configuration, and AI walkthrough screens.
-- **Response Recovery:** Guide users through correcting failed AI responses, retain usable questions, and accept repaired questions without starting over.
-- **Import:** Recover malformed response files and keep the guided repair experience when adding questions to an existing set.
-
-<details>
-<summary>View 1 commit</summary>
-<ol>
-<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/0d44dddca34bbe753c1882dad684e06e6d9520b6">0d44dddc</a> — Restore guided Review AI creation and focus improvements on recovery (v1.50.2)</li>
-</ol>
-</details>
-
-## v1.50.1
-
-<small data-utc="2026-11-17T01:10:51Z">November 16, 2026 at 6:10 PM MST</small>
-
-- **AI Creation:** Restored a guided, four-step flow with one task visible at a time.
-- **Topic Selection:** Enter a specific topic directly, or optionally find topics with AI or reuse a saved topic list.
-- **Response Recovery:** Kept partial imports, repair requests, and additional batches within the guided flow.
-
-<details>
-<summary>View 1 commit</summary>
-<ol>
-<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/f2b361ff774cb2479a3dc81f0c8aa4110389016f">f2b361ff</a> — Restore guided Review AI creation and simplify topic selection (v1.50.1)</li>
-</ol>
-</details>
-
 ## v1.50.0
 
-<small data-utc="2026-11-17T00:49:25Z">November 16, 2026 at 5:49 PM MST</small>
+<small data-utc="2026-11-17T00:47:40Z">November 16, 2026 at 5:47 PM MST</small>
 
-- **AI Creation:** Replaced the multi-step Review wizard with one workspace for study preferences, generation instructions, response import, and preview.
-- **Response Recovery:** Read wrapped and interrupted AI responses, recover individually valid questions, and offer targeted repair requests without discarding the accepted draft.
-- **Batch Generation:** Generate smaller batches, add additional responses, and skip exact duplicate questions.
-- **Question Import:** Use the same recovery and generation experience when adding questions to existing sets.
-- **Confidence:** Keep valid questions even when AI estimates are unavailable, and avoid carrying estimates across incomplete or merged responses.
+- **Review Home:** Open Review to a dedicated landing page instead of automatically selecting the first library item.
+- **Library:** Create with AI, import, create a knowledge set, or add a group at the top level from large action cards; return to the landing page from Home in the library.
+- **Recent Items:** Return to the last opened knowledge set or group directly from Home, even after reloading.
 
 <details>
-<summary>View 2 commits</summary>
+<summary>View 3 commits</summary>
 <ol>
-<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/c3adbff685b42f659c2e34357c9d9c9fcadbcd56">c3adbff6</a> — Redesign Review AI creation and recover partial responses (v1.50.0)</li>
-<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/1fe7beea8a1e24c830def140407ace5eed862313">1fe7beea</a> — Keep Review recovery and copy feedback in view</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/7f685ba34f6a1fb09393300234b2fd7267b005fb">7f685ba3</a> — Experiment with a Review home splash screen (v1.50.0)</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/abe1729116005a8935ace270f38f3de3ae002ed9">abe17291</a> — Polish Review Home and remember the last opened item</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/afbdccded6ffd7088f4ded74bbe09c6ac9c264ce">afbdccde</a> — Extend shared library Home to all library-based apps</li>
 </ol>
 </details>
 

@@ -8,6 +8,7 @@ import { inputValue } from '../../core/dom.ts';
 import { Icon } from '../../components/icon.ts';
 import { LibraryEmptyState } from '../../components/library-empty-state.ts';
 import { useLibrarySelection } from '../../components/use-library-selection.ts';
+import { libraryHome, focusLibraryDetail } from '../../components/library-home.ts';
 import { usePersistedPanelResize } from '../../components/use-persisted-panel-resize.ts';
 import { CrosswordLibrary } from './library.ts';
 import { PuzzleForm, PuzzleSummary } from './puzzle-form.ts';
@@ -16,7 +17,7 @@ import type { PuzzleAiResult } from '../puzzle-ai/puzzle-ai-format.ts';
 import { PuzzleGame } from './puzzle-game.ts';
 import { DisplaySettings } from './display-settings.ts';
 import { resolvedDisplayOptions } from './display-options.ts';
-import { canMove, findItem, firstEntry, groupOptions, moveItem, saveCrossword } from './library-model.ts';
+import { canMove, findItem, groupOptions, moveItem, saveCrossword } from './library-model.ts';
 
 import {
   defineComponent, type PropType, computed, h, nextTick, onBeforeUnmount, onDeactivated, ref,
@@ -37,20 +38,17 @@ export const Crossword = defineComponent({
     const setupTarget = ref<SetupTarget | null>(null);
     const aiTarget = ref<SetupTarget | null>(null);
     const aiError = ref('');
-    const selectedId = useLibrarySelection({
-      firstId: () => firstEntry(props.model.items)?.id ?? null,
-      hasItem: (id) => findItem(props.model.items, id) !== null,
+    const { selectedId, recentItem, remember } = useLibrarySelection({
+      app: 'crossword',
+      lookup: (id) => findItem(props.model.items, id)?.item ?? null,
       enabled: () => setupTarget.value === null && aiTarget.value === null,
-      onAutoSelect: (id) => {
-        library.value?.reveal(id);
-        if (libraryOverlay.value) libraryCollapsed.value = true;
-      },
+      onHome: () => { if (libraryOverlay.value) libraryCollapsed.value = true; },
     });
     const setupVersion = ref(0);
     const workspaceHeading = ref<HTMLElement | null>(null);
     const overlayQuery = window.matchMedia('(max-width: 700px), (max-width: 1100px) and (pointer: coarse)');
     const libraryOverlay = ref(overlayQuery.matches);
-    const libraryCollapsed = ref(overlayQuery.matches && selectedId.value !== null);
+    const libraryCollapsed = ref(overlayQuery.matches);
     const layout = ref<HTMLElement | null>(null);
     const library = ref<CrosswordLibraryHandle | null>(null);
     const showLibraryButton = ref<HTMLButtonElement | null>(null);
@@ -88,7 +86,7 @@ export const Crossword = defineComponent({
     function updateLibraryLayout(event: MediaQueryListEvent) {
       libraryOverlay.value = event.matches;
       libraryResizing.value = false;
-      if (event.matches && selectedId.value) libraryCollapsed.value = true;
+      if (event.matches) libraryCollapsed.value = true;
     }
 
     overlayQuery.addEventListener('change', updateLibraryLayout);
@@ -114,6 +112,7 @@ export const Crossword = defineComponent({
 
     function selectItem(id: string | null) {
       selectedId.value = id;
+      remember(id);
       aiTarget.value = null;
       setupTarget.value = null;
       message.value = '';
@@ -150,7 +149,7 @@ export const Crossword = defineComponent({
     function completeSetup(name: string, puzzle: Puzzle) {
       if (!setupTarget.value) return;
       const item = saveCrossword(props.model.items, setupTarget.value, name, puzzle);
-      selectedId.value = item.id;
+      selectedId.value = item.id; remember(item.id);
       setupTarget.value = null;
       library.value?.reveal(item.id);
       message.value = `Saved ${item.name}.`;
@@ -234,7 +233,7 @@ export const Crossword = defineComponent({
       if (!target || value.kind !== 'crossword') return;
       try {
         const item = saveCrossword(props.model.items, target, value.title, value.puzzle);
-        selectedId.value = item.id;
+        selectedId.value = item.id; remember(item.id);
         aiTarget.value = null;
         aiError.value = '';
         library.value?.reveal(item.id);
@@ -245,6 +244,17 @@ export const Crossword = defineComponent({
       }
     }
 
+    async function createHomeGroup() {
+      libraryCollapsed.value = false;
+      await nextTick();
+      library.value?.createGroup();
+    }
+    function returnToRecent(id: string) {
+      selectItem(id);
+      library.value?.reveal(id);
+      if (libraryOverlay.value) libraryCollapsed.value = true;
+      focusLibraryDetail(layout.value, '.crossword-detail');
+    }
     function detail() {
       if (aiTarget.value) return h('section', {
         class: 'crossword-detail', 'aria-label': 'Crossword AI creation',
@@ -275,7 +285,23 @@ export const Crossword = defineComponent({
       }
 
       const item = selection.value?.item;
-      if (!item || item.kind === 'group') {
+      if (!item) {
+        const homeTarget: SetupTarget = { parentId: null, parentName: 'Top level', prepend: true };
+        return h('section', {
+          class: 'crossword-detail', 'aria-label': 'Home',
+          inert: libraryOverlay.value && !libraryCollapsed.value,
+        }, [libraryHome({
+          title: 'Crossword', description: 'Create your own crosswords and solve the clues.',
+          actions: [
+            { icon: 'ai', label: 'Create with AI', description: 'Generate a crossword from your study materials.', run: () => openAiCreation(homeTarget) },
+            { icon: 'crossword', label: 'New crossword', description: 'Build a puzzle from your own clues and answers.', run: () => openNewCrossword(homeTarget) },
+            { icon: 'folder', label: 'New group', description: 'Organize your puzzles into groups.', run: createHomeGroup },
+          ],
+          recent: recentItem.value, onReturn: returnToRecent,
+          secondary: [{ icon: 'settings', label: 'Settings', run: () => openSettings(null) }],
+        })]);
+      }
+      if (item.kind === 'group') {
         return h('section', {
           class: 'crossword-detail',
           'aria-label': item ? 'Selected group' : 'Crossword workspace',
@@ -362,6 +388,7 @@ export const Crossword = defineComponent({
           ref: library,
           items: props.model.items,
           selectedId: selectedId.value,
+          homeActive: !selection.value && !setupTarget.value && !aiTarget.value,
           collapsed: libraryCollapsed.value,
           onToggleLibrary: () => setLibraryCollapsed(true),
           onSelect: selectItem,

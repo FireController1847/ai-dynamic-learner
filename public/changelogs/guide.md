@@ -1,3 +1,19 @@
+## v2.17.0
+
+<small data-utc="2026-11-17T01:02:39Z">November 16, 2026 at 6:02 PM MST</small>
+
+- **Home:** Open to a dedicated landing page with library actions, including when the library is empty, instead of automatically opening the first item.
+- **Recent Items:** Return to the most recently opened item from Home, even after reloading.
+- **Layout:** Center the final Home action when the grid has an odd number of cards.
+
+<details>
+<summary>View 2 commits</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/afbdccded6ffd7088f4ded74bbe09c6ac9c264ce">afbdccde</a> — Extend shared library Home to all library-based apps</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/0958220583574a2d0a8de99f9a67dd38984eac24">09582205</a> — Center unpaired library Home action cards</li>
+</ol>
+</details>
+
 ## v2.16.2
 
 <small data-utc="2026-11-13T01:40:00Z">November 12, 2026 at 6:40 PM MST</small>

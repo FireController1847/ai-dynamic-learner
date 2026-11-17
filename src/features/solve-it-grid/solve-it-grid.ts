@@ -5,7 +5,7 @@ import { DeleteConfirmation } from '../../components/delete-confirmation.ts';
 import { Icon } from '../../components/icon.ts';
 import { LibraryEmptyState } from '../../components/library-empty-state.ts';
 import { PopupDialog } from '../../components/popup-dialog.ts';
-import { useLibrarySelection } from '../../components/use-library-selection.ts';
+import { useAutomaticLibrarySelection } from '../../components/use-library-selection.ts';
 import { usePersistedPanelResize } from '../../components/use-persisted-panel-resize.ts';
 import { defaultLibrarySettings, isArchived, orderedDatedItems } from '../../core/dated-library.ts';
 import { createImmediateTaskSet, createTaskSet, MAX_NAME_LENGTH, MAX_TASK_SETS, type SolveItGridModel } from './library-model.ts';
@@ -46,7 +46,7 @@ export const SolveItGrid = defineComponent({
     const builder = ref<TaskSetBuilderHandle | null>(null);
     const creationError = ref('');
     const pendingDelete = ref<string | null>(null);
-    const selectedId = useLibrarySelection({
+    const selectedId = useAutomaticLibrarySelection({
       firstId: () => visibleItems.value[0]?.id ?? null,
       hasItem: id => props.model.items.some(item => item.id === id),
       enabled: () => builderMode.value === null,

@@ -1,9 +1,10 @@
-export interface WordSearchLibraryHandle { reveal(id: string): void; focusToggle(): void; focusNewWordSearch(): void; }
+export interface WordSearchLibraryHandle { createGroup(): void; reveal(id: string): void; focusToggle(): void; focusNewWordSearch(): void; }
 import type { VNode } from 'vue';
 import type { LibraryItem, MovePosition } from './library-model.ts';
 import { inputValue } from '../../core/dom.ts';
 import { hasCompletedBoard } from './game-model.ts';
 import { Icon } from '../../components/icon.ts';
+import { libraryHomeButton } from '../../components/library-home.ts';
 import { DeleteConfirmation } from '../../components/delete-confirmation.ts';
 import {
   canMove, countItems, countWordSearches, createGroup, deleteItem, findItem, firstEntry,
@@ -18,6 +19,7 @@ export const WordSearchLibrary = defineComponent({
     items: { type: Array as PropType<LibraryItem[]>, required: true },
     selectedId: { type: String as PropType<string | null>, default: null },
     collapsed: Boolean,
+    homeActive: Boolean,
   },
   emits: { 'select': (_id: string | null) => true, 'open-item': () => true, 'toggle-library': () => true, 'new-word-search': (_target: { parentId: string | null; parentName: string }) => true, 'open-ai': (_target: { parentId: string | null; parentName: string }) => true },
   setup(props, { emit, expose, slots }) {
@@ -132,7 +134,8 @@ export const WordSearchLibrary = defineComponent({
       }
     }
     expose({
-      reveal, focusToggle: () => collapseButton.value?.focus(),
+      reveal,
+      createGroup: createGroupRelativeToSelection, focusToggle: () => collapseButton.value?.focus(),
       focusNewWordSearch: () => createWordSearchButton.value?.focus(),
     });
 
@@ -217,8 +220,7 @@ export const WordSearchLibrary = defineComponent({
         if (next.kind === 'group') removed.push(...next.children);
       }
       if (removesSelection) {
-        if (fallbackId) reveal(fallbackId);
-        emit('select', fallbackId);
+        emit('select', null);
       }
       pendingDelete.value = null;
       deleteTrigger = null;
@@ -340,6 +342,7 @@ export const WordSearchLibrary = defineComponent({
         ]),
       ]),
       h('div', { class: 'word-search-library-scroll' }, [
+        libraryHomeButton(props.homeActive, () => { emit('select', null); emit('open-item'); }),
         rootTarget('before', 'Top level'),
         props.items.length
           ? h('ul', { class: 'word-search-library-list', 'aria-label': 'Groups and word searches' },

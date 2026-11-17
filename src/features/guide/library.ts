@@ -1,15 +1,16 @@
-export interface GuideLibraryHandle { reveal(id:string):void; focusToggle():void; focusNewGuide():void; beginRename(id:string):void }
+export interface GuideLibraryHandle { createGroup(): void; reveal(id:string):void; focusToggle():void; focusNewGuide():void; beginRename(id:string):void }
 import type { VNode } from 'vue';
 import type { MovePosition } from './library-model.ts';
 import { defineComponent,h,nextTick,onDeactivated,ref,type PropType } from 'vue';
 import { inputValue } from '../../core/dom.ts';
 import { Icon } from '../../components/icon.ts';
+import { libraryHomeButton } from '../../components/library-home.ts';
 import { DeleteConfirmation } from '../../components/delete-confirmation.ts';
 import { GuideTypeIcon } from './guide-type-icon.ts';
 import { canMove,countGuides,countItems,createGroup,deleteItem,findItem,firstEntry,guideIsEmpty,mapAdventureCompleted,MAX_DEPTH,MAX_ITEMS,MAX_NAME_LENGTH,moveItem,type LibraryItem } from './library-model.ts';
 export const GuideLibrary=defineComponent({
   name:'GuideLibrary',
-  props:{items:{type:Array as PropType<LibraryItem[]>,required:true},selectedId:{type:String as PropType<string|null>,default:null},collapsed:Boolean},
+  props:{items:{type:Array as PropType<LibraryItem[]>,required:true},selectedId:{type:String as PropType<string|null>,default:null},collapsed:Boolean,homeActive:Boolean},
   emits:{select:(_id:string|null)=>true,'open-item':()=>true,'toggle-library':()=>true,'new-guide':()=>true,'open-ai-import':()=>true,'create-debug-guide':()=>true},
   setup(props,{emit,expose}){
     const expanded=ref(new Set<string>()),editingId=ref<string|null>(null),draft=ref(''),input=ref<HTMLInputElement|null>(null);
@@ -60,8 +61,8 @@ export const GuideLibrary=defineComponent({
     function addGroup(){if(countItems(props.items)>=MAX_ITEMS){announcement.value='The Guide library limit is '+MAX_ITEMS+' items.';return;}const selected=findItem(props.items,props.selectedId);if(selected?.item.kind==='group'&&selected.depth>=MAX_DEPTH){announcement.value='Groups can be at most '+MAX_DEPTH+' levels deep.';return;}const group=createGroup();if(selected?.item.kind==='group'){selected.item.children.unshift(group);expanded.value.add(selected.item.id);}else if(selected)selected.siblings.splice(selected.index+1,0,group);else props.items.unshift(group);expanded.value.add(group.id);reveal(group.id);void rename(group);}
     function requestDelete(item:LibraryItem,e:MouseEvent){endDrag();const empty=item.kind==='group'?item.children.length===0:guideIsEmpty(item);if(empty){void confirmDelete(item.id);return;}deleteTrigger=e.currentTarget instanceof HTMLElement?e.currentTarget:null;pendingDelete.value=item;}
     async function cancelDelete(){pendingDelete.value=null;await nextTick();if(deleteTrigger?.isConnected)deleteTrigger.focus();deleteTrigger=null;}
-    async function confirmDelete(id=pendingDelete.value?.id){const found=id&&findItem(props.items,id);if(!found){await cancelDelete();return;}const item=found.item;const removes=props.selectedId===item.id||(item.kind==='group'&&Boolean(findItem(item.children,props.selectedId)));deleteItem(props.items,item.id);const fallback=firstEntry(props.items)?.id??null;if(removes)emit('select',fallback);pendingDelete.value=null;deleteTrigger=null;announcement.value='Deleted '+item.name+(item.kind==='group'?' and everything inside it.':'.');await nextTick();(labels.get(fallback)??newGuideButton.value)?.focus();}
-    expose({reveal,focusToggle:()=>collapseButton.value?.focus(),focusNewGuide:()=>newGuideButton.value?.focus(),beginRename:(id:string)=>{const found=findItem(props.items,id);if(found)void rename(found.item);}});
+    async function confirmDelete(id=pendingDelete.value?.id){const found=id&&findItem(props.items,id);if(!found){await cancelDelete();return;}const item=found.item;const removes=props.selectedId===item.id||(item.kind==='group'&&Boolean(findItem(item.children,props.selectedId)));deleteItem(props.items,item.id);const fallback=firstEntry(props.items)?.id??null;if(removes)emit('select',null);pendingDelete.value=null;deleteTrigger=null;announcement.value='Deleted '+item.name+(item.kind==='group'?' and everything inside it.':'.');await nextTick();(labels.get(fallback)??newGuideButton.value)?.focus();}
+    expose({reveal,createGroup:addGroup,focusToggle:()=>collapseButton.value?.focus(),focusNewGuide:()=>newGuideButton.value?.focus(),beginRename:(id:string)=>{const found=findItem(props.items,id);if(found)void rename(found.item);}});
     function toggle(id:string){if(expanded.value.has(id))expanded.value.delete(id);else expanded.value.add(id);}
     function renderItem(item:LibraryItem):VNode{
       const group=item.kind==='group',open=expanded.value.has(item.id),editing=editingId.value===item.id;
@@ -110,6 +111,7 @@ export const GuideLibrary=defineComponent({
         h('button',{ref:collapseButton,type:'button',class:'icon-button',title:'Minimize library','aria-label':'Minimize library','aria-expanded':true,'aria-controls':'guide-library',onClick:()=>emit('toggle-library')},[h(Icon,{name:'panel-close'})])
       ])]),
       h('div',{class:'directory-scroll'},[
+        libraryHomeButton(props.homeActive,()=>{emit('select',null);emit('open-item');}),
         props.items.length?h('ul',{class:'directory-list','aria-label':'Groups and guides'},props.items.map(renderItem)):h('p',{class:'directory-empty'},'No groups or guides yet.'),
         draggedId.value?rootTarget():null,
       ]),

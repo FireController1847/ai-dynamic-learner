@@ -5,7 +5,7 @@ import { TodoTaskEditor } from './task-editor.ts';
 import { DeleteConfirmation } from '../../components/delete-confirmation.ts';
 import { Icon } from '../../components/icon.ts';
 import { LibraryEmptyState } from '../../components/library-empty-state.ts';
-import { useLibrarySelection } from '../../components/use-library-selection.ts';
+import { useAutomaticLibrarySelection } from '../../components/use-library-selection.ts';
 import { usePersistedPanelResize } from '../../components/use-persisted-panel-resize.ts';
 import { TodoLibrary, type TodoLibraryHandle } from './library.ts';
 import { TodoLibrarySettings } from './library-settings.ts';
@@ -33,7 +33,7 @@ export const TodoList = defineComponent({
       startClock();
       archiveOpen.value = activeItems.value.length === 0 && archivedItems.value.length > 0;
     });
-    const selectedId = useLibrarySelection({
+    const selectedId = useAutomaticLibrarySelection({
       firstId: () => visibleItems.value[0]?.id ?? null,
       hasItem: (id) => props.model.items.some(item => item.id === id),
       onAutoSelect: () => { if (overlay.value) collapsed.value = true; },
