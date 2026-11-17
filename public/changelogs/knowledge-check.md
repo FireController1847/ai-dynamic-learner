@@ -1,3 +1,20 @@
+## v1.50.0
+
+<small data-utc="2026-11-17T00:49:25Z">November 16, 2026 at 5:49 PM MST</small>
+
+- **AI Creation:** Replaced the multi-step Review wizard with one workspace for study preferences, generation instructions, response import, and preview.
+- **Response Recovery:** Read wrapped and interrupted AI responses, recover individually valid questions, and offer targeted repair requests without discarding the accepted draft.
+- **Batch Generation:** Generate smaller batches, add additional responses, and skip exact duplicate questions.
+- **Question Import:** Use the same recovery and generation experience when adding questions to existing sets.
+- **Confidence:** Keep valid questions even when AI estimates are unavailable, and avoid carrying estimates across incomplete or merged responses.
+
+<details>
+<summary>View 1 commit</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/c3adbff685b42f659c2e34357c9d9c9fcadbcd56">c3adbff6</a> — Redesign Review AI creation and recover partial responses (v1.50.0)</li>
+</ol>
+</details>
+
 ## v1.49.4
 
 <small data-utc="2026-11-16T19:56:49Z">November 16, 2026 at 12:56 PM MST</small>
