@@ -5,8 +5,7 @@ import { DeleteConfirmation } from '../../components/delete-confirmation.ts';
 import { Icon } from '../../components/icon.ts';
 import { LibraryEmptyState } from '../../components/library-empty-state.ts';
 import { PopupDialog } from '../../components/popup-dialog.ts';
-import { useLibrarySelection } from '../../components/use-library-selection.ts';
-import { libraryHome, focusLibraryDetail } from '../../components/library-home.ts';
+import { useAutomaticLibrarySelection } from '../../components/use-library-selection.ts';
 import { usePersistedPanelResize } from '../../components/use-persisted-panel-resize.ts';
 import { defaultLibrarySettings, isArchived, orderedDatedItems } from '../../core/dated-library.ts';
 import { createImmediateTaskSet, createTaskSet, MAX_NAME_LENGTH, MAX_TASK_SETS, type SolveItGridModel } from './library-model.ts';
@@ -47,12 +46,11 @@ export const SolveItGrid = defineComponent({
     const builder = ref<TaskSetBuilderHandle | null>(null);
     const creationError = ref('');
     const pendingDelete = ref<string | null>(null);
-    const { selectedId, recentItem, remember } = useLibrarySelection({
-      app: 'solve-it-grid',
-      lookup: (id) => props.model.items.find(item => item.id === id) ?? null,
+    const selectedId = useAutomaticLibrarySelection({
+      firstId: () => visibleItems.value[0]?.id ?? null,
+      hasItem: id => props.model.items.some(item => item.id === id),
       enabled: () => builderMode.value === null,
-      initialRecent: () => props.model.lastSelectedTaskSetId ?? null,
-      onHome: () => { if (overlay.value) collapsed.value = true; },
+      onAutoSelect: () => { if (overlay.value) collapsed.value = true; },
     });
     const selected = computed(() => props.model.items.find(item => item.id === selectedId.value) ?? null);
     const panel = usePersistedPanelResize({
@@ -69,7 +67,7 @@ export const SolveItGrid = defineComponent({
     function media(event: MediaQueryListEvent) {
       overlay.value = event.matches;
       panel.resizing.value = false;
-      if (event.matches) collapsed.value = true;
+      if (event.matches && selectedId.value) collapsed.value = true;
     }
     onMounted(() => {
       startClock();
@@ -122,7 +120,7 @@ export const SolveItGrid = defineComponent({
         const item = createImmediateTaskSet(props.model.items, immediateName.value.trim());
         refreshClock();
         archiveOpen.value = isArchived(item, now.value, settings.value);
-        selectedId.value = item.id; remember(item.id);
+        selectedId.value = item.id;
         builderMode.value = null;
         creationError.value = '';
         message.value = 'Your immediate grid is ready.';
@@ -146,7 +144,7 @@ export const SolveItGrid = defineComponent({
         }
         refreshClock();
         archiveOpen.value = isArchived(item, now.value, settings.value);
-        selectedId.value = item.id; remember(item.id);
+        selectedId.value = item.id;
         builderMode.value = null;
         message.value = 'Task set saved. Your grid is ready.';
         if (overlay.value) collapsed.value = true;
@@ -163,18 +161,9 @@ export const SolveItGrid = defineComponent({
       try { await requestCheckInNotifications(); }
       finally { notificationsBusy.value = false; notificationsOpen.value = false; }
     }
-    function returnToRecent(id: string) {
-      const item = props.model.items.find(item => item.id === id);
-      if (!item) return;
-      select(id);
-      if (selectedId.value !== id) return;
-      archiveOpen.value = isArchived(item, now.value, settings.value);
-      if (overlay.value) collapsed.value = true;
-      focusLibraryDetail(layout.value, '.solve-it-grid-detail');
-    }
-    function select(id: string | null) {
+    function select(id: string) {
       if (!canLeaveBuilder()) return;
-      builderMode.value = null; selectedId.value = id; remember(id); message.value = '';
+      builderMode.value = null; selectedId.value = id; message.value = '';
     }
     function openArchive() {
       if (!canLeaveBuilder()) return;
@@ -200,7 +189,7 @@ export const SolveItGrid = defineComponent({
       const item = props.model.items[index]!;
       props.model.items.splice(index, 1);
       if (props.model.lastSelectedTaskSetId === id) props.model.lastSelectedTaskSetId = null;
-      if (selectedId.value === id) selectedId.value = null;
+      if (selectedId.value === id) selectedId.value = visibleItems.value[0]?.id ?? null;
       message.value = `Deleted ${item.name}.`;
       await nextTick();
       library.value?.focusToggle();
@@ -238,7 +227,7 @@ export const SolveItGrid = defineComponent({
         h(DatedLibrary, {
           ref: library, libraryId: 'solve-it-grid-library', label: 'Solve-It Grid',
           itemLabel: 'task set', pluralLabel: 'task sets', icon: 'grid', maxItems: MAX_TASK_SETS,
-          maxNameLength: MAX_NAME_LENGTH, items: visibleItems.value, selectedId: selectedId.value, homeActive: !selected.value && !builderMode.value,
+          maxNameLength: MAX_NAME_LENGTH, items: visibleItems.value, selectedId: selectedId.value,
           settings: settings.value, now: now.value, total: props.model.items.length,
           archiveCount: archivedItems.value.length, archived: archiveOpen.value, collapsed: collapsed.value,
           onCreate: create, onSelect: select,
@@ -322,14 +311,10 @@ export const SolveItGrid = defineComponent({
             actionLabel: 'Set up task set', onCreate: edit,
           }),
         ] : [
-          libraryHome({
-            title: 'Solve-It Grid', description: 'Turn your tasks into one thing at a time.',
-            actions: [{ icon: 'plus', label: 'New task set', description: 'Start an immediate grid or build four task lists.', run: create }],
-            recent: recentItem.value, onReturn: returnToRecent,
-            secondary: [
-              { icon: 'settings', label: 'Settings', run: () => { settingsOpen.value = true; } },
-              { icon: 'archive', label: `Archive (${archivedItems.value.length})`, run: () => { archiveOpen.value = true; collapsed.value = false; } },
-            ],
+          h(LibraryEmptyState, {
+            icon: 'plus', title: archiveOpen.value ? 'Your past task sets' : 'Build your task set library',
+            description: archiveOpen.value ? 'No archived task sets yet. Create a new task set to begin.' : 'Build four lists, then turn them into one task at a time.',
+            actionLabel: 'New task set', onCreate: create,
           }),
         ]),
       ]),

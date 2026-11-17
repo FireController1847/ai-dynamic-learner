@@ -21,7 +21,7 @@ export const TodoLibrary = defineComponent({
       itemLabel: 'todo list', pluralLabel: 'lists', icon: 'checklist',
       maxItems: MAX_LISTS, maxNameLength: MAX_NAME_LENGTH, footerClass: 'todo-library-footer',
       completedIds: props.items.filter(item => isTodoListComplete(item.sections ?? [])).map(item => item.id),
-      onCreate: () => emit('create'), onSelect: (id: string | null) => emit('select', id),
+      onCreate: () => emit('create'), onSelect: (id: string) => emit('select', id),
       onOpenItem: () => emit('open-item'), onRename: (id: string, name: string) => emit('rename', id, name),
       onDelete: (id: string) => emit('delete', id), onToggle: () => emit('toggle'),
       onSettings: () => emit('settings'), onArchive: () => emit('archive'),
