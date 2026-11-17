@@ -1,3 +1,23 @@
+## v1.51.0
+
+<small data-utc="2026-11-17T02:40:07Z">November 16, 2026 at 7:40 PM MST</small>
+
+- **AI Import:** Recover valid questions from malformed or interrupted AI responses without requiring the entire set to be regenerated.
+- **Response Recovery:** Follow guided correction instructions, continue with usable questions, or add repaired questions and smaller batches without discarding the draft.
+- **Validation:** Skip duplicate questions when combining responses, isolate invalid solver packages, and accept valid questions even when confidence estimates are missing or unreadable.
+- **Question Import:** Use guided recovery when adding questions to an existing knowledge set.
+
+<details>
+<summary>View 5 commits</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/c3adbff685b42f659c2e34357c9d9c9fcadbcd56">c3adbff6</a> — Redesign Review AI creation and recover partial responses</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/1fe7beea8a1e24c830def140407ace5eed862313">1fe7beea</a> — Keep Review recovery and copy feedback in view</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/f2b361ff774cb2479a3dc81f0c8aa4110389016f">f2b361ff</a> — Restore guided Review AI creation and simplify topic selection</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/0d44dddca34bbe753c1882dad684e06e6d9520b6">0d44dddc</a> — Restore guided Review AI creation and focus improvements on recovery</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/88f70c307ece333a30d8041756d8c832d3a3db27">88f70c30</a> — Merge main into review-ai-redesign and reconcile Review version (v1.51.0)</li>
+</ol>
+</details>
+
 ## v1.50.0
 
 <small data-utc="2026-11-17T00:47:40Z">November 16, 2026 at 5:47 PM MST</small>
