@@ -1,8 +1,9 @@
-export interface DirectoryTreeHandle { reveal(id: string): void; focusToggle(): void; focusNewSet(): void; focusAiImport(): void; beginRename(id: string): void; }
+export interface DirectoryTreeHandle { createGroup(): void; reveal(id: string): void; focusToggle(): void; focusNewSet(): void; focusAiImport(): void; beginRename(id: string): void; }
 import type { VNode } from 'vue';
 import type { LibraryItem, MovePosition } from './tree-model.ts';
 import { inputValue } from '../../core/dom.ts';
 import { Icon } from '../../components/icon.ts';
+import { libraryHomeButton } from '../../components/library-home.ts';
 import { SetModeIcon } from './set-mode-icon.ts';
 import { DeleteConfirmation } from '../../components/delete-confirmation.ts';
 import { canMove, countItems, createItem, deleteItem, findItem, firstEntry, MAX_DEPTH, MAX_ITEMS, MAX_NAME_LENGTH, moveItem } from './tree-model.ts';
@@ -15,6 +16,7 @@ export const DirectoryTree = defineComponent({
     items: { type: Array as PropType<LibraryItem[]>, required: true },
     selectedId: { type: String as PropType<string | null>, default: null },
     collapsed: Boolean,
+    homeActive: Boolean,
   },
   emits: { 'select': (_id: string | null) => true, 'open-item': () => true, 'toggle-library': () => true, 'new-set': () => true, 'open-ai-import': () => true },
   setup(props, { emit, expose, slots }) {
@@ -70,8 +72,7 @@ export const DirectoryTree = defineComponent({
         if (removed.kind === 'group') removedItems.push(...removed.children);
       }
       if (removesSelection) {
-        if (fallbackId) reveal(fallbackId);
-        emit('select', fallbackId);
+        emit('select', null);
       }
       pendingDelete.value = null;
       deleteTrigger = null;
@@ -148,6 +149,7 @@ export const DirectoryTree = defineComponent({
     }
     expose({
       reveal,
+      createGroup: createGroup,
       focusToggle: () => collapseButton.value?.focus(),
       focusNewSet: () => newSetButton.value?.focus(),
       focusAiImport: () => aiButton.value?.focus(),
@@ -308,6 +310,7 @@ export const DirectoryTree = defineComponent({
         ]),
       ]),
       h('div', { id: 'index-cards-directory', class: 'directory-scroll' }, [
+        libraryHomeButton(props.homeActive, () => { emit('select', null); emit('open-item'); }),
         rootTarget('before', 'Top level'),
         props.items.length
           ? h('ul', { class: 'directory-list', 'aria-label': 'Groups and sets' }, props.items.map(renderItem))

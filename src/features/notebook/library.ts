@@ -1,4 +1,4 @@
-export interface NotebookLibraryHandle { reveal(id: string): void; focusToggle(): void; focusNewDocument(): void; beginRename(id: string): void; }
+export interface NotebookLibraryHandle { createGroup(): void; requestImport(): void; reveal(id: string): void; focusToggle(): void; focusNewDocument(): void; beginRename(id: string): void; }
 import type { DocumentTarget } from './library-model.ts';
 export type ImportedDocument = Awaited<ReturnType<typeof readMarkdownFile>>;
 export type ImportDocument = (contents: ImportedDocument, target: DocumentTarget | null) => void;
@@ -6,6 +6,7 @@ import type { VNode } from 'vue';
 import type { LibraryItem, MovePosition } from './library-model.ts';
 import { inputValue } from '../../core/dom.ts';
 import { Icon } from '../../components/icon.ts';
+import { libraryHomeButton } from '../../components/library-home.ts';
 import { DocumentTypeIcon } from './document-type-icon.ts';
 import { DeleteConfirmation } from '../../components/delete-confirmation.ts';
 import { readMarkdownFile } from './document-files.ts';
@@ -22,6 +23,7 @@ export const NotebookLibrary = defineComponent({
     items: { type: Array as PropType<LibraryItem[]>, required: true },
     selectedId: { type: String as PropType<string | null>, default: null },
     collapsed: Boolean,
+    homeActive: Boolean,
     importDocument: { type: Function as PropType<ImportDocument>, required: true },
   },
   emits: { 'select': (_id: string | null) => true, 'open-item': () => true, 'toggle-library': () => true, 'new-document': () => true },
@@ -154,8 +156,7 @@ export const NotebookLibrary = defineComponent({
         if (removed.kind === 'group') removedItems.push(...removed.children);
       }
       if (removesSelection) {
-        if (fallbackId) reveal(fallbackId);
-        emit('select', fallbackId);
+        emit('select', null);
       }
       pendingDelete.value = null;
       deleteTrigger = null;
@@ -177,8 +178,16 @@ export const NotebookLibrary = defineComponent({
       }
     }
 
+    function requestImport() {
+      if (uploading.value) return;
+      uploadTarget = { selectedId: props.selectedId };
+      uploadInput.value?.click();
+    }
+
     expose({
       reveal,
+      createGroup: createGroup,
+      requestImport,
       focusToggle: () => collapseButton.value?.focus(),
       focusNewDocument: () => newDocumentButton.value?.focus(),
       beginRename: (id: string) => {
@@ -268,10 +277,7 @@ export const NotebookLibrary = defineComponent({
           h('button', {
             type: 'button', class: ['icon-button', { 'markdown-is-loading': uploading.value }],
             disabled: uploading.value, title: 'Import document', 'aria-label': 'Import document',
-            onClick: () => {
-              uploadTarget = { selectedId: props.selectedId };
-              uploadInput.value?.click();
-            },
+            onClick: requestImport,
           }, [h(Icon, { name: uploading.value ? 'loading' : 'upload' })]),
           h('button', {
             type: 'button',
@@ -303,6 +309,7 @@ export const NotebookLibrary = defineComponent({
       h('input', { ref: uploadInput, type: 'file', accept: '.md', hidden: true, onChange: upload }),
       uploadMessage.value ? h('p', { class: 'notebook-upload-status', role: 'status' }, uploadMessage.value) : null,
       h('div', { class: 'directory-scroll' }, [
+        libraryHomeButton(props.homeActive, () => { emit('select', null); emit('open-item'); }),
         props.items.length
           ? h('ul', { class: 'directory-list', 'aria-label': 'Groups and documents' }, props.items.map(renderItem))
           : h('p', { class: 'directory-empty' }, 'No groups or documents yet.'),

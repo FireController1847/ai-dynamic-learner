@@ -10,6 +10,7 @@ import type { VNode } from 'vue';
 import type { LibraryItem, MovePosition } from './library-model.ts';
 import { inputValue } from '../../core/dom.ts';
 import { Icon } from '../../components/icon.ts';
+import { libraryHomeButton } from '../../components/library-home.ts';
 import { DeleteConfirmation } from '../../components/delete-confirmation.ts';
 import {
   canMove, countChecks, countItems, createGroup, deleteItem, findItem, firstEntry,
@@ -369,12 +370,7 @@ export const KnowledgeCheckLibrary = defineComponent({
         ]),
       ]),
       h('div', { class: 'knowledge-check-library-scroll' }, [
-        h('button', {
-          ref: homeButton, type: 'button',
-          class: ['knowledge-check-library-home', { 'is-selected': props.homeActive }],
-          'aria-pressed': props.homeActive,
-          onClick: () => { emit('select', null); emit('open-item'); },
-        }, [h(Icon, { name: 'grid' }), 'Home']),
+        libraryHomeButton(props.homeActive, () => { emit('select', null); emit('open-item'); }, homeButton),
         rootTarget('before', 'Top level'),
         props.items.length
           ? h('ul', { class: 'knowledge-check-library-list', 'aria-label': 'Groups and knowledge sets' },

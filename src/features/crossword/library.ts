@@ -1,8 +1,9 @@
-export interface CrosswordLibraryHandle { reveal(id: string): void; focusToggle(): void; focusNewCrossword(): void }
+export interface CrosswordLibraryHandle { createGroup(): void; reveal(id: string): void; focusToggle(): void; focusNewCrossword(): void }
 import type { VNode } from 'vue';
 import type { LibraryItem, MovePosition } from './library-model.ts';
 import { inputValue } from '../../core/dom.ts';
 import { Icon } from '../../components/icon.ts';
+import { libraryHomeButton } from '../../components/library-home.ts';
 import { DeleteConfirmation } from '../../components/delete-confirmation.ts';
 import {
   canMove, countCrosswords, countItems, createGroup, deleteItem, findItem, firstEntry,
@@ -17,6 +18,7 @@ export const CrosswordLibrary = defineComponent({
     items: { type: Array as PropType<LibraryItem[]>, required: true },
     selectedId: { type: String as PropType<string | null>, default: null },
     collapsed: Boolean,
+    homeActive: Boolean,
   },
   emits: { 'select': (_id: string | null) => true, 'open-item': () => true, 'toggle-library': () => true, 'new-crossword': (_target: { parentId: string | null; parentName: string }) => true, 'open-ai': (_target: { parentId: string | null; parentName: string }) => true },
   setup(props, { emit, expose, slots }) {
@@ -133,6 +135,7 @@ export const CrosswordLibrary = defineComponent({
 
     expose({
       reveal,
+      createGroup: createGroupRelativeToSelection,
       focusToggle: () => collapseButton.value?.focus(),
       focusNewCrossword: () => createCrosswordButton.value?.focus(),
     });
@@ -218,8 +221,7 @@ export const CrosswordLibrary = defineComponent({
         if (next.kind === 'group') removed.push(...next.children);
       }
       if (removesSelection) {
-        if (fallbackId) reveal(fallbackId);
-        emit('select', fallbackId);
+        emit('select', null);
       }
       pendingDelete.value = null;
       deleteTrigger = null;
@@ -338,6 +340,7 @@ export const CrosswordLibrary = defineComponent({
         ]),
       ]),
       h('div', { class: 'crossword-library-scroll' }, [
+        libraryHomeButton(props.homeActive, () => { emit('select', null); emit('open-item'); }),
         rootTarget('before', 'Top level'),
         props.items.length
           ? h('ul', { class: 'crossword-library-list', 'aria-label': 'Groups and crosswords' },

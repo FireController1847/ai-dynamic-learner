@@ -1,5 +1,6 @@
 import { defineComponent, h, nextTick, ref, type PropType } from 'vue';
 import { Icon } from './icon.ts';
+import { libraryHomeButton } from './library-home.ts';
 import { inputValue } from '../core/dom.ts';
 import { ageProgress, archiveTime, expiryLabel, type LibrarySettings, type DatedLibraryRecord } from '../core/dated-library.ts';
 
@@ -20,10 +21,10 @@ export const datedLibraryProps = {
     now: { type: Number, required: true },
     total: { type: Number, required: true },
     archiveCount: { type: Number, required: true },
-    archived: Boolean, collapsed: Boolean,
+    archived: Boolean, collapsed: Boolean, homeActive: Boolean,
   } as const;
 export const datedLibraryEmits = {
-    create: () => true, select: (_id: string) => true, 'open-item': () => true, rename: (_id: string, _name: string) => true,
+    create: () => true, select: (_id: string | null) => true, 'open-item': () => true, rename: (_id: string, _name: string) => true,
     delete: (_id: string) => true, toggle: () => true, settings: () => true, archive: () => true,
   };
 
@@ -112,9 +113,11 @@ export const DatedLibrary = defineComponent({
           ]),
         ]),
         h('p', { class: 'dated-library-intro' }, props.archived ? `Older ${props.pluralLabel} are kept here.` : `Created dates · ${expiryLabel(props.settings)}`),
-        h('div', { class: 'directory-scroll' }, groups.length ? groups.map(group => h('section', { key: group.date, class: 'dated-date-section', 'aria-label': `Created ${group.date}` }, [
+        h('div', { class: 'directory-scroll' }, [
+          libraryHomeButton(props.homeActive, () => { emit('select', null); emit('open-item'); }),
+          ...(groups.length ? groups.map(group => h('section', { key: group.date, class: 'dated-date-section', 'aria-label': `Created ${group.date}` }, [
           h('h4', group.date), h('ul', { class: 'directory-list' }, group.items.map(row)),
-        ])) : h('p', { class: 'directory-empty' }, props.archived ? `No archived ${props.pluralLabel} yet.` : `No active ${props.pluralLabel}. Create one to begin.`)),
+        ])) : [h('p', { class: 'directory-empty' }, props.archived ? `No archived ${props.pluralLabel} yet.` : `No active ${props.pluralLabel}. Create one to begin.`)])]),
         h('footer', { class: ['dated-library-footer', props.footerClass] }, [
           h('button', { ref: settings, type: 'button', class: 'quiet-button library-settings-button', onClick: () => emit('settings') }, ['Settings', h(Icon, { name: 'settings' })]),
           h('button', { type: 'button', class: ['quiet-button library-settings-button', { 'is-active': props.archived }],

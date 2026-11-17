@@ -8,7 +8,7 @@ export interface CrosswordItem { id: string; kind: 'crossword'; name: string; pu
 export interface Group { id: string; kind: 'group'; name: string; children: LibraryItem[] }
 export type LibraryItem = Group | CrosswordItem;
 export interface Crossword { items: LibraryItem[]; display?: DisplayOptions }
-export interface PuzzleTarget { itemId?: string | null; parentId?: string | null }
+export interface PuzzleTarget { itemId?: string | null; parentId?: string | null; prepend?: boolean }
 export type ItemLocation = TreeItemLocation<LibraryItem>;
 export type MovePosition = TreeMovePosition;
 export type GroupOption = TreeGroupOption;
@@ -70,7 +70,9 @@ export function saveCrossword(items: LibraryItem[], target: PuzzleTarget, name: 
   if (parent && parent.depth >= MAX_DEPTH) throw new Error(`Groups can be at most ${MAX_DEPTH} levels deep.`);
 
   const item: CrosswordItem = { id: createId(), kind: 'crossword', name: trimmedName, puzzle };
-  (parent?.item.kind === 'group' ? parent.item.children : items).push(item);
+  const siblings = parent?.item.kind === 'group' ? parent.item.children : items;
+  if (target.prepend && !parent) siblings.unshift(item);
+  else siblings.push(item);
   return item;
 }
 

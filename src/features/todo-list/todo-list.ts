@@ -4,8 +4,8 @@ import { defaultTodoDisplay, type TodoDisplay } from './display-options.ts';
 import { TodoTaskEditor } from './task-editor.ts';
 import { DeleteConfirmation } from '../../components/delete-confirmation.ts';
 import { Icon } from '../../components/icon.ts';
-import { LibraryEmptyState } from '../../components/library-empty-state.ts';
 import { useLibrarySelection } from '../../components/use-library-selection.ts';
+import { libraryHome, focusLibraryDetail } from '../../components/library-home.ts';
 import { usePersistedPanelResize } from '../../components/use-persisted-panel-resize.ts';
 import { TodoLibrary, type TodoLibraryHandle } from './library.ts';
 import { TodoLibrarySettings } from './library-settings.ts';
@@ -33,10 +33,11 @@ export const TodoList = defineComponent({
       startClock();
       archiveOpen.value = activeItems.value.length === 0 && archivedItems.value.length > 0;
     });
-    const selectedId = useLibrarySelection({
-      firstId: () => visibleItems.value[0]?.id ?? null,
-      hasItem: (id) => props.model.items.some(item => item.id === id),
-      onAutoSelect: () => { if (overlay.value) collapsed.value = true; },
+    const { selectedId, recentItem, remember } = useLibrarySelection({
+      app: 'todo-list',
+      lookup: (id) => props.model.items.find(item => item.id === id) ?? null,
+      initialRecent: () => props.model.lastSelectedListId ?? null,
+      onHome: () => { if (overlay.value) collapsed.value = true; },
     });
     const settingsOpen = ref(false);
     const message = ref('');
@@ -48,7 +49,7 @@ export const TodoList = defineComponent({
     const showLibraryButton = ref<HTMLButtonElement | null>(null);
     const overlayQuery = window.matchMedia('(max-width: 700px), (max-width: 1100px) and (pointer: coarse)');
     const overlay = ref(overlayQuery.matches);
-    const collapsed = ref(overlay.value && selectedId.value !== null);
+    const collapsed = ref(overlay.value);
     const panel = usePersistedPanelResize({
       preferenceKey: 'dynamic-learner.ui.todo-list.library-width', container: layout,
       panelSelector: '.directory-panel', minWidth: 280, maxWidth: 600, minRemainingWidth: 320, fallbackWidth: 320,
@@ -60,7 +61,7 @@ export const TodoList = defineComponent({
     const archiveCount = computed(() => archivedItems.value.length);
     function changeLayout(event: MediaQueryListEvent) {
       overlay.value = event.matches; panel.resizing.value = false;
-      if (event.matches && selectedId.value) collapsed.value = true;
+      if (event.matches) collapsed.value = true;
     }
     onMounted(() => { startClock(); document.addEventListener('visibilitychange', refreshClock); overlayQuery.addEventListener('change', changeLayout); });
     onDeactivated(() => { stopClock(); settingsOpen.value = false; pendingDelete.value = null; pendingClone.value = null; });
@@ -81,12 +82,21 @@ export const TodoList = defineComponent({
       refreshClock();
       try {
         const item = createList(props.model.items, now.value);
-        archiveOpen.value = false; selectedId.value = item.id; message.value = 'Created a new todo list.';
+        archiveOpen.value = false; selectedId.value = item.id; remember(item.id); message.value = 'Created a new todo list.';
         collapsed.value = false; await nextTick(); await library.value?.beginRename(item.id);
       } catch (error) { message.value = error instanceof Error ? error.message : String(error); }
     }
-    function select(id: string) {
-      selectedId.value = id; message.value = '';
+    function returnToRecent(id: string) {
+      const item = props.model.items.find(item => item.id === id);
+      if (!item) return;
+      select(id);
+      if (selectedId.value !== id) return;
+      archiveOpen.value = isArchived(item, now.value, settings.value);
+      if (overlay.value) collapsed.value = true;
+      focusLibraryDetail(layout.value, '.todo-list-detail');
+    }
+    function select(id: string | null) {
+      selectedId.value = id; remember(id); message.value = '';
     }
     async function clone(skipRemaining: boolean) {
       const source = props.model.items.find(item => item.id === pendingClone.value);
@@ -95,7 +105,7 @@ export const TodoList = defineComponent({
       try {
         const item = cloneList(props.model.items, source, skipRemaining, now.value);
         pendingClone.value = null;
-        archiveOpen.value = false; selectedId.value = item.id;
+        archiveOpen.value = false; selectedId.value = item.id; remember(item.id);
         message.value = skipRemaining ? `Cloned ${source.name} and skipped its remaining tasks.` : `Cloned ${source.name}.`;
         collapsed.value = false;
         await nextTick();
@@ -111,7 +121,7 @@ export const TodoList = defineComponent({
       const item = props.model.items[index]!;
       props.model.items.splice(index, 1);
       if (props.model.lastSelectedListId === id) props.model.lastSelectedListId = null;
-      if (selectedId.value === id) selectedId.value = visibleItems.value[0]?.id ?? null;
+      if (selectedId.value === id) selectedId.value = null;
       message.value = `Deleted ${item.name}.`;
       await nextTick(); library.value?.focusToggle();
     }
@@ -131,7 +141,7 @@ export const TodoList = defineComponent({
           onClick: () => setCollapsed(false) }, [h(Icon, { name: 'panel-open' })]) : null,
         overlay.value && !collapsed.value ? h('button', { type: 'button', class: 'library-scrim', 'aria-label': 'Close library', onClick: () => setCollapsed(true) }) : null,
         h(TodoLibrary, {
-          ref: library, items: visibleItems.value, selectedId: selectedId.value, settings: settings.value, now: now.value,
+          ref: library, items: visibleItems.value, selectedId: selectedId.value, homeActive: !selected.value, settings: settings.value, now: now.value,
           total: props.model.items.length, archiveCount: archiveCount.value, archived: archiveOpen.value, collapsed: collapsed.value,
           onCreate: create, onSelect: select, onRename: rename, onDelete: (id: string) => {
             const item = props.model.items.find(item => item.id === id);
@@ -151,12 +161,14 @@ export const TodoList = defineComponent({
         h('section', { class: 'todo-list-detail', inert: overlay.value && !collapsed.value, 'aria-label': selected.value ? selected.value.name : 'Todo List getting started' }, [
           selected.value ? h(TodoTaskEditor, { key: selected.value.id, item: selected.value, display: display.value,
             onClone: () => { pendingClone.value = selected.value?.id ?? null; cloneError.value = ''; },
-          }) : h(LibraryEmptyState, {
-            icon: 'plus',
-            title: archiveOpen.value ? 'Your past lists' : 'Build your todo library',
-            description: archiveOpen.value ? 'No archived lists yet. Create a new list to get started.' : 'Create a list for your next steps.',
-            actionLabel: 'New todo list',
-            onCreate: create,
+          }) : libraryHome({
+            title: 'Todo List', description: 'Write, organize, and prioritize your tasks.',
+            actions: [{ icon: 'plus', label: 'New todo list', description: 'Create a list for your next steps.', run: create }],
+            recent: recentItem.value, onReturn: returnToRecent,
+            secondary: [
+              { icon: 'settings', label: 'Settings', run: () => { settingsOpen.value = true; } },
+              { icon: 'archive', label: `Archive (${archivedItems.value.length})`, run: () => { archiveOpen.value = true; collapsed.value = false; } },
+            ],
           }),
         ]),
       ]),

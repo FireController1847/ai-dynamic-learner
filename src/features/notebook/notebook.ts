@@ -12,6 +12,7 @@ import { inputValue } from '../../core/dom.ts';
 import { Icon } from '../../components/icon.ts';
 import { LibraryEmptyState } from '../../components/library-empty-state.ts';
 import { useLibrarySelection } from '../../components/use-library-selection.ts';
+import { libraryHome, focusLibraryDetail } from '../../components/library-home.ts';
 import { usePersistedPanelResize } from '../../components/use-persisted-panel-resize.ts';
 import { DocumentBuilder } from './document-builder.ts';
 import { getDocumentType } from './document-types.ts';
@@ -22,7 +23,7 @@ import { DisplaySettings } from './display-settings.ts';
 import { resolvedNotebookDisplay, notebookDisplayStyles } from './display-options.ts';
 import { NotebookLibrary } from './library.ts';
 import {
-  canMove, countDocuments, countItems, deleteItem, findItem, firstEntry, groupOptions, insertDocument,
+  canMove, countDocuments, countItems, deleteItem, findItem, groupOptions, insertDocument,
   MAX_DOCUMENTS, MAX_ITEMS, moveItem,
 } from './library-model.ts';
 
@@ -39,18 +40,16 @@ export const Notebook = defineComponent({
   },
   setup(props) {
     const creationTarget = ref<CreationTarget | null>(null);
-    const selectedId = useLibrarySelection({
-      firstId: () => firstEntry(props.model.items)?.id ?? null,
-      hasItem: (id) => findItem(props.model.items, id) !== null,
+    const { selectedId, recentItem, remember } = useLibrarySelection({
+      app: 'notebook',
+      lookup: (id) => findItem(props.model.items, id)?.item ?? null,
       enabled: () => creationTarget.value === null,
-      onAutoSelect: (id) => {
-        library.value?.reveal(id);
-        if (libraryOverlay.value) libraryCollapsed.value = true;
-      },
+      initialRecent: () => props.model.lastSelectedDocumentId ?? null,
+      onHome: () => { if (libraryOverlay.value) libraryCollapsed.value = true; },
     });
     const overlayQuery = window.matchMedia('(max-width: 700px), (max-width: 1100px) and (pointer: coarse)');
     const libraryOverlay = ref(overlayQuery.matches);
-    const libraryCollapsed = ref(overlayQuery.matches && selectedId.value !== null);
+    const libraryCollapsed = ref(overlayQuery.matches);
     const layout = ref<HTMLElement | null>(null);
     const {
       width: libraryWidth,
@@ -101,7 +100,7 @@ export const Notebook = defineComponent({
     function updateLibraryLayout(event: MediaQueryListEvent) {
       libraryOverlay.value = event.matches;
       libraryResizing.value = false;
-      if (event.matches && selectedId.value) setLibraryCollapsed(true);
+      if (event.matches) setLibraryCollapsed(true);
     }
 
     overlayQuery.addEventListener('change', updateLibraryLayout);
@@ -125,6 +124,19 @@ export const Notebook = defineComponent({
       else library.value?.focusToggle();
     }
 
+    function selectItem(id: string | null) { selectedId.value = id; creationTarget.value = null; message.value = ''; remember(id); }
+
+    async function createHomeGroup() {
+      libraryCollapsed.value = false;
+      await nextTick();
+      library.value?.createGroup();
+    }
+    function returnToRecent(id: string) {
+      selectItem(id);
+      library.value?.reveal(id);
+      if (libraryOverlay.value) libraryCollapsed.value = true;
+      focusLibraryDetail(layout.value, '.notebook-detail');
+    }
     function beginDocumentCreation() {
       const current = selection.value;
       let destination = 'Top level';
@@ -156,7 +168,7 @@ export const Notebook = defineComponent({
       let item;
       try { item = insertDocument(props.model.items, creationTarget.value, type); }
       catch (error) { message.value = error instanceof Error ? error.message : String(error); return; }
-      selectedId.value = item.id;
+      selectedId.value = item.id; remember(item.id);
       creationTarget.value = null;
       library.value?.reveal(item.id);
       nextTick(() => library.value?.beginRename(item.id));
@@ -166,7 +178,7 @@ export const Notebook = defineComponent({
       const item = insertDocument(props.model.items, target, 'markdown');
       item.name = contents.name;
       if (item.type === 'markdown') item.data.markdown = contents.markdown;
-      selectedId.value = item.id;
+      selectedId.value = item.id; remember(item.id);
       creationTarget.value = null;
       library.value?.reveal(item.id);
       if (libraryOverlay.value) setLibraryCollapsed(true);
@@ -325,10 +337,11 @@ export const Notebook = defineComponent({
           ref: library,
           items: props.model.items,
           selectedId: selectedId.value,
+          homeActive: !selection.value && !creationTarget.value,
           collapsed: libraryCollapsed.value,
           importDocument,
           onToggleLibrary: () => setLibraryCollapsed(true),
-          onSelect: (id) => { selectedId.value = id; creationTarget.value = null; message.value = ''; },
+          onSelect: selectItem,
           onOpenItem: () => { if (libraryOverlay.value) setLibraryCollapsed(true); },
           onNewDocument: beginDocumentCreation,
         }, {
@@ -393,7 +406,16 @@ export const Notebook = defineComponent({
                   document: selection.value.item,
                   options: displayOptions.value.graph,
                 })
-            : h(LibraryEmptyState, {
+            : !selection.value ? libraryHome({
+          title: 'Notebook', description: 'Organize your notes into groups and keep your documents together.',
+          actions: [
+            { icon: 'upload', label: 'Import document', description: 'Import a Markdown document.', run: () => { libraryCollapsed.value = false; library.value?.requestImport(); } },
+            { icon: 'document', label: 'New document', description: 'Write notes or create lined or graph paper.', run: beginDocumentCreation },
+            { icon: 'folder', label: 'New group', description: 'Organize documents into groups.', run: createHomeGroup },
+          ],
+          recent: recentItem.value, onReturn: returnToRecent,
+          secondary: [{ icon: 'settings', label: 'Settings', run: () => { settingsOpen.value = true; } }],
+        }) : h(LibraryEmptyState, {
               class: { 'has-organization': selection.value !== null },
               icon: 'document',
               title: selection.value?.item.name ?? 'Build your notebook library',

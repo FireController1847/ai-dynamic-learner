@@ -44,14 +44,14 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'notebook', label: 'Notebook', path: '/notebook/', icon: 'document',
     group: 'work',
-    version: '1.7.1',
+    version: '1.8.0',
     image: 'assets/app-icons/notebook.png',
     description: 'Organize notes into groups and keep your documents together in one notebook.',
   },
   {
     id: 'todo-list', label: 'Todo List', path: '/todo-list/', icon: 'checklist',
     group: 'work',
-    version: '1.6.4',
+    version: '1.7.0',
     image: 'assets/app-icons/todo-list.png',
     description: 'Write, organize, and prioritize tasks in simple lists that archive automatically.',
     metadata: {
@@ -68,7 +68,7 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'solve-it-grid', label: 'Solve-It Grid', path: '/solve-it-grid/', icon: 'grid',
     group: 'work',
-    version: '1.3.2',
+    version: '1.4.0',
     image: 'assets/app-icons/solve-it-grid.png',
     description: 'Build four task lists, then follow a lively grid that turns them into one task at a time.',
     metadata: {
@@ -85,21 +85,21 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'index-cards', label: 'Index Cards', path: '/index-cards/', icon: 'cards',
     group: 'study',
-    version: '1.24.1',
+    version: '1.25.0',
     image: 'assets/app-icons/index-cards.png',
     description: 'Create flash cards or fill-in-the-blanks sets, then review or view them at your own pace.',
   },
   {
     id: 'word-search', label: 'Word Search', path: '/word-search/', icon: 'word-search',
     group: 'study',
-    version: '1.14.1',
+    version: '1.15.0',
     image: 'assets/app-icons/word-search.png',
     description: 'Create your own word searches, find every word, and pick up where you left off.'
   },
   {
     id: 'crossword', label: 'Crossword', path: '/crossword/', icon: 'crossword',
     group: 'study',
-    version: '1.9.1',
+    version: '1.10.0',
     image: 'assets/app-icons/crossword.png',
     description: 'Create your own crosswords, solve the clues, and pick up where you left off.',
     metadata: {
@@ -116,7 +116,7 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'guide', label: 'Guide', path: '/guide/', icon: 'document',
     group: 'master',
-    version: '2.16.2',
+    version: '2.17.0',
     image: 'assets/app-icons/guide.png',
     description: 'Teach and explore ideas through interactive map lessons, Teaching Blocks, or simple lists.',
     metadata: {

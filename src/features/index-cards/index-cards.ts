@@ -23,8 +23,9 @@ import type { AnswerStrictness } from './fill-blank-model.ts';
 import { Icon } from '../../components/icon.ts';
 import { LibraryEmptyState } from '../../components/library-empty-state.ts';
 import { useLibrarySelection } from '../../components/use-library-selection.ts';
+import { libraryHome, focusLibraryDetail } from '../../components/library-home.ts';
 import { usePersistedPanelResize } from '../../components/use-persisted-panel-resize.ts';
-import { canMove, countCards, createItem, deleteItem, findItem, firstEntry, groupOptions, insertSet, moveItem } from './tree-model.ts';
+import { canMove, countCards, createItem, deleteItem, findItem, groupOptions, insertSet, moveItem } from './tree-model.ts';
 import { createCard, MAX_CARDS } from './card-model.ts';
 import { clearPreference, readNumberPreference, writeNumberPreference } from '../../core/ui-preferences.ts';
 
@@ -44,19 +45,17 @@ export const IndexCards = defineComponent({
     const creationTarget = ref<CreationTarget | null>(null);
     const aiTarget = ref<CreationTarget | null>(null);
     const aiMode = ref<SetModeId | null>(null);
-    const selectedId = useLibrarySelection({
-      firstId: () => firstEntry(props.model.items)?.id ?? null,
-      hasItem: (id) => findItem(props.model.items, id) !== null,
+    const { selectedId, recentItem, remember } = useLibrarySelection({
+      app: 'index-cards',
+      lookup: (id) => findItem(props.model.items, id)?.item ?? null,
       enabled: () => creationTarget.value === null && aiTarget.value === null,
-      onAutoSelect: (id) => {
-        tree.value?.reveal(id);
-        if (libraryOverlay.value) libraryCollapsed.value = true;
-      },
+      initialRecent: () => props.model.lastSelectedSetId ?? null,
+      onHome: () => { if (libraryOverlay.value) libraryCollapsed.value = true; },
     });
     // Keep this breakpoint aligned with styles/mobile.css.
     const overlayQuery = window.matchMedia('(max-width: 700px), (max-width: 1100px) and (pointer: coarse)');
     const libraryOverlay = ref(overlayQuery.matches);
-    const libraryCollapsed = ref(overlayQuery.matches && selectedId.value !== null);
+    const libraryCollapsed = ref(overlayQuery.matches);
     const cardListCollapsed = ref(false);
     const cardListWidth = ref(readNumberPreference(CARD_LIST_WIDTH_KEY));
     const layout = ref<HTMLElement | null>(null);
@@ -83,7 +82,7 @@ export const IndexCards = defineComponent({
     function updateLibraryLayout(event: MediaQueryListEvent) {
       libraryOverlay.value = event.matches;
       libraryResizing.value = false;
-      if (event.matches && selectedId.value) setLibraryCollapsed(true);
+      if (event.matches) setLibraryCollapsed(true);
     }
     overlayQuery.addEventListener('change', updateLibraryLayout);
     onBeforeUnmount(() => overlayQuery.removeEventListener('change', updateLibraryLayout));
@@ -158,6 +157,19 @@ export const IndexCards = defineComponent({
       else activeSet.value?.focusCardListToggle();
     }
 
+    function selectItem(id: string | null) { selectedId.value = id; creationTarget.value = null; aiTarget.value = null; message.value = ''; remember(id); }
+
+    async function createHomeGroup() {
+      libraryCollapsed.value = false;
+      await nextTick();
+      tree.value?.createGroup();
+    }
+    function returnToRecent(id: string) {
+      selectItem(id);
+      tree.value?.reveal(id);
+      if (libraryOverlay.value) libraryCollapsed.value = true;
+      focusLibraryDetail(layout.value, '.index-cards-detail');
+    }
     function beginSetCreation() {
       aiTarget.value = null;
       const current = selection.value;
@@ -181,7 +193,7 @@ export const IndexCards = defineComponent({
       let item;
       try { item = insertSet(props.model.items, creationTarget.value, mode); }
       catch (error) { message.value = error instanceof Error ? error.message : String(error); return; }
-      selectedId.value = item.id;
+      selectedId.value = item.id; remember(item.id);
       creationTarget.value = null;
       tree.value?.reveal(item.id);
       nextTick(() => tree.value?.beginRename(item.id));
@@ -219,7 +231,7 @@ export const IndexCards = defineComponent({
         const item = insertSet(props.model.items, aiTarget.value, value.mode);
         item.name = value.data.title.trim();
         item.cards = cards;
-        selectedId.value = item.id;
+        selectedId.value = item.id; remember(item.id);
         aiTarget.value = null;
         tree.value?.reveal(item.id);
         message.value = `Imported ${item.name}.`;
@@ -389,11 +401,12 @@ export const IndexCards = defineComponent({
         }) : null,
         h(DirectoryTree, {
           ref: tree, items: props.model.items, selectedId: selectedId.value,
+          homeActive: !selection.value && !creationTarget.value && !aiTarget.value,
           collapsed: libraryCollapsed.value,
           onToggleLibrary: () => setLibraryCollapsed(true),
           onNewSet: beginSetCreation,
           onOpenAiImport: beginAiImport,
-          onSelect: (id) => { selectedId.value = id; creationTarget.value = null; aiTarget.value = null; message.value = ''; },
+          onSelect: selectItem,
           onOpenItem: () => { if (libraryOverlay.value) setLibraryCollapsed(true); },
         }, {
           footer: () => h('button', {
@@ -471,14 +484,23 @@ export const IndexCards = defineComponent({
                 onResizeCardList: setCardListWidth,
                 onResetCardList: resetCardListWidth,
               })
-            : !creationTarget.value && !aiTarget.value ? h(LibraryEmptyState, {
+            : !creationTarget.value && !aiTarget.value ? (!selection.value ? libraryHome({
+          title: 'Index Cards', description: 'Create flash cards or fill-in-the-blanks sets, then review at your own pace.',
+          actions: [
+            { icon: 'ai', label: 'Create cards with AI', description: 'Generate cards from your study materials.', run: beginAiImport },
+            { icon: 'cards', label: 'New set', description: 'Create flash cards or fill-in-the-blanks cards.', run: beginSetCreation },
+            { icon: 'folder', label: 'New group', description: 'Organize card sets into groups.', run: createHomeGroup },
+          ],
+          recent: recentItem.value, onReturn: returnToRecent,
+          secondary: [{ icon: 'settings', label: 'Settings', run: () => { settingsOpen.value = true; } }],
+        }) : h(LibraryEmptyState, {
             class: { 'has-organization': selection.value !== null },
             icon: 'cards',
             title: selection.value?.item.name ?? 'Build your index-card library',
             description: selection.value ? 'Create a set in this group, or select one from the Library.' : 'Create a set of cards and organize your sets in groups.',
             actionLabel: 'New set',
             onCreate: beginSetCreation,
-          }) : null,
+          })) : null,
           !creationTarget.value && !aiTarget.value && selection.value ? h('details', {
             key: `organization-${selection.value.item.id}`,
             class: ['item-organization', { 'library-group-organization': selection.value.item.kind === 'group' }],

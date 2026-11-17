@@ -76,3 +76,5 @@ Use this as a starting-file index, not a feature specification. Follow imports o
 | Responsive/touch overrides | `src/styles/mobile.css` plus the owning feature stylesheet |
 
 Review session question-bank visual: `src/features/knowledge-check/session-question-coverage.ts` (used by session intro, Study recap, and Quiz/Test results).
+
+- Shared library Home cards, navigation, and recent-item selection: `src/components/library-home.ts`, `src/components/use-library-selection.ts`, `src/styles/library-home.css`.

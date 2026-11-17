@@ -9,8 +9,8 @@ import { ReviewAiCreation } from './ai-creation.ts';
 import type { ReviewAiImport } from './ai-import-format.ts';
 import { questionsForSave } from './question-model.ts';
 import { inputValue } from '../../core/dom.ts';
-import { isValidId } from '../../core/ids.ts';
-import { clearPreference } from '../../core/ui-preferences.ts';
+import { useLibrarySelection } from '../../components/use-library-selection.ts';
+import { libraryHome, focusLibraryDetail } from '../../components/library-home.ts';
 import { Icon } from '../../components/icon.ts';
 import { LibraryEmptyState } from '../../components/library-empty-state.ts';
 import { usePersistedPanelResize } from '../../components/use-persisted-panel-resize.ts';
@@ -24,22 +24,13 @@ import { canMove, deleteItem, findItem, groupOptions, moveItem, insertCheck } fr
 import { addTutorialActionListener, type TutorialCleanup, type TutorialRequest } from '../../../packages/tips/src/index.ts';
 
 import {
-  defineComponent, type PropType, computed, h, nextTick, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref, watch,
+  defineComponent, type PropType, computed, h, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref,
 } from 'vue';
 
 type SetupTarget = CheckTarget;
 
 const MIN_LIBRARY_WIDTH = 248;
 const LIBRARY_WIDTH_KEY = 'dynamic-learner.ui.knowledge-check.library-width';
-const RECENT_ITEM_KEY = 'dynamic-learner.ui.knowledge-check.recent-item';
-
-function readRecentItem(): string | null {
-  try {
-    const id = localStorage.getItem(RECENT_ITEM_KEY);
-    return isValidId(id) ? id : null;
-  } catch { return null; }
-}
-
 export const KnowledgeCheck = defineComponent({
   name: 'KnowledgeCheck',
   props: {
@@ -52,8 +43,12 @@ export const KnowledgeCheck = defineComponent({
     const importTarget = ref<SetupTarget | null>(null);
     const aiTarget = ref<SetupTarget | null>(null);
     onDeactivated(() => { aiTarget.value = null; });
-    const selectedId = ref<string | null>(null);
-    const recentId = ref<string | null>(readRecentItem());
+    const { selectedId, recentItem, remember } = useLibrarySelection({
+      app: 'knowledge-check',
+      lookup: (id) => findItem(props.model.items, id)?.item ?? null,
+      enabled: () => !setupTarget.value && !importTarget.value && !aiTarget.value,
+      onHome: () => { if (libraryOverlay.value) libraryCollapsed.value = true; },
+    });
     const setupVersion = ref(0);
     const workspaceHeading = ref<HTMLElement | null>(null);
     const overlayQuery = window.matchMedia('(max-width: 700px), (max-width: 1100px) and (pointer: coarse)');
@@ -163,28 +158,7 @@ export const KnowledgeCheck = defineComponent({
     });
 
     const selection = computed(() => findItem(props.model.items, selectedId.value));
-    const recentItem = computed(() => recentId.value ? findItem(props.model.items, recentId.value)?.item ?? null : null);
-    watch(selectedId, (id) => {
-      if (!id || id === tutorialSetId.value || !findItem(props.model.items, id)) return;
-      recentId.value = id;
-      try { localStorage.setItem(RECENT_ITEM_KEY, id); }
-      catch { /* UI preferences are best-effort only. */ }
-    }, { flush: 'sync' });
-    watch(recentItem, (item) => {
-      if (item || !recentId.value) return;
-      recentId.value = null;
-      clearPreference(RECENT_ITEM_KEY);
-    });
     const homeActive = computed(() => !selection.value && !setupTarget.value && !importTarget.value && !aiTarget.value);
-    watch(() => selectedId.value !== null && !selection.value, (missing) => {
-      if (missing) selectedId.value = null;
-    });
-    onActivated(() => {
-      if (setupTarget.value || importTarget.value || aiTarget.value) return;
-      selectedId.value = null;
-      message.value = '';
-      if (libraryOverlay.value) libraryCollapsed.value = true;
-    });
     useStatisticsVisits('knowledge-check', () => selection.value?.item.id ?? null, () => setupTarget.value === null && importTarget.value === null && aiTarget.value === null && selection.value?.item.id !== tutorialSetId.value);
 
     function updateLibraryLayout(event: MediaQueryListEvent) {
@@ -213,6 +187,7 @@ export const KnowledgeCheck = defineComponent({
     function selectItem(id: string | null) {
       if ((id !== selectedId.value || setupTarget.value || importTarget.value || aiTarget.value) && !requestLeave()) return false;
       selectedId.value = id;
+      remember(id);
       setupTarget.value = null;
       importTarget.value = null;
       aiTarget.value = null;
@@ -220,15 +195,11 @@ export const KnowledgeCheck = defineComponent({
       return true;
     }
 
-    function returnToRecentItem() {
-      const item = recentItem.value;
-      if (!item || !selectItem(item.id)) return;
-      library.value?.reveal(item.id);
+    function returnToRecentItem(id: string) {
+      if (!selectItem(id)) return;
+      library.value?.reveal(id);
       if (libraryOverlay.value) libraryCollapsed.value = true;
-      nextTick(() => {
-        const heading = workspaceHeading.value ?? layout.value?.querySelector<HTMLElement>('.knowledge-check-detail');
-        heading?.focus({ preventScroll: true });
-      });
+      focusLibraryDetail(layout.value, '.knowledge-check-detail');
     }
 
     function openNewKnowledgeCheck(target: SetupTarget) {
@@ -273,7 +244,7 @@ export const KnowledgeCheck = defineComponent({
       try {
         const item = insertCheck(props.model.items, aiTarget.value, value.title, questionsForSave(value.questions),
           { ...defaultSetOptions(), description: value.description });
-        selectedId.value = item.id;
+        selectedId.value = item.id; remember(item.id);
         aiTarget.value = null;
         library.value?.reveal(item.id);
         message.value = `Created ${item.name} with ${item.questions.length} items.`;
@@ -301,7 +272,7 @@ export const KnowledgeCheck = defineComponent({
       if (!importTarget.value) return;
       try {
         const item = insertCheck(props.model.items, importTarget.value, name, questions);
-        selectedId.value = item.id;
+        selectedId.value = item.id; remember(item.id);
         importTarget.value = null;
         library.value?.reveal(item.id);
         message.value = `Imported ${item.name} with ${item.questions.length} ${item.questions.length === 1 ? 'question' : 'questions'}.`;
@@ -316,7 +287,7 @@ export const KnowledgeCheck = defineComponent({
       try {
         validateSetOptions(options);
         const item = insertCheck(props.model.items, setupTarget.value, name, questionsForSave(questions), options);
-        selectedId.value = item.id;
+        selectedId.value = item.id; remember(item.id);
         setupTarget.value = null;
         library.value?.reveal(item.id);
         message.value = `Created ${item.name}.`;
@@ -406,38 +377,13 @@ export const KnowledgeCheck = defineComponent({
         { icon: 'folder', label: 'New group', description: 'Organize knowledge sets into groups.', run: createHomeGroup },
       ];
       return h('section', {
-        class: 'knowledge-check-detail knowledge-check-splash',
+        class: 'knowledge-check-detail',
         'aria-label': 'Home',
         inert: libraryOverlay.value && !libraryCollapsed.value,
       }, [
-        h('div', { class: 'knowledge-check-splash-content' }, [
-          h('header', { class: 'knowledge-check-builder-intro' }, [
-            h('h2', { ref: workspaceHeading, tabindex: -1 }, 'Review'),
-            h('p', 'Create a knowledge set to study, quiz yourself, or take a test.'),
-          ]),
-          h('div', { class: 'knowledge-check-splash-grid' }, actions.map(action =>
-            h('button', {
-              key: action.label, type: 'button', class: 'knowledge-check-type-card',
-              onClick: action.run,
-            }, [
-              h(Icon, { name: action.icon, class: 'knowledge-check-type-icon' }),
-              h('span', { class: 'knowledge-check-type-copy' }, [
-                h('strong', action.label), h('span', action.description),
-              ]),
-            ]))),
-          recentItem.value ? h('div', { class: 'knowledge-check-splash-note' }, [
-            h('button', {
-              type: 'button', class: 'quiet-button knowledge-check-recent-button',
-              title: `Return to ${recentItem.value.name}`,
-              onClick: returnToRecentItem,
-            }, [
-              h(Icon, { name: recentItem.value.kind === 'group' ? 'folder' : 'cards' }),
-              h('span', `Return to ${recentItem.value.name}`),
-              h(Icon, { name: 'arrow-right' }),
-            ]),
-          ]) : null,
-          h('p', { class: 'visually-hidden', role: 'status' }, message.value),
-        ]),
+        libraryHome({ title: 'Review', description: 'Create a knowledge set to study, quiz yourself, or take a test.', actions,
+          recent: recentItem.value, onReturn: returnToRecentItem, headingRef: workspaceHeading }),
+        h('p', { class: 'visually-hidden', role: 'status' }, message.value),
       ]);
     }
 
