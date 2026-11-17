@@ -26,6 +26,7 @@ export const AiPromptExchange = defineComponent({
     preferFileImport: Boolean,
     // Review can recover raw/malformed response files; other callers keep strict file checks.
     allowRawResponseFile: Boolean,
+    recovering: Boolean,
   },
   emits: { 'update-json': (_value: string) => true, validate: () => true },
   setup(props, { emit, slots, expose }) {
@@ -60,6 +61,7 @@ export const AiPromptExchange = defineComponent({
       cancelCopy();
       if (stage.value === 'instructions') copied.value = false;
     }, { flush: 'sync' });
+    watch(() => props.json, value => { if (!value) { uploadedFile.value = ''; fileProblem.value = ''; } });
     onBeforeUnmount(() => { disposed = true; fileAttempt++; cancelCopy(); });
 
     async function acceptJsonFile(file: File | undefined) {
@@ -219,7 +221,7 @@ export const AiPromptExchange = defineComponent({
           default: () => h('section', {
             key: stage.value, class: 'ai-exchange-panel',
             'aria-labelledby': props.idPrefix + '-step-title',
-          }, stage.value === 'source' && !props.importOnly ? [
+          }, props.recovering && stage.value === 'response' ? slots.recovery?.() : stage.value === 'source' && !props.importOnly ? [
             h('div', { class: 'ai-exchange-step-heading' }, [
               h('h3', { id: props.idPrefix + '-step-title', ref: stepHeading, tabindex: -1 }, 'Give your AI something to study'),
               h('p', { class: 'ai-exchange-help' }, 'Open your AI chat and share the material you want to learn from.'),

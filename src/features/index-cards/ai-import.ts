@@ -1,13 +1,15 @@
 import { computed, defineComponent, h, onMounted, ref, type PropType } from 'vue';
+import { useAiRecovery } from '../../components/use-ai-recovery.ts';
+import { MAX_CARDS } from './card-model.ts';
 import { AiPromptExchange } from '../../components/ai-prompt-exchange.ts';
 import { AiCoverageAcceptance } from '../../components/ai-coverage-acceptance.ts';
 import { inputValue } from '../../core/dom.ts';
 import { maskFillBlankAnswers, parseFillBlankTemplate } from '../../core/fill-blank.ts';
-import { fillBlankAiPrompt, parseFillBlankAiImport, type AiBlankStyle, type FillBlankCardsImport } from './fill-blank-ai-format.ts';
+import { fillBlankAiPrompt, parseFillBlankAiImport, FILL_BLANK_IMPORT_FORMAT, type AiBlankStyle, type FillBlankCardsImport } from './fill-blank-ai-format.ts';
 import { getSetMode, type SetModeId } from './set-modes.ts';
 import { categoryScopedPrompt, type AiCardScope } from '../../core/ai-study-categories.ts';
 import {
-  answerIsLong, flashCardsAiPrompt, MAX_AI_IMPORT_LENGTH, parseFlashCardsAiImport,
+  answerIsLong, flashCardsAiPrompt, FLASH_CARDS_IMPORT_FORMAT, MAX_AI_IMPORT_LENGTH, parseFlashCardsAiImport,
   type AiCardCoverage, type FlashCardsImport,
 } from './ai-import-format.ts';
 
@@ -44,16 +46,24 @@ export const IndexCardsAiImport = defineComponent({
       ? candidate.value.data.cards.filter(card => answerIsLong(card.answer)).length : 0);
     const overCapacity = computed(() => (candidate.value?.data.cards.length ?? 0) > props.remainingCards);
     onMounted(() => heading.value?.focus({ preventScroll: true }));
+    const recovery = useAiRecovery<IndexCardsAiImportValue>(() => {
+      const format = isFillBlank.value ? FILL_BLANK_IMPORT_FORMAT : FLASH_CARDS_IMPORT_FORMAT;
+      function parse(text: string): IndexCardsAiImportValue {
+        return isFillBlank.value ? { mode: 'fill-in-the-blanks', data: parseFillBlankAiImport(text) }
+          : { mode: 'flash-cards', data: parseFlashCardsAiImport(text) };
+      }
+      return {
+        field: 'cards', formats: [format], title: props.scope?.category.title ?? modeLabel.value,
+        maxItems: Math.min(MAX_CARDS, props.remainingCards), parse,
+        requiredMetadata: props.direct ? [] : ['coverage'],
+        validateItem: entry => JSON.stringify(parse(JSON.stringify({ format, version: 1, title: 'Cards', cards: [entry] })).data.cards[0]),
+      };
+    }, () => modeLabel.value, () => 'cards', value => { candidate.value = value; }, () => { json.value = ''; });
     function preview() {
       candidate.value = null;
       coverageAccepted.value = false;
       problem.value = '';
-      try {
-        candidate.value = isFillBlank.value
-          ? { mode: 'fill-in-the-blanks', data: parseFillBlankAiImport(json.value) }
-          : { mode: 'flash-cards', data: parseFlashCardsAiImport(json.value) };
-        if (!props.direct && !candidate.value.data.coverage) throw new Error('The AI omitted the mandatory source coverage inventory. Request complete JSON with every subject and matching itemNumbers.');
-      } catch (error) { candidate.value = null; problem.value = error instanceof Error ? error.message : String(error); }
+      recovery.check(json.value);
     }
     function previewCards(value: IndexCardsAiImportValue) {
       if (value.mode === 'flash-cards') return value.data.cards.map((card, index) => h('li', { key: index }, [
@@ -92,7 +102,9 @@ export const IndexCardsAiImport = defineComponent({
         importHelp: 'Paste the response from your AI chat to preview the cards.',
         onUpdateJson: (value: string) => { json.value = value; candidate.value = null; coverageAccepted.value = false; problem.value = ''; },
         onValidate: preview,
+        recovering: recovery.active.value,
       }, {
+        recovery: recovery.panel,
         options: () => h('div', { class: 'flash-ai-options' }, [
             h('label', { class: 'flash-ai-option' }, [h('span', 'Coverage'), h('select', {
               value: coverage.value,
@@ -123,7 +135,7 @@ export const IndexCardsAiImport = defineComponent({
           candidate.value.data.coverage ? h(AiCoverageAcceptance, { key: json.value, coverage: candidate.value.data.coverage,
             items: candidate.value.data.cards.map(card => 'question' in card ? card.question : card.text),
             onApproval: (accepted: boolean) => { coverageAccepted.value = accepted; },
-          }) : h('p', { class: 'study-ai-muted' }, 'Legacy JSON without a source coverage inventory: completeness cannot be verified.'),
+          }) : h('p', { class: 'study-ai-muted' }, 'No reliable source coverage inventory is available: completeness cannot be verified.'),
           overCapacity.value ? h('p', { class: 'flash-ai-error', role: 'alert' }, 'This set exceeds the remaining card capacity. Import fewer cards or remove existing cards first.') : null,
           h('button', {
             type: 'button', class: 'card-primary-button', disabled: overCapacity.value || (Boolean(candidate.value.data.coverage) && !coverageAccepted.value),

@@ -1,4 +1,6 @@
 import { computed, defineComponent, h, ref, type PropType } from 'vue';
+import { useAiRecovery } from '../../components/use-ai-recovery.ts';
+import { readAiResponse, type AiCollectionOptions } from '../../core/ai-response-recovery.ts';
 import { AiPromptExchange, type AiPromptExchangeHandle } from '../../components/ai-prompt-exchange.ts';
 import { AiScopeChoices } from '../../components/ai-scope-choices.ts';
 import { AiFocusChoices } from '../../components/ai-focus-choices.ts';
@@ -410,6 +412,57 @@ export function parseGuideAiImport(text: string, mode: GuideMode = 'list'): Simp
   return mode === 'map' ? parseMapImport(value) : parseListImport(value);
 }
 
+/** Only retain original map relationships and solver references; never invent paths or code. */
+function solversForTopics(envelope: Record<string, unknown>, topics: unknown[]): unknown[] {
+  const identities = new Set<string>();
+  for (const topic of topics) {
+    if (!isRecord(topic) || !isRecord(topic.lesson) || !Array.isArray(topic.lesson.blocks)) continue;
+    for (const block of topic.lesson.blocks as unknown[]) {
+      if (!isRecord(block) || block.kind !== 'parameterized' || !isRecord(block.rules) || !isRecord(block.rules.solver)) continue;
+      const solver = block.rules.solver;
+      if (typeof solver.id === 'string' && typeof solver.version === 'string') identities.add(solver.id + ':' + solver.version);
+    }
+  }
+  return Array.isArray(envelope.solvers) ? (envelope.solvers as unknown[]).filter(pkg =>
+    isRecord(pkg) && identities.has(String(pkg.id) + ':' + String(pkg.solverVersion))) : [];
+}
+
+function guideRecoveryOptions(mode: GuideMode, direct: boolean, title: string): AiCollectionOptions<SimpleGuideImport> {
+  const map = mode === 'map';
+  return {
+    field: map ? 'topics' : 'sections',
+    formats: map ? [MAP_IMPORT_FORMAT, LEGACY_MAP_IMPORT_FORMAT] : [LIST_IMPORT_FORMAT, LEGACY_LIST_IMPORT_FORMAT],
+    versions: map ? [TEACHING_IMPORT_VERSION, IMPORT_VERSION] : [IMPORT_VERSION],
+    title, maxItems: map ? MAX_TOPICS : MAX_SECTIONS,
+    requiredMetadata: direct ? [] : ['coverage', 'confidence'],
+    parse: text => parseGuideAiImport(text, mode),
+    validateItem: (item, envelope) => {
+      if (!map) return JSON.stringify(parseImportSections([item], { count: 0 }, 'Guide')[0]);
+      if (!isRecord(item) || typeof item.key !== 'string') throw new Error('This map topic needs a valid key.');
+      const version = envelope.version ?? TEACHING_IMPORT_VERSION;
+      const solvers = solversForTopics(envelope, [item]);
+      const result = parseMapImport({
+        format: MAP_IMPORT_FORMAT, version, title: 'Topic', startTopic: item.key.trim(), topics: [structuredClone(item)], connections: [],
+        ...(solvers.length ? { solvers } : {}),
+      });
+      return result.topics[0].key;
+    },
+    build: map ? (envelope, items) => {
+      if (!Array.isArray(envelope.connections)) throw new Error('The map needs its complete original connections.');
+      const keys = new Set(items.filter(isRecord).map(topic => String(topic.key).trim()));
+      const connections = (envelope.connections as unknown[]).filter(connection => {
+        if (!Array.isArray(connection) || connection.length !== 2 || connection.some(key => typeof key !== 'string')) return true;
+        return connection.every(key => keys.has(String(key).trim()));
+      });
+      const solvers = solversForTopics(envelope, items);
+      const result = { ...envelope, connections, topics: items };
+      if (solvers.length) return { ...result, solvers };
+      const { solvers: _unused, ...withoutSolvers } = result as Record<string, unknown>;
+      return withoutSolvers;
+    } : undefined,
+  };
+}
+
 function importBulletCount(value: SimpleListGuideImport): number {
   return value.sections.reduce((count, section) => count + section.bullets.length, 0);
 }
@@ -439,6 +492,7 @@ export const GuideAiImportWorkspace = defineComponent({
       else if (stage.value === 'exchange') {
         if (exchangeRef.value?.goBack()) return;
         if (props.direct) { emit('back'); return; }
+        recovery.reset();
         stage.value = chosenScope.value ? 'categories' : 'scope';
       } else if (stage.value === 'categories') stage.value = 'scope';
       else emit('back');
@@ -469,24 +523,25 @@ export const GuideAiImportWorkspace = defineComponent({
       mixMode: mixMode.value, aiFocus: aiFocus.value,
       targetBlocks: targetBlocks.value, weights: weights.value,
     }, props.mode, chosenScope.value));
+    const recoveryMode = ref<GuideMode>(props.mode);
+    const recovery = useAiRecovery<SimpleGuideImport>(
+      () => guideRecoveryOptions(recoveryMode.value, props.direct, chosenScope.value?.category.title ?? 'AI Guide'),
+      () => 'Guide', () => recoveryMode.value === 'map' ? 'topics' : 'sections',
+      value => { candidate.value = value; returningFromReview.value = false; stage.value = 'review'; },
+      () => { json.value = ''; }, () => recoveryMode.value === 'list',
+    );
     function importValidated() {
       problem.value = '';
-      try {
-        let imported: SimpleGuideImport;
-        if (props.direct) {
-          try { imported = parseGuideAiImport(json.value, 'list'); }
-          catch { imported = parseGuideAiImport(json.value, 'map'); }
-        } else imported = parseGuideAiImport(json.value, props.mode);
-        if (!props.direct && !imported.coverage)
-          throw new Error('The response is missing its source coverage inventory. Request corrected JSON.');
-        if (!props.direct && !imported.confidence)
-          throw new Error('The response is missing its AI confidence estimates. Request corrected JSON with confidence.');
-        candidate.value = imported;
-        returningFromReview.value = false;
-        stage.value = 'review';
-      } catch (error) {
-        problem.value = error instanceof Error ? error.message : String(error);
-      }
+      candidate.value = null;
+      if (props.direct && !recovery.retrying.value) {
+        recoveryMode.value = 'list';
+        try { readAiResponse(json.value, 'sections'); }
+        catch {
+          try { readAiResponse(json.value, 'topics'); recoveryMode.value = 'map'; }
+          catch { recoveryMode.value = props.mode; }
+        }
+      } else if (!props.direct) recoveryMode.value = props.mode;
+      recovery.check(json.value);
     }
     function optionField<T extends string>(
       id: string,
@@ -541,13 +596,14 @@ export const GuideAiImportWorkspace = defineComponent({
         ref: exchangeRef, idPrefix: 'guide-ai', label: 'Guide', prompt: prompt.value, json: json.value, problem: problem.value, startInImport: props.direct || returningFromReview.value, importOnly: props.direct,
         hasPreview: false, showReviewStep: !props.direct,
         skipSource: Boolean(chosenScope.value),
-        preferFileImport: true, maxLength: MAX_AI_IMPORT_LENGTH,
+        preferFileImport: true, allowRawResponseFile: true, recovering: recovery.active.value, maxLength: MAX_AI_IMPORT_LENGTH,
         promptHelp: 'Create a guided interactive lesson from your source, using Teaching Blocks and an exploratory map.',
         importHelp: 'Upload your AI-generated JSON file or paste the response, then preview the content and coverage estimates.',
         validateLabel: 'Check & preview',
         onUpdateJson: (value: string) => { json.value = value; candidate.value = null; problem.value = ''; },
         onValidate: importValidated,
       }, {
+        recovery: recovery.panel,
         options: () => h('div', { class: 'guide-ai-options' }, [
               optionField('guide-ai-detail', 'Detail', detail.value, [
                 { value: 'concise', label: 'Concise' },

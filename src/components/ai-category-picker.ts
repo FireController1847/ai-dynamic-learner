@@ -1,9 +1,10 @@
 import { defineComponent, h, nextTick, onMounted, ref, watch, type PropType } from 'vue';
+import { useAiRecovery } from './use-ai-recovery.ts';
 import { AiPromptExchange } from './ai-prompt-exchange.ts';
 import { AiSourceIntro } from './ai-source-intro.ts';
 import { PopupDialog } from './popup-dialog.ts';
 import { Icon } from './icon.ts';
-import { studyCategoriesPrompt, parseStudyCategories, type AiCardCategories, type AiCardScope } from '../core/ai-study-categories.ts';
+import { studyCategoriesPrompt, parseStudyCategories, STUDY_CATEGORIES_FORMAT, MAX_CATEGORIES, type AiCardCategories, type AiCardScope } from '../core/ai-study-categories.ts';
 import { readCategoryHistory, rememberCategories, writeCategoryHistory, type CategoryHistoryEntry } from '../core/ai-category-history.ts';
 import { MAX_AI_IMPORT_LENGTH } from '../core/ai-json.ts';
 
@@ -33,6 +34,21 @@ export const AiCategoryPicker = defineComponent({
     const storageMessage = ref('');
     const prompt = studyCategoriesPrompt(props.label);
 
+    const recovery = useAiRecovery(() => ({
+      field: 'categories', formats: [STUDY_CATEGORIES_FORMAT], title: 'Study topics', maxItems: MAX_CATEGORIES,
+      parse: parseStudyCategories,
+      validateItem: entry => {
+        const category = parseStudyCategories(JSON.stringify({ format: STUDY_CATEGORIES_FORMAT, version: 1, title: 'Topics', categories: [entry] })).categories[0];
+        return category.key;
+      },
+      conflicts: (entry, kept) => {
+        const title = (value: unknown) => {
+          if (typeof value !== 'object' || value === null || !('title' in value) || typeof value.title !== 'string') return '';
+          return value.title.trim().replace(/\s+/gu, ' ').toLowerCase();
+        };
+        return kept.some(item => title(item) === title(entry));
+      },
+    }), () => props.label + ' categories', () => 'categories', acceptCategories, () => { json.value = ''; });
     onMounted(() => heading.value?.focus({ preventScroll: true }));
     watch(stage, async () => {
       await nextTick();
@@ -52,6 +68,7 @@ export const AiCategoryPicker = defineComponent({
       else stage.value = 'start';
     }
     function newCategories(direct = false) {
+      recovery.reset();
       importExisting.value = direct;
       problem.value = '';
       json.value = '';
@@ -67,16 +84,14 @@ export const AiCategoryPicker = defineComponent({
     }
     function checkResponse() {
       problem.value = '';
-      try {
-        const parsed = parseStudyCategories(json.value);
-        categories.value = parsed;
-        chosenFrom.value = 'generate';
-        history.value = rememberCategories(history.value, parsed);
-        persist();
-        stage.value = 'choose';
-      } catch (error) {
-        problem.value = error instanceof Error ? error.message : String(error);
-      }
+      recovery.check(json.value);
+    }
+    function acceptCategories(parsed: AiCardCategories) {
+      categories.value = parsed;
+      chosenFrom.value = 'generate';
+      history.value = rememberCategories(history.value, parsed);
+      persist();
+      stage.value = 'choose';
     }
     function removeSaved(entry: CategoryHistoryEntry) {
       const index = history.value.findIndex(item => item.id === entry.id);
@@ -141,7 +156,8 @@ export const AiCategoryPicker = defineComponent({
           validateLabel: 'Check categories',
           onUpdateJson: (value: string) => { json.value = value; problem.value = ''; },
           onValidate: checkResponse,
-        }),
+          recovering: recovery.active.value,
+        }, { recovery: recovery.panel }),
       ];
 
       return categories.value ? [

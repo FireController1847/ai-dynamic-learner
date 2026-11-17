@@ -1,5 +1,4 @@
-import { defineComponent, h, ref, type PropType } from 'vue';
-import { Icon } from '../../components/icon.ts';
+export { AiRecoveryHelp as ReviewAiRecoveryHelp } from '../../components/ai-recovery-help.ts';
 import { parseReviewAiImport, parseReviewQuestionsImport, type ReviewAiImport, type ReviewAiPreferences } from './ai-import-format.ts';
 import { recoverReviewResponse, repairReviewPrompt, type ReviewResponseRecovery } from './ai-response-recovery.ts';
 import { questionDisplayPrompt, validateQuestions, type Question } from './question-model.ts';
@@ -76,73 +75,3 @@ export function reviewBatchPrompt(prompt: string, questions: readonly Question[]
   return prompt + (prompts ? '\n\nReturn ONLY new questions. Do not repeat or paraphrase these already accepted question prompts:\n' + prompts : '');
 }
 
-/** A separate guided repair step, never shown during a successful ordinary import. */
-export const ReviewAiRecoveryHelp = defineComponent({
-  name: 'ReviewAiRecoveryHelp',
-  props: {
-    report: { type: Object as PropType<ReviewResponseRecovery>, required: true },
-    accepted: { type: Number, required: true },
-    repairPrompt: { type: String, required: true },
-    batchPrompt: { type: String, default: '' },
-    batchOnly: Boolean,
-  },
-  emits: { retry: () => true, review: () => true, back: () => true },
-  setup(props, { emit }) {
-    const copied = ref(false);
-    const fallback = ref('');
-    const copying = ref(false);
-    async function copy(text: string) {
-      copying.value = true;
-      try { await navigator.clipboard.writeText(text); copied.value = true; fallback.value = ''; }
-      catch { fallback.value = text; }
-      finally { copying.value = false; }
-    }
-    return () => h('section', { class: 'review-ai-repair-step', 'aria-label': 'Recover your AI response' }, [
-      h('h3', props.batchOnly ? 'Add more questions' : props.accepted ? props.accepted + ' questions are ready!' : 'Your AI response needs a quick fix'),
-      h('p', props.batchOnly ? 'Keep your existing questions and ask the AI for another small batch.' : props.accepted
-        ? 'We kept the questions that could be read. Some of the response could not be used, but you do not need to start over.'
-        : 'We couldn’t read the response yet. This can happen when the AI sends an incomplete or incorrectly formatted reply. You don’t need to fix it yourself.'),
-      copied.value ? [
-        h('div', { class: 'ai-send-scene', 'aria-hidden': 'true' }, [
-          h('div', { class: 'ai-send-piece' }, [h(Icon, { name: 'duplicate' }), 'Copied instructions']),
-          h(Icon, { name: 'chevron' }),
-          h('div', { class: 'ai-send-chat' }, [
-            h('div', { class: 'ai-send-chat-heading' }, [h(Icon, { name: 'ai' }), 'Your AI conversation']),
-            h('div', { class: 'ai-send-bubble' }, [h(Icon, { name: 'document' }), 'Paste instructions here']),
-            h('div', { class: 'ai-send-reply' }, [h(Icon, { name: 'check' }), 'AI replies']),
-          ]),
-        ]),
-        h('div', { class: 'ai-send-directions' }, [
-          h('strong', 'Back in the same AI chat:'),
-          h('ol', [h('li', 'Paste the copied instructions and send them.'), h('li', 'Wait for the AI to finish, then return here with its new response.')]),
-        ]),
-        h('div', { class: 'study-ai-actions' }, [
-          h('button', { type: 'button', class: 'card-primary-button', onClick: () => emit('retry') }, 'I sent the instructions — next'),
-          h('a', { class: 'quiet-button ai-exchange-open-link', href: 'https://chatgpt.com/', target: '_blank', rel: 'noopener noreferrer' }, 'Open ChatGPT'),
-        ]),
-      ] : [
-        h('div', { class: 'study-ai-actions' }, [
-          h('button', { type: 'button', class: 'card-primary-button', disabled: copying.value,
-            onClick: () => { void copy(props.repairPrompt); } }, props.batchOnly ? 'Copy instructions for another batch' : 'Copy instructions to fix the response'),
-          props.accepted ? h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('review') }, 'Continue with ' + props.accepted + ' questions') : null,
-        ]),
-        fallback.value ? h('div', [
-          h('p', { role: 'status' }, 'Copying was blocked. Copy these instructions manually.'),
-          h('textarea', { readonly: true, rows: 5, value: fallback.value, 'aria-label': 'Repair instructions' }),
-          h('button', { type: 'button', class: 'quiet-button', onClick: () => { copied.value = true; fallback.value = ''; } }, 'I copied the instructions'),
-        ]) : null,
-        props.batchPrompt ? h('details', { class: 'review-ai-warning-details' }, [
-          h('summary', 'AI struggling with a large request?'),
-          h('p', 'Try asking for a smaller batch. You can add the new questions to the draft.'),
-          h('button', { type: 'button', class: 'quiet-button', disabled: copying.value, onClick: () => { void copy(props.batchPrompt); } }, 'Copy smaller request'),
-        ]) : null,
-      ],
-      copied.value && props.accepted ? h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('review') }, 'Continue with ' + props.accepted + ' questions instead') : null,
-      !props.batchOnly && (props.report.issues.length || props.report.notices.length) ? h('details', { class: 'review-ai-warning-details' }, [
-        h('summary', 'What went wrong?'),
-        h('ul', [...props.report.issues.map(issue => (issue.item ? 'Question ' + issue.item + ': ' : '') + issue.message), ...props.report.notices].map(message => h('li', message))),
-      ]) : null,
-      h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('back') }, 'Back to response'),
-    ]);
-  },
-});

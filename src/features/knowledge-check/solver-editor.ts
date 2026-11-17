@@ -1,6 +1,7 @@
 import { computed, defineComponent, h, ref, onBeforeUnmount, type PropType } from 'vue';
 import { inputValue } from '../../core/dom.ts';
-import { parseAiImportJson } from '../../core/ai-json.ts';
+import { recoverAiObject, type AiRecoveryReport } from '../../core/ai-response-recovery.ts';
+import { AiRecoveryHelp } from '../../components/ai-recovery-help.ts';
 import { registeredSolvers } from '../../core/parameterized/solvers.ts';
 import { sameSolverPackage, validateSolverPackage, type SolverPackage } from '../../core/parameterized/solver-package.ts';
 import type { GenerationRules } from '../../core/parameterized/template.ts';
@@ -11,6 +12,7 @@ export const SolverEditor = defineComponent({
   emits: { upload: (_pkg: SolverPackage) => true },
   setup(props, { emit }) {
     const message = ref('');
+    const recovery = ref<AiRecoveryReport | null>(null);
     let active = true;
     onBeforeUnmount(() => { active = false; });
     const reading = ref(false);
@@ -26,16 +28,19 @@ export const SolverEditor = defineComponent({
     async function upload(event: Event) {
       const input = event.target as HTMLInputElement;
       const file = input.files?.[0]; if (!file) return;
-      reading.value = true; message.value = '';
+      reading.value = true; message.value = ''; recovery.value = null;
       try {
         if (file.size > 128 * 1024) throw new Error('Solver packages must be at most 128 KiB.');
         const text = await file.text(); if (!active) return;
-        const value: unknown = parseAiImportJson(text); validateSolverPackage(value);
+        const value: unknown = recoverAiObject(text); validateSolverPackage(value);
         const existing = packages.value.find(pkg => pkg.id === value.id && pkg.solverVersion === value.solverVersion);
         if (existing && !sameSolverPackage(existing, value)) throw new Error('This solver ID/version already has different code. Give the new package a new version.');
         emit('upload', value); attach(value);
         message.value = `Uploaded ${value.label}. Map its inputs below, then choose solver output keys for your answers.`;
-      } catch (error) { message.value = error instanceof Error ? error.message : String(error); }
+      } catch (error) {
+        message.value = error instanceof Error ? error.message : String(error);
+        recovery.value = { issues: [{ message: message.value }], notices: [] };
+      }
       finally { reading.value = false; input.value = ''; }
     }
     function select(event: Event) {
@@ -58,7 +63,12 @@ export const SolverEditor = defineComponent({
       return h('details', { open: Boolean(solver) }, [h('summary', 'Registered solver (optional)'),
         h('p', { class: 'knowledge-muted' }, 'Upload a JavaScript solver JSON package, or select a solver already used in this set. Uploaded code runs in an isolated background runner.'),
         h('label', { class: 'knowledge-field' }, ['Upload solver (.json)', h('input', { type: 'file', accept: '.json,application/json', disabled: reading.value, onChange: upload })]),
-        message.value ? h('p', { class: 'knowledge-message', role: 'status' }, message.value) : null,
+        recovery.value ? h(AiRecoveryHelp, {
+          report: recovery.value, accepted: 0, itemLabel: 'solver packages', canContinue: false, appendRepair: false,
+          repairPrompt: 'Correct the complete Dynamic Learner solver JSON package from the previous response. Preserve its intended algorithm and output names, use a new solverVersion if the code changes, and return one valid complete version-1 dynamic-learner-solver JSON file. Do not invent missing code. Error: ' + message.value,
+          onRetry: () => { recovery.value = null; message.value = 'Upload the corrected solver file above when the AI finishes.'; },
+          onBack: () => { recovery.value = null; },
+        }) : message.value ? h('p', { class: 'knowledge-message', role: 'status' }, message.value) : null,
         h('label', { class: 'knowledge-field' }, ['Solver', h('select', { value: selected, onChange: select }, [
           h('option', { value: '' }, 'Expressions only'),
           ...registeredSolvers().map(entry => h('option', { value: `builtin:${entry.id}:${entry.version}` }, `${entry.label} (${entry.version})`)),

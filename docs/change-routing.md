@@ -15,6 +15,7 @@ Use this as a starting-file index, not a feature specification. Follow imports o
 | Tips engine/UI | `packages/tips/` |
 | Shared buttons/dialogs | `src/styles/base.css`, `src/components/use-dialog.ts`, `popup-dialog.ts` |
 | Shared guided AI handoff, source illustration, visual scope selection, import, and animation | `src/components/ai-prompt-exchange.ts`, `src/components/ai-source-intro.ts`, `src/components/ai-scope-choices.ts`, `src/styles/ai-prompt-exchange.css` |
+| Shared AI response recovery, partial imports, and guided correction | `src/core/ai-response-recovery.ts`, `src/components/use-ai-recovery.ts`, `src/components/ai-recovery-help.ts`; feature-specific validators and adapters |
 | Shared AI category selection, saved lists, and discovery | `src/components/ai-category-picker.ts`, `src/core/ai-study-categories.ts`, `ai-category-history.ts`, `ai-json.ts` |
 | Shared GFM rendering / typography | `src/components/markdown-renderer.ts`, `markdown-content.ts`, `src/styles/markdown-content.css`; Notebook keeps its heading/outline adapter |
 | Answer strictness control | `src/components/answer-strictness-field.ts` |

@@ -1,4 +1,5 @@
 import { MAX_AI_IMPORT_LENGTH } from '../../core/ai-json.ts';
+import { readAiResponse, type AiResponseIssue } from '../../core/ai-response-recovery.ts';
 import { isRecord } from '../../core/validation.ts';
 import { parseAiSolvers } from './ai-parameterized-format.ts';
 import { parseReviewAiImport, REVIEW_AI_FORMAT, type ReviewAiImport, type ReviewAiPreferences } from './ai-import-format.ts';
@@ -6,7 +7,7 @@ import { AI_QUESTION_TYPES, allocateQuestions, questionMixProblem, questionTypeL
 import { MAX_NAME_LENGTH } from './library-model.ts';
 import { MAX_TEXT, validateQuestions, type Question } from './question-model.ts';
 
-export interface ReviewResponseIssue { item?: number; message: string; source?: string }
+export type ReviewResponseIssue = AiResponseIssue;
 export interface ReviewResponseRecovery {
   candidate: ReviewAiImport | null;
   issues: ReviewResponseIssue[];
@@ -17,157 +18,6 @@ export interface ReviewResponseRecovery {
 
 function errorText(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
-}
-
-/** Remove only commas immediately before a closing delimiter, outside strings. */
-function removeTrailingCommas(text: string): string {
-  let result = '', quoted = false, escaped = false;
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i];
-    if (quoted) {
-      result += char;
-      if (escaped) escaped = false;
-      else if (char === '\\') escaped = true;
-      else if (char === '"') quoted = false;
-    } else if (char === '"') {
-      quoted = true; result += char;
-    } else if (char === ',') {
-      let next = i + 1;
-      while (next < text.length && /\s/.test(text[next])) next++;
-      if (text[next] !== '}' && text[next] !== ']') result += char;
-    } else result += char;
-  }
-  return result;
-}
-
-function parseLoose(text: string): unknown {
-  try { return JSON.parse(text) as unknown; }
-  catch { return JSON.parse(removeTrailingCommas(text)) as unknown; }
-}
-
-/** Find a complete object/array, respecting JSON strings and nested delimiters. */
-function endOfValue(text: string, start: number): number {
-  const stack: string[] = [];
-  let quoted = false, escaped = false;
-  for (let i = start; i < text.length; i++) {
-    const char = text[i];
-    if (quoted) {
-      if (escaped) escaped = false;
-      else if (char === '\\') escaped = true;
-      else if (char === '"') quoted = false;
-      continue;
-    }
-    if (char === '"') quoted = true;
-    else if (char === '{' || char === '[') stack.push(char);
-    else if (char === '}' || char === ']') {
-      if (stack.pop() !== (char === '}' ? '{' : '[')) return -1;
-      if (!stack.length) return i + 1;
-    }
-  }
-  return -1;
-}
-
-function looksLikeReview(value: unknown): boolean {
-  return Array.isArray(value) || (isRecord(value) && Array.isArray(value.questions));
-}
-
-interface RawEntry { number: number; value?: unknown; invalid?: string; source: string }
-interface ResponseSource { envelope: Record<string, unknown>; entries: RawEntry[]; incomplete: boolean; changed: boolean }
-
-function completeSource(value: unknown, changed: boolean): ResponseSource {
-  const envelope = Array.isArray(value) ? { questions: value } : value;
-  if (!isRecord(envelope) || !Array.isArray(envelope.questions)) throw new Error('No Review questions were found. Paste the AI’s full response or attach its file.');
-  return { envelope, entries: envelope.questions.map((entry: unknown, index: number) => ({
-    number: index + 1, value: entry, source: JSON.stringify(entry) ?? '',
-  })), incomplete: false, changed };
-}
-
-/** Recover completed array elements from an interrupted or malformed envelope.
- * Never invent the missing tail, close a partial question, or infer an answer. */
-function recoverArray(text: string, start: number, envelope: Record<string, unknown>): ResponseSource {
-  const entries: RawEntry[] = [];
-  let cursor = start + 1, closed = false;
-  while (cursor < text.length) {
-    while (cursor < text.length && /[\s,]/.test(text[cursor])) cursor++;
-    if (text[cursor] === ']') { closed = true; break; }
-    if (cursor >= text.length) break;
-    const number = entries.length + 1;
-    if (text[cursor] !== '{') {
-      entries.push({ number, invalid: 'This question is not a complete JSON object.', source: text.slice(cursor, cursor + 2000) });
-      break;
-    }
-    const end = endOfValue(text, cursor);
-    if (end < 0) {
-      entries.push({ number, invalid: 'The response ended or became malformed in this question.', source: text.slice(cursor, cursor + 2000) });
-      break;
-    }
-    const source = text.slice(cursor, end);
-    try { entries.push({ number, value: parseLoose(source), source }); }
-    catch { entries.push({ number, invalid: 'This question could not be read.', source }); }
-    cursor = end;
-  }
-  return { envelope, entries, incomplete: !closed || entries.some(entry => Boolean(entry.invalid)), changed: true };
-}
-
-function readSource(text: string): ResponseSource {
-  const trimmed = text.trim().replace(/^\uFEFF/, '');
-  if (!trimmed) throw new Error('Paste or upload the response from your AI first.');
-  try {
-    const value = JSON.parse(trimmed) as unknown;
-    if (looksLikeReview(value)) return completeSource(value, false);
-  } catch { /* Find a wrapped or incomplete response below. */ }
-
-  const fences = [...trimmed.matchAll(/(?:^|\n)\s*```(?:json)?[ \t]*\r?\n([\s\S]*?)(?:\r?\n\s*```|$)/gi)].map(match => match[1].trim());
-  const blocks = fences.length ? fences : [trimmed];
-  const found: ResponseSource[] = [];
-  for (const block of blocks) {
-    const first = block.search(/[\[{]/);
-    if (first < 0) continue;
-    const end = endOfValue(block, first);
-    if (end > first) {
-      try {
-        const value = parseLoose(block.slice(first, end));
-        if (looksLikeReview(value)) { found.push(completeSource(value, true)); continue; }
-      } catch { /* Recover independently complete questions below. */ }
-    }
-    if (block[first] === '[') {
-      const result = recoverArray(block, first, {});
-      if (result.entries.length) found.push(result);
-      continue;
-    }
-    // Only recognize a questions property at the root, never text inside a question.
-    let depth = 0, quoted = false, escaped = false, keyStart = -1;
-    for (let i = first; i < block.length; i++) {
-      const char = block[i];
-      if (quoted) {
-        if (escaped) escaped = false;
-        else if (char === '\\') escaped = true;
-        else if (char === '"') {
-          quoted = false;
-          if (depth === 1 && keyStart >= 0 && block.slice(keyStart, i + 1) === '"questions"') {
-            const match = /^\s*:\s*\[/.exec(block.slice(i + 1));
-            if (match) {
-              const arrayStart = i + match[0].length;
-              const prefix = block.slice(first, keyStart).trimEnd().replace(/,\s*$/, '');
-              let envelope: Record<string, unknown> = {};
-              try {
-                const header = parseLoose(prefix + '}');
-                if (isRecord(header)) envelope = header;
-              } catch { /* Header is optional for recovery. */ }
-              found.push(recoverArray(block, arrayStart, envelope));
-              break;
-            }
-          }
-        }
-      } else if (char === '"') { quoted = true; keyStart = i; }
-      else if (char === '{' || char === '[') depth++;
-      else if (char === '}' || char === ']') depth--;
-    }
-  }
-  if (found.length !== 1) throw new Error(found.length > 1
-    ? 'More than one possible Review response was found. Paste the one you want to use, separately.'
-    : 'No Review questions were found. If the AI stopped early or only gave an explanation, ask it to return the questions or try a smaller request.');
-  return found[0];
 }
 
 function normalizeEntry(value: unknown): { value: unknown; changed: boolean } {
@@ -190,7 +40,7 @@ export function recoverReviewResponse(text: string, preferences: ReviewAiPrefere
   const result: ReviewResponseRecovery = { candidate: null, issues: [], recovered: 0, received: 0, notices: [] };
   try {
     if (text.length > MAX_AI_IMPORT_LENGTH) throw new Error('This response is too large. Ask for a smaller batch.');
-    const source = readSource(text), envelope = source.envelope;
+    const source = readAiResponse(text, 'questions'), envelope = source.envelope;
     if (envelope.format !== undefined && envelope.format !== REVIEW_AI_FORMAT) throw new Error('This response belongs to a different format, not Review.');
     if (envelope.version !== undefined && envelope.version !== 1) throw new Error('This Review response uses an unsupported version.');
     result.received = source.entries.length;

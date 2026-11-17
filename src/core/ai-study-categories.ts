@@ -2,8 +2,8 @@ import { isRecord } from './validation.ts';
 import { parseAiImportJson } from './ai-json.ts';
 const MAX_NAME_LENGTH = 120;
 
-const FORMAT = 'dynamic-learner-index-card-categories';
-const MAX_CATEGORIES = 40;
+export const STUDY_CATEGORIES_FORMAT = 'dynamic-learner-index-card-categories';
+export const MAX_CATEGORIES = 40;
 export interface AiCardCategory { key: string; title: string; description: string }
 export interface AiCardCategories { title: string; categories: AiCardCategory[] }
 export interface AiCardScope { subject: string; category: AiCardCategory }
@@ -19,7 +19,7 @@ export function studyCategoriesPrompt(product = 'Index Cards'): string {
 Return ONLY one JSON code block:
 \`\`\`json
 {
-  "format": "${FORMAT}",
+  "format": "${STUDY_CATEGORIES_FORMAT}",
   "version": 1,
   "title": "Subject title",
   "categories": [
@@ -32,13 +32,13 @@ Use 1–${MAX_CATEGORIES} categories with unique keys (1–64 characters) and ti
 }
 
 export function categoryResponseJson(value: AiCardCategories): string {
-  return JSON.stringify({ format: FORMAT, version: 1, ...value }, null, 2);
+  return JSON.stringify({ format: STUDY_CATEGORIES_FORMAT, version: 1, ...value }, null, 2);
 }
 
 export function parseStudyCategories(text: string): AiCardCategories {
   const value = parseAiImportJson(text);
   if (!isRecord(value) || Object.keys(value).some(key => !['format', 'version', 'title', 'categories'].includes(key)) ||
-      value.format !== FORMAT || value.version !== 1 ||
+      value.format !== STUDY_CATEGORIES_FORMAT || value.version !== 1 ||
       typeof value.title !== 'string' || !value.title.trim() || value.title.trim().length > MAX_NAME_LENGTH ||
       !Array.isArray(value.categories) || !value.categories.length || value.categories.length > MAX_CATEGORIES) {
     throw new Error(`Paste a supported category response with a subject title and 1–${MAX_CATEGORIES} categories. Use the category prompt, not the card prompt.`);

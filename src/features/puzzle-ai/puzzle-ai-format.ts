@@ -131,6 +131,28 @@ The example is a STRUCTURAL TEMPLATE, not puzzle content. Output ${minimumEntrie
   return scope ? categoryScopedPrompt(body, scope, kind === 'word-search' ? 'word-search terms and hints' : 'crossword answers and clues') : body;
 }
 
+/** Validate an individual entry using the exact same rules as complete imports. */
+export function parsePuzzleAiEntry(item: unknown, kind: PuzzleAiKind, options: PuzzleAiOptions, index = 0): { answer: string; clue: string } {
+  if (kind === 'word-search') {
+    if (!isRecord(item) || Object.keys(item).some(k => !['word', 'hint'].includes(k)) ||
+        typeof item.word !== 'string' ||
+        (item.hint !== undefined && (typeof item.hint !== 'string' || item.hint.length > MAX_HINT_LENGTH))) {
+      throw new Error(`Word ${index + 1} needs one valid word and, when supplied, a concise hint.`);
+    }
+    if (options.studyMode === 'hints' && (typeof item.hint !== 'string' || !item.hint.trim())) {
+      throw new Error(`Word ${index + 1} needs a descriptive hint in hint study mode.`);
+    }
+    return { answer: singleWord(item.word, `Word ${index + 1}`, Math.min(MAX_WORD_LENGTH, options.size)),
+      clue: typeof item.hint === 'string' ? item.hint.trim() : '' };
+  }
+  if (!isRecord(item) || Object.keys(item).some(k => !['answer', 'clue'].includes(k)) ||
+      typeof item.answer !== 'string' || typeof item.clue !== 'string' || !item.clue.trim() ||
+      item.clue.length > MAX_CLUE_LENGTH) {
+    throw new Error(`Answer ${index + 1} needs a valid word and a nonempty clue.`);
+  }
+  return { answer: singleWord(item.answer, `Crossword answer ${index + 1}`, MAX_ANSWER_LENGTH), clue: item.clue.trim() };
+}
+
 export function parsePuzzleAiImport(json: string, kind: PuzzleAiKind, scope: AiCardScope | null, options: PuzzleAiOptions): PuzzleAiResult {
   const limit = options.count;
   const randomPool = kind === 'word-search' && options.selectionMode === 'random';
@@ -151,19 +173,11 @@ export function parsePuzzleAiImport(json: string, kind: PuzzleAiKind, scope: AiC
     const words: string[] = [];
     const hints: Record<string, string> = {};
     for (const [index, item] of items.entries()) {
-      if (!isRecord(item) || Object.keys(item).some(k => !['word', 'hint'].includes(k)) ||
-          typeof item.word !== 'string' ||
-          (item.hint !== undefined && (typeof item.hint !== 'string' || item.hint.length > MAX_HINT_LENGTH))) {
-        throw new Error(`Word ${index + 1} needs one valid word and, when supplied, a concise hint.`);
-      }
-      if (options.studyMode === 'hints' && (typeof item.hint !== 'string' || !item.hint.trim())) {
-        throw new Error(`Word ${index + 1} needs a descriptive hint in hint study mode.`);
-      }
-      const word = singleWord(item.word, `Word ${index + 1}`, Math.min(MAX_WORD_LENGTH, options.size));
+      const { answer: word, clue } = parsePuzzleAiEntry(item, kind, options, index);
       if (used.has(word)) throw new Error(`The answer ${word} is repeated.`);
       used.add(word);
       words.push(word);
-      if (typeof item.hint === 'string' && item.hint.trim()) hints[word] = item.hint.trim();
+      if (clue) hints[word] = clue;
     }
     const puzzle: WordSearchPuzzle = {
       words, hints,
@@ -179,16 +193,11 @@ export function parsePuzzleAiImport(json: string, kind: PuzzleAiKind, scope: AiC
 
   const entries: CrosswordPuzzle['entries'] = [];
   for (const [index, item] of items.entries()) {
-    if (!isRecord(item) || Object.keys(item).some(k => !['answer', 'clue'].includes(k)) ||
-        typeof item.answer !== 'string' || typeof item.clue !== 'string' || !item.clue.trim() ||
-        item.clue.length > MAX_CLUE_LENGTH) {
-      throw new Error(`Answer ${index + 1} needs a valid word and a nonempty clue.`);
-    }
-    const answer = singleWord(item.answer, `Crossword answer ${index + 1}`, MAX_ANSWER_LENGTH);
-    if (used.has(answer)) throw new Error(`The answer ${answer} is repeated.`);
-    used.add(answer); entries.push({ answer, clue: item.clue.trim() });
+    const entry = parsePuzzleAiEntry(item, kind, options, index);
+    if (used.has(entry.answer)) throw new Error(`The answer ${entry.answer} is repeated.`);
+    used.add(entry.answer); entries.push(entry);
   }
   const puzzle: CrosswordPuzzle = { entries, instructions: options.instructions.trim() };
   validatePuzzleForGeneration(puzzle);
-  return { kind, title: value.title.trim(), puzzle };
+  return { kind, title: value.title.trim(), puzzle, coverage };
 }

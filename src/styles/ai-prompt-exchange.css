@@ -266,3 +266,10 @@
 .ai-scope-example-output { display:flex;align-items:center;gap:5px;color:var(--text-color)!important;font-weight:600!important;font-size:12px!important; }
 .ai-scope-example-output .ui-icon { width:14px;height:14px;color:var(--brand-text); }
 @media(prefers-reduced-motion:reduce) {.ai-scope-choices>.quiet-button { transition:none; }.ai-scope-choices>.quiet-button:hover {transform:none}}
+
+/* Review recovery uses the same visual handoff as the normal guided exchange. */
+.ai-repair-step { display:grid;gap:16px;min-width:0;padding:16px;border:1px solid var(--border-color);border-radius:var(--radius-dialog); }
+.ai-repair-step h3,.ai-repair-step p { margin:0; }
+.ai-repair-step textarea { width:100%;min-width:0; }
+.ai-repair-step > .quiet-button { justify-self:start; }
+.ai-repair-step .study-ai-actions { flex-wrap:wrap; }
