@@ -374,7 +374,7 @@ export const KnowledgeCheckLibrary = defineComponent({
           class: ['knowledge-check-library-home', { 'is-selected': props.homeActive }],
           'aria-pressed': props.homeActive,
           onClick: () => { emit('select', null); emit('open-item'); },
-        }, [h(Icon, { name: 'grid' }), 'Review home']),
+        }, [h(Icon, { name: 'grid' }), 'Home']),
         rootTarget('before', 'Top level'),
         props.items.length
           ? h('ul', { class: 'knowledge-check-library-list', 'aria-label': 'Groups and knowledge sets' },

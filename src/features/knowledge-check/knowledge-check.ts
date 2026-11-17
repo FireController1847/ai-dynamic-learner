@@ -9,6 +9,8 @@ import { ReviewAiCreation } from './ai-creation.ts';
 import type { ReviewAiImport } from './ai-import-format.ts';
 import { questionsForSave } from './question-model.ts';
 import { inputValue } from '../../core/dom.ts';
+import { isValidId } from '../../core/ids.ts';
+import { clearPreference } from '../../core/ui-preferences.ts';
 import { Icon } from '../../components/icon.ts';
 import { LibraryEmptyState } from '../../components/library-empty-state.ts';
 import { usePersistedPanelResize } from '../../components/use-persisted-panel-resize.ts';
@@ -29,6 +31,14 @@ type SetupTarget = CheckTarget;
 
 const MIN_LIBRARY_WIDTH = 248;
 const LIBRARY_WIDTH_KEY = 'dynamic-learner.ui.knowledge-check.library-width';
+const RECENT_ITEM_KEY = 'dynamic-learner.ui.knowledge-check.recent-item';
+
+function readRecentItem(): string | null {
+  try {
+    const id = localStorage.getItem(RECENT_ITEM_KEY);
+    return isValidId(id) ? id : null;
+  } catch { return null; }
+}
 
 export const KnowledgeCheck = defineComponent({
   name: 'KnowledgeCheck',
@@ -43,6 +53,7 @@ export const KnowledgeCheck = defineComponent({
     const aiTarget = ref<SetupTarget | null>(null);
     onDeactivated(() => { aiTarget.value = null; });
     const selectedId = ref<string | null>(null);
+    const recentId = ref<string | null>(readRecentItem());
     const setupVersion = ref(0);
     const workspaceHeading = ref<HTMLElement | null>(null);
     const overlayQuery = window.matchMedia('(max-width: 700px), (max-width: 1100px) and (pointer: coarse)');
@@ -152,6 +163,18 @@ export const KnowledgeCheck = defineComponent({
     });
 
     const selection = computed(() => findItem(props.model.items, selectedId.value));
+    const recentItem = computed(() => recentId.value ? findItem(props.model.items, recentId.value)?.item ?? null : null);
+    watch(selectedId, (id) => {
+      if (!id || id === tutorialSetId.value || !findItem(props.model.items, id)) return;
+      recentId.value = id;
+      try { localStorage.setItem(RECENT_ITEM_KEY, id); }
+      catch { /* UI preferences are best-effort only. */ }
+    }, { flush: 'sync' });
+    watch(recentItem, (item) => {
+      if (item || !recentId.value) return;
+      recentId.value = null;
+      clearPreference(RECENT_ITEM_KEY);
+    });
     const homeActive = computed(() => !selection.value && !setupTarget.value && !importTarget.value && !aiTarget.value);
     watch(() => selectedId.value !== null && !selection.value, (missing) => {
       if (missing) selectedId.value = null;
@@ -188,12 +211,24 @@ export const KnowledgeCheck = defineComponent({
     }
 
     function selectItem(id: string | null) {
-      if ((id !== selectedId.value || setupTarget.value || importTarget.value || aiTarget.value) && !requestLeave()) return;
+      if ((id !== selectedId.value || setupTarget.value || importTarget.value || aiTarget.value) && !requestLeave()) return false;
       selectedId.value = id;
       setupTarget.value = null;
       importTarget.value = null;
       aiTarget.value = null;
       message.value = '';
+      return true;
+    }
+
+    function returnToRecentItem() {
+      const item = recentItem.value;
+      if (!item || !selectItem(item.id)) return;
+      library.value?.reveal(item.id);
+      if (libraryOverlay.value) libraryCollapsed.value = true;
+      nextTick(() => {
+        const heading = workspaceHeading.value ?? layout.value?.querySelector<HTMLElement>('.knowledge-check-detail');
+        heading?.focus({ preventScroll: true });
+      });
     }
 
     function openNewKnowledgeCheck(target: SetupTarget) {
@@ -363,7 +398,7 @@ export const KnowledgeCheck = defineComponent({
     }
 
     function splashScreen() {
-      const target: SetupTarget = { parentId: null, parentName: 'Top level' };
+      const target: SetupTarget = { parentId: null, parentName: 'Top level', selectedId: null };
       const actions = [
         { icon: 'ai', label: 'Create with AI', description: 'Generate a knowledge set from your study materials.', run: () => openAiCreation(target) },
         { icon: 'upload', label: 'Import knowledge set', description: 'Build a set from material in your other apps.', run: () => openImportKnowledgeCheck(target) },
@@ -372,7 +407,7 @@ export const KnowledgeCheck = defineComponent({
       ];
       return h('section', {
         class: 'knowledge-check-detail knowledge-check-splash',
-        'aria-label': 'Review home',
+        'aria-label': 'Home',
         inert: libraryOverlay.value && !libraryCollapsed.value,
       }, [
         h('div', { class: 'knowledge-check-splash-content' }, [
@@ -390,12 +425,17 @@ export const KnowledgeCheck = defineComponent({
                 h('strong', action.label), h('span', action.description),
               ]),
             ]))),
-          h('p', { class: 'knowledge-check-splash-note' }, [
-            props.model.items.length ? 'Or select a knowledge set from your library.' : 'Your knowledge sets will appear in the library.',
-            libraryCollapsed.value ? h('button', {
-              type: 'button', class: 'quiet-button', onClick: () => setLibraryCollapsed(false),
-            }, 'Open library') : null,
-          ]),
+          recentItem.value ? h('div', { class: 'knowledge-check-splash-note' }, [
+            h('button', {
+              type: 'button', class: 'quiet-button knowledge-check-recent-button',
+              title: `Return to ${recentItem.value.name}`,
+              onClick: returnToRecentItem,
+            }, [
+              h(Icon, { name: recentItem.value.kind === 'group' ? 'folder' : 'cards' }),
+              h('span', `Return to ${recentItem.value.name}`),
+              h(Icon, { name: 'arrow-right' }),
+            ]),
+          ]) : null,
           h('p', { class: 'visually-hidden', role: 'status' }, message.value),
         ]),
       ]);
@@ -446,6 +486,7 @@ export const KnowledgeCheck = defineComponent({
         return h('section', {
           class: 'knowledge-check-detail',
           'aria-label': 'Selected group',
+          tabindex: -1,
           inert: libraryOverlay.value && !libraryCollapsed.value,
         }, [
           h(LibraryEmptyState, {
