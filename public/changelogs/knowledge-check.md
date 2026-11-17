@@ -1,3 +1,18 @@
+## v1.50.2
+
+<small data-utc="2026-11-17T01:17:44Z">November 16, 2026 at 6:17 PM MST</small>
+
+- **AI Creation:** Restored the original guided scope, configuration, and AI walkthrough screens.
+- **Response Recovery:** Guide users through correcting failed AI responses, retain usable questions, and accept repaired questions without starting over.
+- **Import:** Recover malformed response files and keep the guided repair experience when adding questions to an existing set.
+
+<details>
+<summary>View 1 commit</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/0d44dddca34bbe753c1882dad684e06e6d9520b6">0d44dddc</a> — Restore guided Review AI creation and focus improvements on recovery (v1.50.2)</li>
+</ol>
+</details>
+
 ## v1.50.1
 
 <small data-utc="2026-11-17T01:10:51Z">November 16, 2026 at 6:10 PM MST</small>
