@@ -7,10 +7,11 @@
 - **Recent Items:** Return to the last opened knowledge set or group directly from Home, even after reloading.
 
 <details>
-<summary>View 2 commits</summary>
+<summary>View 3 commits</summary>
 <ol>
 <li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/7f685ba34f6a1fb09393300234b2fd7267b005fb">7f685ba3</a> — Experiment with a Review home splash screen (v1.50.0)</li>
 <li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/abe1729116005a8935ace270f38f3de3ae002ed9">abe17291</a> — Polish Review Home and remember the last opened item</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/afbdccded6ffd7088f4ded74bbe09c6ac9c264ce">afbdccde</a> — Extend shared library Home to all library-based apps</li>
 </ol>
 </details>
 

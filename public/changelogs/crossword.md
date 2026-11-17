@@ -1,3 +1,17 @@
+## v1.10.0
+
+<small data-utc="2026-11-17T01:02:39Z">November 16, 2026 at 6:02 PM MST</small>
+
+- **Home:** Open to a dedicated landing page with library actions, including when the library is empty, instead of automatically opening the first item.
+- **Recent Items:** Return to the most recently opened item from Home, even after reloading.
+
+<details>
+<summary>View 1 commit</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/afbdccded6ffd7088f4ded74bbe09c6ac9c264ce">afbdccde</a> — Extend shared library Home to all library-based apps</li>
+</ol>
+</details>
+
 ## v1.9.1
 
 <small data-utc="2026-10-26T05:10:42Z">October 25, 2026 at 11:10 PM MDT</small>
