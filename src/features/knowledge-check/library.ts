@@ -4,6 +4,7 @@ export interface KnowledgeCheckLibraryHandle {
   focusNewKnowledgeCheck(): void;
   focusImportKnowledgeCheck(): void;
   focusAiCreation(): void;
+  createGroup(): void;
 }
 import type { VNode } from 'vue';
 import type { LibraryItem, MovePosition } from './library-model.ts';
@@ -23,6 +24,7 @@ export const KnowledgeCheckLibrary = defineComponent({
     items: { type: Array as PropType<LibraryItem[]>, required: true },
     selectedId: { type: String as PropType<string | null>, default: null },
     collapsed: Boolean,
+    homeActive: Boolean,
     beforeChange: { type: Function as PropType<() => boolean>, default: () => true },
   },
   emits: {
@@ -47,6 +49,7 @@ export const KnowledgeCheckLibrary = defineComponent({
     const createKnowledgeCheckButton = ref<HTMLButtonElement | null>(null);
     const importKnowledgeCheckButton = ref<HTMLButtonElement | null>(null);
     const collapseButton = ref<HTMLButtonElement | null>(null);
+    const homeButton = ref<HTMLButtonElement | null>(null);
     const labels = new Map<string | null, HTMLElement>();
     let deleteTrigger: HTMLElement | null = null;
 
@@ -151,6 +154,7 @@ export const KnowledgeCheckLibrary = defineComponent({
 
     expose({
       reveal,
+      createGroup: createGroupRelativeToSelection,
       focusToggle: () => collapseButton.value?.focus(),
       focusNewKnowledgeCheck: () => createKnowledgeCheckButton.value?.focus(),
       focusImportKnowledgeCheck: () => importKnowledgeCheckButton.value?.focus(),
@@ -241,14 +245,13 @@ export const KnowledgeCheckLibrary = defineComponent({
         if (next.kind === 'group') removed.push(...next.children);
       }
       if (removesSelection) {
-        if (fallbackId) reveal(fallbackId);
-        emit('select', fallbackId);
+        emit('select', null);
       }
       pendingDelete.value = null;
       deleteTrigger = null;
       announcement.value = `Deleted ${item.name}${item.kind === 'group' ? ' and everything inside it' : ''}.`;
       await nextTick();
-      (labels.get(fallbackId) ?? createGroupButton.value)?.focus();
+      (removesSelection ? homeButton.value : labels.get(fallbackId) ?? createGroupButton.value)?.focus();
     }
 
     function renderItem(item: LibraryItem): VNode {
@@ -366,6 +369,12 @@ export const KnowledgeCheckLibrary = defineComponent({
         ]),
       ]),
       h('div', { class: 'knowledge-check-library-scroll' }, [
+        h('button', {
+          ref: homeButton, type: 'button',
+          class: ['knowledge-check-library-home', { 'is-selected': props.homeActive }],
+          'aria-pressed': props.homeActive,
+          onClick: () => { emit('select', null); emit('open-item'); },
+        }, [h(Icon, { name: 'grid' }), 'Review home']),
         rootTarget('before', 'Top level'),
         props.items.length
           ? h('ul', { class: 'knowledge-check-library-list', 'aria-label': 'Groups and knowledge sets' },
