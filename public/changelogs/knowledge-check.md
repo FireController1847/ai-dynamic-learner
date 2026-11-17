@@ -1,3 +1,18 @@
+## v1.50.1
+
+<small data-utc="2026-11-17T01:10:51Z">November 16, 2026 at 6:10 PM MST</small>
+
+- **AI Creation:** Restored a guided, four-step flow with one task visible at a time.
+- **Topic Selection:** Enter a specific topic directly, or optionally find topics with AI or reuse a saved topic list.
+- **Response Recovery:** Kept partial imports, repair requests, and additional batches within the guided flow.
+
+<details>
+<summary>View 1 commit</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/f2b361ff774cb2479a3dc81f0c8aa4110389016f">f2b361ff</a> — Restore guided Review AI creation and simplify topic selection (v1.50.1)</li>
+</ol>
+</details>
+
 ## v1.50.0
 
 <small data-utc="2026-11-17T00:49:25Z">November 16, 2026 at 5:49 PM MST</small>
