@@ -1,9 +1,14 @@
-import { computed, defineComponent, h, nextTick, ref, type PropType } from 'vue';
+import { computed, defineComponent, h, ref, type PropType } from 'vue';
+import { AiPromptExchange } from '../../components/ai-prompt-exchange.ts';
+import { MarkdownContent } from '../../components/markdown-content.ts';
+import { MAX_AI_IMPORT_LENGTH } from '../../core/ai-json.ts';
+import { parseFillBlankTemplate } from '../../core/fill-blank.ts';
 import { inputValue } from '../../core/dom.ts';
-import { DEFAULT_AI_WEIGHTS, questionCountProblem } from './ai-question-mix.ts';
-import { reviewAiPrompt, type ReviewAiImport, type ReviewAiPreferences } from './ai-import-format.ts';
-import { ReviewAiResponseWorkspace, reviewAiProgress, type ReviewAiStep } from './ai-response-workspace.ts';
+import { DEFAULT_AI_WEIGHTS, questionCountProblem, questionTypeLabel } from './ai-question-mix.ts';
+import { reviewAiPrompt, type ReviewAiImport } from './ai-import-format.ts';
 import { questionDisplayPrompt, type Question } from './question-model.ts';
+import { checkReviewResponse, ReviewAiRecoveryHelp, reviewRetryPrompt, reviewBatchPrompt } from './ai-import-recovery.ts';
+import type { ReviewResponseRecovery } from './ai-response-recovery.ts';
 
 export const ReviewQuestionImport = defineComponent({
   name: 'ReviewQuestionImport',
@@ -11,56 +16,148 @@ export const ReviewQuestionImport = defineComponent({
     setName: { type: String, required: true },
     existing: { type: Array as PropType<Question[]>, required: true },
   },
-  emits: { back: () => true, append: (_questions: Question[]) => true },
+  emits: {
+    back: () => true,
+    append: (_questions: Question[]) => true,
+  },
   setup(props, { emit }) {
     const count = ref(20);
-    const step = ref<'setup' | ReviewAiStep>('setup');
-    const heading = ref<HTMLElement | null>(null);
-    function go(next: typeof step.value) { step.value = next; void nextTick(() => heading.value?.focus({ preventScroll: true })); }
-    const preferences = computed<ReviewAiPreferences>(() => ({
-      count: count.value, mixMode: 'ai', coverage: 'balanced', weights: { ...DEFAULT_AI_WEIGHTS },
-    }));
-    function promptForCount(requested: number) {
-      if (questionCountProblem(requested)) return '';
-      const questions = props.existing.map(question => questionDisplayPrompt(question).trim().replace(/\s+/g, ' '))
-        .filter(Boolean).map((question, index) => (index + 1) + '. ' + question.slice(0, 200)).join('\n');
-      return 'I am adding questions to an existing Dynamic Learner Review knowledge set named ' + JSON.stringify(props.setName) +
-        '. Generate only new questions from the original study material; do not repeat or paraphrase these existing questions:\n' +
-        (questions || '(No existing written questions)') + '\n\nUse the study material attached to this message or already supplied in this conversation. ' +
-        'If no study material is available, ask for it before generating questions. Only the additional questions will be imported.\n\n' +
-        reviewAiPrompt({ ...preferences.value, count: requested }, null).replace('original source material supplied earlier in this conversation',
-          'original source material attached to this message or supplied earlier in this conversation');
+    const json = ref('');
+    const problem = ref('');
+    const candidate = ref<ReviewAiImport | null>(null);
+    const report = ref<ReviewResponseRecovery | null>(null);
+    const recovering = ref(false);
+    const adding = ref(false);
+    const prompt = computed(() => {
+      if (questionCountProblem(count.value)) return '';
+      const questionsToAvoid = props.existing
+        .map(question => questionDisplayPrompt(question).trim().replace(/\s+/g, ' '))
+        .filter(Boolean);
+      const existing = questionsToAvoid.length
+        ? questionsToAvoid.map((question, index) => `${index + 1}. ${question.slice(0, 200)}`).join('\n')
+        : '(No existing written questions)';
+      return `I am adding questions to an EXISTING Dynamic Learner Review knowledge set named "${props.setName}". Generate ONLY new questions that complement the set, without repeating or paraphrasing the following existing questions.
+
+Existing question prompts:
+${existing}
+
+Your answer must be a standalone valid Review JSON response with a title, description, and ONLY the additional questions. The title and description are required for the JSON format but will NOT replace my existing knowledge set name or options.
+
+${reviewAiPrompt({
+        count: count.value, mixMode: 'ai', coverage: 'balanced', weights: { ...DEFAULT_AI_WEIGHTS },
+      }, null)}`;
+    });
+
+    function validate() {
+      problem.value = '';
+      const result = checkReviewResponse(json.value, {
+        count: count.value, mixMode: 'ai', coverage: 'balanced', weights: { ...DEFAULT_AI_WEIGHTS },
+      }, { append: true, existing: props.existing, previous: candidate.value, add: adding.value });
+      candidate.value = result.candidate;
+      report.value = result;
+      recovering.value = result.issues.length > 0;
+      adding.value = false;
     }
-    const prompt = computed(() => promptForCount(count.value));
-    return () => h('section', { class: 'knowledge-set-builder knowledge-question-import review-ai-workspace', 'aria-label': 'Import additional questions' }, [
+    function retry(add: boolean, clear: boolean) {
+      adding.value = add;
+      if (clear) json.value = '';
+      recovering.value = false;
+      if (!add) { candidate.value = null; report.value = null; }
+    }
+    function previewQuestion(question: Question, index: number) {
+      const answers = question.type === 'parameterized'
+        ? (question.parameters?.rules.answers ?? []).map(answer => `${answer.label}: ${answer.expression ?? `Solver output ${answer.solverKey}`}`)
+        : question.type === 'dropdown'
+          ? (question.matches ?? []).map(row => `${row.label}: ${row.answer}`)
+          : question.type === 'fill-in-the-blanks'
+            ? parseFillBlankTemplate(question.prompt).answers
+            : question.correctAnswers ?? (question.type === 'statement' ? [] : [question.answer]);
+      return h('li', { key: question.id }, [
+        h('span', { class: 'study-ai-muted' }, `${index + 1} · ${questionTypeLabel(question.type)}`),
+        h('strong', questionDisplayPrompt(question)),
+        question.context?.trim()
+          ? h(MarkdownContent, { text: question.context, class: 'knowledge-question-context' }) : null,
+        question.choices.length ? h('ul', question.choices.map(choice => h('li', choice))) : null,
+        question.parameters?.rules.solver?.package
+          ? h('p', { class: 'study-ai-muted' }, 'Includes a solver package for this generated question.') : null,
+        question.type !== 'statement' ? h('details', [
+          h('summary', 'Reveal expected answer'),
+          h('p', answers.join(' · ')),
+          question.explanation ? h('p', question.explanation) : null,
+        ]) : null,
+      ]);
+    }
+
+    return () => h('section', { class: 'knowledge-set-builder knowledge-question-import',
+      'aria-label': 'Import additional questions' }, [
       h('header', { class: 'knowledge-builder-header' }, [
         h('div', [
-          h('h2', { ref: heading, tabindex: -1 }, 'Add questions with AI'),
-          h('p', props.setName + ' · ' + props.existing.length + ' existing questions'),
+          h('h2', 'Import questions'),
+          h('p', `Append questions to ${props.setName} without replacing the existing ones.`),
         ]),
         h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('back') }, 'Back to builder'),
       ]),
-      reviewAiProgress(step.value),
-      h('section', { class: 'review-ai-panel', style: step.value !== 'setup' ? { display: 'none' } : undefined }, [
-        h('label', { class: 'knowledge-field knowledge-question-import-count' }, [
-          'Number of new questions',
-          h('input', { type: 'number', min: 1, step: 1, value: count.value,
-            onInput: (event: Event) => { count.value = Number(inputValue(event)); } }),
-        ]),
-        h('p', { class: 'study-ai-muted' }, 'Your existing questions and settings stay unchanged. Nothing is saved until you save the builder.'),
-        questionCountProblem(count.value) ? h('p', { class: 'study-ai-error' }, questionCountProblem(count.value)) : null,
-        h('div', { class: 'review-ai-inline-actions review-ai-navigation' }, [
-          h('button', { type: 'button', class: 'quiet-button', onClick: () => go('response') }, 'Already have a response?'),
-          h('button', { type: 'button', class: 'card-primary-button', disabled: Boolean(questionCountProblem(count.value)), onClick: () => go('generate') }, 'Continue'),
-        ]),
+      h('p', { class: 'knowledge-muted' },
+        `${props.existing.length} existing questions`),
+      h('label', { class: 'knowledge-field knowledge-question-import-count' }, [
+        'Number of new questions to request',
+        h('input', {
+          type: 'number', min: 1, step: 1, value: count.value,
+          onInput: (event: Event) => {
+            const next = Number(inputValue(event));
+            count.value = Number.isFinite(next) ? Math.max(1, Math.min(Number.MAX_SAFE_INTEGER, Math.trunc(next))) : 1;
+            candidate.value = null;
+            report.value = null;
+            recovering.value = false;
+            adding.value = false;
+            problem.value = '';
+          },
+        }),
       ]),
-      h(ReviewAiResponseWorkspace, {
-        step: step.value === 'setup' ? 'generate' : step.value,
-        style: step.value === 'setup' ? { display: 'none' } : undefined,
-        preferences: preferences.value, prompt: prompt.value, promptForCount, appendMode: true, existing: props.existing,
-        onStep: (next: ReviewAiStep) => go(next),
-        onBack: () => go('setup'),
-        onComplete: (value: ReviewAiImport) => emit('append', value.questions),
+      h('p', { class: 'knowledge-muted' },
+        'Add more questions from an AI response without replacing your existing ones.'),
+      recovering.value && report.value ? h(ReviewAiRecoveryHelp, {
+        report: report.value, accepted: candidate.value?.questions.length ?? 0,
+        repairPrompt: reviewRetryPrompt(report.value, count.value, candidate.value?.questions.length ?? 0),
+        batchPrompt: count.value > (candidate.value?.questions.length ?? 0) + 25
+          ? reviewBatchPrompt(reviewAiPrompt({
+            count: Math.min(25, count.value - (candidate.value?.questions.length ?? 0)),
+            mixMode: 'ai', coverage: 'balanced', weights: { ...DEFAULT_AI_WEIGHTS },
+          }, null), [...props.existing, ...(candidate.value?.questions ?? [])]) : '',
+        onRetry: () => retry(Boolean(candidate.value), true),
+        onReview: () => { recovering.value = false; },
+        onBack: () => { recovering.value = false; },
+      }) : h(AiPromptExchange, {
+        idPrefix: 'review-question-append', label: 'Review questions',
+        prompt: prompt.value, json: json.value, problem: problem.value,
+        maxLength: MAX_AI_IMPORT_LENGTH, hasPreview: candidate.value !== null && !adding.value,
+        startInImport: report.value !== null,
+        promptHelp: 'These instructions request additional questions and help your AI avoid repeating existing ones.',
+        importHelp: adding.value && candidate.value
+          ? `${candidate.value.questions.length} new questions are safe. Paste the AI’s next response to add to them.`
+          : 'Paste the AI response you want to add. Existing questions and settings stay unchanged.',
+        onUpdateJson: (value: string) => { json.value = value; if (!adding.value) candidate.value = null; problem.value = ''; },
+        onValidate: validate,
+      }, {
+        preview: () => candidate.value ? h('div', { class: 'study-ai-preview' }, [
+          h('h3', `${candidate.value.questions.length} new questions ready`),
+          h('p', { class: 'knowledge-muted' },
+            'Only questions are added. Imported titles and descriptions are ignored. Nothing is saved until you save the builder.'),
+          report.value && (report.value.issues.length || report.value.notices.length || report.value.recovered) ? h('details', { class: 'review-ai-warning-details' }, [
+            h('summary', 'Response recovery details'),
+            h('ul', [...report.value.notices, ...report.value.issues.map(issue => issue.message)].map(message => h('li', message))),
+            report.value.issues.length ? h('button', { type: 'button', class: 'quiet-button', onClick: () => { recovering.value = true; } }, 'Fix remaining questions') : null,
+          ]) : null,
+          candidate.value.warnings.length ? h('section', { class: 'review-ai-import-warning',
+            role: 'status', 'aria-label': 'Import warnings' }, [
+            h('strong', 'Review these warnings'),
+            h('ul', candidate.value.warnings.map(warning => h('li', warning))),
+          ]) : null,
+          h('ol', { class: 'review-ai-preview' }, candidate.value.questions.map(previewQuestion)),
+          h('button', { type: 'button', class: 'card-primary-button', onClick: () => {
+            if (candidate.value) emit('append', candidate.value.questions);
+          } }, `Add ${candidate.value.questions.length} ${candidate.value.questions.length === 1 ? 'question' : 'questions'} to builder`),
+        ]) : null,
       }),
     ]);
   },

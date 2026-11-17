@@ -24,6 +24,8 @@ export const AiPromptExchange = defineComponent({
     skipSource: Boolean,
     showReviewStep: Boolean,
     preferFileImport: Boolean,
+    // Review can recover raw/malformed response files; other callers keep strict file checks.
+    allowRawResponseFile: Boolean,
   },
   emits: { 'update-json': (_value: string) => true, validate: () => true },
   setup(props, { emit, slots, expose }) {
@@ -69,8 +71,8 @@ export const AiPromptExchange = defineComponent({
       // Never allow an earlier, previously selected file to be validated
       // after the user deliberately chooses a new one.
       emit('update-json', '');
-      if (!file.name.toLowerCase().endsWith('.json')) {
-        fileProblem.value = 'Choose a .json file from your AI conversation.';
+      if (!(props.allowRawResponseFile ? /\.(json|txt|md)$/i.test(file.name) : file.name.toLowerCase().endsWith('.json'))) {
+        fileProblem.value = props.allowRawResponseFile ? 'Choose a .json, .txt, or .md response file from your AI conversation.' : 'Choose a .json file from your AI conversation.';
         return;
       }
       if (props.maxLength !== undefined && file.size > props.maxLength * 4) {
@@ -83,8 +85,10 @@ export const AiPromptExchange = defineComponent({
         if (props.maxLength !== undefined && contents.length > props.maxLength) {
           throw new Error('The JSON exceeds the supported import size.');
         }
-        try { JSON.parse(contents); }
-        catch { throw new Error('This file does not contain valid JSON.'); }
+        if (!props.allowRawResponseFile) {
+          try { JSON.parse(contents); }
+          catch { throw new Error('This file does not contain valid JSON.'); }
+        }
         if (disposed || attempt !== fileAttempt) return;
         uploadedFile.value = file.name;
         pasteExpanded.value = false;
@@ -296,7 +300,7 @@ export const AiPromptExchange = defineComponent({
             props.preferFileImport ? h('div', { class: 'ai-json-return' }, [
               h('input', {
                 ref: fileInput, id: props.idPrefix + '-file',
-                type: 'file', accept: '.json,application/json',
+                type: 'file', accept: props.allowRawResponseFile ? '.json,.txt,.md,application/json,text/plain,text/markdown' : '.json,application/json',
                 class: 'ai-json-file-input', tabindex: -1, 'aria-hidden': 'true',
                 onChange: loadJsonFile,
               }),
@@ -330,7 +334,7 @@ export const AiPromptExchange = defineComponent({
                   h('strong', uploading.value ? 'Reading your file…'
                     : uploadedFile.value || (props.json.trim() ? 'JSON response ready' : 'Add your JSON file')),
                   h('p', { class: 'ai-exchange-help' },
-                    uploading.value ? 'Checking the file format locally.'
+                    uploading.value ? props.allowRawResponseFile ? 'Reading the response locally.' : 'Checking the file format locally.'
                       : uploadedFile.value || props.json.trim()
                         ? 'Ready to validate and move on.'
                         : 'Drop a .json file here, or select one from your device.'),
@@ -363,7 +367,7 @@ export const AiPromptExchange = defineComponent({
                   },
                 }, [
                   h(Icon, { name: pasteExpanded.value ? 'chevron-up' : 'chevron-down' }),
-                  pasteExpanded.value ? 'Hide JSON editor' : 'No file? Paste JSON instead',
+                  pasteExpanded.value ? props.allowRawResponseFile ? 'Hide response' : 'Hide JSON editor' : props.allowRawResponseFile ? 'No file? Paste the AI response instead' : 'No file? Paste JSON instead',
                 ]),
                 h(Transition, { name: 'ai-exchange-reveal' }, {
                   default: () => pasteExpanded.value ? h('div', {
@@ -374,7 +378,7 @@ export const AiPromptExchange = defineComponent({
                     h('textarea', {
                       ref: input, id: props.idPrefix + '-response', value: props.json,
                       rows: 6, maxlength: props.maxLength,
-                      placeholder: 'Paste the complete JSON response here',
+                      placeholder: props.allowRawResponseFile ? 'Paste the complete AI response here' : 'Paste the complete JSON response here',
                       'aria-invalid': props.problem ? 'true' : undefined,
                       'aria-describedby': props.problem ? props.idPrefix + '-error' : undefined,
                       onInput: updatePastedJson,

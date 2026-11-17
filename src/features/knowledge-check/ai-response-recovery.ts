@@ -243,6 +243,9 @@ export function recoverReviewResponse(text: string, preferences: ReviewAiPrefere
         result.issues.push({ item: item.number, message: errorText(error).replace(/^Item 1(?=[: ]|$)/, 'Question'), source: item.source.slice(0, 3000) });
       }
     }
+    if (source.incomplete && !result.issues.length) {
+      result.issues.push({ message: 'The response ended before the question list was complete.' });
+    }
     if (!questions.length) {
       if (!result.issues.length) result.issues.push({ message: 'No complete questions were returned.' });
       return result;
