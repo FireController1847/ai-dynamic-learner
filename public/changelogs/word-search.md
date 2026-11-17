@@ -1,3 +1,17 @@
+## v1.16.0
+
+<small data-utc="2026-11-17T02:46:45Z">November 16, 2026 at 7:46 PM MST</small>
+
+- **AI Import:** Recover valid words and hints from malformed or incomplete AI responses.
+- **Recovery:** Keep usable entries and guide users through corrections while retaining the selected grid and word-pool constraints.
+
+<details>
+<summary>View 1 commit</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/da49a9a3a9dcc643a8fdeb16d0d9498f04d53f38">da49a9a3</a> — Share guided AI response recovery across study apps</li>
+</ol>
+</details>
+
 ## v1.15.0
 
 <small data-utc="2026-11-17T01:02:39Z">November 16, 2026 at 6:02 PM MST</small>

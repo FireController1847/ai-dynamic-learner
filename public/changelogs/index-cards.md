@@ -1,3 +1,17 @@
+## v1.26.0
+
+<small data-utc="2026-11-17T02:46:45Z">November 16, 2026 at 7:46 PM MST</small>
+
+- **AI Import:** Recover usable Flash Cards and Fill in the Blanks cards from malformed or incomplete AI responses.
+- **Recovery:** Keep accepted cards, skip duplicates during repairs, and guide users through corrected responses and optional coverage review.
+
+<details>
+<summary>View 1 commit</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/da49a9a3a9dcc643a8fdeb16d0d9498f04d53f38">da49a9a3</a> — Share guided AI response recovery across study apps</li>
+</ol>
+</details>
+
 ## v1.25.0
 
 <small data-utc="2026-11-17T01:02:39Z">November 16, 2026 at 6:02 PM MST</small>
