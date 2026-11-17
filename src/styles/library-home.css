@@ -20,6 +20,12 @@
 .library-home-heading h2 { margin: 4px 0 8px; font-size: clamp(26px, 4vw, 36px); line-height: 1.2; }
 .library-home-heading p { margin: 0; color: var(--text-secondary); }
 .library-home-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+/* Keep an unpaired final card centered at the same width as its neighbors. */
+.library-home-grid:not(.is-single) > .library-home-card:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+  justify-self: center;
+  width: calc((100% - 12px) / 2);
+}
 .library-home-grid.is-single { grid-template-columns: minmax(0, 1fr); width: min(100%, 400px); justify-self: center; }
 .library-home-card {
   display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center;
@@ -42,6 +48,7 @@
 .library-collapsed .library-home-content { padding-top: max(56px, 5vw); }
 @container (max-width: 540px) {
   .library-home-grid { grid-template-columns: minmax(0, 1fr); }
+  .library-home-grid:not(.is-single) > .library-home-card:last-child:nth-child(odd) { width: 100%; }
   .library-home-card { min-height: 84px; padding: 14px; }
   .library-home-card-icon { width: 36px; height: 36px; }
 }
