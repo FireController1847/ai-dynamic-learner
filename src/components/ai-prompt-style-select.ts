@@ -2,7 +2,7 @@ import { defineComponent, h, type PropType } from 'vue';
 import { Icon } from './icon.ts';
 import type { AiPromptVariant } from '../core/ai-prompt-variants.ts';
 
-/** Compact, accessible selection before the guided AI exchange. */
+/** Both prompt styles are free to choose; suitability describes external AI chats. */
 export const AiPromptStyleSelect = defineComponent({
   name: 'AiPromptStyleSelect',
   props: {
@@ -18,18 +18,22 @@ export const AiPromptStyleSelect = defineComponent({
           type: 'button',
           class: ['ai-prompt-style-choice', { 'is-selected': props.value === 'simple' }],
           'aria-pressed': props.value === 'simple',
-          'aria-label': 'Simple prompt, suited to free AI chats',
-          title: 'Simple — works well with free AI chats',
+          'aria-label': 'Simple prompt — works best with free AI chats',
           onClick: () => emit('select', 'simple'),
-        }, [h(Icon, { name: 'ai' }), h('span', 'Simple')]),
+        }, [
+          h('span', { class: 'ai-prompt-style-choice-name' }, [h(Icon, { name: 'ai' }), 'Simple']),
+          h('small', 'Works best with free AI chats'),
+        ]),
         h('button', {
           type: 'button',
-          class: ['ai-prompt-style-choice', 'is-detailed', { 'is-selected': props.value === 'detailed' }],
+          class: ['ai-prompt-style-choice', { 'is-selected': props.value === 'detailed' }],
           'aria-pressed': props.value === 'detailed',
-          'aria-label': 'Detailed prompt, suited to paid AI chats',
-          title: 'Detailed — works best with paid AI chats',
+          'aria-label': 'Detailed prompt — works best with paid AI chats',
           onClick: () => emit('select', 'detailed'),
-        }, [h(Icon, { name: 'crown' }), h('span', 'Detailed')]),
+        }, [
+          h('span', { class: 'ai-prompt-style-choice-name' }, [h(Icon, { name: 'document' }), 'Detailed']),
+          h('small', 'Works best with paid AI chats'),
+        ]),
       ]),
     ]);
   },

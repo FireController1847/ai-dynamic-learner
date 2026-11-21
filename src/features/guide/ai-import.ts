@@ -5,6 +5,7 @@ import { AiPromptExchange, type AiPromptExchangeHandle } from '../../components/
 import { AiCreationScope } from '../../components/ai-creation-scope.ts';
 import { AiCoverageSelect } from '../../components/ai-coverage-select.ts';
 import { AiPromptStyleSelect } from '../../components/ai-prompt-style-select.ts';
+import { AiOptionsHeader } from '../../components/ai-options-header.ts';
 import { DEFAULT_AI_PROMPT_VARIANT, simpleAiPrompt, type AiPromptVariant } from '../../core/ai-prompt-variants.ts';
 import { AiFocusChoices } from '../../components/ai-focus-choices.ts';
 import { AiCategoryPicker } from '../../components/ai-category-picker.ts';
@@ -586,7 +587,7 @@ export const GuideAiImportWorkspace = defineComponent({
       change: (value: T) => void,
       explanation: string,
     ) {
-      return h('label', { for: id, class: 'guide-ai-option' }, [
+      return h('label', { for: id, class: 'ai-options-field' }, [
         h('span', label),
         h('select', {
           id,
@@ -599,62 +600,70 @@ export const GuideAiImportWorkspace = defineComponent({
       ]);
     }
 
-    function renderOptions() { return h('div', { class: 'guide-ai-options' }, [
-              h(AiPromptStyleSelect, { value: promptVariant.value, fieldClass: 'guide-ai-option',
-                onSelect: value => { promptVariant.value = value; },
-              }),
-              optionField('guide-ai-detail', 'Detail', detail.value, [
-                { value: 'concise', label: 'Concise' },
-                { value: 'balanced', label: 'Balanced' },
-                { value: 'detailed', label: 'Detailed' },
-              ], (value) => { detail.value = value; }, 'How much information appears within each section.'),
-              h(AiCoverageSelect, { value: coverage.value, fieldClass: 'guide-ai-option',
-                onSelect: value => { coverage.value = value; },
-              }),
-              props.mode === 'list' ? optionField('guide-ai-bullet-style', 'Bullet style', bulletStyle.value, [
-                { value: 'phrases', label: 'Key phrases' },
-                { value: 'thoughts', label: 'Complete thoughts' },
-              ], (value) => { bulletStyle.value = value; }, 'List mode retains the classic notes format.') : null,
-              props.mode === 'map' ? h('div', { class: 'guide-ai-teaching-settings' }, [
-                h('h3', 'Teaching Blocks mix'),
-                h('p', { class: 'study-ai-muted' },
-                  'Like Review, let AI choose the best types or specify your own weighted distribution. Teaching Blocks help explain concepts before Review assesses them.'),
-                h('div', { class: 'guide-ai-mix-modes', role: 'group', 'aria-label': 'Teaching block selection strategy' }, [
-                  ...([['ai', 'Let AI choose'], ['custom', 'Custom weighted mix']] as const).map(([value, label]) =>
-                    h('button', { type: 'button', class: 'quiet-button', key: value,
-                      'aria-pressed': mixMode.value === value, onClick: () => { mixMode.value = value; } }, label)),
-                ]),
-                mixMode.value === 'ai' ? h(AiFocusChoices, {
-                  options: GUIDE_AI_FOCUSES,
-                  value: aiFocus.value,
-                  name: 'guide-ai-focus',
-                  onSelect: (id: string) => { aiFocus.value = id as GuideAiFocus; },
-                }) : null,
-                h('label', { class: 'guide-ai-option' }, [
-                  h('span', 'Target total Teaching Blocks'),
-                  h('input', { type: 'number', min: 1, max: 80, step: 1, value: targetBlocks.value,
-                    onInput: (event: Event) => { targetBlocks.value = Number(inputValue(event)); } }),
-                  h('small', chosenScope.value
-                    ? 'Category: aim for exactly this total across 5–7 stops. Deviate only if the source makes it necessary. No filler.'
-                    : 'Overall: aim near this total across 5–7 stops (normally ' +
-                      overallTeachingBlockRange(targetBlocks.value).min + '–' +
-                      overallTeachingBlockRange(targetBlocks.value).max +
-                      ' blocks). Allow source-backed flexibility. No filler.'),
-                ]),
-                mixMode.value === 'custom' ? h('div', { class: 'guide-ai-weight-list' },
-                  TEACHING_TYPES.map(kind => h('label', { class: 'guide-ai-weight-row', key: kind }, [
-                    h('span', kind.replace(/-/g, ' ')),
-                    h('input', { type: 'number', min: 0, max: 100, step: 1,
-                      'aria-label': kind + ' teaching block percentage', value: weights.value[kind],
-                      onChange: (event: Event) => {
-                        weights.value = rebalanceTeachingWeights(weights.value, kind, Number(inputValue(event)));
-                      } }),
-                    h('span', '%'),
-                    allocations.value ? h('small', '≈ ' + allocations.value[kind]) : null,
-                  ]))) : null,
-                mixError.value ? h('p', { class: 'guide-ai-mix-error', role: 'alert' }, mixError.value) : null,
-              ]) : null,
-            ]); }
+    function renderOptions() {
+      return h('div', { class: 'ai-options-body' }, [
+        h('div', { class: 'ai-options-grid' }, [
+          h(AiPromptStyleSelect, { value: promptVariant.value, onSelect: value => { promptVariant.value = value; } }),
+          props.mode === 'map' ? h('label', { class: 'ai-options-field' }, [
+            h('span', 'Target Teaching Blocks'),
+            h('input', { type: 'number', min: 1, max: 80, step: 1, value: targetBlocks.value,
+              onInput: (event: Event) => { targetBlocks.value = Number(inputValue(event)); } }),
+            h('small', { class: 'study-ai-muted' }, chosenScope.value
+              ? 'Aim for exactly this many blocks across 5–7 stops, unless the source requires fewer.'
+              : 'Approximate total across 5–7 stops (normally ' +
+                overallTeachingBlockRange(targetBlocks.value).min + '–' +
+                overallTeachingBlockRange(targetBlocks.value).max + ' blocks).'),
+          ]) : optionField('guide-ai-detail', 'Detail', detail.value, [
+            { value: 'concise', label: 'Concise' },
+            { value: 'balanced', label: 'Balanced' },
+            { value: 'detailed', label: 'Detailed' },
+          ], value => { detail.value = value; }, 'How much information appears within each section.'),
+          h(AiCoverageSelect, { value: coverage.value, fieldClass: 'ai-options-field',
+            onSelect: value => { coverage.value = value; },
+          }),
+          props.mode === 'list' ? optionField('guide-ai-bullet-style', 'Bullet style', bulletStyle.value, [
+            { value: 'phrases', label: 'Key phrases' },
+            { value: 'thoughts', label: 'Complete thoughts' },
+          ], value => { bulletStyle.value = value; }, 'List mode retains the classic notes format.')
+            : optionField('guide-ai-detail', 'Detail', detail.value, [
+              { value: 'concise', label: 'Concise' },
+              { value: 'balanced', label: 'Balanced' },
+              { value: 'detailed', label: 'Detailed' },
+            ], value => { detail.value = value; }, 'How much information appears within each topic.'),
+        ]),
+        props.mode === 'map' ? h('fieldset', { class: 'ai-options-section' }, [
+          h('legend', 'Teaching block types'),
+          h('label', { class: 'ai-options-mode' }, [
+            h('input', { type: 'radio', name: 'guide-ai-mix-mode', checked: mixMode.value === 'ai',
+              onChange: () => { mixMode.value = 'ai'; } }),
+            h('span', [h('strong', 'Let AI choose'),
+              h('span', 'Choose suitable teaching activities based on the source.')]),
+          ]),
+          h('label', { class: 'ai-options-mode' }, [
+            h('input', { type: 'radio', name: 'guide-ai-mix-mode', checked: mixMode.value === 'custom',
+              onChange: () => { mixMode.value = 'custom'; } }),
+            h('span', [h('strong', 'Custom percentages'),
+              h('span', 'Set how many Teaching Blocks of each type you want.')]),
+          ]),
+          mixMode.value === 'ai' ? h(AiFocusChoices, {
+            options: GUIDE_AI_FOCUSES, value: aiFocus.value, name: 'guide-ai-focus',
+            onSelect: (id: string) => { aiFocus.value = id as GuideAiFocus; },
+          }) : null,
+          mixMode.value === 'custom' ? h('div', { class: 'guide-ai-weight-list' },
+            TEACHING_TYPES.map(kind => h('label', { class: 'guide-ai-weight-row', key: kind }, [
+              h('span', kind.replace(/-/g, ' ')),
+              h('input', { type: 'number', min: 0, max: 100, step: 1,
+                'aria-label': kind + ' teaching block percentage', value: weights.value[kind],
+                onChange: (event: Event) => {
+                  weights.value = rebalanceTeachingWeights(weights.value, kind, Number(inputValue(event)));
+                } }),
+              h('span', '%'),
+              allocations.value ? h('small', '≈ ' + allocations.value[kind]) : null,
+            ]))) : null,
+          mixError.value ? h('p', { class: 'guide-ai-mix-error', role: 'alert' }, mixError.value) : null,
+        ]) : null,
+      ]);
+    }
 
     return () => stage.value === 'categories' ? h(AiCategoryPicker, {
       key: 'guide-categories', label: 'Guide', targetApp: 'guide', destination: props.destination,
@@ -669,8 +678,14 @@ export const GuideAiImportWorkspace = defineComponent({
       overall: chosenScope.value === null,
       onBack: back, onCancel: () => emit('cancel'),
       onCreate: () => { if (candidate.value) emit('import', candidate.value); },
-    }) : h('section', { class: 'guide-ai-workspace', 'aria-labelledby': 'guide-ai-title' }, [
-      h('header', { class: 'guide-ai-header' }, [
+    }) : h('section', { class: 'guide-ai-workspace study-ai-workspace', 'aria-labelledby': 'guide-ai-title' }, [
+      stage.value === 'configure' ? h(AiOptionsHeader, {
+        app: 'Guide', destination: props.destination,
+        title: 'Configure ' + (props.mode === 'map' ? 'map guide' : 'list guide'),
+        headingId: 'guide-ai-title',
+        scope: chosenScope.value?.category.title ?? 'Overall subject',
+        onBack: back, onCancel: () => emit('cancel'),
+      }) : h('header', { class: 'guide-ai-header' }, [
         h('div', { class: 'guide-ai-heading' }, [
           h('span', { class: 'guide-ai-kicker' }, `${directImport.value ? 'Existing AI response' : props.mode === 'map' ? 'Map mode' : 'List mode'} · Saved in ${props.destination}`),
           h('h2', { id: 'guide-ai-title' }, stage.value === 'scope' ? 'Choose what to teach' : chosenScope.value?.category.title ?? 'Create with AI'),
@@ -689,9 +704,7 @@ export const GuideAiImportWorkspace = defineComponent({
           chosenScope.value = null; directImport.value = true; recovery.reset();
           json.value = ''; candidate.value = null; stage.value = 'exchange';
         },
-      }) : stage.value === 'configure' ? h('div', { class: 'guide-ai-configuration' }, [
-        h('h3', 'Configure your Guide'),
-        h('p', { class: 'study-ai-muted' }, 'Set up your lesson before the Source, Copy, Send, and Return steps.'),
+      }) : stage.value === 'configure' ? h('div', { class: 'ai-options-configuration' }, [
         renderOptions(),
         h('div', { class: 'guide-ai-actions' }, [
           h('button', { type: 'button', class: 'card-primary-button', disabled: Boolean(mixError.value),

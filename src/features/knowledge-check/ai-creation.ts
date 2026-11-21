@@ -4,6 +4,7 @@ import { AiCreationScope } from '../../components/ai-creation-scope.ts';
 import { AiSourceUnitCoverage } from '../../components/ai-source-unit-coverage.ts';
 import { AiCoverageSelect } from '../../components/ai-coverage-select.ts';
 import { AiPromptStyleSelect } from '../../components/ai-prompt-style-select.ts';
+import { AiOptionsHeader } from '../../components/ai-options-header.ts';
 import { DEFAULT_AI_PROMPT_VARIANT, simpleAiPrompt, type AiPromptVariant } from '../../core/ai-prompt-variants.ts';
 import { Icon } from '../../components/icon.ts';
 import { AiPromptExchange, type AiPromptExchangeHandle } from '../../components/ai-prompt-exchange.ts';
@@ -205,7 +206,11 @@ export const ReviewAiCreation = defineComponent({
         onSelect: (selected: AiCardScope, list: AiCardCategories) => { scope.value = selected; categories.value = list; go('configure'); },
       });
       return h('section', { key: stage.value, class: 'study-ai-workspace review-ai-workspace' }, [
-        h('header', { class: 'study-ai-header' }, [
+        stage.value === 'configure' ? h(AiOptionsHeader, {
+          app: 'Review', destination: props.destination, title: 'Configure questions',
+          scope: scope.value?.category.title ?? 'Overall subject', onBack: back,
+          onCancel: () => emit('cancel'),
+        }) : h('header', { class: 'study-ai-header' }, [
           h('div', [h('p', { class: 'study-ai-muted' }, `Review · Saved in ${props.destination}`),
             h('h2', { ref: heading, tabindex: -1 }, stage.value === 'scope' ? 'Create a knowledge set with AI' : stage.value === 'configure' ? 'Choose your question mix' : scope.value?.category.title ?? 'Overall subject'),
             h('p', stage.value === 'scope'
@@ -223,11 +228,11 @@ export const ReviewAiCreation = defineComponent({
           onDirect: () => { scope.value = null; go('direct'); },
           onExit: () => emit('cancel'),
         }) : stage.value === 'configure' ? [
-          h('div', { class: 'review-ai-settings' }, [
+          h('div', { class: 'ai-options-grid' }, [
             h(AiPromptStyleSelect, { value: promptVariant.value,
               onSelect: value => { promptVariant.value = value; },
             }),
-            h('label', [h('span', 'Total questions'), h('input', { type: 'number', min: 1, step: 1, value: preferences.value.count,
+            h('label', { class: 'ai-options-field' }, [h('span', 'Total questions'), h('input', { type: 'number', min: 1, step: 1, value: preferences.value.count,
               onInput: (event: Event) => { preferences.value.count = Number(inputValue(event)); } }), h('small', { class: 'study-ai-muted' }, 'Number of questions the AI should make.')]),
             h(AiCoverageSelect, { value: preferences.value.coverage,
               onSelect: value => { preferences.value.coverage = value; },

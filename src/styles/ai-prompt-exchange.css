@@ -274,17 +274,40 @@
 .ai-repair-step > .quiet-button { justify-self:start; }
 .ai-repair-step .study-ai-actions { flex-wrap:wrap; }
 
-/* Prompt style selection: a quiet default for free chats, with a visual premium cue. */
-.ai-prompt-style-select { display:grid;gap:6px;align-content:start;min-width:0;max-width:380px;margin:0;padding:0;border:0; }
+/* Two equally available prompt modes. The descriptions refer to external AI chats, not Dynamic Learner plans. */
+.ai-prompt-style-select { display:grid;gap:6px;align-content:start;min-width:0;max-width:430px;margin:0;padding:0;border:0; }
 .ai-prompt-style-select legend { margin:0 0 6px;padding:0;color:var(--text-secondary);font-size:12px;font-weight:600; }
 .ai-prompt-style-options { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;min-width:0; }
-.ai-prompt-style-choice { display:inline-flex;align-items:center;justify-content:center;gap:7px;min-width:0;min-height:40px;padding:7px 11px;border:1px solid var(--border-color);border-radius:var(--radius);background:var(--page-background);color:var(--text-secondary);font:inherit;font-size:13px;font-weight:600;line-height:20px;cursor:pointer;transition:border-color 160ms var(--ease-out),background-color 160ms var(--ease-out),box-shadow 160ms var(--ease-out); }
-.ai-prompt-style-choice .ui-icon { flex-shrink:0;width:17px;height:17px; }
+.ai-prompt-style-choice { display:grid;align-content:center;justify-items:center;gap:3px;min-width:0;min-height:62px;padding:8px;border:1px solid var(--border-color);border-radius:var(--radius);background:var(--page-background);color:var(--text-color);font:inherit;line-height:18px;text-align:center;cursor:pointer;transition:border-color 160ms var(--ease-out),background-color 160ms var(--ease-out),box-shadow 160ms var(--ease-out); }
 .ai-prompt-style-choice:hover { border-color:var(--brand);background:var(--surface-subtle); }
 .ai-prompt-style-choice.is-selected { border-color:var(--brand);background:var(--brand-tint);color:var(--brand-text);box-shadow:inset 0 0 0 1px var(--brand); }
-.ai-prompt-style-choice.is-detailed:not(.is-selected) { border-color:color-mix(in srgb,#c29743 48%,var(--border-color));background:color-mix(in srgb,#e6be6c 8%,var(--page-background));color:var(--text-color); }
-.ai-prompt-style-choice.is-detailed .ui-icon { color:color-mix(in srgb,#c29743 82%,var(--text-color)); }
-.ai-prompt-style-choice.is-detailed:hover { border-color:color-mix(in srgb,#c29743 80%,var(--border-color));background:color-mix(in srgb,#e6be6c 16%,var(--page-background)); }
+.ai-prompt-style-choice-name { display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:650; }
+.ai-prompt-style-choice-name .ui-icon { flex-shrink:0;width:16px;height:16px; }
+.ai-prompt-style-choice small { color:var(--text-secondary);font-size:11px;font-weight:400;line-height:15px; }
 .ai-prompt-style-choice:focus-visible { outline:2px solid var(--brand);outline-offset:2px; }
-@media(pointer:coarse) { .ai-prompt-style-choice { min-height:44px; } }
+@media(pointer:coarse) { .ai-prompt-style-choice { min-height:68px; } }
 @media(prefers-reduced-motion:reduce) { .ai-prompt-style-choice { transition:none; } }
+
+/* Review's grid and fieldsets are the reference for every AI configuration screen. */
+.ai-options-grid { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:12px;min-width:0;width:100%; }
+.ai-options-grid > label,.ai-options-grid > .ai-options-field,.ai-options-grid > .ai-prompt-style-select { display:grid;align-content:start;gap:6px;min-width:0; }
+.ai-options-grid > label > span:first-child,.ai-options-grid > .ai-options-field > span:first-child { font-size:12px;font-weight:600;color:var(--text-secondary); }
+.ai-options-grid input:not([type='checkbox']):not([type='radio']),.ai-options-grid select { width:100%;min-width:0; }
+.ai-options-grid small,.ai-options-grid > label > .study-ai-muted { color:var(--text-secondary);font-size:12px;font-weight:400;line-height:18px; }
+.ai-options-grid > .ai-prompt-style-select { max-width:none; }
+.ai-options-section { display:grid;gap:10px;min-width:0;margin:0;padding:16px;border:1px solid var(--border-color);border-radius:var(--radius-dialog); }
+.ai-options-section > legend { padding-inline:6px;font-weight:600; }
+.ai-options-mode { display:flex;align-items:flex-start;gap:10px;cursor:pointer; }
+.ai-options-mode > input { flex:0 0 auto;margin-top:4px;accent-color:var(--brand); }
+.ai-options-mode > span { display:grid;gap:3px;min-width:0; }
+.ai-options-mode > span > span { color:var(--text-secondary);font-size:12px; }
+.ai-options-header > div:first-child p { margin-block:0 8px; }
+.ai-options-header > div:first-child p:last-child { margin-bottom:0; }
+@container (max-width:700px) { .ai-options-grid { grid-template-columns:minmax(0,1fr); } }
+@container (max-width:460px) { .ai-options-section { padding:12px; } }
+@media (pointer:coarse) { .ai-options-mode { min-height:44px; } }
+
+.ai-options-configuration { display:grid;gap:20px;min-width:0;align-content:start; }
+.ai-options-grid > .ai-options-field > input:not([type='checkbox']):not([type='radio']) { min-height:40px; }
+.ai-options-grid > .ai-options-field > small { margin:0; }
+@container (max-width:700px) { .ai-options-configuration { gap:16px; } }

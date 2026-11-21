@@ -7,6 +7,7 @@ import { AiCoverageAcceptance } from '../../components/ai-coverage-acceptance.ts
 import { AiSourceUnitCoverage } from '../../components/ai-source-unit-coverage.ts';
 import { AiCoverageSelect } from '../../components/ai-coverage-select.ts';
 import { AiPromptStyleSelect } from '../../components/ai-prompt-style-select.ts';
+import { AiOptionsHeader } from '../../components/ai-options-header.ts';
 import { DEFAULT_AI_PROMPT_VARIANT, simpleAiPrompt, type AiPromptVariant } from '../../core/ai-prompt-variants.ts';
 import { MAX_AI_IMPORT_LENGTH } from '../../core/ai-json.ts';
 import type { AiCardCategories, AiCardScope } from '../../core/ai-study-categories.ts';
@@ -165,29 +166,17 @@ export const PuzzleAiCreation = defineComponent({
       const bounds = puzzleAiLimits[props.kind];
       const current = preferences.value;
       return h('section', { key: 'configure', class: 'study-ai-workspace puzzle-ai-workspace' }, [
-        h('header', { class: 'study-ai-header' }, [
-          h('div', [
-            h('p', { class: 'study-ai-muted' }, label.value + ' · Saved in ' + props.destination),
-            h('h2', 'Configure ' + (wordSearch ? 'word search' : 'crossword')),
-            h('p', 'Choose your puzzle settings before starting the AI steps.'),
-            h('p', { class: 'study-ai-muted' }, scope.value?.category.title ?? 'Overall subject'),
-          ]),
-          h('div', { class: 'study-ai-actions' }, [
-            h('button', { type: 'button', class: 'quiet-button', onClick: () => {
-              backward.value = true; configured.value = false; entry.value = scope.value ? 'categories' : 'scope';
-            } }, scope.value ? 'Back to categories' : 'Back to scope'),
-            h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel') }, 'Cancel'),
-          ]),
-        ]),
+        h(AiOptionsHeader, {
+          app: label.value, destination: props.destination,
+          title: 'Configure ' + (wordSearch ? 'word search' : 'crossword'),
+          scope: scope.value?.category.title ?? 'Overall subject',
+          onBack: () => { backward.value = true; configured.value = false; entry.value = scope.value ? 'categories' : 'scope'; },
+          onCancel: () => emit('cancel'),
+        }),
         h('form', { class: 'puzzle-ai-setup', onSubmit: continueToPrompt }, [
-          h(AiPromptStyleSelect, { value: promptVariant.value, fieldClass: 'puzzle-ai-setting',
-            onSelect: value => { promptVariant.value = value; },
-          }),
-          h(AiCoverageSelect, { value: current.coverage, fieldClass: 'puzzle-ai-setting',
-            onSelect: value => updatePreferences({ coverage: value }),
-          }),
-          h('div', { class: 'puzzle-ai-setup-grid' }, [
-            h('label', { class: 'puzzle-ai-setting' }, [
+          h('div', { class: 'ai-options-grid' }, [
+            h(AiPromptStyleSelect, { value: promptVariant.value, onSelect: value => { promptVariant.value = value; } }),
+            h('label', { class: 'ai-options-field' }, [
               h('span', wordSearch ? 'Word pool target' : 'Target answers'),
               h('input', {
                 type: 'number', required: true, min: bounds.min, max: bounds.max, step: 1,
@@ -199,7 +188,10 @@ export const PuzzleAiCreation = defineComponent({
                   ? `Request ${bounds.min}–${bounds.max} unique terms from the selected category. ${current.selectionMode === 'random' ? 'The AI generates a pool larger than one board.' : 'All imported words must fit one board.'}`
                   : `Choose ${bounds.min}–${bounds.max}. Use fewer when the category is small.`),
             ]),
-            wordSearch ? h('label', { class: 'puzzle-ai-setting' }, [
+            h(AiCoverageSelect, { value: current.coverage, fieldClass: 'ai-options-field',
+              onSelect: value => updatePreferences({ coverage: value }),
+            }),
+            wordSearch ? h('label', { class: 'ai-options-field' }, [
               h('span', 'Grid size'),
               h('select', {
                 value: current.size,
@@ -208,14 +200,14 @@ export const PuzzleAiCreation = defineComponent({
               }, GRID_SIZES.map(size => h('option', { value: size }, `${size} × ${size}`))),
               h('span', { class: 'study-ai-muted' },
                 'The AI must choose words short enough for this grid. Very dense word lists may not fit.'),
-            ]) : h('div', { class: 'puzzle-ai-setting' }, [
+            ]) : h('div', { class: 'ai-options-field' }, [
               h('span', 'Grid size'),
               h('strong', 'Automatic'),
               h('span', { class: 'study-ai-muted' },
                 'Crossword determines the grid from the intersections of its answers.'),
             ]),
           ]),
-          wordSearch ? h('fieldset', { class: 'puzzle-ai-choice-group' }, [
+          wordSearch ? h('fieldset', { class: 'puzzle-ai-choice-group ai-options-section' }, [
             h('legend', 'Words per layout'),
             ...([
               { value: 'all' as const, label: 'Use all words', description: `Every generated layout uses all imported words (max ${MAX_LAYOUT_WORDS}).` },
@@ -249,7 +241,7 @@ export const PuzzleAiCreation = defineComponent({
             h('p', { class: 'study-ai-muted' },
               'The AI writes the entire word pool. Each new grid samples a number within this range. Set both numbers equal for a fixed count.'),
           ]) : null,
-          h('fieldset', { class: 'puzzle-ai-choice-group' }, [
+          h('fieldset', { class: 'puzzle-ai-choice-group ai-options-section' }, [
             h('legend', wordSearch ? 'Difficulty' : 'Clue difficulty'),
             ...DIFFICULTIES.map(choice => {
               const selected = wordSearch
@@ -279,7 +271,7 @@ export const PuzzleAiCreation = defineComponent({
           ]),
           !wordSearch ? h('p', { class: 'study-ai-muted' },
             'Clue difficulty influences AI wording only; Crossword generates the actual grid automatically.') : null,
-          wordSearch ? h('fieldset', { class: 'puzzle-ai-choice-group' }, [
+          wordSearch ? h('fieldset', { class: 'puzzle-ai-choice-group ai-options-section' }, [
             h('legend', 'Study display'),
             ...STUDY_MODES.map(choice => h('label', {
               key: choice.value,
@@ -310,7 +302,7 @@ export const PuzzleAiCreation = defineComponent({
           ]),
           configurationProblem.value ? h('p', { role: 'alert', class: 'ai-exchange-error' }, configurationProblem.value) : null,
           h('div', { class: 'study-ai-actions' }, [
-            h('button', { type: 'submit', class: 'card-primary-button' }, 'Continue to AI →'),
+            h('button', { type: 'submit', class: 'card-primary-button' }, 'Continue to AI'),
           ]),
         ]),
       ]);

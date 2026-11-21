@@ -496,3 +496,10 @@
 
 /* Vegetables retain the same understated monochrome treatment when animated. */
 .guide-map-surface.is-pattern-vegetables .guide-map-backdrop{color:var(--text-secondary)}
+
+/* Match Review's AI options width and header without changing Guide editor layouts. */
+.guide-ai-workspace.study-ai-workspace { width:min(900px,100%);gap:20px;padding:clamp(28px,5vw,56px);container-type:inline-size; }
+.ai-options-body { display:grid;gap:20px;min-width:0; }
+.guide-ai-configuration { display:grid;gap:20px;min-width:0; }
+.guide-ai-configuration .guide-ai-actions { justify-content:flex-start; }
+@media(max-width:700px),(max-width:1100px) and (pointer:coarse) { .guide-ai-workspace.study-ai-workspace { padding:48px 20px 20px; } }

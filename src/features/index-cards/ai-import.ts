@@ -6,6 +6,7 @@ import { AiCoverageAcceptance } from '../../components/ai-coverage-acceptance.ts
 import { AiSourceUnitCoverage } from '../../components/ai-source-unit-coverage.ts';
 import { AiCoverageSelect } from '../../components/ai-coverage-select.ts';
 import { AiPromptStyleSelect } from '../../components/ai-prompt-style-select.ts';
+import { AiOptionsHeader } from '../../components/ai-options-header.ts';
 import { DEFAULT_AI_PROMPT_VARIANT, simpleAiPrompt, type AiPromptVariant } from '../../core/ai-prompt-variants.ts';
 import { inputValue } from '../../core/dom.ts';
 import { maskFillBlankAnswers, parseFillBlankTemplate } from '../../core/fill-blank.ts';
@@ -97,20 +98,20 @@ export const IndexCardsAiImport = defineComponent({
       });
     }
 
-    function renderOptions() { return h('div', { class: 'flash-ai-options' }, [
-            h(AiPromptStyleSelect, { value: promptVariant.value, fieldClass: 'flash-ai-option',
+    function renderOptions() { return h('div', { class: 'ai-options-grid' }, [
+            h(AiPromptStyleSelect, { value: promptVariant.value, fieldClass: 'ai-options-field',
               onSelect: value => { promptVariant.value = value; },
             }),
-            h(AiCoverageSelect, { value: coverage.value, fieldClass: 'flash-ai-option',
-              onSelect: value => { coverage.value = value; },
-            }),
-            h('label', { class: 'flash-ai-option' }, [h('span', 'Maximum cards'), h('select', {
+            h('label', { class: 'ai-options-field' }, [h('span', 'Maximum cards'), h('select', {
               value: limit.value, onChange: (event: Event) => {
                 const value = Number(inputValue(event));
                 if ([10, 20, 30, 50].includes(value)) limit.value = value;
               },
             }, [10, 20, 30, 50].map(value => h('option', { value }, String(value)))), h('small', 'An upper limit, not a required number of cards.')]),
-            isFillBlank.value ? h('label', { class: 'flash-ai-option' }, [h('span', 'Blank style'), h('select', {
+            h(AiCoverageSelect, { value: coverage.value, fieldClass: 'ai-options-field',
+              onSelect: value => { coverage.value = value; },
+            }),
+            isFillBlank.value ? h('label', { class: 'ai-options-field' }, [h('span', 'Blank style'), h('select', {
               value: blankStyle.value, onChange: (event: Event) => {
                 const value = inputValue(event);
                 if (value === 'focused' || value === 'connected') blankStyle.value = value;
@@ -118,8 +119,13 @@ export const IndexCardsAiImport = defineComponent({
             }, [h('option', { value: 'focused' }, 'One focused blank'), h('option', { value: 'connected' }, 'A few related blanks')]), h('small', 'One missing answer or several connected answers per card.')]) : null,
           ]); }
 
-    return () => h('section', { class: 'flash-ai-workspace', 'aria-labelledby': 'flash-ai-title' }, [
-      h('header', { class: 'flash-ai-header' }, [
+    return () => h('section', { class: 'flash-ai-workspace study-ai-workspace', 'aria-labelledby': 'flash-ai-title' }, [
+      stage.value === 'configure' ? h(AiOptionsHeader, {
+        app: modeLabel.value, destination: props.destination, title: 'Configure ' + modeLabel.value.toLowerCase(),
+        headingId: 'flash-ai-title',
+        scope: props.scope?.category.title ?? 'Overall subject',
+        onBack: () => emit('back'), onCancel: () => emit('cancel'),
+      }) : h('header', { class: 'flash-ai-header' }, [
         h('div', [
           h('p', { class: 'flash-ai-muted' }, `${modeLabel.value} · Saved in ${props.destination}`),
           h('h2', { id: 'flash-ai-title', ref: heading, tabindex: -1 }, props.scope?.category.title ?? (props.direct ? 'Import an AI response' : 'Overall subject')),
@@ -134,9 +140,7 @@ export const IndexCardsAiImport = defineComponent({
           h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel') }, 'Cancel'),
         ]),
       ]),
-      stage.value === 'configure' ? h('div', { class: 'flash-ai-configuration' }, [
-        h('h3', 'Configure ' + modeLabel.value),
-        h('p', { class: 'study-ai-muted' }, 'Choose your settings before starting the AI steps.'),
+      stage.value === 'configure' ? h('div', { class: 'ai-options-configuration' }, [
         renderOptions(),
         h('div', { class: 'study-ai-actions' }, [h('button', {
           type: 'button', class: 'card-primary-button', onClick: () => { stage.value = 'exchange'; },

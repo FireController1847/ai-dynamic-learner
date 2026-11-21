@@ -67,7 +67,6 @@ const paths: Record<string, string> = {
   'text-size': 'M3 5h12M9 5v15M5 20h8M16 10h6M19 10v10M17 20h4',
   lightbulb: 'M9 18h6M10 22h4M8.5 15.2A7 7 0 1 1 15.5 15.2C14.5 16.1 14 16.9 14 18h-4c0-1.1-.5-1.9-1.5-2.8Z',
   ai: 'M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5ZM19 13l.8 2.2L22 16l-2.2.8L19 19l-.8-2.2L16 16l2.2-.8ZM5 15l.7 1.8L8 17.5l-2.3.7L5 20l-.7-1.8L2 17.5l2.3-.7Z',
-  crown: 'M2 8l4 4 6-7 6 7 4-4-2 11H4L2 8ZM4 22h16',
 };
 
 export const Icon = defineComponent({
