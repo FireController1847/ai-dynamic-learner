@@ -8,7 +8,8 @@ import { AiFocusChoices } from '../../components/ai-focus-choices.ts';
 import { AiCategoryPicker } from '../../components/ai-category-picker.ts';
 import { categoryScopedPrompt, type AiCardScope, type AiCardCategories } from '../../core/ai-study-categories.ts';
 import { MAX_AI_IMPORT_LENGTH } from '../../core/ai-json.ts';
-import { AI_COMPLETE_COVERAGE_PROMPT, parseAiSubjectCoverage, type AiSubjectCoverage } from '../../core/ai-subject-coverage.ts';
+import { parseAiSubjectCoverage, type AiSubjectCoverage } from '../../core/ai-subject-coverage.ts';
+import { aiCoverageInstructions, type AiCoverageLevel } from '../../core/ai-coverage.ts';
 import { inputValue } from '../../core/dom.ts';
 import { AI_BOUNDED_INFERENCE_PROMPT } from '../../core/ai-source-inference.ts';
 import { AI_SOURCE_DIFFICULTY_PROMPT } from '../../core/ai-source-difficulty.ts';
@@ -41,7 +42,7 @@ const MAX_IMPORT_BULLET_DEPTH = 7;
 const JSON_FENCE = '```';
 
 type PromptDetail = 'concise' | 'balanced' | 'detailed';
-type PromptCoverage = 'essentials' | 'balanced' | 'comprehensive';
+type PromptCoverage = AiCoverageLevel;
 type PromptBulletStyle = 'phrases' | 'thoughts';
 
 export interface GuideAiPromptOptions {
@@ -102,12 +103,6 @@ const DETAIL_INSTRUCTIONS: Record<PromptDetail, string> = {
   detailed: 'Keep all genuinely useful study material, including lower-priority supporting details, while still writing notes rather than textbook prose.',
 };
 
-const COVERAGE_INSTRUCTIONS: Record<PromptCoverage, string> = {
-  essentials: 'Cover only the core concepts needed to understand and remember the material.',
-  balanced: 'Cover the major ideas plus supporting details that directly help understanding or recall. Do not try to preserve every fact.',
-  comprehensive: 'Cover the material broadly, including useful distinctions and supporting details, but skip redundancy and trivia.',
-};
-
 const BULLET_STYLE_INSTRUCTIONS: Record<PromptBulletStyle, string> = {
   phrases: 'Write short note fragments or points, usually about 5–10 words. They do not need to be complete sentences and normally should not end with a period.',
   thoughts: 'Write every bullet and sub-bullet as a short, intelligible complete sentence. Keep each sentence brief, focused on one idea, and free of unnecessary clauses or explanation. End each sentence with a period.',
@@ -128,11 +123,10 @@ ${AI_SOURCE_DIFFICULTY_PROMPT}
 
 Selected preferences:
 - Detail: ${DETAIL_INSTRUCTIONS[options.detail]}
-- Coverage: ${COVERAGE_INSTRUCTIONS[options.coverage]}
+- Coverage: ${aiCoverageInstructions(options.coverage)}
 - Bullet style: ${BULLET_STYLE_INSTRUCTIONS[options.bulletStyle]}
 
-Condense redundant wording, NEVER omit a source subject or subtopic. If the material exceeds application limits, ask for batches rather than silently dropping topics.
-${AI_COMPLETE_COVERAGE_PROMPT}
+Condense redundant wording. Respect the selected coverage level; explain omitted important topics rather than silently dropping them. If the material exceeds application limits, ask for batches.
 ${GUIDE_CONFIDENCE_PROMPT}
 For Guide, coverage itemNumbers are 1-based section indices in List mode and 1-based topic indices in Map mode.
 
