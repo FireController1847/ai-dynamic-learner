@@ -1,3 +1,20 @@
+## v1.18.2
+
+<small data-utc="2026-11-21T23:49:51Z">November 21, 2026 at 4:49 PM MST</small>
+
+- **AI Setup:** Unify configuration screens around Review's header, two-column settings grid, and responsive grouped controls.
+- **Prompt Choice:** Keep Simple and Detailed equally available, with clear descriptions for free and paid external AI chats instead of premium-style cues.
+- **Categories:** Choose category-discovery prompt settings before starting the AI exchange.
+- **Puzzles:** Word pool, coverage, grid size, and layout choices use the shared Review-style configuration.
+
+<details>
+<summary>View 2 commits</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/122e45de7b4191b41268b062623e1170e60392b2">122e45de</a> — Unify AI settings and clarify free/paid AI compatibility</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/ecff9dd67fd4530e67edd3f24bb31ab1d04fdd77">ecff9dd6</a> — Fix Review configuration title type check</li>
+</ol>
+</details>
+
 ## v1.18.1
 
 <small data-utc="2026-11-21T23:39:25Z">November 21, 2026 at 4:39 PM MST</small>
