@@ -1,3 +1,29 @@
+## v2.20.0
+
+<small data-utc="2026-11-21T23:30:48Z">November 21, 2026 at 4:30 PM MST</small>
+
+- **AI Workflow:** Choose teaching settings before starting the guided AI exchange, including Simple and Detailed prompts.
+- **Generation:** Share Review’s coverage options, follow source difficulty and bounded inference, and retain Guide-specific List and Map teaching configurations.
+- **Import:** Identify the intended app, improve response recovery guidance, and preserve explicitly named source units with per-unit generation previews.
+
+<details>
+<summary>View 12 commits</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/d86b3dd76ba413919195ef8b690c8d4f744a33fa">d86b3dd7</a> — Move Guide and Index Cards settings before AI steps</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/40661a0745b24fb2c5528814a98f20a8a008900d">40661a07</a> — Identify target apps and guide direct imports</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/2c5d352cd6ab9c52ae757adddad1b716f3eb6434">2c5d352c</a> — Unify AI coverage choices</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/f38500843aeae770343d08f2c80e5fa61270959b">f3850084</a> — Support source-bounded inference</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/80377bcedcca2f36ca3fa7e8eddec2f2cc8f5038">80377bce</a> — Match source difficulty and scope</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/b52f7859fa0718de566ec63d476ba61c53529549">b52f7859</a> — Correct shared coverage guidance in Guide</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/6d88549c757e9df7757b9f4f8057e5457bee5bac">6d88549c</a> — Offer simple and detailed prompts</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/ecbb2949ce3d9878ca7552e7b52a4d79a4d90eee">ecbb2949</a> — Improve JSON error guidance and recovery</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/ffc743caf61cb5f8b061b4e8a76edc2731f0469e">ffc743ca</a> — Preserve source units and per-chapter statistics</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/b71f83bbf1312fe4468da602e886425f84337d19">b71f83bb</a> — Clarify wrong-app imports before content validation</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/9cc5db7c2bf34ec9cfa2a063c2499154972b3718">9cc5db7c</a> — Separate settings and import guidance from numbered steps</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/70be7cc70fadfb8057ff613a5f8e6d9c3e256e01">70be7cc7</a> — Bump versions for unified AI enhancements</li>
+</ol>
+</details>
+
 ## v2.19.0
 
 <small data-utc="2026-11-21T20:34:16Z">November 21, 2026 at 1:34 PM MST</small>
