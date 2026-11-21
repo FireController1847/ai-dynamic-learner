@@ -3,18 +3,16 @@ import { AiCategoryPicker } from '../../components/ai-category-picker.ts';
 import { AiCreationScope } from '../../components/ai-creation-scope.ts';
 import { Icon } from '../../components/icon.ts';
 import { AiPromptExchange, type AiPromptExchangeHandle } from '../../components/ai-prompt-exchange.ts';
-import { MarkdownContent } from '../../components/markdown-content.ts';
 import { MAX_AI_IMPORT_LENGTH } from '../../core/ai-json.ts';
 import { DEFAULT_SESSION_QUESTION_LIMIT } from './set-options.ts';
 import type { AiCardCategories, AiCardScope } from '../../core/ai-study-categories.ts';
 import { inputValue } from '../../core/dom.ts';
-import { parseFillBlankTemplate } from '../../core/fill-blank.ts';
 import { reviewAiPrompt, type ReviewAiImport, type ReviewAiPreferences } from './ai-import-format.ts';
 
 import { REVIEW_AI_FOCUSES, type ReviewAiFocus } from './ai-focus.ts';
 import { AiFocusChoices } from '../../components/ai-focus-choices.ts';
 import { AI_QUESTION_TYPES, allocateQuestions, DEFAULT_AI_WEIGHTS, equalizeQuestionWeights, normalizeQuestionWeights, questionCountProblem, questionMixProblem, questionTypeLabel, rebalanceQuestionWeights, type QuestionWeights, type AiQuestionType } from './ai-question-mix.ts';
-import { questionDisplayPrompt, type Question } from './question-model.ts';
+import { reviewAiQuestionPreview } from './ai-question-preview.ts';
 import { checkReviewResponse, reviewRetryPrompt, reviewBatchPrompt, ReviewAiRecoveryHelp } from './ai-import-recovery.ts';
 import type { ReviewResponseRecovery } from './ai-response-recovery.ts';
 
@@ -182,21 +180,6 @@ export const ReviewAiCreation = defineComponent({
         correctionFallback.value = true;
         correctionMessage.value = 'Copying was blocked. Select this request and send it to the same AI chat.';
       }
-    }
-    function previewQuestion(question: Question, index: number) {
-      const answers = question.type === 'parameterized' ? (question.parameters?.rules.answers ?? []).map(answer => `${answer.label}: ${answer.expression ?? `Solver output ${answer.solverKey}`}`) : question.type === 'dropdown' ? (question.matches ?? []).map(row => `${row.label}: ${row.answer}`) :
-        question.type === 'fill-in-the-blanks' ? parseFillBlankTemplate(question.prompt).answers :
-        question.correctAnswers ?? [question.answer];
-      return h('li', { key: question.id }, [
-        h('span', { class: 'study-ai-muted' }, `${index + 1} · ${questionTypeLabel(question.type)}`),
-        h('strong', questionDisplayPrompt(question)),
-        question.context?.trim() ? h(MarkdownContent, { text: question.context, class: 'knowledge-question-context' }) : null,
-        question.type === 'dropdown' ? h('ul', (question.matches ?? []).map(row => h('li', row.label))) : null,
-        question.parameters?.rules.solver?.package ? h('p', { class: 'study-ai-muted' }, `Includes uploaded solver: ${question.parameters.rules.solver.package.label}. Code runs only when previewing or reviewing a generated variant.`) : null,
-        question.choices.length ? h('ul', question.choices.map(choice => h('li', choice))) : null,
-        question.type !== 'statement' ? h('details', [h('summary', 'Reveal answer'),
-          h('p', answers.join(' · ')), question.explanation ? h('p', question.explanation) : null]) : null,
-      ]);
     }
     function workspace() {
       if (stage.value === 'categories') return h(AiCategoryPicker, {
@@ -421,7 +404,7 @@ export const ReviewAiCreation = defineComponent({
           ]) : null,
           h('details', { class: 'review-ai-questions-details', open: true }, [
             h('summary', `Preview all ${candidate.value.questions.length} questions`),
-            h('ol', { class: 'review-ai-preview' }, candidate.value.questions.map(previewQuestion)),
+            h('ol', { class: 'review-ai-preview' }, candidate.value.questions.map(reviewAiQuestionPreview)),
           ]),
           h('div', { class: 'study-ai-actions' }, [
             h('button', { type: 'button', class: 'quiet-button', onClick: back }, 'Back to response'),
