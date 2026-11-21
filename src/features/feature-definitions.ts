@@ -85,21 +85,21 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'index-cards', label: 'Index Cards', path: '/index-cards/', icon: 'cards',
     group: 'study',
-    version: '1.28.0',
+    version: '1.28.1',
     image: 'assets/app-icons/index-cards.png',
     description: 'Create flash cards or fill-in-the-blanks sets, then review or view them at your own pace.',
   },
   {
     id: 'word-search', label: 'Word Search', path: '/word-search/', icon: 'word-search',
     group: 'study',
-    version: '1.18.0',
+    version: '1.18.1',
     image: 'assets/app-icons/word-search.png',
     description: 'Create your own word searches, find every word, and pick up where you left off.'
   },
   {
     id: 'crossword', label: 'Crossword', path: '/crossword/', icon: 'crossword',
     group: 'study',
-    version: '1.13.0',
+    version: '1.13.1',
     image: 'assets/app-icons/crossword.png',
     description: 'Create your own crosswords, solve the clues, and pick up where you left off.',
     metadata: {
@@ -116,7 +116,7 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'guide', label: 'Guide', path: '/guide/', icon: 'document',
     group: 'master',
-    version: '2.20.0',
+    version: '2.20.1',
     image: 'assets/app-icons/guide.png',
     description: 'Teach and explore ideas through interactive map lessons, Teaching Blocks, or simple lists.',
     metadata: {
@@ -133,7 +133,7 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'knowledge-check', label: 'Review', path: '/knowledge-check/', icon: 'checklist',
     group: 'master',
-    version: '1.53.0',
+    version: '1.53.1',
     image: 'assets/app-icons/knowledge-check.png',
     description: 'Make knowledge sets to study, quiz yourself, or take a test.',
     metadata: {

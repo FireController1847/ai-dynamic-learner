@@ -1,3 +1,17 @@
+## v1.18.1
+
+<small data-utc="2026-11-21T23:39:25Z">November 21, 2026 at 4:39 PM MST</small>
+
+- **AI Prompts:** Default to the simpler prompt for free AI chats, with Detailed still available for larger paid AI models.
+- **UI/UX:** Replace the text-heavy prompt dropdown with compact selectable buttons and a subtle crown icon for Detailed.
+
+<details>
+<summary>View 1 commit</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/201b8fe4469c5a3cd250ffdd1cca3727e9b2a599">201b8fe4</a> — Default to Simple with a compact premium-style Detailed option</li>
+</ol>
+</details>
+
 ## v1.18.0
 
 <small data-utc="2026-11-21T23:30:48Z">November 21, 2026 at 4:30 PM MST</small>
