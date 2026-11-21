@@ -482,7 +482,7 @@ export const GuideAiImportWorkspace = defineComponent({
   emits: { back: () => true, cancel: () => true, import: (_value: SimpleGuideImport) => true },
   setup(props, { emit }) {
     const directImport = ref(props.direct);
-    const stage = ref<'scope' | 'categories' | 'exchange' | 'review'>(directImport.value ? 'exchange' : 'scope');
+    const stage = ref<'scope' | 'categories' | 'configure' | 'exchange' | 'review'>(directImport.value ? 'exchange' : 'scope');
     const candidate = ref<SimpleGuideImport | null>(null);
     const returningFromReview = ref(false);
     const chosenScope = ref<AiCardScope | null>(null);
@@ -498,8 +498,9 @@ export const GuideAiImportWorkspace = defineComponent({
           return;
         }
         recovery.reset();
-        stage.value = chosenScope.value ? 'categories' : 'scope';
-      } else if (stage.value === 'categories') stage.value = 'scope';
+        stage.value = 'configure';
+      } else if (stage.value === 'configure') stage.value = chosenScope.value ? 'categories' : 'scope';
+      else if (stage.value === 'categories') stage.value = 'scope';
       else emit('back');
     }
     const detail = ref<PromptDetail>(DEFAULT_PROMPT_OPTIONS.detail);
@@ -569,52 +570,7 @@ export const GuideAiImportWorkspace = defineComponent({
       ]);
     }
 
-    return () => stage.value === 'categories' ? h(AiCategoryPicker, {
-      key: 'guide-categories', label: 'Guide', destination: props.destination,
-      initialCategories: categoryList.value, onBack: () => { stage.value = 'scope'; },
-      onCancel: () => emit('cancel'),
-      onSelect: (selected: AiCardScope, list: AiCardCategories) => {
-        chosenScope.value = selected; categoryList.value = list; stage.value = 'exchange';
-      },
-    }) : stage.value === 'review' && candidate.value ? h(GuideAiReview, {
-      candidate: candidate.value, direct: directImport.value,
-      targetBlocks: !directImport.value && props.mode === 'map' ? targetBlocks.value : 0,
-      overall: chosenScope.value === null,
-      onBack: back, onCancel: () => emit('cancel'),
-      onCreate: () => { if (candidate.value) emit('import', candidate.value); },
-    }) : h('section', { class: 'guide-ai-workspace', 'aria-labelledby': 'guide-ai-title' }, [
-      h('header', { class: 'guide-ai-header' }, [
-        h('div', { class: 'guide-ai-heading' }, [
-          h('span', { class: 'guide-ai-kicker' }, `${directImport.value ? 'Existing AI response' : props.mode === 'map' ? 'Map mode' : 'List mode'} · Saved in ${props.destination}`),
-          h('h2', { id: 'guide-ai-title' }, stage.value === 'scope' ? 'Choose what to teach' : chosenScope.value?.category.title ?? 'Create with AI'),
-          h('p', directImport.value ? 'Import an existing AI response.' : stage.value === 'scope' ? 'Choose between the overall subject and a specific category, just like Review.' : chosenScope.value?.category.description ?? 'Prepare a Guide from your source material with AI.'),
-        ]),
-        h('div', { class: 'guide-ai-actions' }, [
-          h('button', { type: 'button', class: 'quiet-button', onClick: back }, 'Back'),
-          h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel') }, 'Cancel'),
-        ]),
-      ]),
-      stage.value === 'scope' ? h(AiCreationScope, {
-        showExit: false,
-        onOverall: () => { chosenScope.value = null; directImport.value = false; stage.value = 'exchange'; },
-        onCategory: () => { stage.value = 'categories'; },
-        onDirect: () => {
-          chosenScope.value = null; directImport.value = true; recovery.reset();
-          json.value = ''; candidate.value = null; stage.value = 'exchange';
-        },
-      }) : h(AiPromptExchange, {
-        ref: exchangeRef, idPrefix: 'guide-ai', label: 'Guide', prompt: prompt.value, json: json.value, problem: problem.value, startInImport: directImport.value || returningFromReview.value, importOnly: directImport.value,
-        hasPreview: false, showReviewStep: !directImport.value,
-        skipSource: Boolean(chosenScope.value),
-        preferFileImport: true, allowRawResponseFile: true, recovering: recovery.active.value, maxLength: MAX_AI_IMPORT_LENGTH,
-        promptHelp: 'Create a guided interactive lesson from your source, using Teaching Blocks and an exploratory map.',
-        importHelp: 'Upload your AI-generated JSON file or paste the response, then preview the content and coverage estimates.',
-        validateLabel: 'Check & preview',
-        onUpdateJson: (value: string) => { json.value = value; candidate.value = null; problem.value = ''; },
-        onValidate: importValidated,
-      }, {
-        recovery: recovery.panel,
-        options: () => h('div', { class: 'guide-ai-options' }, [
+    function renderOptions() { return h('div', { class: 'guide-ai-options' }, [
               optionField('guide-ai-detail', 'Detail', detail.value, [
                 { value: 'concise', label: 'Concise' },
                 { value: 'balanced', label: 'Balanced' },
@@ -668,7 +624,62 @@ export const GuideAiImportWorkspace = defineComponent({
                   ]))) : null,
                 mixError.value ? h('p', { class: 'guide-ai-mix-error', role: 'alert' }, mixError.value) : null,
               ]) : null,
-            ]),
+            ]); }
+
+    return () => stage.value === 'categories' ? h(AiCategoryPicker, {
+      key: 'guide-categories', label: 'Guide', destination: props.destination,
+      initialCategories: categoryList.value, onBack: () => { stage.value = 'scope'; },
+      onCancel: () => emit('cancel'),
+      onSelect: (selected: AiCardScope, list: AiCardCategories) => {
+        chosenScope.value = selected; categoryList.value = list; stage.value = 'configure';
+      },
+    }) : stage.value === 'review' && candidate.value ? h(GuideAiReview, {
+      candidate: candidate.value, direct: directImport.value,
+      targetBlocks: !directImport.value && props.mode === 'map' ? targetBlocks.value : 0,
+      overall: chosenScope.value === null,
+      onBack: back, onCancel: () => emit('cancel'),
+      onCreate: () => { if (candidate.value) emit('import', candidate.value); },
+    }) : h('section', { class: 'guide-ai-workspace', 'aria-labelledby': 'guide-ai-title' }, [
+      h('header', { class: 'guide-ai-header' }, [
+        h('div', { class: 'guide-ai-heading' }, [
+          h('span', { class: 'guide-ai-kicker' }, `${directImport.value ? 'Existing AI response' : props.mode === 'map' ? 'Map mode' : 'List mode'} · Saved in ${props.destination}`),
+          h('h2', { id: 'guide-ai-title' }, stage.value === 'scope' ? 'Choose what to teach' : chosenScope.value?.category.title ?? 'Create with AI'),
+          h('p', directImport.value ? 'Import an existing AI response.' : stage.value === 'scope' ? 'Choose between the overall subject and a specific category, just like Review.' : chosenScope.value?.category.description ?? 'Prepare a Guide from your source material with AI.'),
+        ]),
+        h('div', { class: 'guide-ai-actions' }, [
+          h('button', { type: 'button', class: 'quiet-button', onClick: back }, 'Back'),
+          h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel') }, 'Cancel'),
+        ]),
+      ]),
+      stage.value === 'scope' ? h(AiCreationScope, {
+        showExit: false,
+        onOverall: () => { chosenScope.value = null; directImport.value = false; stage.value = 'configure'; },
+        onCategory: () => { stage.value = 'categories'; },
+        onDirect: () => {
+          chosenScope.value = null; directImport.value = true; recovery.reset();
+          json.value = ''; candidate.value = null; stage.value = 'exchange';
+        },
+      }) : stage.value === 'configure' ? h('div', { class: 'guide-ai-configuration' }, [
+        h('h3', 'Configure your Guide'),
+        h('p', { class: 'study-ai-muted' }, 'Set up your lesson before the Source, Copy, Send, and Return steps.'),
+        renderOptions(),
+        h('div', { class: 'guide-ai-actions' }, [
+          h('button', { type: 'button', class: 'card-primary-button', disabled: Boolean(mixError.value),
+            onClick: () => { if (!mixError.value) stage.value = 'exchange'; } }, 'Continue to AI'),
+        ]),
+      ]) : h(AiPromptExchange, {
+        ref: exchangeRef, idPrefix: 'guide-ai', label: 'Guide', prompt: prompt.value, json: json.value, problem: problem.value, startInImport: directImport.value || returningFromReview.value, importOnly: directImport.value,
+        hasPreview: false, showReviewStep: !directImport.value,
+        skipSource: Boolean(chosenScope.value),
+        preferFileImport: true, allowRawResponseFile: true, recovering: recovery.active.value, maxLength: MAX_AI_IMPORT_LENGTH,
+        promptHelp: 'Create a guided interactive lesson from your source, using Teaching Blocks and an exploratory map.',
+        importHelp: 'Upload your AI-generated JSON file or paste the response, then preview the content and coverage estimates.',
+        validateLabel: 'Check & preview',
+        onUpdateJson: (value: string) => { json.value = value; candidate.value = null; problem.value = ''; },
+        onValidate: importValidated,
+      }, {
+        recovery: recovery.panel,
+
 
       }),
     ]);

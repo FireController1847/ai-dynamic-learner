@@ -28,6 +28,7 @@ export const IndexCardsAiImport = defineComponent({
   },
   emits: { back: () => true, cancel: () => true, import: (_value: IndexCardsAiImportValue) => true },
   setup(props, { emit }) {
+    const stage = ref<'configure' | 'exchange'>(props.direct ? 'exchange' : 'configure');
     const coverage = ref<AiCardCoverage>('balanced');
     const limit = ref(20);
     const blankStyle = ref<AiBlankStyle>('connected');
@@ -81,31 +82,7 @@ export const IndexCardsAiImport = defineComponent({
       });
     }
 
-    return () => h('section', { class: 'flash-ai-workspace', 'aria-labelledby': 'flash-ai-title' }, [
-      h('header', { class: 'flash-ai-header' }, [
-        h('div', [
-          h('p', { class: 'flash-ai-muted' }, `${modeLabel.value} · Saved in ${props.destination}`),
-          h('h2', { id: 'flash-ai-title', ref: heading, tabindex: -1 }, props.scope?.category.title ?? (props.direct ? 'Import an AI response' : 'Overall subject')),
-          h('p', props.direct ? 'Import an existing set of cards.' : 'Create cards for your selected scope.'),
-          h('p', { class: 'flash-ai-muted' }, props.scope?.category.description ?? ''),
-        ]),
-        h('div', { class: 'flash-ai-actions' }, [
-          h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('back') }, 'Back'),
-          h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel') }, 'Cancel'),
-        ]),
-      ]),
-      h(AiPromptExchange, {
-        idPrefix: 'index-cards-ai', label: modeLabel.value, prompt: prompt.value, startInImport: props.direct, importOnly: props.direct, skipSource: Boolean(props.scope),
-        json: json.value, problem: problem.value, maxLength: MAX_AI_IMPORT_LENGTH,
-        hasPreview: candidate.value !== null,
-        promptHelp: props.scope ? 'Create cards for your selected category.' : 'Create cards covering the overall subject.',
-        importHelp: 'Upload or paste the AI response to preview the cards.',
-        onUpdateJson: (value: string) => { json.value = value; candidate.value = null; coverageAccepted.value = false; problem.value = ''; },
-        onValidate: preview,
-        recovering: recovery.active.value,
-      }, {
-        recovery: recovery.panel,
-        options: () => h('div', { class: 'flash-ai-options' }, [
+    function renderOptions() { return h('div', { class: 'flash-ai-options' }, [
             h('label', { class: 'flash-ai-option' }, [h('span', 'Coverage'), h('select', {
               value: coverage.value,
               onChange: (event: Event) => {
@@ -126,7 +103,42 @@ export const IndexCardsAiImport = defineComponent({
                 if (value === 'focused' || value === 'connected') blankStyle.value = value;
               },
             }, [h('option', { value: 'focused' }, 'One focused blank'), h('option', { value: 'connected' }, 'A few related blanks')]), h('small', 'One missing answer or several connected answers per card.')]) : null,
-          ]),
+          ]); }
+
+    return () => h('section', { class: 'flash-ai-workspace', 'aria-labelledby': 'flash-ai-title' }, [
+      h('header', { class: 'flash-ai-header' }, [
+        h('div', [
+          h('p', { class: 'flash-ai-muted' }, `${modeLabel.value} · Saved in ${props.destination}`),
+          h('h2', { id: 'flash-ai-title', ref: heading, tabindex: -1 }, props.scope?.category.title ?? (props.direct ? 'Import an AI response' : 'Overall subject')),
+          h('p', props.direct ? 'Import an existing set of cards.' : 'Create cards for your selected scope.'),
+          h('p', { class: 'flash-ai-muted' }, props.scope?.category.description ?? ''),
+        ]),
+        h('div', { class: 'flash-ai-actions' }, [
+          h('button', { type: 'button', class: 'quiet-button', onClick: () => {
+            if (stage.value === 'exchange' && !props.direct) stage.value = 'configure';
+            else emit('back');
+          } }, 'Back'),
+          h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel') }, 'Cancel'),
+        ]),
+      ]),
+      stage.value === 'configure' ? h('div', { class: 'flash-ai-configuration' }, [
+        h('h3', 'Configure ' + modeLabel.value),
+        h('p', { class: 'study-ai-muted' }, 'Choose your settings before starting the AI steps.'),
+        renderOptions(),
+        h('div', { class: 'study-ai-actions' }, [h('button', {
+          type: 'button', class: 'card-primary-button', onClick: () => { stage.value = 'exchange'; },
+        }, 'Continue to AI')]),
+      ]) : h(AiPromptExchange, {
+        idPrefix: 'index-cards-ai', label: modeLabel.value, prompt: prompt.value, startInImport: props.direct, importOnly: props.direct, skipSource: Boolean(props.scope),
+        json: json.value, problem: problem.value, maxLength: MAX_AI_IMPORT_LENGTH,
+        hasPreview: candidate.value !== null,
+        promptHelp: props.scope ? 'Create cards for your selected category.' : 'Create cards covering the overall subject.',
+        importHelp: 'Upload or paste the AI response to preview the cards.',
+        onUpdateJson: (value: string) => { json.value = value; candidate.value = null; coverageAccepted.value = false; problem.value = ''; },
+        onValidate: preview,
+        recovering: recovery.active.value,
+      }, {
+        recovery: recovery.panel,
         preview: () => candidate.value ? h('div', { class: 'flash-ai-preview', 'aria-label': `${modeLabel.value} preview` }, [
           h('h3', candidate.value.data.title),
           h('p', { role: 'status' }, `${candidate.value.data.cards.length} cards · ${modeLabel.value} · ${props.remainingCards} card spaces available`),

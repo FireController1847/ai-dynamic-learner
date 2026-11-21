@@ -232,7 +232,6 @@ export const AiPromptExchange = defineComponent({
               h('h3', { id: props.idPrefix + '-step-title' }, 'Make instructions for your AI'),
               h('p', { class: 'ai-exchange-help' }, props.promptHelp),
             ]),
-            slots.options?.(),
             slots.guidance?.(),
             h('div', { class: 'ai-exchange-actions' }, [
               h('button', {
