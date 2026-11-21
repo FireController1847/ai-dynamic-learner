@@ -3,7 +3,8 @@ import { assertAiTarget } from '../../core/ai-app-identity.ts';
 import { aiFileOutputInstructions } from '../../core/ai-file-output.ts';
 import { categoryScopedPrompt, type AiCardScope } from '../../core/ai-study-categories.ts';
 import { isRecord } from '../../core/validation.ts';
-import { AI_COMPLETE_COVERAGE_PROMPT, parseAiSubjectCoverage, type AiSubjectCoverage } from '../../core/ai-subject-coverage.ts';
+import { parseAiSubjectCoverage, type AiSubjectCoverage } from '../../core/ai-subject-coverage.ts';
+import { aiCoverageInstructions, type AiCoverageLevel } from '../../core/ai-coverage.ts';
 import { AI_PLAIN_TEXT_ONLY_GUIDANCE } from '../../core/ai-formatting-guidance.ts';
 import {
   MAX_HINT_LENGTH, MAX_WORD_LENGTH, DEFAULT_LAYOUT_MIN_WORDS, DEFAULT_LAYOUT_MAX_WORDS, MIN_WORDS,
@@ -26,6 +27,7 @@ export const puzzleAiLimits = {
 
 export interface PuzzleAiOptions {
   count: number;
+  coverage: AiCoverageLevel;
   size: GridSize;
   difficulty: Difficulty;
   studyMode: StudyMode;
@@ -39,6 +41,7 @@ export interface PuzzleAiOptions {
 export function defaultPuzzleAiOptions(kind: PuzzleAiKind): PuzzleAiOptions {
   return {
     count: puzzleAiLimits[kind].initial,
+    coverage: 'balanced',
     size: 15,
     difficulty: 'medium',
     studyMode: 'hints',
@@ -112,8 +115,8 @@ Use only facts and terminology supported by the original source. If there are fe
 
 ${AI_PLAIN_TEXT_ONLY_GUIDANCE}
 
-${AI_COMPLETE_COVERAGE_PROMPT}
-For puzzle answers that cannot represent a multiword subject directly, test the subject using a relevant valid single-word answer and a specific clue/hint. If complete coverage cannot fit the supported entry limits, ask to split the source; never silently omit a subject.
+${aiCoverageInstructions(options.coverage)}
+For puzzle answers that cannot represent a multiword subject directly, test the subject using a relevant valid single-word answer and a specific clue/hint. If selected coverage cannot fit the supported entry limits, report omissions and ask to split the source; never silently omit an important selected subject.
 
 Avoid repeated answers, redundant clues, citations, URLs, attribution, markdown commentary and ChatGPT citation markers. ${scope ? 'This JSON represents ONE selected category only.' : 'Cover the overall subject, not a single category.'}
 

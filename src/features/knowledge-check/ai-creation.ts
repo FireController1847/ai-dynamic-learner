@@ -1,6 +1,7 @@
 import { computed, defineComponent, h, onMounted, ref, Transition } from 'vue';
 import { AiCategoryPicker } from '../../components/ai-category-picker.ts';
 import { AiCreationScope } from '../../components/ai-creation-scope.ts';
+import { AiCoverageSelect } from '../../components/ai-coverage-select.ts';
 import { Icon } from '../../components/icon.ts';
 import { AiPromptExchange, type AiPromptExchangeHandle } from '../../components/ai-prompt-exchange.ts';
 import { MAX_AI_IMPORT_LENGTH } from '../../core/ai-json.ts';
@@ -209,9 +210,9 @@ export const ReviewAiCreation = defineComponent({
           h('div', { class: 'review-ai-settings' }, [
             h('label', [h('span', 'Total questions'), h('input', { type: 'number', min: 1, step: 1, value: preferences.value.count,
               onInput: (event: Event) => { preferences.value.count = Number(inputValue(event)); } }), h('small', { class: 'study-ai-muted' }, 'Number of questions the AI should make.')]),
-            h('label', [h('span', 'Coverage'), h('select', { value: preferences.value.coverage, onChange: (event: Event) => {
-              const value = inputValue(event); if (value === 'exam-prep' || value === 'essentials' || value === 'balanced') preferences.value.coverage = value;
-            } }, [h('option', { value: 'exam-prep' }, 'Exam prep only'), h('option', { value: 'essentials' }, 'Essentials only'), h('option', { value: 'balanced' }, 'Balanced')]), h('small', { class: 'study-ai-muted' }, 'Likely exam content, essential concepts, or a balanced review.')]),
+            h(AiCoverageSelect, { value: preferences.value.coverage,
+              onSelect: value => { preferences.value.coverage = value; },
+            }),
           ]),
           h('div', { class: 'review-ai-question-bank' }, [
             h('div', { class: 'review-ai-bank-counts' }, [

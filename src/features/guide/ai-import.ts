@@ -3,6 +3,7 @@ import { useAiRecovery } from '../../components/use-ai-recovery.ts';
 import { readAiResponse, type AiCollectionOptions } from '../../core/ai-response-recovery.ts';
 import { AiPromptExchange, type AiPromptExchangeHandle } from '../../components/ai-prompt-exchange.ts';
 import { AiCreationScope } from '../../components/ai-creation-scope.ts';
+import { AiCoverageSelect } from '../../components/ai-coverage-select.ts';
 import { AiFocusChoices } from '../../components/ai-focus-choices.ts';
 import { AiCategoryPicker } from '../../components/ai-category-picker.ts';
 import { categoryScopedPrompt, type AiCardScope, type AiCardCategories } from '../../core/ai-study-categories.ts';
@@ -580,11 +581,9 @@ export const GuideAiImportWorkspace = defineComponent({
                 { value: 'balanced', label: 'Balanced' },
                 { value: 'detailed', label: 'Detailed' },
               ], (value) => { detail.value = value; }, 'How much information appears within each section.'),
-              optionField('guide-ai-coverage', 'Coverage', coverage.value, [
-                { value: 'essentials', label: 'Essentials only' },
-                { value: 'balanced', label: 'Balanced' },
-                { value: 'comprehensive', label: 'Comprehensive' },
-              ], (value) => { coverage.value = value; }, 'Key ideas only or more of the subject.'),
+              h(AiCoverageSelect, { value: coverage.value, fieldClass: 'guide-ai-option',
+                onSelect: value => { coverage.value = value; },
+              }),
               props.mode === 'list' ? optionField('guide-ai-bullet-style', 'Bullet style', bulletStyle.value, [
                 { value: 'phrases', label: 'Key phrases' },
                 { value: 'thoughts', label: 'Complete thoughts' },

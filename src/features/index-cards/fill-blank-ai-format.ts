@@ -2,9 +2,10 @@ import { parseFillBlankTemplate } from '../../core/fill-blank.ts';
 import { aiFileOutputInstructions } from '../../core/ai-file-output.ts';
 import { isRecord } from '../../core/validation.ts';
 import { assertAiTarget } from '../../core/ai-app-identity.ts';
-import { AI_COMPLETE_COVERAGE_PROMPT, parseAiSubjectCoverage, type AiSubjectCoverage } from '../../core/ai-subject-coverage.ts';
+import { parseAiSubjectCoverage, type AiSubjectCoverage } from '../../core/ai-subject-coverage.ts';
 import { AI_PLAIN_TEXT_ONLY_GUIDANCE } from '../../core/ai-formatting-guidance.ts';
-import { AI_COVERAGE_INSTRUCTIONS, parseAiImportJson, type AiCardCoverage } from './ai-import-format.ts';
+import { parseAiImportJson, type AiCardCoverage } from './ai-import-format.ts';
+import { aiCoverageInstructions } from '../../core/ai-coverage.ts';
 import { MAX_CARDS, MAX_CARD_TEXT_LENGTH } from './card-model.ts';
 import { MAX_NAME_LENGTH } from './tree-model.ts';
 
@@ -38,8 +39,7 @@ Make each card a useful recall challenge:
 
 ${AI_PLAIN_TEXT_ONLY_GUIDANCE}
 
-Coverage depth: ${AI_COVERAGE_INSTRUCTIONS[coverage]} This controls DETAIL, never subject inclusion.
-${AI_COMPLETE_COVERAGE_PROMPT}
+Coverage depth: ${aiCoverageInstructions(coverage)} This controls DETAIL, never subject inclusion.
 Create at most ${limit} cards. Use fewer if the source does not support that many useful recall targets; never pad with filler.
 
 ${aiFileOutputInstructions("dynamic-learner-fill-in-the-blanks.json")}

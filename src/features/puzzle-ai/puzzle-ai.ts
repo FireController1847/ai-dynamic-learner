@@ -4,6 +4,7 @@ import { AiCreationScope } from '../../components/ai-creation-scope.ts';
 import { useAiRecovery } from '../../components/use-ai-recovery.ts';
 import { AiPromptExchange } from '../../components/ai-prompt-exchange.ts';
 import { AiCoverageAcceptance } from '../../components/ai-coverage-acceptance.ts';
+import { AiCoverageSelect } from '../../components/ai-coverage-select.ts';
 import { MAX_AI_IMPORT_LENGTH } from '../../core/ai-json.ts';
 import type { AiCardCategories, AiCardScope } from '../../core/ai-study-categories.ts';
 import { inputValue } from '../../core/dom.ts';
@@ -157,6 +158,9 @@ export const PuzzleAiCreation = defineComponent({
           ]),
         ]),
         h('form', { class: 'puzzle-ai-setup', onSubmit: continueToPrompt }, [
+          h(AiCoverageSelect, { value: current.coverage, fieldClass: 'puzzle-ai-setting',
+            onSelect: value => updatePreferences({ coverage: value }),
+          }),
           h('div', { class: 'puzzle-ai-setup-grid' }, [
             h('label', { class: 'puzzle-ai-setting' }, [
               h('span', wordSearch ? 'Word pool target' : 'Target answers'),

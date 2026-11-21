@@ -3,6 +3,7 @@ import { useAiRecovery } from '../../components/use-ai-recovery.ts';
 import { MAX_CARDS } from './card-model.ts';
 import { AiPromptExchange } from '../../components/ai-prompt-exchange.ts';
 import { AiCoverageAcceptance } from '../../components/ai-coverage-acceptance.ts';
+import { AiCoverageSelect } from '../../components/ai-coverage-select.ts';
 import { inputValue } from '../../core/dom.ts';
 import { maskFillBlankAnswers, parseFillBlankTemplate } from '../../core/fill-blank.ts';
 import { fillBlankAiPrompt, parseFillBlankAiImport, FILL_BLANK_IMPORT_FORMAT, type AiBlankStyle, type FillBlankCardsImport } from './fill-blank-ai-format.ts';
@@ -83,14 +84,9 @@ export const IndexCardsAiImport = defineComponent({
     }
 
     function renderOptions() { return h('div', { class: 'flash-ai-options' }, [
-            h('label', { class: 'flash-ai-option' }, [h('span', 'Coverage'), h('select', {
-              value: coverage.value,
-              onChange: (event: Event) => {
-                const value = inputValue(event);
-                if (value === 'essentials' || value === 'balanced' || value === 'comprehensive') coverage.value = value;
-              },
-            }, [h('option', { value: 'essentials' }, 'Essentials only'), h('option', { value: 'balanced' }, 'Balanced'),
-              h('option', { value: 'comprehensive' }, 'Comprehensive')]), h('small', 'How much to cover: just key facts, a balanced mix, or most of the material.')]),
+            h(AiCoverageSelect, { value: coverage.value, fieldClass: 'flash-ai-option',
+              onSelect: value => { coverage.value = value; },
+            }),
             h('label', { class: 'flash-ai-option' }, [h('span', 'Maximum cards'), h('select', {
               value: limit.value, onChange: (event: Event) => {
                 const value = Number(inputValue(event));

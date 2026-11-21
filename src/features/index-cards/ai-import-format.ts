@@ -3,25 +3,20 @@ import { aiFileOutputInstructions } from '../../core/ai-file-output.ts';
 export { parseAiImportJson, MAX_AI_IMPORT_LENGTH } from '../../core/ai-json.ts';
 import { isRecord } from '../../core/validation.ts';
 import { assertAiTarget } from '../../core/ai-app-identity.ts';
-import { AI_COMPLETE_COVERAGE_PROMPT, parseAiSubjectCoverage, type AiSubjectCoverage } from '../../core/ai-subject-coverage.ts';
+import { parseAiSubjectCoverage, type AiSubjectCoverage } from '../../core/ai-subject-coverage.ts';
+import { aiCoverageInstructions, type AiCoverageLevel } from '../../core/ai-coverage.ts';
 import { AI_PLAIN_TEXT_ONLY_GUIDANCE } from '../../core/ai-formatting-guidance.ts';
 import { MAX_CARDS, MAX_CARD_TEXT_LENGTH } from './card-model.ts';
 import { MAX_NAME_LENGTH } from './tree-model.ts';
 
 export const FLASH_CARDS_IMPORT_FORMAT = 'dynamic-learner-flash-cards';
 
-export type AiCardCoverage = 'essentials' | 'balanced' | 'comprehensive';
+export type AiCardCoverage = AiCoverageLevel;
 export interface FlashCardsImport {
   title: string;
   cards: { question: string; answer: string }[];
   coverage?: AiSubjectCoverage[];
 }
-
-export const AI_COVERAGE_INSTRUCTIONS: Record<AiCardCoverage, string> = {
-  essentials: 'Only the core facts and terms worth memorizing.',
-  balanced: 'Major ideas plus useful supporting facts; omit trivia and repetition.',
-  comprehensive: 'Broad coverage of useful facts and distinctions, without duplicates or filler.',
-};
 
 export function flashCardsAiPrompt(coverage: AiCardCoverage, limit: number): string {
   return `Using the source material I supplied immediately before this instruction, create a Dynamic Learner Flash Cards set.
@@ -40,8 +35,7 @@ Answer brevity is the highest writing priority:
 
 ${AI_PLAIN_TEXT_ONLY_GUIDANCE}
 
-Coverage depth: ${AI_COVERAGE_INSTRUCTIONS[coverage]} This controls DETAIL, never subject inclusion.
-${AI_COMPLETE_COVERAGE_PROMPT}
+Coverage depth: ${aiCoverageInstructions(coverage)} This controls DETAIL, never subject inclusion.
 Create at most ${limit} useful cards. Fewer is better if the source does not support that many; do not invent filler.
 Do not create Fill in the Blanks, cloze syntax, card headings, explanations, IDs, groups, or application settings.
 
