@@ -1,6 +1,7 @@
 import { AI_PARAMETERIZED_EXAMPLE, AI_SOLVER_EXAMPLE, PARAMETERIZED_AI_GUIDANCE, parseAiSolvers, resolveAiParameters } from './ai-parameterized-format.ts';
 import { parseAiImportJson } from '../../core/ai-json.ts';
 import { AI_BOUNDED_INFERENCE_PROMPT } from '../../core/ai-source-inference.ts';
+import { AI_SOURCE_DIFFICULTY_PROMPT } from '../../core/ai-source-difficulty.ts';
 import { assertAiTarget } from '../../core/ai-app-identity.ts';
 import { categoryScopedPrompt, type AiCardScope } from '../../core/ai-study-categories.ts';
 import { parseFillBlankTemplate } from '../../core/fill-blank.ts';
@@ -126,6 +127,7 @@ Choose the approach from the material (respect requested type counts where possi
 Think like an instructor when CHOOSING what to test, not when wording the questions. ${examPrep ? 'Emphasize what the supplied exam evidence explicitly indicates WILL be tested; repetition or importance alone does not establish exam relevance.' : 'Emphasize what the source repeats, compares, demonstrates, or expects learners to apply.'} Vary scenarios and difficulty without redundant questions or outside facts. Reject questions whose answer is given away by their wording, which test only the presence of a word in the prompt, or whose distractors are obviously nonsensical; each question should genuinely test knowledge or reasoning.
 STRICT SOURCE FIDELITY — NON-NEGOTIABLE:
 ${AI_BOUNDED_INFERENCE_PROMPT}
+${AI_SOURCE_DIFFICULTY_PROMPT}
 - Use ONLY the study material supplied in this AI conversation and the explicitly selected category. Treat it as a closed knowledge source. Do not add facts from general knowledge, training data, web searches, common practice, or assumptions about what instructors normally teach.
 - Reasonable, well-supported inference is allowed to clarify an incomplete idea using adjacent source facts and relationships. Do not invent missing details, methods, examples, or claims that the supplied concepts cannot justify.
 - Test definitions, facts, comparisons, methods, and relationships present or defensibly implied by the source. Make clear when a conclusion is inferred rather than directly quoted; do not assert uncertainty as fact.

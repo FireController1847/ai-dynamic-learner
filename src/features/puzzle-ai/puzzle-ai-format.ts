@@ -6,6 +6,7 @@ import { isRecord } from '../../core/validation.ts';
 import { parseAiSubjectCoverage, type AiSubjectCoverage } from '../../core/ai-subject-coverage.ts';
 import { aiCoverageInstructions, type AiCoverageLevel } from '../../core/ai-coverage.ts';
 import { AI_BOUNDED_INFERENCE_PROMPT } from '../../core/ai-source-inference.ts';
+import { AI_SOURCE_DIFFICULTY_PROMPT } from '../../core/ai-source-difficulty.ts';
 import { AI_PLAIN_TEXT_ONLY_GUIDANCE } from '../../core/ai-formatting-guidance.ts';
 import {
   MAX_HINT_LENGTH, MAX_WORD_LENGTH, DEFAULT_LAYOUT_MIN_WORDS, DEFAULT_LAYOUT_MAX_WORDS, MIN_WORDS,
@@ -114,6 +115,7 @@ STRICT SINGLE-WORD RULES FOR EVERY ANSWER:
 
 Use source-supported facts, terminology, and carefully bounded inferences. If there are fewer useful terms than requested, output fewer rather than inventing unrelated terms; never go below ${minimumEntries} entries.
 ${AI_BOUNDED_INFERENCE_PROMPT}
+${AI_SOURCE_DIFFICULTY_PROMPT}
 
 ${AI_PLAIN_TEXT_ONLY_GUIDANCE}
 

@@ -11,6 +11,7 @@ import { MAX_AI_IMPORT_LENGTH } from '../../core/ai-json.ts';
 import { AI_COMPLETE_COVERAGE_PROMPT, parseAiSubjectCoverage, type AiSubjectCoverage } from '../../core/ai-subject-coverage.ts';
 import { inputValue } from '../../core/dom.ts';
 import { AI_BOUNDED_INFERENCE_PROMPT } from '../../core/ai-source-inference.ts';
+import { AI_SOURCE_DIFFICULTY_PROMPT } from '../../core/ai-source-difficulty.ts';
 import { isRecord } from '../../core/validation.ts';
 import { assertAiTarget } from '../../core/ai-app-identity.ts';
 import { AI_PLAIN_TEXT_ONLY_GUIDANCE } from '../../core/ai-formatting-guidance.ts';
@@ -123,6 +124,7 @@ Write in the style of a capable student taking organized notes during class: com
 ${planning}
 
 ${AI_BOUNDED_INFERENCE_PROMPT}
+${AI_SOURCE_DIFFICULTY_PROMPT}
 
 Selected preferences:
 - Detail: ${DETAIL_INSTRUCTIONS[options.detail]}
