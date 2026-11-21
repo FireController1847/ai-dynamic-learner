@@ -190,6 +190,14 @@ export function recoverAiCollection<T>(text: string, options: AiCollectionOption
   const result: AiCollectionRecovery<T> = { candidate: previous?.candidate ?? null, envelope: previous?.envelope ?? null,
     items: previous?.items ?? [], accepted: previous?.accepted ?? 0, issues: [], notices: [] };
   try {
+    // Check recognizable app identity before looking for an app-specific items array.
+    // A well-formed wrong-app response may contain no field named options.field.
+    if (options.targetApp) {
+      try { assertAiTarget(parseAiImportJson(text), options.targetApp); }
+      catch (error) {
+        if (error instanceof Error && /generated for .*importing it into|identifies conflicting apps|Unknown AI target app/i.test(error.message)) throw error;
+      }
+    }
     // Full validation comes first. A valid response keeps its metadata and exact semantics.
     const source = readAiResponse(text, options.field);
     const raw = source.envelope;

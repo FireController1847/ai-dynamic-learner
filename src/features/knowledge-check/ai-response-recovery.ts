@@ -1,4 +1,4 @@
-import { MAX_AI_IMPORT_LENGTH } from '../../core/ai-json.ts';
+import { MAX_AI_IMPORT_LENGTH, parseAiImportJson } from '../../core/ai-json.ts';
 import { assertAiTarget } from '../../core/ai-app-identity.ts';
 import { parseAiSourceUnits } from '../../core/ai-source-units.ts';
 import { readAiResponse, type AiResponseIssue } from '../../core/ai-response-recovery.ts';
@@ -42,6 +42,11 @@ export function recoverReviewResponse(text: string, preferences: ReviewAiPrefere
   const result: ReviewResponseRecovery = { candidate: null, issues: [], recovered: 0, received: 0, notices: [] };
   try {
     if (text.length > MAX_AI_IMPORT_LENGTH) throw new Error('This response is too large. Ask for a smaller batch.');
+    // Detect a different app even when its JSON does not have a questions array.
+    try { assertAiTarget(parseAiImportJson(text), 'review'); }
+    catch (error) {
+      if (error instanceof Error && /generated for .*importing it into|identifies conflicting apps|Unknown AI target app/i.test(error.message)) throw error;
+    }
     const source = readAiResponse(text, 'questions'), envelope = source.envelope;
     assertAiTarget(envelope, 'review');
     if (envelope.format !== undefined && envelope.format !== REVIEW_AI_FORMAT) throw new Error('This response belongs to a different format, not Review.');
