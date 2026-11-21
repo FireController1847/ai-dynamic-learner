@@ -4,6 +4,8 @@ import { readAiResponse, type AiCollectionOptions } from '../../core/ai-response
 import { AiPromptExchange, type AiPromptExchangeHandle } from '../../components/ai-prompt-exchange.ts';
 import { AiCreationScope } from '../../components/ai-creation-scope.ts';
 import { AiCoverageSelect } from '../../components/ai-coverage-select.ts';
+import { AiPromptStyleSelect } from '../../components/ai-prompt-style-select.ts';
+import { simpleAiPrompt, type AiPromptVariant } from '../../core/ai-prompt-variants.ts';
 import { AiFocusChoices } from '../../components/ai-focus-choices.ts';
 import { AiCategoryPicker } from '../../components/ai-category-picker.ts';
 import { categoryScopedPrompt, type AiCardScope, type AiCardCategories } from '../../core/ai-study-categories.ts';
@@ -507,6 +509,7 @@ export const GuideAiImportWorkspace = defineComponent({
       else if (stage.value === 'categories') stage.value = 'scope';
       else emit('back');
     }
+    const promptVariant = ref<AiPromptVariant>('detailed');
     const detail = ref<PromptDetail>(DEFAULT_PROMPT_OPTIONS.detail);
     const coverage = ref<PromptCoverage>(DEFAULT_PROMPT_OPTIONS.coverage);
     const bulletStyle = ref<PromptBulletStyle>(DEFAULT_PROMPT_OPTIONS.bulletStyle);
@@ -528,11 +531,26 @@ export const GuideAiImportWorkspace = defineComponent({
     const allocations = computed(() => mixError.value || mixMode.value !== 'custom' ? null : allocateTeachingBlocks(weights.value, targetBlocks.value));
     const json = ref('');
     const problem = ref('');
-    const prompt = computed(() => mixError.value ? '' : guideAiPrompt({
+    const prompt = computed(() => mixError.value ? '' : (promptVariant.value === 'simple' ? simpleAiPrompt(guideAiPrompt({
       detail: detail.value, coverage: coverage.value, bulletStyle: bulletStyle.value,
       mixMode: mixMode.value, aiFocus: aiFocus.value,
       targetBlocks: targetBlocks.value, weights: weights.value,
-    }, props.mode, chosenScope.value));
+    }, props.mode, chosenScope.value), 'Guide',
+       `Make a ${props.mode === 'map' ? 'Map lesson' : 'List guide'}${chosenScope.value ? ' for ' + chosenScope.value.category.title : ' for the overall subject'}. Coverage: ${coverage.value}, detail: ${detail.value}.`,
+       props.mode === 'map' ? [
+         `Use approximately ${targetBlocks.value} Teaching Blocks over 5–7 connected stops with prerequisites taught before checks.`,
+         `Teaching mix: ${mixMode.value === 'ai' ? 'AI chooses' : TEACHING_TYPES.map(t => t + ' ' + weights.value[t] + '%').join(', ')}. Focus: ${aiFocus.value}.`,
+         'Keep a connected tree: every topic is reachable; N topics have N−1 links. Use valid stop positions or omit them all.',
+         'Use teaching examples, comparisons, and guided practice; for procedural numeric problems use safe parameterized rules or solvers only when supported.',
+         'Include valid lesson.blocks, coverage, confidence, and a suitable background.',
+       ] : [
+         `Bullet style: ${bulletStyle.value}. Use concise nested sections and cover the selected source material.`,
+         'Include coverage and confidence; do not exceed section, bullet, or nesting limits.',
+       ]) : guideAiPrompt({
+      detail: detail.value, coverage: coverage.value, bulletStyle: bulletStyle.value,
+      mixMode: mixMode.value, aiFocus: aiFocus.value,
+      targetBlocks: targetBlocks.value, weights: weights.value,
+    }, props.mode, chosenScope.value)));
     const recoveryMode = ref<GuideMode>(props.mode);
     const recovery = useAiRecovery<SimpleGuideImport>(
       () => guideRecoveryOptions(recoveryMode.value, directImport.value, chosenScope.value?.category.title ?? 'AI Guide'),
@@ -575,6 +593,9 @@ export const GuideAiImportWorkspace = defineComponent({
     }
 
     function renderOptions() { return h('div', { class: 'guide-ai-options' }, [
+              h(AiPromptStyleSelect, { value: promptVariant.value, fieldClass: 'guide-ai-option',
+                onSelect: value => { promptVariant.value = value; },
+              }),
               optionField('guide-ai-detail', 'Detail', detail.value, [
                 { value: 'concise', label: 'Concise' },
                 { value: 'balanced', label: 'Balanced' },

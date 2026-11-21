@@ -5,6 +5,8 @@ import { useAiRecovery } from '../../components/use-ai-recovery.ts';
 import { AiPromptExchange } from '../../components/ai-prompt-exchange.ts';
 import { AiCoverageAcceptance } from '../../components/ai-coverage-acceptance.ts';
 import { AiCoverageSelect } from '../../components/ai-coverage-select.ts';
+import { AiPromptStyleSelect } from '../../components/ai-prompt-style-select.ts';
+import { simpleAiPrompt, type AiPromptVariant } from '../../core/ai-prompt-variants.ts';
 import { MAX_AI_IMPORT_LENGTH } from '../../core/ai-json.ts';
 import type { AiCardCategories, AiCardScope } from '../../core/ai-study-categories.ts';
 import { inputValue } from '../../core/dom.ts';
@@ -24,6 +26,7 @@ export const PuzzleAiCreation = defineComponent({
     const scope = ref<AiCardScope | null>(null);
     const preferences = ref<PuzzleAiOptions>(defaultPuzzleAiOptions(props.kind));
     const configured = ref(false);
+    const promptVariant = ref<AiPromptVariant>('detailed');
     const entry = ref<'scope' | 'categories' | 'settings' | 'direct'>('scope');
     const configurationProblem = ref('');
     const json = ref('');
@@ -31,7 +34,21 @@ export const PuzzleAiCreation = defineComponent({
     const candidate = ref<PuzzleAiResult | null>(null);
     const coverageAccepted = ref(false);
     const backward = ref(false);
-    const prompt = computed(() => puzzleAiPrompt(props.kind, scope.value, preferences.value));
+    const prompt = computed(() => {
+      const detailed = puzzleAiPrompt(props.kind, scope.value, preferences.value);
+      const current = preferences.value;
+      return promptVariant.value === 'simple' ? simpleAiPrompt(detailed, label.value,
+        `Create ${props.kind === 'word-search' ? 'word-search words' : 'crossword answers and clues'}${scope.value ? ' for ' + scope.value.category.title : ''}. Coverage: ${current.coverage}.`,
+        props.kind === 'word-search' ? [
+          `Up to ${current.count} distinct single English words (A–Z), each fitting a ${current.size}×${current.size} grid.`,
+          `Study display: ${current.studyMode}; selection: ${current.selectionMode}; layout range: ${current.layoutMin}–${current.layoutMax}.`,
+          'Include a non-spoiling hint for each word in hint mode, none in word-list mode.',
+          'Never return a letter grid; the application generates it.',
+        ] : [
+          `Up to ${current.count} distinct single English-word answers (A–Z), each with a ${current.clueDifficulty} clue.`,
+          'Every answer must connect with another through a letter intersection. No coordinates or generated grid.',
+        ]) : detailed;
+    });
     const recovery = useAiRecovery<PuzzleAiResult>(() => ({
       field: props.kind === 'word-search' ? 'words' : 'entries',
       targetApp: props.kind,
@@ -158,6 +175,9 @@ export const PuzzleAiCreation = defineComponent({
           ]),
         ]),
         h('form', { class: 'puzzle-ai-setup', onSubmit: continueToPrompt }, [
+          h(AiPromptStyleSelect, { value: promptVariant.value, fieldClass: 'puzzle-ai-setting',
+            onSelect: value => { promptVariant.value = value; },
+          }),
           h(AiCoverageSelect, { value: current.coverage, fieldClass: 'puzzle-ai-setting',
             onSelect: value => updatePreferences({ coverage: value }),
           }),

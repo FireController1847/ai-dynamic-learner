@@ -2,6 +2,8 @@ import { defineComponent, h, nextTick, onMounted, ref, watch, type PropType } fr
 import { useAiRecovery } from './use-ai-recovery.ts';
 import { AiPromptExchange } from './ai-prompt-exchange.ts';
 import { AiSourceIntro } from './ai-source-intro.ts';
+import { AiPromptStyleSelect } from './ai-prompt-style-select.ts';
+import { simpleAiPrompt, type AiPromptVariant } from '../core/ai-prompt-variants.ts';
 import { PopupDialog } from './popup-dialog.ts';
 import { Icon } from './icon.ts';
 import { studyCategoriesPrompt, parseStudyCategories, STUDY_CATEGORIES_FORMAT, MAX_CATEGORIES, type AiCardCategories, type AiCardScope } from '../core/ai-study-categories.ts';
@@ -34,7 +36,15 @@ export const AiCategoryPicker = defineComponent({
     const clearButton = ref<HTMLButtonElement | null>(null);
     const clearOpen = ref(false);
     const storageMessage = ref('');
-    const prompt = studyCategoriesPrompt(props.label, props.targetApp);
+    const promptVariant = ref<AiPromptVariant>('detailed');
+    const prompt = () => {
+      const detailed = studyCategoriesPrompt(props.label, props.targetApp);
+      return promptVariant.value === 'simple' ? simpleAiPrompt(detailed, props.label,
+        'Identify a few distinct categories covering every major source topic, retaining the original order.',
+        ['Use 1–40 categories with unique key, title and concise description.',
+         'Do not split every heading into its own category; merge only genuinely related topics.',
+         'Keep all important subject matter represented, without invented facts.']) : detailed;
+    };
 
     const recovery = useAiRecovery(() => ({
       field: 'categories', targetApp: props.targetApp, formats: [STUDY_CATEGORIES_FORMAT], title: 'Study topics', maxItems: MAX_CATEGORIES,
@@ -125,6 +135,9 @@ export const AiCategoryPicker = defineComponent({
           history.value.length ? option('Use saved categories', 'Use a saved list that matches the notes you shared.', () => { stage.value = 'saved'; }, 'folder') : null,
           option('Find categories with AI', 'Create a category list from your study material.', () => newCategories(), 'ai'),
         ]),
+        h(AiPromptStyleSelect, { value: promptVariant.value,
+          onSelect: value => { promptVariant.value = value; },
+        }),
         h('div', { class: 'ai-category-secondary' }, [
           h('button', { type: 'button', class: 'quiet-button outline-button', onClick: () => newCategories(true) }, 'Import an existing AI response'),
         ]),
@@ -151,7 +164,7 @@ export const AiCategoryPicker = defineComponent({
       if (stage.value === 'generate') return [
         h(AiPromptExchange, {
           key: importExisting.value ? 'existing' : 'new', idPrefix: 'study-category', label: 'Categories',
-          prompt, promptHelp: 'Have your AI find the main categories in your source material.',
+          prompt: prompt(), promptHelp: 'Have your AI find the main categories in your source material.',
           importHelp: 'Upload or paste the category list from your AI chat.',
           json: json.value, problem: problem.value, maxLength: MAX_AI_IMPORT_LENGTH,
           startInImport: importExisting.value, importOnly: importExisting.value, skipSource: true,

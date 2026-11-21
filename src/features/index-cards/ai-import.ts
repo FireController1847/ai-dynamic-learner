@@ -4,6 +4,8 @@ import { MAX_CARDS } from './card-model.ts';
 import { AiPromptExchange } from '../../components/ai-prompt-exchange.ts';
 import { AiCoverageAcceptance } from '../../components/ai-coverage-acceptance.ts';
 import { AiCoverageSelect } from '../../components/ai-coverage-select.ts';
+import { AiPromptStyleSelect } from '../../components/ai-prompt-style-select.ts';
+import { simpleAiPrompt, type AiPromptVariant } from '../../core/ai-prompt-variants.ts';
 import { inputValue } from '../../core/dom.ts';
 import { maskFillBlankAnswers, parseFillBlankTemplate } from '../../core/fill-blank.ts';
 import { fillBlankAiPrompt, parseFillBlankAiImport, FILL_BLANK_IMPORT_FORMAT, type AiBlankStyle, type FillBlankCardsImport } from './fill-blank-ai-format.ts';
@@ -30,6 +32,7 @@ export const IndexCardsAiImport = defineComponent({
   emits: { back: () => true, cancel: () => true, import: (_value: IndexCardsAiImportValue) => true },
   setup(props, { emit }) {
     const stage = ref<'configure' | 'exchange'>(props.direct ? 'exchange' : 'configure');
+    const promptVariant = ref<AiPromptVariant>('detailed');
     const coverage = ref<AiCardCoverage>('balanced');
     const limit = ref(20);
     const blankStyle = ref<AiBlankStyle>('connected');
@@ -42,7 +45,17 @@ export const IndexCardsAiImport = defineComponent({
     const isFillBlank = computed(() => props.mode === 'fill-in-the-blanks');
     const prompt = computed(() => {
       const base = isFillBlank.value ? fillBlankAiPrompt(coverage.value, limit.value, blankStyle.value) : flashCardsAiPrompt(coverage.value, limit.value);
-      return props.scope ? categoryScopedPrompt(base, props.scope) : base;
+      const detailed = props.scope ? categoryScopedPrompt(base, props.scope) : base;
+      return promptVariant.value === 'simple' ? simpleAiPrompt(detailed, modeLabel.value,
+        `Create up to ${limit.value} ${isFillBlank.value ? 'Fill in the Blanks' : 'Flash Cards'} cards${props.scope ? ' for ' + props.scope.category.title : ''}. Coverage: ${coverage.value}.`,
+        isFillBlank.value ? [
+          `Blank style: ${blankStyle.value}. Put each correct answer inside {{answer}} and leave clear visible context.`,
+          'Use consistent terminology, short accurate statements, and source-supported facts.',
+          'Cover requested source objectives without padding with filler.',
+        ] : [
+          'Ask one clear recall question per card. Use answers of 1–5 words when possible, never long explanations.',
+          'Cover requested source objectives without padding with filler.',
+        ]) : detailed;
     });
     const longAnswers = computed(() => candidate.value?.mode === 'flash-cards'
       ? candidate.value.data.cards.filter(card => answerIsLong(card.answer)).length : 0);
@@ -84,6 +97,9 @@ export const IndexCardsAiImport = defineComponent({
     }
 
     function renderOptions() { return h('div', { class: 'flash-ai-options' }, [
+            h(AiPromptStyleSelect, { value: promptVariant.value, fieldClass: 'flash-ai-option',
+              onSelect: value => { promptVariant.value = value; },
+            }),
             h(AiCoverageSelect, { value: coverage.value, fieldClass: 'flash-ai-option',
               onSelect: value => { coverage.value = value; },
             }),

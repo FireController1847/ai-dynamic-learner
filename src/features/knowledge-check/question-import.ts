@@ -1,6 +1,8 @@
 import { computed, defineComponent, h, ref, type PropType } from 'vue';
 import { AiPromptExchange } from '../../components/ai-prompt-exchange.ts';
 import { AiCreationScope } from '../../components/ai-creation-scope.ts';
+import { AiPromptStyleSelect } from '../../components/ai-prompt-style-select.ts';
+import { simpleAiPrompt, type AiPromptVariant } from '../../core/ai-prompt-variants.ts';
 import { AiCategoryPicker } from '../../components/ai-category-picker.ts';
 import type { AiCardCategories, AiCardScope } from '../../core/ai-study-categories.ts';
 import { reviewAiQuestionPreview } from './ai-question-preview.ts';
@@ -24,6 +26,7 @@ export const ReviewQuestionImport = defineComponent({
   },
   setup(props, { emit }) {
     const count = ref(20);
+    const promptVariant = ref<AiPromptVariant>('detailed');
     const stage = ref<'scope' | 'categories' | 'import'>('scope');
     const scope = ref<AiCardScope | null>(null);
     const categories = ref<AiCardCategories | null>(null);
@@ -49,9 +52,16 @@ ${existing}
 
 Your answer must be a standalone valid Review JSON response with a title, description, and ONLY the additional questions. The title and description are required for the JSON format but will NOT replace my existing knowledge set name or options.
 
-${reviewAiPrompt({
+${(promptVariant.value === 'simple' ? simpleAiPrompt(reviewAiPrompt({
         count: count.value, mixMode: 'ai', coverage: 'balanced', weights: { ...DEFAULT_AI_WEIGHTS },
-      }, scope.value)}`;
+      }, scope.value), 'Review', 'Create additional questions without replacing the existing set.',
+         ['Use exactly the requested count when supported; no duplicate or paraphrased existing questions.',
+          'Use the supported question types, including parameterized or solver questions when supported.',
+          'For multiple-choice, use plausible choices; for fill-in-the-blanks, place answers in {{markers}}.',
+          'Explanations are gentle hints and must not reveal the correct answer.',
+          'Include source-based confidence and coverage estimates.']) : reviewAiPrompt({
+        count: count.value, mixMode: 'ai', coverage: 'balanced', weights: { ...DEFAULT_AI_WEIGHTS },
+      }, scope.value))}`;
     });
 
     function validate() {
@@ -95,6 +105,7 @@ ${reviewAiPrompt({
         onCategory: () => { stage.value = 'categories'; },
         onDirect: () => { scope.value = null; direct.value = true; stage.value = 'import'; },
       })] : [
+      h(AiPromptStyleSelect, { value: promptVariant.value, onSelect: value => { promptVariant.value = value; } }),
       h('p', { class: 'knowledge-muted' },
         `${props.existing.length} existing questions`),
       h('label', { class: 'knowledge-field knowledge-question-import-count' }, [

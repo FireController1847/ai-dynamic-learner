@@ -2,6 +2,8 @@ import { computed, defineComponent, h, onMounted, ref, Transition } from 'vue';
 import { AiCategoryPicker } from '../../components/ai-category-picker.ts';
 import { AiCreationScope } from '../../components/ai-creation-scope.ts';
 import { AiCoverageSelect } from '../../components/ai-coverage-select.ts';
+import { AiPromptStyleSelect } from '../../components/ai-prompt-style-select.ts';
+import { simpleAiPrompt, type AiPromptVariant } from '../../core/ai-prompt-variants.ts';
 import { Icon } from '../../components/icon.ts';
 import { AiPromptExchange, type AiPromptExchangeHandle } from '../../components/ai-prompt-exchange.ts';
 import { MAX_AI_IMPORT_LENGTH } from '../../core/ai-json.ts';
@@ -24,6 +26,7 @@ export const ReviewAiCreation = defineComponent({
   setup(props, { emit }) {
     const stage = ref<'scope' | 'categories' | 'configure' | 'generate' | 'direct' | 'review' | 'recovery'>('scope');
     const importedDirectly = ref(false);
+    const promptVariant = ref<AiPromptVariant>('detailed');
     const returningFromReview = ref(false);
     const scope = ref<AiCardScope | null>(null);
     const categories = ref<AiCardCategories | null>(null);
@@ -36,10 +39,21 @@ export const ReviewAiCreation = defineComponent({
     const batchOnly = ref(false);
     const retrying = ref(false);
     const acceptedCount = computed(() => candidate.value?.questions.length ?? 0);
+    function createPrompt(options: ReviewAiPreferences): string {
+      const detailed = reviewAiPrompt(options, scope.value);
+      return promptVariant.value === 'simple' ? simpleAiPrompt(detailed, 'Review',
+        `Create up to ${options.count} useful, distinct questions${scope.value ? ' for the selected category ' + scope.value.category.title : ' for the overall subject'}. Coverage: ${options.coverage}.`,
+        ['Follow the selected question mix and focus. Use all supported types only when appropriate.',
+         'Use source-supported formulas and solver packages for parameterized problems; do not invent ranges.',
+         'Use 2–8 plausible choices for multiple-choice and matching, and {{answer}} for fill-in-the-blanks.',
+         'Write clear, unambiguous questions with brief supportive explanations that never give away answers.',
+         'Include all four confidence estimates, coverage explanation, and uncovered subjects; never inflate them.',
+         'Do not exceed the requested question count or invent filler.']) : detailed;
+    }
     const batchPrompt = computed(() => {
       const remaining = preferences.value.count - acceptedCount.value;
       if (importedDirectly.value || remaining <= 0 || mixProblem.value) return '';
-      return reviewBatchPrompt(reviewAiPrompt({ ...preferences.value, count: Math.min(25, remaining) }, scope.value), candidate.value?.questions ?? []);
+      return reviewBatchPrompt(createPrompt({ ...preferences.value, count: Math.min(25, remaining) }), candidate.value?.questions ?? []);
     });
     const examPrep = computed(() => !importedDirectly.value && preferences.value.coverage === 'exam-prep');
     const selectiveCoverage = computed(() => !importedDirectly.value && preferences.value.coverage !== 'balanced');
@@ -76,7 +90,7 @@ export const ReviewAiCreation = defineComponent({
         ? allocateQuestions(normalizedMix.value, preferences.value.count) : null
       : counts.value);
     const total = computed(() => AI_QUESTION_TYPES.reduce((sum, type) => sum + preferences.value.weights[type], 0));
-    const prompt = computed(() => mixProblem.value ? '' : reviewAiPrompt(preferences.value, scope.value));
+    const prompt = computed(() => mixProblem.value ? '' : createPrompt(preferences.value));
     onMounted(() => heading.value?.focus());
     function commitWeight(type: AiQuestionType, input?: HTMLInputElement) {
       if (editingWeight.value !== type) return;
@@ -208,6 +222,9 @@ export const ReviewAiCreation = defineComponent({
           onExit: () => emit('cancel'),
         }) : stage.value === 'configure' ? [
           h('div', { class: 'review-ai-settings' }, [
+            h(AiPromptStyleSelect, { value: promptVariant.value,
+              onSelect: value => { promptVariant.value = value; },
+            }),
             h('label', [h('span', 'Total questions'), h('input', { type: 'number', min: 1, step: 1, value: preferences.value.count,
               onInput: (event: Event) => { preferences.value.count = Number(inputValue(event)); } }), h('small', { class: 'study-ai-muted' }, 'Number of questions the AI should make.')]),
             h(AiCoverageSelect, { value: preferences.value.coverage,
