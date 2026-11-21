@@ -1,5 +1,6 @@
 import { AI_PARAMETERIZED_EXAMPLE, AI_SOLVER_EXAMPLE, PARAMETERIZED_AI_GUIDANCE, parseAiSolvers, resolveAiParameters } from './ai-parameterized-format.ts';
 import { parseAiImportJson } from '../../core/ai-json.ts';
+import { assertAiTarget } from '../../core/ai-app-identity.ts';
 import { categoryScopedPrompt, type AiCardScope } from '../../core/ai-study-categories.ts';
 import { parseFillBlankTemplate } from '../../core/fill-blank.ts';
 import { isRecord } from '../../core/validation.ts';
@@ -163,7 +164,7 @@ OUTPUT AS A DOWNLOADABLE JSON FILE, NOT A CHAT CODE BLOCK:
 
 Write the following JSON STRUCTURE to the downloadable file (illustrative schema only):
 \`\`\`json
-${JSON.stringify({ format: REVIEW_AI_FORMAT, version: 1, title: 'Short knowledge set title', description: 'Brief scope of this knowledge set.', ...(allowParameterized ? { solvers: [AI_SOLVER_EXAMPLE] } : {}), questions: enabledTypes.map(type => examples[type]), confidence: { overallCoverage: 85, examConfidence: 90, subjectConfidence: 86, studyConfidence: 90, coverageExplanation: 'Short explanation of coverage estimate.', uncoveredSubjects: ['Specific source topics not adequately tested'], confidenceExplanation: 'Short explanation of evidence and uncertainty.' } }, null, 2)}
+${JSON.stringify({ format: REVIEW_AI_FORMAT, targetApp: 'review', version: 1, title: 'Short knowledge set title', description: 'Brief scope of this knowledge set.', ...(allowParameterized ? { solvers: [AI_SOLVER_EXAMPLE] } : {}), questions: enabledTypes.map(type => examples[type]), confidence: { overallCoverage: 85, examConfidence: 90, subjectConfidence: 86, studyConfidence: 90, coverageExplanation: 'Short explanation of coverage estimate.', uncoveredSubjects: ['Specific source topics not adequately tested'], confidenceExplanation: 'Short explanation of evidence and uncertainty.' } }, null, 2)}
 \`\`\`
 
 Examples show structure only, not required types or facts. ${allowParameterized ? 'Include solvers only when a Parameterized question needs them. ' : ''}Title: 1–${MAX_NAME_LENGTH} characters; description, prompt, answer, explanation, and choices: at most ${MAX_TEXT} characters each; context: at most ${MAX_QUESTION_CONTEXT} characters. Escape newlines and backslashes inside JSON strings.
@@ -177,10 +178,11 @@ export function parseReviewAiImport(text: string, preferences: ReviewAiPreferenc
   if (countProblem) throw new Error(countProblem);
   const expected = preferences.mixMode === 'ai' ? null : allocateQuestions(preferences.weights, preferences.count);
   const value = parseAiImportJson(text);
+  assertAiTarget(value, 'review');
   if (!isRecord(value) || value.format !== REVIEW_AI_FORMAT || value.version !== 1) {
     throw new Error('Paste a dynamic-learner-review version-1 JSON object.');
   }
-  if (Object.keys(value).some(key => !['format', 'version', 'title', 'description', 'questions', 'solvers', 'coverage', 'confidence'].includes(key))) {
+  if (Object.keys(value).some(key => !['format', 'targetApp', 'version', 'title', 'description', 'questions', 'solvers', 'coverage', 'confidence'].includes(key))) {
     throw new Error('The Review response contains unsupported top-level fields.');
   }
   if (typeof value.title !== 'string' || !value.title.trim() || value.title.trim().length > MAX_NAME_LENGTH) {
@@ -335,7 +337,7 @@ export function parseReviewAiImport(text: string, preferences: ReviewAiPreferenc
 export function parseReviewQuestionsImport(text: string, requestedCount: number): ReviewAiImport {
   const source = parseAiImportJson(text);
   const envelope = Array.isArray(source)
-    ? { format: REVIEW_AI_FORMAT, version: 1, title: 'Additional questions', description: '', questions: source }
+    ? { format: REVIEW_AI_FORMAT, targetApp: 'review', version: 1, title: 'Additional questions', description: '', questions: source }
     : isRecord(source) && !Object.hasOwn(source, 'format') &&
       Object.keys(source).every(key => key === 'questions' || key === 'solvers')
       ? { ...source, format: REVIEW_AI_FORMAT, version: 1, title: 'Additional questions', description: '' }

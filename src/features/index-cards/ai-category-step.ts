@@ -35,7 +35,7 @@ export const IndexCardsAiCreation = defineComponent({
           scope: scope.value, onBack: () => { backward.value = true; entry.value = scope.value ? 'categories' : 'scope'; },
           onCancel: () => emit('cancel'), onImport: (value: IndexCardsAiImportValue) => emit('import', value),
         }) : h(AiCategoryPicker, {
-          key: 'categories', label: getSetMode(props.mode)?.label, destination: props.destination,
+          key: 'categories', label: getSetMode(props.mode)?.label, targetApp: 'index-cards', destination: props.destination,
           initialCategories: categories.value, onBack: () => { entry.value = 'scope'; }, onCancel: () => emit('cancel'),
           onSelect: (selected: AiCardScope, list: AiCardCategories) => { backward.value = false; categories.value = list; scope.value = selected; entry.value = 'category'; },
         }),

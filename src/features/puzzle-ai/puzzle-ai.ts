@@ -33,6 +33,7 @@ export const PuzzleAiCreation = defineComponent({
     const prompt = computed(() => puzzleAiPrompt(props.kind, scope.value, preferences.value));
     const recovery = useAiRecovery<PuzzleAiResult>(() => ({
       field: props.kind === 'word-search' ? 'words' : 'entries',
+      targetApp: props.kind,
       formats: ['dynamic-learner-' + props.kind],
       title: scope.value?.category.title ?? label.value,
       maxItems: Math.min(preferences.value.count, puzzleAiLimits[props.kind].max),
@@ -349,6 +350,7 @@ export const PuzzleAiCreation = defineComponent({
         : h(AiCategoryPicker, {
           key: 'categories',
           label: label.value,
+          targetApp: props.kind,
           destination: props.destination,
           totalSteps: 3,
           initialCategories: categories.value,

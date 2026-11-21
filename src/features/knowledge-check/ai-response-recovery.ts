@@ -1,4 +1,5 @@
 import { MAX_AI_IMPORT_LENGTH } from '../../core/ai-json.ts';
+import { assertAiTarget } from '../../core/ai-app-identity.ts';
 import { readAiResponse, type AiResponseIssue } from '../../core/ai-response-recovery.ts';
 import { isRecord } from '../../core/validation.ts';
 import { parseAiSolvers } from './ai-parameterized-format.ts';
@@ -41,6 +42,7 @@ export function recoverReviewResponse(text: string, preferences: ReviewAiPrefere
   try {
     if (text.length > MAX_AI_IMPORT_LENGTH) throw new Error('This response is too large. Ask for a smaller batch.');
     const source = readAiResponse(text, 'questions'), envelope = source.envelope;
+    assertAiTarget(envelope, 'review');
     if (envelope.format !== undefined && envelope.format !== REVIEW_AI_FORMAT) throw new Error('This response belongs to a different format, not Review.');
     if (envelope.version !== undefined && envelope.version !== 1) throw new Error('This Review response uses an unsupported version.');
     result.received = source.entries.length;
@@ -67,7 +69,7 @@ export function recoverReviewResponse(text: string, preferences: ReviewAiPrefere
         } catch { result.notices.push('An invalid or duplicate solver package was skipped; dependent questions may need repair.'); }
       }
     } else if (envelope.solvers !== undefined) result.notices.push('The solver list was unreadable.');
-    const base = { format: REVIEW_AI_FORMAT, version: 1, title, description };
+    const base = { format: REVIEW_AI_FORMAT, targetApp: 'review', version: 1, title, description };
     const questions: Question[] = [], accepted: unknown[] = [];
     const validationPreferences: ReviewAiPreferences = { ...preferences, count: 1, mixMode: 'ai' };
     for (const item of source.entries) {

@@ -7,6 +7,7 @@ import { Icon } from './icon.ts';
 import { studyCategoriesPrompt, parseStudyCategories, STUDY_CATEGORIES_FORMAT, MAX_CATEGORIES, type AiCardCategories, type AiCardScope } from '../core/ai-study-categories.ts';
 import { readCategoryHistory, rememberCategories, writeCategoryHistory, type CategoryHistoryEntry } from '../core/ai-category-history.ts';
 import { MAX_AI_IMPORT_LENGTH } from '../core/ai-json.ts';
+import type { AiTargetApp } from '../core/ai-app-identity.ts';
 
 type CategoryStage = 'source' | 'start' | 'saved' | 'generate' | 'choose';
 
@@ -15,6 +16,7 @@ export const AiCategoryPicker = defineComponent({
   props: {
     destination: { type: String, required: true },
     label: { type: String, default: 'Index Cards' },
+    targetApp: { type: String as PropType<AiTargetApp>, required: true },
     totalSteps: { type: Number, default: 2 },
     initialCategories: { type: Object as PropType<AiCardCategories | null>, default: null },
   },
@@ -32,13 +34,13 @@ export const AiCategoryPicker = defineComponent({
     const clearButton = ref<HTMLButtonElement | null>(null);
     const clearOpen = ref(false);
     const storageMessage = ref('');
-    const prompt = studyCategoriesPrompt(props.label);
+    const prompt = studyCategoriesPrompt(props.label, props.targetApp);
 
     const recovery = useAiRecovery(() => ({
-      field: 'categories', formats: [STUDY_CATEGORIES_FORMAT], title: 'Study topics', maxItems: MAX_CATEGORIES,
-      parse: parseStudyCategories,
+      field: 'categories', targetApp: props.targetApp, formats: [STUDY_CATEGORIES_FORMAT], title: 'Study topics', maxItems: MAX_CATEGORIES,
+      parse: (text: string) => parseStudyCategories(text, props.targetApp),
       validateItem: entry => {
-        const category = parseStudyCategories(JSON.stringify({ format: STUDY_CATEGORIES_FORMAT, version: 1, title: 'Topics', categories: [entry] })).categories[0];
+        const category = parseStudyCategories(JSON.stringify({ format: STUDY_CATEGORIES_FORMAT, targetApp: props.targetApp, version: 1, title: 'Topics', categories: [entry] }), props.targetApp).categories[0];
         return category.key;
       },
       conflicts: (entry, kept) => {

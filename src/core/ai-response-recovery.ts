@@ -1,5 +1,6 @@
 import { parseAiImportJson, MAX_AI_IMPORT_LENGTH } from './ai-json.ts';
 import { isRecord } from './validation.ts';
+import { assertAiTarget, type AiTargetApp } from './ai-app-identity.ts';
 
 export interface AiResponseIssue { item?: number; message: string; source?: string }
 export interface AiRecoveryReport { issues: AiResponseIssue[]; notices: string[] }
@@ -161,6 +162,7 @@ export function readAiResponse(text: string, field: string): AiResponseSource {
 
 export interface AiCollectionOptions<T> {
   field: string;
+  targetApp?: AiTargetApp;
   formats: readonly string[];
   versions?: readonly number[];
   title: string;
@@ -191,6 +193,7 @@ export function recoverAiCollection<T>(text: string, options: AiCollectionOption
     // Full validation comes first. A valid response keeps its metadata and exact semantics.
     const source = readAiResponse(text, options.field);
     const raw = source.envelope;
+    if (options.targetApp) assertAiTarget(raw, options.targetApp);
     if (raw.format !== undefined && !options.formats.includes(String(raw.format)))
       throw new Error('This response is for a different Dynamic Learner format.');
     if (raw.version !== undefined && (typeof raw.version !== 'number' || !(options.versions ?? [1]).includes(raw.version)))

@@ -1,4 +1,5 @@
 import { isRecord } from './validation.ts';
+import { assertAiTarget, type AiTargetApp } from './ai-app-identity.ts';
 import { aiFileOutputInstructions } from './ai-file-output.ts';
 import { parseAiImportJson } from './ai-json.ts';
 const MAX_NAME_LENGTH = 120;
@@ -9,7 +10,7 @@ export interface AiCardCategory { key: string; title: string; description: strin
 export interface AiCardCategories { title: string; categories: AiCardCategory[] }
 export interface AiCardScope { subject: string; category: AiCardCategory }
 
-export function studyCategoriesPrompt(product = 'Index Cards'): string {
+export function studyCategoriesPrompt(product = 'Index Cards', targetApp: AiTargetApp = 'index-cards'): string {
   return `Using the source material I supplied immediately before this instruction, organize categories for Dynamic Learner ${product}. This step ONLY proposes categories; I will select one before generating study content.
 
 - Prefer the FEWEST useful categories that cover the source. Combine related short sections and overlapping topics; don't create a category for every heading. Keep genuinely different major topics separate.
@@ -23,6 +24,7 @@ The JSON file must match this structure:
 \`\`\`json
 {
   "format": "${STUDY_CATEGORIES_FORMAT}",
+  "targetApp": "${targetApp}",
   "version": 1,
   "title": "Subject title",
   "categories": [
@@ -38,9 +40,10 @@ export function categoryResponseJson(value: AiCardCategories): string {
   return JSON.stringify({ format: STUDY_CATEGORIES_FORMAT, version: 1, ...value }, null, 2);
 }
 
-export function parseStudyCategories(text: string): AiCardCategories {
+export function parseStudyCategories(text: string, targetApp?: AiTargetApp): AiCardCategories {
   const value = parseAiImportJson(text);
-  if (!isRecord(value) || Object.keys(value).some(key => !['format', 'version', 'title', 'categories'].includes(key)) ||
+  if (targetApp) assertAiTarget(value, targetApp);
+  if (!isRecord(value) || Object.keys(value).some(key => !['format', 'targetApp', 'version', 'title', 'categories'].includes(key)) ||
       value.format !== STUDY_CATEGORIES_FORMAT || value.version !== 1 ||
       typeof value.title !== 'string' || !value.title.trim() || value.title.trim().length > MAX_NAME_LENGTH ||
       !Array.isArray(value.categories) || !value.categories.length || value.categories.length > MAX_CATEGORIES) {

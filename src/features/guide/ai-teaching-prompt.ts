@@ -8,7 +8,7 @@ import { MAP_GRID, MAP_MAX_X, MAP_MAX_Y, MAP_TOPIC_HEIGHT, MAP_TOPIC_WIDTH } fro
 import type { GuideAiPromptOptions } from './ai-import.ts';
 
 const EXAMPLE = {
-  format: 'dynamic-learner-guide-map', version: 2,
+  format: 'dynamic-learner-guide-map', targetApp: 'guide', version: 2,
   title: 'Understanding operating systems', background: 'flow', startTopic: 'foundations',
   coverage: [{ subject: 'Core process concepts', itemNumbers: [1] }],
   confidence: GUIDE_CONFIDENCE_EXAMPLE,
@@ -167,7 +167,7 @@ export function guideAiTeachingPrompt(options: GuideAiPromptOptions, isOverall =
     '- Give meaningful 1–2 sentence descriptions to build curiosity. No filler stops. If uncertain about map positions, omit ALL position fields and let the app create a spaced route.',
     '',
     guideAiFileOutputInstructions('map'),
-    'The downloadable JSON file must use format "dynamic-learner-guide-map" and version 2, with title, background, startTopic, coverage, confidence, topics, connections and OPTIONAL solvers (only when a Parameterized block truly requires algorithm execution).',
+    'The downloadable JSON file must use format "dynamic-learner-guide-map", targetApp "guide", and version 2, with title, background, startTopic, coverage, confidence, topics, connections and OPTIONAL solvers (only when a Parameterized block truly requires algorithm execution).',
     'The following shows the JSON structure to write INTO THE FILE. It is an illustrative schema ONLY: its two example stops and four sample blocks are NOT an instruction about output size. Your real output should normally have 5–7 stops and ' + countGoal + ' Teaching Blocks unless source coverage warrants an exception:',
     String.fromCharCode(96).repeat(3) + 'json',
     JSON.stringify(EXAMPLE, null, 2),

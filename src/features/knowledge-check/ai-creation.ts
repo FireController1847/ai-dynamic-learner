@@ -183,7 +183,7 @@ export const ReviewAiCreation = defineComponent({
     }
     function workspace() {
       if (stage.value === 'categories') return h(AiCategoryPicker, {
-        key: 'categories', label: 'Review', destination: props.destination, initialCategories: categories.value,
+        key: 'categories', label: 'Review', targetApp: 'review', destination: props.destination, initialCategories: categories.value,
         onBack: () => go('scope', true), onCancel: () => emit('cancel'),
         onSelect: (selected: AiCardScope, list: AiCardCategories) => { scope.value = selected; categories.value = list; go('configure'); },
       });

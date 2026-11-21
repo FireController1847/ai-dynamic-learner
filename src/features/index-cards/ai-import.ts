@@ -54,7 +54,7 @@ export const IndexCardsAiImport = defineComponent({
           : { mode: 'flash-cards', data: parseFlashCardsAiImport(text) };
       }
       return {
-        field: 'cards', formats: [format], title: props.scope?.category.title ?? modeLabel.value,
+        field: 'cards', targetApp: 'index-cards', formats: [format], title: props.scope?.category.title ?? modeLabel.value,
         maxItems: Math.min(MAX_CARDS, props.remainingCards), parse,
         requiredMetadata: props.direct ? [] : ['coverage'],
         validateItem: entry => JSON.stringify(parse(JSON.stringify({ format, version: 1, title: 'Cards', cards: [entry] })).data.cards[0]),

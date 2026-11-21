@@ -71,7 +71,7 @@ ${reviewAiPrompt({
       if (!add) { candidate.value = null; report.value = null; }
     }
     return () => stage.value === 'categories' ? h(AiCategoryPicker, {
-      label: 'Review', destination: props.setName, initialCategories: categories.value,
+      label: 'Review', targetApp: 'review', destination: props.setName, initialCategories: categories.value,
       onBack: () => { stage.value = 'scope'; }, onCancel: () => emit('back'),
       onSelect: (selected: AiCardScope, list: AiCardCategories) => {
         scope.value = selected; categories.value = list; direct.value = false; stage.value = 'import';

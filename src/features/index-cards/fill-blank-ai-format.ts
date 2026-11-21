@@ -1,6 +1,7 @@
 import { parseFillBlankTemplate } from '../../core/fill-blank.ts';
 import { aiFileOutputInstructions } from '../../core/ai-file-output.ts';
 import { isRecord } from '../../core/validation.ts';
+import { assertAiTarget } from '../../core/ai-app-identity.ts';
 import { AI_COMPLETE_COVERAGE_PROMPT, parseAiSubjectCoverage, type AiSubjectCoverage } from '../../core/ai-subject-coverage.ts';
 import { AI_PLAIN_TEXT_ONLY_GUIDANCE } from '../../core/ai-formatting-guidance.ts';
 import { AI_COVERAGE_INSTRUCTIONS, parseAiImportJson, type AiCardCoverage } from './ai-import-format.ts';
@@ -47,6 +48,7 @@ The JSON file must match this structure:
 \`\`\`json
 {
   "format": "${FILL_BLANK_IMPORT_FORMAT}",
+  "targetApp": "index-cards",
   "version": 1,
   "title": "Short set title",
   "coverage": [{ "subject": "Chemical symbols", "itemNumbers": [1] }],
@@ -62,8 +64,9 @@ Use only the fields shown. The title must be 1–${MAX_NAME_LENGTH} characters. 
 
 export function parseFillBlankAiImport(text: string): FillBlankCardsImport {
   const value = parseAiImportJson(text);
+  assertAiTarget(value, 'index-cards');
   if (!isRecord(value) ||
-      Object.keys(value).some(key => !['format', 'version', 'title', 'cards', 'coverage'].includes(key)) ||
+      Object.keys(value).some(key => !['format', 'targetApp', 'version', 'title', 'cards', 'coverage'].includes(key)) ||
       value.format !== FILL_BLANK_IMPORT_FORMAT || value.version !== 1 ||
       typeof value.title !== 'string' || !value.title.trim() || value.title.trim().length > MAX_NAME_LENGTH) {
     throw new Error('This is not a supported Fill in the Blanks import. Use the generated Fill in the Blanks prompt.');

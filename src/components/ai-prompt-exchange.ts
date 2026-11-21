@@ -30,7 +30,8 @@ export const AiPromptExchange = defineComponent({
   },
   emits: { 'update-json': (_value: string) => true, validate: () => true },
   setup(props, { emit, slots, expose }) {
-    const stage = ref<'source' | 'instructions' | 'send' | 'response'>(props.startInImport || props.importOnly ? 'response' : props.skipSource ? 'instructions' : 'source');
+    const stage = ref<'source' | 'instructions' | 'send' | 'response' | 'import-info'>(props.importOnly ? 'import-info' : props.startInImport ? 'response' : props.skipSource ? 'instructions' : 'source');
+    const fromExisting = ref(props.importOnly);
     const shown = ref(false);
     const copied = ref(false);
     const copying = ref(false);
@@ -140,6 +141,10 @@ export const AiPromptExchange = defineComponent({
       focusResponse = true;
       stage.value = 'response';
     }
+    function selectExisting() {
+      fromExisting.value = true;
+      stage.value = 'import-info';
+    }
     function selectInstructions() {
       if (props.importOnly) return;
       stage.value = 'instructions';
@@ -153,7 +158,8 @@ export const AiPromptExchange = defineComponent({
     }
     function goBack(): boolean {
       if (props.importOnly) return false;
-      if (stage.value === 'response') stage.value = 'send';
+      if (stage.value === 'response') stage.value = fromExisting.value ? 'import-info' : 'send';
+      else if (stage.value === 'import-info') stage.value = 'source';
       else if (stage.value === 'send') stage.value = 'instructions';
       else if (stage.value === 'instructions' && !props.skipSource) stage.value = 'source';
       else return false;
@@ -221,12 +227,22 @@ export const AiPromptExchange = defineComponent({
           default: () => h('section', {
             key: stage.value, class: 'ai-exchange-panel',
             'aria-labelledby': props.idPrefix + '-step-title',
-          }, props.recovering && stage.value === 'response' ? slots.recovery?.() : stage.value === 'source' && !props.importOnly ? [
+          }, props.recovering && stage.value === 'response' ? slots.recovery?.() : stage.value === 'import-info' ? [
+            h('div', { class: 'ai-exchange-step-heading' }, [
+              h('h3', { id: props.idPrefix + '-step-title', ref: stepHeading, tabindex: -1 }, 'Import an existing AI response'),
+              h('p', { class: 'ai-exchange-help' }, 'AI responses are app-specific. A response created for another app will not import here.'),
+              h('p', { class: 'ai-exchange-help' }, 'Use a response generated for ' + props.label + '. Older responses are checked against their format.'),
+            ]),
+            h('div', { class: 'ai-exchange-actions' }, [
+              h('button', { type: 'button', class: 'card-primary-button', onClick: selectResponse }, 'Continue to import'),
+              !props.importOnly ? h('button', { type: 'button', class: 'quiet-button', onClick: selectSource }, 'Back') : null,
+            ]),
+          ] : stage.value === 'source' && !props.importOnly ? [
             h('div', { class: 'ai-exchange-step-heading' }, [
               h('h3', { id: props.idPrefix + '-step-title', ref: stepHeading, tabindex: -1 }, 'Give your AI something to study'),
               h('p', { class: 'ai-exchange-help' }, 'Open your AI chat and share the material you want to learn from.'),
             ]),
-            h(AiSourceIntro, { showImportShortcut: true, onNext: selectInstructions, onImport: selectResponse }),
+            h(AiSourceIntro, { showImportShortcut: true, onNext: selectInstructions, onImport: selectExisting }),
           ] : stage.value === 'instructions' && !props.importOnly ? [
             h('div', { class: 'ai-exchange-step-heading' }, [
               h('h3', { id: props.idPrefix + '-step-title' }, 'Make instructions for your AI'),

@@ -1,4 +1,5 @@
 import { parseAiImportJson } from '../../core/ai-json.ts';
+import { assertAiTarget } from '../../core/ai-app-identity.ts';
 import { aiFileOutputInstructions } from '../../core/ai-file-output.ts';
 import { categoryScopedPrompt, type AiCardScope } from '../../core/ai-study-categories.ts';
 import { isRecord } from '../../core/validation.ts';
@@ -122,6 +123,7 @@ The JSON file must match this structure:
 \`\`\`json
 {
   "format": "${format}",
+  "targetApp": "${kind}",
   "version": 1,
   "title": ${JSON.stringify(scope?.category.title ?? "Subject word puzzle")},
   ${scope ? `"categoryKey": ${JSON.stringify(scope.category.key)},` : ''}
@@ -161,9 +163,10 @@ export function parsePuzzleAiImport(json: string, kind: PuzzleAiKind, scope: AiC
   const randomPool = kind === 'word-search' && options.selectionMode === 'random';
   const minEntries = randomPool ? Math.max(MIN_WORDS, options.layoutMax) : puzzleAiLimits[kind].min;
   const value = parseAiImportJson(json);
+  assertAiTarget(value, kind);
   const format = kind === 'word-search' ? 'dynamic-learner-word-search' : 'dynamic-learner-crossword';
   const field = kind === 'word-search' ? 'words' : 'entries';
-  if (!isRecord(value) || Object.keys(value).some(k => !['format', 'version', 'title', 'categoryKey', field, 'coverage'].includes(k)) ||
+  if (!isRecord(value) || Object.keys(value).some(k => !['format', 'targetApp', 'version', 'title', 'categoryKey', field, 'coverage'].includes(k)) ||
       value.format !== format || value.version !== 1 || (scope ? value.categoryKey !== scope.category.key : (value.categoryKey !== undefined && typeof value.categoryKey !== 'string')) ||
       typeof value.title !== 'string' || !value.title.trim() || value.title.length > 120 ||
       !Array.isArray(value[field]) || value[field].length < minEntries || value[field].length > Math.min(limit, kind === 'word-search' ? puzzleAiLimits['word-search'].max : MAX_ENTRIES)) {

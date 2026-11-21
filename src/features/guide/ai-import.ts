@@ -10,6 +10,7 @@ import { MAX_AI_IMPORT_LENGTH } from '../../core/ai-json.ts';
 import { AI_COMPLETE_COVERAGE_PROMPT, parseAiSubjectCoverage, type AiSubjectCoverage } from '../../core/ai-subject-coverage.ts';
 import { inputValue } from '../../core/dom.ts';
 import { isRecord } from '../../core/validation.ts';
+import { assertAiTarget } from '../../core/ai-app-identity.ts';
 import { AI_PLAIN_TEXT_ONLY_GUIDANCE } from '../../core/ai-formatting-guidance.ts';
 import { parseAiTeachingLesson } from './ai-teaching-schema.ts';
 import { parseAiSolvers } from '../knowledge-check/ai-parameterized-format.ts';
@@ -143,6 +144,7 @@ Write the following illustrative JSON STRUCTURE into the downloadable file (the 
 ${JSON_FENCE}json
 {
   "format": "${LIST_IMPORT_FORMAT}",
+  "targetApp": "guide",
   "version": ${IMPORT_VERSION},
   "title": "Short guide title",
   "coverage": [{ "subject": "Specific source topic", "itemNumbers": [1] }],
@@ -272,7 +274,7 @@ function parsedJson(text: string): unknown {
 
 function parseListImport(value: unknown): SimpleListGuideImport {
   if (!isRecord(value) ||
-      Object.keys(value).some((key) => !['format', 'version', 'title', 'sections', 'coverage', 'confidence'].includes(key)) ||
+      Object.keys(value).some((key) => !['format', 'targetApp', 'version', 'title', 'sections', 'coverage', 'confidence'].includes(key)) ||
       (value.format !== LIST_IMPORT_FORMAT && value.format !== LEGACY_LIST_IMPORT_FORMAT) || value.version !== IMPORT_VERSION ||
       typeof value.title !== 'string' || !value.title.trim() || value.title.trim().length > MAX_NAME_LENGTH) {
     throw new Error('This is not a supported List-mode Guide import.');
@@ -289,7 +291,7 @@ function parseListImport(value: unknown): SimpleListGuideImport {
 
 function parseMapImport(value: unknown): SimpleMapGuideImport {
   if (!isRecord(value) ||
-      Object.keys(value).some((key) => !['format', 'version', 'title', 'startTopic', 'topics', 'connections', 'coverage', 'confidence', 'solvers', 'background'].includes(key)) ||
+      Object.keys(value).some((key) => !['format', 'targetApp', 'version', 'title', 'startTopic', 'topics', 'connections', 'coverage', 'confidence', 'solvers', 'background'].includes(key)) ||
       (value.format !== MAP_IMPORT_FORMAT && value.format !== LEGACY_MAP_IMPORT_FORMAT) ||
       (value.version !== IMPORT_VERSION && value.version !== TEACHING_IMPORT_VERSION) ||
       typeof value.title !== 'string' || !value.title.trim() || value.title.trim().length > MAX_NAME_LENGTH ||
@@ -409,6 +411,7 @@ function parseMapImport(value: unknown): SimpleMapGuideImport {
 
 export function parseGuideAiImport(text: string, mode: GuideMode = 'list'): SimpleGuideImport {
   const value = parsedJson(text);
+  assertAiTarget(value, 'guide');
   return mode === 'map' ? parseMapImport(value) : parseListImport(value);
 }
 
@@ -432,6 +435,7 @@ function guideRecoveryOptions(mode: GuideMode, direct: boolean, title: string): 
   return {
     field: map ? 'topics' : 'sections',
     formats: map ? [MAP_IMPORT_FORMAT, LEGACY_MAP_IMPORT_FORMAT] : [LIST_IMPORT_FORMAT, LEGACY_LIST_IMPORT_FORMAT],
+    targetApp: 'guide',
     versions: map ? [TEACHING_IMPORT_VERSION, IMPORT_VERSION] : [IMPORT_VERSION],
     title, maxItems: map ? MAX_TOPICS : MAX_SECTIONS,
     requiredMetadata: direct ? [] : ['coverage', 'confidence'],
@@ -627,7 +631,7 @@ export const GuideAiImportWorkspace = defineComponent({
             ]); }
 
     return () => stage.value === 'categories' ? h(AiCategoryPicker, {
-      key: 'guide-categories', label: 'Guide', destination: props.destination,
+      key: 'guide-categories', label: 'Guide', targetApp: 'guide', destination: props.destination,
       initialCategories: categoryList.value, onBack: () => { stage.value = 'scope'; },
       onCancel: () => emit('cancel'),
       onSelect: (selected: AiCardScope, list: AiCardCategories) => {
