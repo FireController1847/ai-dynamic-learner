@@ -294,7 +294,8 @@
 .ai-options-grid > label > span:first-child,.ai-options-grid > .ai-options-field > span:first-child { font-size:12px;font-weight:600;color:var(--text-secondary); }
 .ai-options-grid input:not([type='checkbox']):not([type='radio']),.ai-options-grid select { width:100%;min-width:0; }
 .ai-options-grid small,.ai-options-grid > label > .study-ai-muted { color:var(--text-secondary);font-size:12px;font-weight:400;line-height:18px; }
-.ai-options-grid > .ai-prompt-style-select { max-width:none; }
+/* Keep the choice independent of adjacent settings: the following inputs begin on the next grid row. */
+.ai-options-grid > .ai-prompt-style-select { grid-column:1/-1;justify-self:start;width:100%;max-width:600px; }
 .ai-options-section { display:grid;gap:10px;min-width:0;margin:0;padding:16px;border:1px solid var(--border-color);border-radius:var(--radius-dialog); }
 .ai-options-section > legend { padding-inline:6px;font-weight:600; }
 .ai-options-mode { display:flex;align-items:flex-start;gap:10px;cursor:pointer; }
@@ -308,6 +309,5 @@
 @media (pointer:coarse) { .ai-options-mode { min-height:44px; } }
 
 .ai-options-configuration { display:grid;gap:20px;min-width:0;align-content:start; }
-.ai-options-grid > .ai-options-field > input:not([type='checkbox']):not([type='radio']) { min-height:40px; }
 .ai-options-grid > .ai-options-field > small { margin:0; }
 @container (max-width:700px) { .ai-options-configuration { gap:16px; } }
