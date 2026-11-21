@@ -1,4 +1,5 @@
 import { parseFillBlankTemplate } from '../../core/fill-blank.ts';
+import { aiFileOutputInstructions } from '../../core/ai-file-output.ts';
 import { isRecord } from '../../core/validation.ts';
 import { AI_COMPLETE_COVERAGE_PROMPT, parseAiSubjectCoverage, type AiSubjectCoverage } from '../../core/ai-subject-coverage.ts';
 import { AI_PLAIN_TEXT_ONLY_GUIDANCE } from '../../core/ai-formatting-guidance.ts';
@@ -40,7 +41,9 @@ Coverage depth: ${AI_COVERAGE_INSTRUCTIONS[coverage]} This controls DETAIL, neve
 ${AI_COMPLETE_COVERAGE_PROMPT}
 Create at most ${limit} cards. Use fewer if the source does not support that many useful recall targets; never pad with filler.
 
-Return ONLY one JSON code block with this exact structure:
+${aiFileOutputInstructions("dynamic-learner-fill-in-the-blanks.json")}
+
+The JSON file must match this structure:
 \`\`\`json
 {
   "format": "${FILL_BLANK_IMPORT_FORMAT}",

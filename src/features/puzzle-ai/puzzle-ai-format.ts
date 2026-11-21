@@ -1,4 +1,5 @@
 import { parseAiImportJson } from '../../core/ai-json.ts';
+import { aiFileOutputInstructions } from '../../core/ai-file-output.ts';
 import { categoryScopedPrompt, type AiCardScope } from '../../core/ai-study-categories.ts';
 import { isRecord } from '../../core/validation.ts';
 import { AI_COMPLETE_COVERAGE_PROMPT, parseAiSubjectCoverage, type AiSubjectCoverage } from '../../core/ai-subject-coverage.ts';
@@ -115,7 +116,9 @@ For puzzle answers that cannot represent a multiword subject directly, test the 
 
 Avoid repeated answers, redundant clues, citations, URLs, attribution, markdown commentary and ChatGPT citation markers. ${scope ? 'This JSON represents ONE selected category only.' : 'Cover the overall subject, not a single category.'}
 
-Return ONLY one fenced JSON code block with this exact structure:
+${aiFileOutputInstructions(format + ".json")}
+
+The JSON file must match this structure:
 \`\`\`json
 {
   "format": "${format}",

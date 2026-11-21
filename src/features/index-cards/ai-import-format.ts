@@ -1,4 +1,5 @@
 import { parseAiImportJson } from '../../core/ai-json.ts';
+import { aiFileOutputInstructions } from '../../core/ai-file-output.ts';
 export { parseAiImportJson, MAX_AI_IMPORT_LENGTH } from '../../core/ai-json.ts';
 import { isRecord } from '../../core/validation.ts';
 import { AI_COMPLETE_COVERAGE_PROMPT, parseAiSubjectCoverage, type AiSubjectCoverage } from '../../core/ai-subject-coverage.ts';
@@ -43,7 +44,9 @@ ${AI_COMPLETE_COVERAGE_PROMPT}
 Create at most ${limit} useful cards. Fewer is better if the source does not support that many; do not invent filler.
 Do not create Fill in the Blanks, cloze syntax, card headings, explanations, IDs, groups, or application settings.
 
-Return ONLY one JSON code block with this exact structure:
+${aiFileOutputInstructions("dynamic-learner-flash-cards.json")}
+
+The JSON file must match this structure:
 \`\`\`json
 {
   "format": "${FLASH_CARDS_IMPORT_FORMAT}",

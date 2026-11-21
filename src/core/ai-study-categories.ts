@@ -1,4 +1,5 @@
 import { isRecord } from './validation.ts';
+import { aiFileOutputInstructions } from './ai-file-output.ts';
 import { parseAiImportJson } from './ai-json.ts';
 const MAX_NAME_LENGTH = 120;
 
@@ -16,7 +17,9 @@ export function studyCategoriesPrompt(product = 'Index Cards'): string {
 - Keep categories minimal, but ACCOUNT FOR EVERY subject, subtopic, study-guide objective, question, and bullet in the source. Merging related material must NEVER drop a concept. Think like an instructor when grouping, without inventing unsupported content or filler.
 - Descriptions: one short plain-text phrase (3–8 words, at most 80 characters). No overlap, citations, Markdown, math markup, or application settings.
 
-Return ONLY one JSON code block:
+${aiFileOutputInstructions("dynamic-learner-categories.json")}
+
+The JSON file must match this structure:
 \`\`\`json
 {
   "format": "${STUDY_CATEGORIES_FORMAT}",
