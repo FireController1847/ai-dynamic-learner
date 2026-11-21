@@ -3,6 +3,7 @@ import { useAiRecovery } from '../../components/use-ai-recovery.ts';
 import { MAX_CARDS } from './card-model.ts';
 import { AiPromptExchange } from '../../components/ai-prompt-exchange.ts';
 import { AiCoverageAcceptance } from '../../components/ai-coverage-acceptance.ts';
+import { AiSourceUnitCoverage } from '../../components/ai-source-unit-coverage.ts';
 import { AiCoverageSelect } from '../../components/ai-coverage-select.ts';
 import { AiPromptStyleSelect } from '../../components/ai-prompt-style-select.ts';
 import { simpleAiPrompt, type AiPromptVariant } from '../../core/ai-prompt-variants.ts';
@@ -155,6 +156,11 @@ export const IndexCardsAiImport = defineComponent({
           h('h3', candidate.value.data.title),
           h('p', { role: 'status' }, `${candidate.value.data.cards.length} cards · ${modeLabel.value} · ${props.remainingCards} card spaces available`),
           longAnswers.value ? h('p', { class: 'flash-ai-muted' }, `${longAnswers.value} ${longAnswers.value === 1 ? 'answer exceeds' : 'answers exceed'} 10 words. Ask your AI to split those into shorter cards, or shorten them after import.`) : null,
+          candidate.value.data.sourceUnits?.length ? h(AiSourceUnitCoverage, {
+            units: candidate.value.data.sourceUnits,
+            items: candidate.value.data.cards.map(card => 'question' in card ? card.question : maskFillBlankAnswers(card.text)),
+            itemLabel: 'cards',
+          }) : null,
           h('ol', { class: 'flash-ai-cards' }, previewCards(candidate.value)),
           candidate.value.data.coverage ? h(AiCoverageAcceptance, { key: json.value, coverage: candidate.value.data.coverage,
             items: candidate.value.data.cards.map(card => 'question' in card ? card.question : card.text),

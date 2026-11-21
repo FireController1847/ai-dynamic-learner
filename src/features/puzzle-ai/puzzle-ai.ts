@@ -4,6 +4,7 @@ import { AiCreationScope } from '../../components/ai-creation-scope.ts';
 import { useAiRecovery } from '../../components/use-ai-recovery.ts';
 import { AiPromptExchange } from '../../components/ai-prompt-exchange.ts';
 import { AiCoverageAcceptance } from '../../components/ai-coverage-acceptance.ts';
+import { AiSourceUnitCoverage } from '../../components/ai-source-unit-coverage.ts';
 import { AiCoverageSelect } from '../../components/ai-coverage-select.ts';
 import { AiPromptStyleSelect } from '../../components/ai-prompt-style-select.ts';
 import { simpleAiPrompt, type AiPromptVariant } from '../../core/ai-prompt-variants.ts';
@@ -146,6 +147,10 @@ export const PuzzleAiCreation = defineComponent({
           h('strong', entry.answer),
           entry.clue ? h('span', entry.clue) : null,
         ]))),
+        result.sourceUnits?.length ? h(AiSourceUnitCoverage, {
+          units: result.sourceUnits, items: entries.map(item => item.answer + (item.clue ? ' — ' + item.clue : '')),
+          itemLabel: 'puzzle entries',
+        }) : null,
         result.coverage ? h(AiCoverageAcceptance, { key: json.value, coverage: result.coverage,
           items: entries.map(item => item.answer + (item.clue ? ' — ' + item.clue : '')),
           onApproval: (value: boolean) => { coverageAccepted.value = value; },

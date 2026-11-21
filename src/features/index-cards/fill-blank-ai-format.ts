@@ -8,6 +8,7 @@ import { parseAiImportJson, type AiCardCoverage } from './ai-import-format.ts';
 import { aiCoverageInstructions } from '../../core/ai-coverage.ts';
 import { AI_BOUNDED_INFERENCE_PROMPT } from '../../core/ai-source-inference.ts';
 import { AI_SOURCE_DIFFICULTY_PROMPT } from '../../core/ai-source-difficulty.ts';
+import { AI_SOURCE_UNITS_PROMPT, parseAiSourceUnits, type AiSourceUnit } from '../../core/ai-source-units.ts';
 import { MAX_CARDS, MAX_CARD_TEXT_LENGTH } from './card-model.ts';
 import { MAX_NAME_LENGTH } from './tree-model.ts';
 
@@ -17,6 +18,7 @@ export interface FillBlankCardsImport {
   title: string;
   cards: { text: string }[];
   coverage?: AiSubjectCoverage[];
+  sourceUnits?: AiSourceUnit[];
 }
 
 export function fillBlankAiPrompt(coverage: AiCardCoverage, limit: number, style: AiBlankStyle): string {
@@ -39,6 +41,7 @@ Make each card a useful recall challenge:
 - Do not invent facts, add citations, URLs, source markers, explanations, headings, IDs, or app settings.
 ${AI_BOUNDED_INFERENCE_PROMPT}
 ${AI_SOURCE_DIFFICULTY_PROMPT}
+${AI_SOURCE_UNITS_PROMPT}
 - Do not use nested braces, empty blanks, newlines inside a blank, or any brace characters outside {{answer}} markers.
 
 ${AI_PLAIN_TEXT_ONLY_GUIDANCE}
@@ -53,6 +56,7 @@ The JSON file must match this structure:
 {
   "format": "${FILL_BLANK_IMPORT_FORMAT}",
   "targetApp": "index-cards",
+  "sourceUnits": [],
   "version": 1,
   "title": "Short set title",
   "coverage": [{ "subject": "Chemical symbols", "itemNumbers": [1] }],
@@ -70,7 +74,7 @@ export function parseFillBlankAiImport(text: string): FillBlankCardsImport {
   const value = parseAiImportJson(text);
   assertAiTarget(value, 'index-cards');
   if (!isRecord(value) ||
-      Object.keys(value).some(key => !['format', 'targetApp', 'version', 'title', 'cards', 'coverage'].includes(key)) ||
+      Object.keys(value).some(key => !['format', 'targetApp', 'version', 'title', 'cards', 'coverage', 'sourceUnits'].includes(key)) ||
       value.format !== FILL_BLANK_IMPORT_FORMAT || value.version !== 1 ||
       typeof value.title !== 'string' || !value.title.trim() || value.title.trim().length > MAX_NAME_LENGTH) {
     throw new Error('This is not a supported Fill in the Blanks import. Use the generated Fill in the Blanks prompt.');
@@ -96,5 +100,6 @@ export function parseFillBlankAiImport(text: string): FillBlankCardsImport {
     return { text: source };
   });
   const subjectCoverage = value.coverage === undefined ? undefined : parseAiSubjectCoverage(value.coverage, cards.length);
-  return { title: value.title.trim(), cards, coverage: subjectCoverage };
+  const sourceUnits = parseAiSourceUnits(value.sourceUnits, cards.length);
+  return { title: value.title.trim(), cards, coverage: subjectCoverage, ...(sourceUnits ? { sourceUnits } : {}) };
 }

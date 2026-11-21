@@ -244,6 +244,7 @@ export const KnowledgeCheck = defineComponent({
       try {
         const item = insertCheck(props.model.items, aiTarget.value, value.title, questionsForSave(value.questions),
           { ...defaultSetOptions(), description: value.description });
+        if (value.sourceUnits?.length) item.sourceUnits = value.sourceUnits;
         selectedId.value = item.id; remember(item.id);
         aiTarget.value = null;
         library.value?.reveal(item.id);

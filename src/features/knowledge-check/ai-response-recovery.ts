@@ -1,5 +1,6 @@
 import { MAX_AI_IMPORT_LENGTH } from '../../core/ai-json.ts';
 import { assertAiTarget } from '../../core/ai-app-identity.ts';
+import { parseAiSourceUnits } from '../../core/ai-source-units.ts';
 import { readAiResponse, type AiResponseIssue } from '../../core/ai-response-recovery.ts';
 import { isRecord } from '../../core/validation.ts';
 import { parseAiSolvers } from './ai-parameterized-format.ts';
@@ -113,7 +114,15 @@ export function recoverReviewResponse(text: string, preferences: ReviewAiPrefere
       }
     }
     let confidence: ReviewAiImport['confidence'] = null, coverage: ReviewAiImport['coverage'] = null;
+    let sourceUnits: ReviewAiImport['sourceUnits'] = undefined;
     if (!source.incomplete && !result.issues.length) {
+      if (envelope.sourceUnits !== undefined) {
+        try {
+          sourceUnits = parseAiSourceUnits(envelope.sourceUnits, questions.length);
+          for (const unit of sourceUnits ?? []) for (const n of unit.itemNumbers)
+            questions[n - 1].sourceUnit = unit.title;
+        } catch { result.notices.push('Source-unit mapping could not be validated; use the original chapters to request corrected mapping.'); }
+      }
       for (const field of ['confidence', 'coverage'] as const) {
         if (envelope[field] === undefined) continue;
         try {
@@ -122,10 +131,11 @@ export function recoverReviewResponse(text: string, preferences: ReviewAiPrefere
           else coverage = parsed.coverage;
         } catch { result.notices.push('The AI’s ' + field + ' summary could not be read and was left out.'); }
       }
-    } else if (envelope.confidence !== undefined || envelope.coverage !== undefined) {
+    } else if (envelope.sourceUnits !== undefined || envelope.confidence !== undefined || envelope.coverage !== undefined) {
       result.notices.push('Coverage and confidence were not retained because some questions were missing.');
     }
-    result.candidate = { title, description, questions, warnings, confidence, coverage };
+    result.candidate = { title, description, questions, warnings, confidence, coverage,
+      ...(sourceUnits ? { sourceUnits } : {}) };
   } catch (error) { result.issues.push({ message: errorText(error) }); }
   return result;
 }

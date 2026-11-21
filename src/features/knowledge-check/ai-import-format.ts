@@ -2,6 +2,7 @@ import { AI_PARAMETERIZED_EXAMPLE, AI_SOLVER_EXAMPLE, PARAMETERIZED_AI_GUIDANCE,
 import { parseAiImportJson } from '../../core/ai-json.ts';
 import { AI_BOUNDED_INFERENCE_PROMPT } from '../../core/ai-source-inference.ts';
 import { AI_SOURCE_DIFFICULTY_PROMPT } from '../../core/ai-source-difficulty.ts';
+import { AI_SOURCE_UNITS_PROMPT, parseAiSourceUnits, type AiSourceUnit } from '../../core/ai-source-units.ts';
 import { assertAiTarget } from '../../core/ai-app-identity.ts';
 import { categoryScopedPrompt, type AiCardScope } from '../../core/ai-study-categories.ts';
 import { parseFillBlankTemplate } from '../../core/fill-blank.ts';
@@ -28,6 +29,7 @@ export interface ReviewAiImport {
   title: string; description: string; questions: Question[]; warnings: string[];
   /** A transient AI audit; it does not change the persisted question schema. */
   coverage: ReviewAiSubjectCoverage[] | null;
+  sourceUnits?: AiSourceUnit[];
   confidence: ReviewAiConfidence | null;
 }
 export type ReviewAiMixMode = 'custom' | 'ai';
@@ -128,6 +130,7 @@ Think like an instructor when CHOOSING what to test, not when wording the questi
 STRICT SOURCE FIDELITY — NON-NEGOTIABLE:
 ${AI_BOUNDED_INFERENCE_PROMPT}
 ${AI_SOURCE_DIFFICULTY_PROMPT}
+${AI_SOURCE_UNITS_PROMPT}
 - Use ONLY the study material supplied in this AI conversation and the explicitly selected category. Treat it as a closed knowledge source. Do not add facts from general knowledge, training data, web searches, common practice, or assumptions about what instructors normally teach.
 - Reasonable, well-supported inference is allowed to clarify an incomplete idea using adjacent source facts and relationships. Do not invent missing details, methods, examples, or claims that the supplied concepts cannot justify.
 - Test definitions, facts, comparisons, methods, and relationships present or defensibly implied by the source. Make clear when a conclusion is inferred rather than directly quoted; do not assert uncertainty as fact.
@@ -168,7 +171,7 @@ OUTPUT AS A DOWNLOADABLE JSON FILE, NOT A CHAT CODE BLOCK:
 
 Write the following JSON STRUCTURE to the downloadable file (illustrative schema only):
 \`\`\`json
-${JSON.stringify({ format: REVIEW_AI_FORMAT, targetApp: 'review', version: 1, title: 'Short knowledge set title', description: 'Brief scope of this knowledge set.', ...(allowParameterized ? { solvers: [AI_SOLVER_EXAMPLE] } : {}), questions: enabledTypes.map(type => examples[type]), confidence: { overallCoverage: 85, examConfidence: 90, subjectConfidence: 86, studyConfidence: 90, coverageExplanation: 'Short explanation of coverage estimate.', uncoveredSubjects: ['Specific source topics not adequately tested'], confidenceExplanation: 'Short explanation of evidence and uncertainty.' } }, null, 2)}
+${JSON.stringify({ format: REVIEW_AI_FORMAT, targetApp: 'review', version: 1, title: 'Short knowledge set title', description: 'Brief scope of this knowledge set.', ...(allowParameterized ? { solvers: [AI_SOLVER_EXAMPLE] } : {}), questions: enabledTypes.map(type => examples[type]), sourceUnits: [], confidence: { overallCoverage: 85, examConfidence: 90, subjectConfidence: 86, studyConfidence: 90, coverageExplanation: 'Short explanation of coverage estimate.', uncoveredSubjects: ['Specific source topics not adequately tested'], confidenceExplanation: 'Short explanation of evidence and uncertainty.' } }, null, 2)}
 \`\`\`
 
 Examples show structure only, not required types or facts. ${allowParameterized ? 'Include solvers only when a Parameterized question needs them. ' : ''}Title: 1–${MAX_NAME_LENGTH} characters; description, prompt, answer, explanation, and choices: at most ${MAX_TEXT} characters each; context: at most ${MAX_QUESTION_CONTEXT} characters. Escape newlines and backslashes inside JSON strings.
@@ -186,7 +189,7 @@ export function parseReviewAiImport(text: string, preferences: ReviewAiPreferenc
   if (!isRecord(value) || value.format !== REVIEW_AI_FORMAT || value.version !== 1) {
     throw new Error('Paste a dynamic-learner-review version-1 JSON object.');
   }
-  if (Object.keys(value).some(key => !['format', 'targetApp', 'version', 'title', 'description', 'questions', 'solvers', 'coverage', 'confidence'].includes(key))) {
+  if (Object.keys(value).some(key => !['format', 'targetApp', 'version', 'title', 'description', 'questions', 'solvers', 'coverage', 'confidence', 'sourceUnits'].includes(key))) {
     throw new Error('The Review response contains unsupported top-level fields.');
   }
   if (typeof value.title !== 'string' || !value.title.trim() || value.title.trim().length > MAX_NAME_LENGTH) {
@@ -272,6 +275,9 @@ export function parseReviewAiImport(text: string, preferences: ReviewAiPreferenc
   for (const pkg of packages) {
     if (!questions.some(question => question.parameters?.rules.solver?.package?.id === pkg.id && question.parameters.rules.solver.package.solverVersion === pkg.solverVersion)) warnings.push(`Solver “${pkg.label}” is unused and will not be imported.`);
   }
+  const sourceUnits = parseAiSourceUnits(value.sourceUnits, questions.length);
+  for (const unit of sourceUnits ?? []) for (const number of unit.itemNumbers)
+    questions[number - 1].sourceUnit = unit.title;
   validateQuestions(questions);
   if (expected !== null) {
     for (const type of AI_QUESTION_TYPES) {
@@ -332,7 +338,8 @@ export function parseReviewAiImport(text: string, preferences: ReviewAiPreferenc
   } else if (options.requireCoverage) {
     throw new Error('The AI omitted the required confidence statistics. Ask for complete JSON with confidence percentages and explanations.');
   }
-  return { title: value.title.trim(), description: value.description.trim(), questions, warnings, coverage, confidence };
+  return { title: value.title.trim(), description: value.description.trim(), questions, warnings, coverage, confidence,
+    ...(sourceUnits ? { sourceUnits } : {}) };
 }
 
 /** Accept a complete AI knowledge-set response OR a bare question array.

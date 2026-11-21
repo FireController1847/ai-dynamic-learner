@@ -56,6 +56,7 @@ export function checkReviewResponse(text: string, preferences: ReviewAiPreferenc
       warnings: previous ? ['Requested ' + preferences.count + ' questions; ' + questions.length + ' are ready.'] : incoming.warnings,
       confidence: previous || duplicates ? null : incoming.confidence,
       coverage: previous || duplicates ? null : incoming.coverage,
+      sourceUnits: previous || duplicates ? undefined : incoming.sourceUnits,
     },
     notices: [...report.notices, ...(previous ? ['AI confidence estimates cannot be combined across responses.'] : [])],
   };

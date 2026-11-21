@@ -7,6 +7,7 @@ import { parseAiSubjectCoverage, type AiSubjectCoverage } from '../../core/ai-su
 import { aiCoverageInstructions, type AiCoverageLevel } from '../../core/ai-coverage.ts';
 import { AI_BOUNDED_INFERENCE_PROMPT } from '../../core/ai-source-inference.ts';
 import { AI_SOURCE_DIFFICULTY_PROMPT } from '../../core/ai-source-difficulty.ts';
+import { AI_SOURCE_UNITS_PROMPT, parseAiSourceUnits, type AiSourceUnit } from '../../core/ai-source-units.ts';
 import { AI_PLAIN_TEXT_ONLY_GUIDANCE } from '../../core/ai-formatting-guidance.ts';
 import { MAX_CARDS, MAX_CARD_TEXT_LENGTH } from './card-model.ts';
 import { MAX_NAME_LENGTH } from './tree-model.ts';
@@ -18,6 +19,7 @@ export interface FlashCardsImport {
   title: string;
   cards: { question: string; answer: string }[];
   coverage?: AiSubjectCoverage[];
+  sourceUnits?: AiSourceUnit[];
 }
 
 export function flashCardsAiPrompt(coverage: AiCardCoverage, limit: number): string {
@@ -36,6 +38,7 @@ Answer brevity is the highest writing priority:
 - Use source-supported information and defensible inferences from its immediate context; do not invent facts, citations, references, URLs, or source markers.
 ${AI_BOUNDED_INFERENCE_PROMPT}
 ${AI_SOURCE_DIFFICULTY_PROMPT}
+${AI_SOURCE_UNITS_PROMPT}
 
 ${AI_PLAIN_TEXT_ONLY_GUIDANCE}
 
@@ -50,6 +53,7 @@ The JSON file must match this structure:
 {
   "format": "${FLASH_CARDS_IMPORT_FORMAT}",
   "targetApp": "index-cards",
+  "sourceUnits": [],
   "version": 1,
   "title": "Short set title",
   "coverage": [{ "subject": "Chemical symbols", "itemNumbers": [1] }],
@@ -67,7 +71,7 @@ export function parseFlashCardsAiImport(text: string): FlashCardsImport {
   const value = parseAiImportJson(text);
   assertAiTarget(value, 'index-cards');
   if (!isRecord(value) ||
-      Object.keys(value).some(key => !['format', 'targetApp', 'version', 'title', 'cards', 'coverage'].includes(key)) ||
+      Object.keys(value).some(key => !['format', 'targetApp', 'version', 'title', 'cards', 'coverage', 'sourceUnits'].includes(key)) ||
       value.format !== FLASH_CARDS_IMPORT_FORMAT || value.version !== 1 ||
       typeof value.title !== 'string' || !value.title.trim() || value.title.trim().length > MAX_NAME_LENGTH) {
     throw new Error('This is not a supported Flash Cards import. Use the generated Flash Cards prompt.');
@@ -85,7 +89,8 @@ export function parseFlashCardsAiImport(text: string): FlashCardsImport {
     return { question: card.question.trim(), answer: card.answer.trim() };
   });
   const subjectCoverage = value.coverage === undefined ? undefined : parseAiSubjectCoverage(value.coverage, cards.length);
-  return { title: value.title.trim(), cards, coverage: subjectCoverage };
+  const sourceUnits = parseAiSourceUnits(value.sourceUnits, cards.length);
+  return { title: value.title.trim(), cards, coverage: subjectCoverage, ...(sourceUnits ? { sourceUnits } : {}) };
 }
 
 export function answerIsLong(answer: string): boolean {

@@ -247,6 +247,10 @@ export function recoverAiCollection<T>(text: string, options: AiCollectionOption
       return result;
     }
     const repaired = { ...base, [options.field]: kept } as Record<string, unknown>;
+    if (repaired.sourceUnits !== undefined) {
+      delete repaired.sourceUnits;
+      result.notices.push('Source-unit references were omitted after recovery because item positions changed; ask the AI to regenerate the unit mapping.');
+    }
     if (repaired.coverage !== undefined || repaired.confidence !== undefined) {
       delete repaired.coverage; delete repaired.confidence;
       result.notices.push('Coverage and confidence estimates were omitted because the content was recovered or combined.');

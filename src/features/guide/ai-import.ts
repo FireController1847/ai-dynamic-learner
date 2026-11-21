@@ -15,6 +15,7 @@ import { aiCoverageInstructions, type AiCoverageLevel } from '../../core/ai-cove
 import { inputValue } from '../../core/dom.ts';
 import { AI_BOUNDED_INFERENCE_PROMPT } from '../../core/ai-source-inference.ts';
 import { AI_SOURCE_DIFFICULTY_PROMPT } from '../../core/ai-source-difficulty.ts';
+import { AI_SOURCE_UNITS_PROMPT, parseAiSourceUnits, type AiSourceUnit } from '../../core/ai-source-units.ts';
 import { isRecord } from '../../core/validation.ts';
 import { assertAiTarget } from '../../core/ai-app-identity.ts';
 import { AI_PLAIN_TEXT_ONLY_GUIDANCE } from '../../core/ai-formatting-guidance.ts';
@@ -66,6 +67,7 @@ export interface SimpleListGuideImport {
   mode: 'list';
   title: string;
   coverage?: AiSubjectCoverage[];
+  sourceUnits?: AiSourceUnit[];
   confidence: GuideAiConfidence | null;
   sections: SimpleGuideImportSection[];
 }
@@ -85,6 +87,7 @@ export interface SimpleMapGuideImport {
   /** One theme for the full generated map, optional for legacy AI responses. */
   background?: GuideMapPattern;
   coverage?: AiSubjectCoverage[];
+  sourceUnits?: AiSourceUnit[];
   confidence: GuideAiConfidence | null;
   startTopic: string;
   topics: SimpleMapGuideImportTopic[];
@@ -122,6 +125,7 @@ ${planning}
 
 ${AI_BOUNDED_INFERENCE_PROMPT}
 ${AI_SOURCE_DIFFICULTY_PROMPT}
+${AI_SOURCE_UNITS_PROMPT}
 
 Selected preferences:
 - Detail: ${DETAIL_INSTRUCTIONS[options.detail]}
@@ -147,6 +151,7 @@ ${JSON_FENCE}json
 {
   "format": "${LIST_IMPORT_FORMAT}",
   "targetApp": "guide",
+  "sourceUnits": [],
   "version": ${IMPORT_VERSION},
   "title": "Short guide title",
   "coverage": [{ "subject": "Specific source topic", "itemNumbers": [1] }],
@@ -276,7 +281,7 @@ function parsedJson(text: string): unknown {
 
 function parseListImport(value: unknown): SimpleListGuideImport {
   if (!isRecord(value) ||
-      Object.keys(value).some((key) => !['format', 'targetApp', 'version', 'title', 'sections', 'coverage', 'confidence'].includes(key)) ||
+      Object.keys(value).some((key) => !['format', 'targetApp', 'version', 'title', 'sections', 'coverage', 'confidence', 'sourceUnits'].includes(key)) ||
       (value.format !== LIST_IMPORT_FORMAT && value.format !== LEGACY_LIST_IMPORT_FORMAT) || value.version !== IMPORT_VERSION ||
       typeof value.title !== 'string' || !value.title.trim() || value.title.trim().length > MAX_NAME_LENGTH) {
     throw new Error('This is not a supported List-mode Guide import.');
@@ -288,12 +293,13 @@ function parseListImport(value: unknown): SimpleListGuideImport {
     sections: parseImportSections(value.sections, state, 'Guide'),
     confidence: parseGuideConfidence(value.confidence),
     coverage: value.coverage === undefined ? undefined : parseAiSubjectCoverage(value.coverage, Array.isArray(value.sections) ? value.sections.length : 0),
+    sourceUnits: parseAiSourceUnits(value.sourceUnits, Array.isArray(value.sections) ? value.sections.length : 0),
   };
 }
 
 function parseMapImport(value: unknown): SimpleMapGuideImport {
   if (!isRecord(value) ||
-      Object.keys(value).some((key) => !['format', 'targetApp', 'version', 'title', 'startTopic', 'topics', 'connections', 'coverage', 'confidence', 'solvers', 'background'].includes(key)) ||
+      Object.keys(value).some((key) => !['format', 'targetApp', 'version', 'title', 'startTopic', 'topics', 'connections', 'coverage', 'confidence', 'solvers', 'background', 'sourceUnits'].includes(key)) ||
       (value.format !== MAP_IMPORT_FORMAT && value.format !== LEGACY_MAP_IMPORT_FORMAT) ||
       (value.version !== IMPORT_VERSION && value.version !== TEACHING_IMPORT_VERSION) ||
       typeof value.title !== 'string' || !value.title.trim() || value.title.trim().length > MAX_NAME_LENGTH ||
@@ -408,7 +414,8 @@ function parseMapImport(value: unknown): SimpleMapGuideImport {
   return { mode: 'map', title: value.title.trim(), startTopic, topics, connections,
     ...(background ? { background } : {}),
     confidence: parseGuideConfidence(value.confidence),
-    coverage: value.coverage === undefined ? undefined : parseAiSubjectCoverage(value.coverage, topics.length) };
+    coverage: value.coverage === undefined ? undefined : parseAiSubjectCoverage(value.coverage, topics.length),
+    sourceUnits: parseAiSourceUnits(value.sourceUnits, topics.length) };
 }
 
 export function parseGuideAiImport(text: string, mode: GuideMode = 'list'): SimpleGuideImport {

@@ -1,4 +1,5 @@
 import { aiCoverageInstructions } from '../../core/ai-coverage.ts';
+import { AI_SOURCE_UNITS_PROMPT } from '../../core/ai-source-units.ts';
 import { AI_BOUNDED_INFERENCE_PROMPT } from '../../core/ai-source-inference.ts';
 import { AI_SOURCE_DIFFICULTY_PROMPT } from '../../core/ai-source-difficulty.ts';
 import { DEFAULT_TEACHING_WEIGHTS, TEACHING_TYPES } from './ai-teaching-mix.ts';
@@ -10,7 +11,7 @@ import { MAP_GRID, MAP_MAX_X, MAP_MAX_Y, MAP_TOPIC_HEIGHT, MAP_TOPIC_WIDTH } fro
 import type { GuideAiPromptOptions } from './ai-import.ts';
 
 const EXAMPLE = {
-  format: 'dynamic-learner-guide-map', targetApp: 'guide', version: 2,
+  format: 'dynamic-learner-guide-map', targetApp: 'guide', version: 2, sourceUnits: [],
   title: 'Understanding operating systems', background: 'flow', startTopic: 'foundations',
   coverage: [{ subject: 'Core process concepts', itemNumbers: [1] }],
   confidence: GUIDE_CONFIDENCE_EXAMPLE,
@@ -68,6 +69,7 @@ export function guideAiTeachingPrompt(options: GuideAiPromptOptions, isOverall =
     'Think like an excellent instructor building an interactive textbook, not a bulleted outline. Build understanding, teach WHY, supply context, select appropriate examples, visual models, explanations, comparisons and gentle questions. Never invent unsupported facts.',
     AI_BOUNDED_INFERENCE_PROMPT,
     AI_SOURCE_DIFFICULTY_PROMPT,
+    AI_SOURCE_UNITS_PROMPT,
     'Coverage: ' + aiCoverageInstructions(options.coverage) + ' Detail: ' + options.detail + '.',
     'LEARNING JOURNEY — ABSOLUTE PRIORITY: Guide is a teacher, not a surprise exam. DO NOT introduce a Check, memory prompt, predictive challenge or independent task until the learner has first encountered clear, sufficient teaching of the exact rule and its prerequisite concepts. No gotcha questions, grading pressure, forced answers, timers or unexplained terminology. Even when asking for prediction, precede it with the necessary worked explanation or source-backed conceptual setup. Include explicit examples before expecting independent application.',
     'DESIGN THE ENTIRE MAP AS A SPIRAL OF UNDERSTANDING, NOT A STACK OF ARTICLES: Early stops (roughly first third of the main learning path) establish foundational vocabulary, intuition, concrete examples and observed demonstrations. Middle stops reuse these foundations with worked variation, guided choices, predictions with clues and gentle applications. Later stops connect concepts, explore harder conditions and return to earlier taught ideas with less support. Difficulty should rise from the prerequisite structure of the SOURCE, not from arbitrary numbering or coordinate position. Never assume material was mastered because a stop was marked visited.',
@@ -171,7 +173,7 @@ export function guideAiTeachingPrompt(options: GuideAiPromptOptions, isOverall =
     '- Give meaningful 1–2 sentence descriptions to build curiosity. No filler stops. If uncertain about map positions, omit ALL position fields and let the app create a spaced route.',
     '',
     guideAiFileOutputInstructions('map'),
-    'The downloadable JSON file must use format "dynamic-learner-guide-map", targetApp "guide", and version 2, with title, background, startTopic, coverage, confidence, topics, connections and OPTIONAL solvers (only when a Parameterized block truly requires algorithm execution).',
+    'The downloadable JSON file must use format "dynamic-learner-guide-map", targetApp "guide", and version 2, with title, background, startTopic, coverage, confidence, topics, connections, OPTIONAL sourceUnits for explicitly headed material, and OPTIONAL solvers (only when a Parameterized block truly requires algorithm execution).',
     'The following shows the JSON structure to write INTO THE FILE. It is an illustrative schema ONLY: its two example stops and four sample blocks are NOT an instruction about output size. Your real output should normally have 5–7 stops and ' + countGoal + ' Teaching Blocks unless source coverage warrants an exception:',
     String.fromCharCode(96).repeat(3) + 'json',
     JSON.stringify(EXAMPLE, null, 2),

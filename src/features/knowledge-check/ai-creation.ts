@@ -1,6 +1,7 @@
 import { computed, defineComponent, h, onMounted, ref, Transition } from 'vue';
 import { AiCategoryPicker } from '../../components/ai-category-picker.ts';
 import { AiCreationScope } from '../../components/ai-creation-scope.ts';
+import { AiSourceUnitCoverage } from '../../components/ai-source-unit-coverage.ts';
 import { AiCoverageSelect } from '../../components/ai-coverage-select.ts';
 import { AiPromptStyleSelect } from '../../components/ai-prompt-style-select.ts';
 import { simpleAiPrompt, type AiPromptVariant } from '../../core/ai-prompt-variants.ts';
@@ -16,6 +17,7 @@ import { REVIEW_AI_FOCUSES, type ReviewAiFocus } from './ai-focus.ts';
 import { AiFocusChoices } from '../../components/ai-focus-choices.ts';
 import { AI_QUESTION_TYPES, allocateQuestions, DEFAULT_AI_WEIGHTS, equalizeQuestionWeights, normalizeQuestionWeights, questionCountProblem, questionMixProblem, questionTypeLabel, rebalanceQuestionWeights, type QuestionWeights, type AiQuestionType } from './ai-question-mix.ts';
 import { reviewAiQuestionPreview } from './ai-question-preview.ts';
+import { questionDisplayPrompt } from './question-model.ts';
 import { checkReviewResponse, reviewRetryPrompt, reviewBatchPrompt, ReviewAiRecoveryHelp } from './ai-import-recovery.ts';
 import type { ReviewResponseRecovery } from './ai-response-recovery.ts';
 
@@ -381,6 +383,10 @@ export const ReviewAiCreation = defineComponent({
           ]) : null,
                     h('h3', candidate.value.title),
           h('p', candidate.value.description),
+          candidate.value.sourceUnits?.length ? h(AiSourceUnitCoverage, {
+            units: candidate.value.sourceUnits,
+            items: candidate.value.questions.map(q => questionDisplayPrompt(q)), itemLabel: 'questions',
+          }) : null,
           h('div', { class: 'review-ai-preview-counts', role: 'status' }, [
             !importedDirectly.value ? h('div', [h('strong', String(preferences.value.count)), h('span', 'Requested')]) : null,
             !importedDirectly.value ? h(Icon, { name: 'chevron' }) : null,
