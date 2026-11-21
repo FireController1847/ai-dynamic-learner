@@ -1,3 +1,19 @@
+## v1.27.0
+
+<small data-utc="2026-11-21T20:34:16Z">November 21, 2026 at 1:34 PM MST</small>
+
+- **AI Import:** Upload `.json`, `.txt`, or `.md` AI replies, or paste a response, for Flash Cards and Fill in the Blanks.
+- **AI Prompts:** Request downloadable JSON files with a text fallback; retain card count, coverage, blank style, and topic selection.
+
+<details>
+<summary>View 3 commits</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/26ca0590d4e0168825bebc0e02284fd165e1a349">26ca0590</a> — Share Review-style scope picker and response-file recovery entry</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/1bcc796f416900acd6c0a34386c1655cf7fe84ab">1bcc796f</a> — Centralize downloadable JSON output across generators</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/8bef12e0f4be69be9b43f4f05ef773c6dab6f8b5">8bef12e0</a> — Bump AI-enabled app versions for unified import workflow</li>
+</ol>
+</details>
+
 ## v1.26.0
 
 <small data-utc="2026-11-17T02:46:45Z">November 16, 2026 at 7:46 PM MST</small>

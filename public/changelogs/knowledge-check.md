@@ -1,3 +1,21 @@
+## v1.52.0
+
+<small data-utc="2026-11-21T20:34:16Z">November 21, 2026 at 1:34 PM MST</small>
+
+- **Question Import:** Choose the overall subject or an AI-discovered topic when adding questions to an existing set.
+- **AI Workflow:** Use the shared scope picker and file-first category response import without changing Review’s approved question-generation prompt.
+- **Preview:** Show the same question details when creating and appending questions.
+
+<details>
+<summary>View 4 commits</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/26ca0590d4e0168825bebc0e02284fd165e1a349">26ca0590</a> — Share Review-style scope picker and response-file recovery entry</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/6f7a3dfead85a0d86accd76f5e0dfd18d4712e8b">6f7a3dfe</a> — Share question previews and support topic-scoped additions</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/1bcc796f416900acd6c0a34386c1655cf7fe84ab">1bcc796f</a> — Centralize downloadable JSON output across generators</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/8bef12e0f4be69be9b43f4f05ef773c6dab6f8b5">8bef12e0</a> — Bump AI-enabled app versions for unified import workflow</li>
+</ol>
+</details>
+
 ## v1.51.1
 
 <small data-utc="2026-11-17T02:46:45Z">November 16, 2026 at 7:46 PM MST</small>
