@@ -169,7 +169,7 @@ export const PuzzleAiCreation = defineComponent({
           h('div', [
             h('p', { class: 'study-ai-muted' }, label.value + ' · Saved in ' + props.destination),
             h('h2', 'Configure ' + (wordSearch ? 'word search' : 'crossword')),
-            h('p', 'Step 2 of 3 · Choose how you want your puzzle to work.'),
+            h('p', 'Choose your puzzle settings before starting the AI steps.'),
             h('p', { class: 'study-ai-muted' }, scope.value?.category.title ?? 'Overall subject'),
           ]),
           h('div', { class: 'study-ai-actions' }, [
@@ -344,7 +344,7 @@ export const PuzzleAiCreation = defineComponent({
             h('div', [
               h('p', { class: 'study-ai-muted' }, label.value + ' · Saved in ' + props.destination),
               h('h2', scope.value?.category.title ?? 'Overall subject'),
-              h('p', 'Step 3 of 3 · Create one puzzle using your selected settings.'),
+              h('p', 'Create one puzzle using your selected settings.'),
               h('p', { class: 'study-ai-muted' }, scope.value?.category.description ?? 'Cover the overall subject.'),
             ]),
             h('div', { class: 'study-ai-actions' }, [

@@ -215,7 +215,7 @@ export const AiPromptExchange = defineComponent({
     }
 
     return () => h('div', { class: 'ai-exchange' }, [
-      props.importOnly ? null : h('div', { class: 'ai-exchange-progress', 'aria-label': 'AI creation progress' }, [
+      props.importOnly || stage.value === 'import-info' ? null : h('div', { class: 'ai-exchange-progress', 'aria-label': 'AI creation progress' }, [
         !props.skipSource ? h('span', { class: stage.value === 'source' ? 'is-active' : 'is-complete', 'aria-current': stage.value === 'source' ? 'step' : undefined }, '1 · Source') : null,
         !props.skipSource ? h(Icon, { name: 'chevron' }) : null,
         h('span', { class: stage.value === 'instructions' ? 'is-active' : stage.value === 'send' || stage.value === 'response' ? 'is-complete' : '', 'aria-current': stage.value === 'instructions' ? 'step' : undefined }, props.skipSource ? '1 · Copy' : '2 · Copy'),
