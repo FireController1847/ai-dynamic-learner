@@ -1,3 +1,17 @@
+## v1.28.3
+
+<small data-utc="2026-11-21T23:54:59Z">November 21, 2026 at 4:54 PM MST</small>
+
+- **AI Options:** Give Simple and Detailed prompts a separate full-width row above the other settings.
+- **Layout:** Allow counts, coverage, and app-specific inputs to keep their natural height in the responsive settings grid.
+
+<details>
+<summary>View 1 commit</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/b84ef344b73f607406f4791ff93d0a0c2aaa9581">b84ef344</a> — Separate prompt selection from the settings grid</li>
+</ol>
+</details>
+
 ## v1.28.2
 
 <small data-utc="2026-11-21T23:49:51Z">November 21, 2026 at 4:49 PM MST</small>
