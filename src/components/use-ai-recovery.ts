@@ -39,11 +39,12 @@ export function useAiRecovery<T>(
   function panel() {
     const value = report.value;
     if (!active.value || !value) return null;
-    const field = options().field;
+    const settings = options();
+    const field = settings.field;
     const append = canAppend() && Boolean(value.envelope);
     return h(AiRecoveryHelp, {
       report: value, accepted: value.accepted, itemLabel: itemLabel(), canContinue: Boolean(value.candidate), appendRepair: append,
-      repairPrompt: aiRepairPrompt(value, label(), field, value.accepted, append),
+      repairPrompt: aiRepairPrompt(value, label(), field, value.accepted, append, settings.formats[0], settings.targetApp),
       onRetry: () => { retrying.value = true; active.value = false; clearResponse(); },
       onReview: finish,
       onBack: () => { active.value = false; },

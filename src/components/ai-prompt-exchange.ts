@@ -38,6 +38,7 @@ export const AiPromptExchange = defineComponent({
     const errorMessage = ref('');
     const uploadedFile = ref('');
     const fileProblem = ref('');
+    const previousResponse = ref('');
     const uploading = ref(false);
     const draggingFile = ref(false);
     const pasteExpanded = ref(false);
@@ -62,7 +63,10 @@ export const AiPromptExchange = defineComponent({
       cancelCopy();
       if (stage.value === 'instructions') copied.value = false;
     }, { flush: 'sync' });
-    watch(() => props.json, value => { if (!value) { uploadedFile.value = ''; fileProblem.value = ''; } });
+    watch(() => props.json, (value, previous) => {
+      if (previous?.trim() && !value.trim()) previousResponse.value = previous;
+      if (!value) { uploadedFile.value = ''; fileProblem.value = ''; }
+    });
     onBeforeUnmount(() => { disposed = true; fileAttempt++; cancelCopy(); });
 
     async function acceptJsonFile(file: File | undefined) {
@@ -413,6 +417,12 @@ export const AiPromptExchange = defineComponent({
               'aria-describedby': props.problem ? props.idPrefix + '-error' : undefined,
               onInput: (event: Event) => { emit('update-json', inputValue(event)); },
             }) : null,
+            previousResponse.value ? h('details', { class: 'ai-exchange-format-help' }, [
+              h('summary', 'Previous response retained'),
+              h('p', { class: 'ai-exchange-help' }, 'Your earlier response is still available if a repair needs to be retried.'),
+              h('textarea', { readonly: true, value: previousResponse.value, rows: 4, 'aria-label': 'Previous AI response' }),
+              h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('update-json', previousResponse.value) }, 'Restore previous response'),
+            ]) : null,
             props.problem ? h('p', { id: props.idPrefix + '-error', role: 'alert', class: 'ai-exchange-error' }, [
               h('strong', 'That response could not be used. '), props.problem,
             ]) : null,

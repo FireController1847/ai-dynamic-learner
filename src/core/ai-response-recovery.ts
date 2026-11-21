@@ -270,13 +270,16 @@ export function recoverAiCollection<T>(text: string, options: AiCollectionOption
   }
 }
 
-export function aiRepairPrompt(report: AiRecoveryReport, label: string, field: string, accepted: number, append: boolean): string {
+export function aiRepairPrompt(report: AiRecoveryReport, label: string, field: string, accepted: number, append: boolean,
+  format?: string, targetApp?: string): string {
   const details = report.issues.slice(0, 15).map(issue => (issue.item ? 'Item ' + issue.item + ': ' : '') + issue.message +
     (issue.source ? '\nOriginal item: ' + issue.source : '')).join('\n\n').slice(0, 22000);
   return 'Fix your previous Dynamic Learner ' + label + ' response using the original study material and original instructions. ' +
+    (format ? 'Use format "' + format + '", the same schema version, and ' : 'Preserve the original schema and ') +
+    (targetApp ? 'targetApp "' + targetApp + '". ' : 'the correct app identifier. ') +
     (append && accepted ? 'Return ONLY corrected or missing items in the "' + field + '" array, with the same format, version and scope. Do not repeat the ' + accepted + ' accepted items. '
       : 'Return the COMPLETE corrected response in the same format, version and scope. Preserve all valid existing content. ') +
-    'Return valid JSON as requested, with no unrelated commentary. Do not invent facts, answers, or filler. ' +
+    'Return a COMPLETE valid UTF-8 .json file, or raw JSON if file attachment is unavailable. Do not include surrounding commentary. Do not invent facts, answers, or filler. ' +
     'Check all structural requirements and references before replying.\n\n' + details;
 }
 
