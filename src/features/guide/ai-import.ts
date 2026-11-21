@@ -5,7 +5,7 @@ import { AiPromptExchange, type AiPromptExchangeHandle } from '../../components/
 import { AiCreationScope } from '../../components/ai-creation-scope.ts';
 import { AiCoverageSelect } from '../../components/ai-coverage-select.ts';
 import { AiPromptStyleSelect } from '../../components/ai-prompt-style-select.ts';
-import { simpleAiPrompt, type AiPromptVariant } from '../../core/ai-prompt-variants.ts';
+import { DEFAULT_AI_PROMPT_VARIANT, simpleAiPrompt, type AiPromptVariant } from '../../core/ai-prompt-variants.ts';
 import { AiFocusChoices } from '../../components/ai-focus-choices.ts';
 import { AiCategoryPicker } from '../../components/ai-category-picker.ts';
 import { categoryScopedPrompt, type AiCardScope, type AiCardCategories } from '../../core/ai-study-categories.ts';
@@ -516,7 +516,7 @@ export const GuideAiImportWorkspace = defineComponent({
       else if (stage.value === 'categories') stage.value = 'scope';
       else emit('back');
     }
-    const promptVariant = ref<AiPromptVariant>('detailed');
+    const promptVariant = ref<AiPromptVariant>(DEFAULT_AI_PROMPT_VARIANT);
     const detail = ref<PromptDetail>(DEFAULT_PROMPT_OPTIONS.detail);
     const coverage = ref<PromptCoverage>(DEFAULT_PROMPT_OPTIONS.coverage);
     const bulletStyle = ref<PromptBulletStyle>(DEFAULT_PROMPT_OPTIONS.bulletStyle);

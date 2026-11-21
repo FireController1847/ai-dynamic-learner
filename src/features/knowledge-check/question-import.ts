@@ -2,7 +2,7 @@ import { computed, defineComponent, h, ref, type PropType } from 'vue';
 import { AiPromptExchange } from '../../components/ai-prompt-exchange.ts';
 import { AiCreationScope } from '../../components/ai-creation-scope.ts';
 import { AiPromptStyleSelect } from '../../components/ai-prompt-style-select.ts';
-import { simpleAiPrompt, type AiPromptVariant } from '../../core/ai-prompt-variants.ts';
+import { DEFAULT_AI_PROMPT_VARIANT, simpleAiPrompt, type AiPromptVariant } from '../../core/ai-prompt-variants.ts';
 import { AiCategoryPicker } from '../../components/ai-category-picker.ts';
 import type { AiCardCategories, AiCardScope } from '../../core/ai-study-categories.ts';
 import { reviewAiQuestionPreview } from './ai-question-preview.ts';
@@ -26,7 +26,7 @@ export const ReviewQuestionImport = defineComponent({
   },
   setup(props, { emit }) {
     const count = ref(20);
-    const promptVariant = ref<AiPromptVariant>('detailed');
+    const promptVariant = ref<AiPromptVariant>(DEFAULT_AI_PROMPT_VARIANT);
     const stage = ref<'scope' | 'categories' | 'import'>('scope');
     const scope = ref<AiCardScope | null>(null);
     const categories = ref<AiCardCategories | null>(null);

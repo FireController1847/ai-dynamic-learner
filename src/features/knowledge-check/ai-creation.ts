@@ -4,7 +4,7 @@ import { AiCreationScope } from '../../components/ai-creation-scope.ts';
 import { AiSourceUnitCoverage } from '../../components/ai-source-unit-coverage.ts';
 import { AiCoverageSelect } from '../../components/ai-coverage-select.ts';
 import { AiPromptStyleSelect } from '../../components/ai-prompt-style-select.ts';
-import { simpleAiPrompt, type AiPromptVariant } from '../../core/ai-prompt-variants.ts';
+import { DEFAULT_AI_PROMPT_VARIANT, simpleAiPrompt, type AiPromptVariant } from '../../core/ai-prompt-variants.ts';
 import { Icon } from '../../components/icon.ts';
 import { AiPromptExchange, type AiPromptExchangeHandle } from '../../components/ai-prompt-exchange.ts';
 import { MAX_AI_IMPORT_LENGTH } from '../../core/ai-json.ts';
@@ -28,7 +28,7 @@ export const ReviewAiCreation = defineComponent({
   setup(props, { emit }) {
     const stage = ref<'scope' | 'categories' | 'configure' | 'generate' | 'direct' | 'review' | 'recovery'>('scope');
     const importedDirectly = ref(false);
-    const promptVariant = ref<AiPromptVariant>('detailed');
+    const promptVariant = ref<AiPromptVariant>(DEFAULT_AI_PROMPT_VARIANT);
     const returningFromReview = ref(false);
     const scope = ref<AiCardScope | null>(null);
     const categories = ref<AiCardCategories | null>(null);

@@ -1,7 +1,8 @@
 import { defineComponent, h, type PropType } from 'vue';
+import { Icon } from './icon.ts';
 import type { AiPromptVariant } from '../core/ai-prompt-variants.ts';
 
-/** An app-owned configuration control displayed before the source/exchange steps. */
+/** Compact, accessible selection before the guided AI exchange. */
 export const AiPromptStyleSelect = defineComponent({
   name: 'AiPromptStyleSelect',
   props: {
@@ -10,18 +11,26 @@ export const AiPromptStyleSelect = defineComponent({
   },
   emits: { select: (_value: AiPromptVariant) => true },
   setup(props, { emit }) {
-    return () => h('label', { class: props.fieldClass }, [
-      h('span', 'AI prompt'),
-      h('select', { value: props.value, onChange: (event: Event) => {
-        const value = (event.target as HTMLSelectElement).value;
-        if (value === 'simple' || value === 'detailed') emit('select', value);
-      } }, [
-        h('option', { value: 'simple' }, 'Simple prompt'),
-        h('option', { value: 'detailed' }, 'Detailed prompt'),
+    return () => h('fieldset', { class: ['ai-prompt-style-select', props.fieldClass] }, [
+      h('legend', 'AI prompt'),
+      h('div', { class: 'ai-prompt-style-options', role: 'group', 'aria-label': 'AI prompt style' }, [
+        h('button', {
+          type: 'button',
+          class: ['ai-prompt-style-choice', { 'is-selected': props.value === 'simple' }],
+          'aria-pressed': props.value === 'simple',
+          'aria-label': 'Simple prompt, suited to free AI chats',
+          title: 'Simple — works well with free AI chats',
+          onClick: () => emit('select', 'simple'),
+        }, [h(Icon, { name: 'ai' }), h('span', 'Simple')]),
+        h('button', {
+          type: 'button',
+          class: ['ai-prompt-style-choice', 'is-detailed', { 'is-selected': props.value === 'detailed' }],
+          'aria-pressed': props.value === 'detailed',
+          'aria-label': 'Detailed prompt, suited to paid AI chats',
+          title: 'Detailed — works best with paid AI chats',
+          onClick: () => emit('select', 'detailed'),
+        }, [h(Icon, { name: 'crown' }), h('span', 'Detailed')]),
       ]),
-      h('small', { class: 'study-ai-muted' }, props.value === 'simple'
-        ? 'Works better with free versions of AI chats.'
-        : 'Works better with paid versions of AI chats.'),
     ]);
   },
 });

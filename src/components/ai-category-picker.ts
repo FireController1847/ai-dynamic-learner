@@ -3,7 +3,7 @@ import { useAiRecovery } from './use-ai-recovery.ts';
 import { AiPromptExchange } from './ai-prompt-exchange.ts';
 import { AiSourceIntro } from './ai-source-intro.ts';
 import { AiPromptStyleSelect } from './ai-prompt-style-select.ts';
-import { simpleAiPrompt, type AiPromptVariant } from '../core/ai-prompt-variants.ts';
+import { DEFAULT_AI_PROMPT_VARIANT, simpleAiPrompt, type AiPromptVariant } from '../core/ai-prompt-variants.ts';
 import { PopupDialog } from './popup-dialog.ts';
 import { Icon } from './icon.ts';
 import { studyCategoriesPrompt, parseStudyCategories, STUDY_CATEGORIES_FORMAT, MAX_CATEGORIES, type AiCardCategories, type AiCardScope } from '../core/ai-study-categories.ts';
@@ -36,7 +36,7 @@ export const AiCategoryPicker = defineComponent({
     const clearButton = ref<HTMLButtonElement | null>(null);
     const clearOpen = ref(false);
     const storageMessage = ref('');
-    const promptVariant = ref<AiPromptVariant>('detailed');
+    const promptVariant = ref<AiPromptVariant>(DEFAULT_AI_PROMPT_VARIANT);
     const prompt = () => {
       const detailed = studyCategoriesPrompt(props.label, props.targetApp);
       return promptVariant.value === 'simple' ? simpleAiPrompt(detailed, props.label,

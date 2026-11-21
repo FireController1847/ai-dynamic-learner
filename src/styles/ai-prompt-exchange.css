@@ -273,3 +273,18 @@
 .ai-repair-step textarea { width:100%;min-width:0; }
 .ai-repair-step > .quiet-button { justify-self:start; }
 .ai-repair-step .study-ai-actions { flex-wrap:wrap; }
+
+/* Prompt style selection: a quiet default for free chats, with a visual premium cue. */
+.ai-prompt-style-select { display:grid;gap:6px;align-content:start;min-width:0;max-width:380px;margin:0;padding:0;border:0; }
+.ai-prompt-style-select legend { margin:0 0 6px;padding:0;color:var(--text-secondary);font-size:12px;font-weight:600; }
+.ai-prompt-style-options { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;min-width:0; }
+.ai-prompt-style-choice { display:inline-flex;align-items:center;justify-content:center;gap:7px;min-width:0;min-height:40px;padding:7px 11px;border:1px solid var(--border-color);border-radius:var(--radius);background:var(--page-background);color:var(--text-secondary);font:inherit;font-size:13px;font-weight:600;line-height:20px;cursor:pointer;transition:border-color 160ms var(--ease-out),background-color 160ms var(--ease-out),box-shadow 160ms var(--ease-out); }
+.ai-prompt-style-choice .ui-icon { flex-shrink:0;width:17px;height:17px; }
+.ai-prompt-style-choice:hover { border-color:var(--brand);background:var(--surface-subtle); }
+.ai-prompt-style-choice.is-selected { border-color:var(--brand);background:var(--brand-tint);color:var(--brand-text);box-shadow:inset 0 0 0 1px var(--brand); }
+.ai-prompt-style-choice.is-detailed:not(.is-selected) { border-color:color-mix(in srgb,#c29743 48%,var(--border-color));background:color-mix(in srgb,#e6be6c 8%,var(--page-background));color:var(--text-color); }
+.ai-prompt-style-choice.is-detailed .ui-icon { color:color-mix(in srgb,#c29743 82%,var(--text-color)); }
+.ai-prompt-style-choice.is-detailed:hover { border-color:color-mix(in srgb,#c29743 80%,var(--border-color));background:color-mix(in srgb,#e6be6c 16%,var(--page-background)); }
+.ai-prompt-style-choice:focus-visible { outline:2px solid var(--brand);outline-offset:2px; }
+@media(pointer:coarse) { .ai-prompt-style-choice { min-height:44px; } }
+@media(prefers-reduced-motion:reduce) { .ai-prompt-style-choice { transition:none; } }

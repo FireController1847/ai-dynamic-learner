@@ -6,7 +6,7 @@ import { AiCoverageAcceptance } from '../../components/ai-coverage-acceptance.ts
 import { AiSourceUnitCoverage } from '../../components/ai-source-unit-coverage.ts';
 import { AiCoverageSelect } from '../../components/ai-coverage-select.ts';
 import { AiPromptStyleSelect } from '../../components/ai-prompt-style-select.ts';
-import { simpleAiPrompt, type AiPromptVariant } from '../../core/ai-prompt-variants.ts';
+import { DEFAULT_AI_PROMPT_VARIANT, simpleAiPrompt, type AiPromptVariant } from '../../core/ai-prompt-variants.ts';
 import { inputValue } from '../../core/dom.ts';
 import { maskFillBlankAnswers, parseFillBlankTemplate } from '../../core/fill-blank.ts';
 import { fillBlankAiPrompt, parseFillBlankAiImport, FILL_BLANK_IMPORT_FORMAT, type AiBlankStyle, type FillBlankCardsImport } from './fill-blank-ai-format.ts';
@@ -33,7 +33,7 @@ export const IndexCardsAiImport = defineComponent({
   emits: { back: () => true, cancel: () => true, import: (_value: IndexCardsAiImportValue) => true },
   setup(props, { emit }) {
     const stage = ref<'configure' | 'exchange'>(props.direct ? 'exchange' : 'configure');
-    const promptVariant = ref<AiPromptVariant>('detailed');
+    const promptVariant = ref<AiPromptVariant>(DEFAULT_AI_PROMPT_VARIANT);
     const coverage = ref<AiCardCoverage>('balanced');
     const limit = ref(20);
     const blankStyle = ref<AiBlankStyle>('connected');

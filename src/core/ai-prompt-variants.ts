@@ -3,6 +3,9 @@ import { AI_SOURCE_DIFFICULTY_PROMPT } from './ai-source-difficulty.ts';
 
 export type AiPromptVariant = 'simple' | 'detailed';
 
+/** Most learners use free AI chats; keep the default consistent in every app. */
+export const DEFAULT_AI_PROMPT_VARIANT: AiPromptVariant = 'simple';
+
 /** Compact prompt with the original generator's current JSON example, including
  * its format, targetApp, enabled content kinds, and any optional solver fields.
  * Keep the full generator available for capable models. */

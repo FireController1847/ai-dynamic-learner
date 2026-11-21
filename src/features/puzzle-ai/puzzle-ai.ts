@@ -7,7 +7,7 @@ import { AiCoverageAcceptance } from '../../components/ai-coverage-acceptance.ts
 import { AiSourceUnitCoverage } from '../../components/ai-source-unit-coverage.ts';
 import { AiCoverageSelect } from '../../components/ai-coverage-select.ts';
 import { AiPromptStyleSelect } from '../../components/ai-prompt-style-select.ts';
-import { simpleAiPrompt, type AiPromptVariant } from '../../core/ai-prompt-variants.ts';
+import { DEFAULT_AI_PROMPT_VARIANT, simpleAiPrompt, type AiPromptVariant } from '../../core/ai-prompt-variants.ts';
 import { MAX_AI_IMPORT_LENGTH } from '../../core/ai-json.ts';
 import type { AiCardCategories, AiCardScope } from '../../core/ai-study-categories.ts';
 import { inputValue } from '../../core/dom.ts';
@@ -27,7 +27,7 @@ export const PuzzleAiCreation = defineComponent({
     const scope = ref<AiCardScope | null>(null);
     const preferences = ref<PuzzleAiOptions>(defaultPuzzleAiOptions(props.kind));
     const configured = ref(false);
-    const promptVariant = ref<AiPromptVariant>('detailed');
+    const promptVariant = ref<AiPromptVariant>(DEFAULT_AI_PROMPT_VARIANT);
     const entry = ref<'scope' | 'categories' | 'settings' | 'direct'>('scope');
     const configurationProblem = ref('');
     const json = ref('');
