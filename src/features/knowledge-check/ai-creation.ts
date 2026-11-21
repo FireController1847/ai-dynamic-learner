@@ -212,7 +212,7 @@ export const ReviewAiCreation = defineComponent({
           onCancel: () => emit('cancel'),
         }) : h('header', { class: 'study-ai-header' }, [
           h('div', [h('p', { class: 'study-ai-muted' }, `Review · Saved in ${props.destination}`),
-            h('h2', { ref: heading, tabindex: -1 }, stage.value === 'scope' ? 'Create a knowledge set with AI' : stage.value === 'configure' ? 'Choose your question mix' : scope.value?.category.title ?? 'Overall subject'),
+            h('h2', { ref: heading, tabindex: -1 }, stage.value === 'scope' ? 'Create a knowledge set with AI' : scope.value?.category.title ?? 'Overall subject'),
             h('p', stage.value === 'scope'
               ? 'Choose how much of the material your questions should cover.'
               : scope.value?.category.description ?? 'Cover the overall subject using your chosen question-type strategy.'),
