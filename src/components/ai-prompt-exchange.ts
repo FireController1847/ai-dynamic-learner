@@ -23,9 +23,9 @@ export const AiPromptExchange = defineComponent({
     importOnly: Boolean,
     skipSource: Boolean,
     showReviewStep: Boolean,
-    preferFileImport: Boolean,
-    // Review can recover raw/malformed response files; other callers keep strict file checks.
-    allowRawResponseFile: Boolean,
+    // Review's file-first, recovery-friendly import is the default for every app.
+    preferFileImport: { type: Boolean, default: true },
+    allowRawResponseFile: { type: Boolean, default: true },
     recovering: Boolean,
   },
   emits: { 'update-json': (_value: string) => true, validate: () => true },
@@ -311,7 +311,7 @@ export const AiPromptExchange = defineComponent({
                   'is-dragging': draggingFile.value,
                   'has-file': Boolean(uploadedFile.value || props.json.trim()),
                 }],
-                role: 'group', 'aria-label': 'Choose a JSON file',
+                role: 'group', 'aria-label': 'Choose an AI response file',
                 onDragenter: (event: DragEvent) => {
                   event.preventDefault();
                   draggingFile.value = true;
@@ -334,22 +334,22 @@ export const AiPromptExchange = defineComponent({
                 ]),
                 h('div', { class: 'ai-json-upload-copy' }, [
                   h('strong', uploading.value ? 'Reading your file…'
-                    : uploadedFile.value || (props.json.trim() ? 'JSON response ready' : 'Add your JSON file')),
+                    : uploadedFile.value || (props.json.trim() ? 'AI response ready' : 'Add your AI response')),
                   h('p', { class: 'ai-exchange-help' },
                     uploading.value ? props.allowRawResponseFile ? 'Reading the response locally.' : 'Checking the file format locally.'
                       : uploadedFile.value || props.json.trim()
                         ? 'Ready to validate and move on.'
-                        : 'Drop a .json file here, or select one from your device.'),
+                        : props.allowRawResponseFile ? 'Drop a .json, .txt, or .md response here, or select one from your device.' : 'Drop a .json file here, or select one from your device.'),
                 ]),
                 h('div', { class: 'ai-json-upload-actions' }, [
                   h('button', {
                     ref: fileButton, type: 'button', class: 'quiet-button ai-json-choose-button',
                     disabled: uploading.value, onClick: () => fileInput.value?.click(),
                   }, [h(Icon, { name: 'upload' }),
-                    uploadedFile.value || props.json.trim() ? 'Replace file' : 'Choose JSON file']),
+                    uploadedFile.value || props.json.trim() ? 'Replace file' : 'Choose response file']),
                   uploadedFile.value || props.json.trim() ? h('button', {
                     type: 'button', class: 'quiet-button ai-json-clear-button',
-                    'aria-label': 'Clear selected JSON response', disabled: uploading.value,
+                    'aria-label': 'Clear selected AI response', disabled: uploading.value,
                     onClick: clearJsonFile,
                   }, [h(Icon, { name: 'trash' }), 'Clear']) : null,
                 ]),

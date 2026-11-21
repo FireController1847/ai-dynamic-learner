@@ -1,6 +1,6 @@
 import { computed, defineComponent, h, onMounted, ref, Transition } from 'vue';
 import { AiCategoryPicker } from '../../components/ai-category-picker.ts';
-import { AiScopeChoices } from '../../components/ai-scope-choices.ts';
+import { AiCreationScope } from '../../components/ai-creation-scope.ts';
 import { Icon } from '../../components/icon.ts';
 import { AiPromptExchange, type AiPromptExchangeHandle } from '../../components/ai-prompt-exchange.ts';
 import { MarkdownContent } from '../../components/markdown-content.ts';
@@ -217,15 +217,12 @@ export const ReviewAiCreation = defineComponent({
             stage.value !== 'scope' ? h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel') }, 'Cancel') : null,
           ]),
         ]),
-        stage.value === 'scope' ? [h(AiScopeChoices, {
+        stage.value === 'scope' ? h(AiCreationScope, {
           onOverall: () => { scope.value = null; go('configure'); },
           onCategory: () => go('categories'),
-        }),
-          h('div', { class: 'study-ai-actions ai-scope-actions' }, [
-            h('button', { type: 'button', class: 'quiet-button outline-button', style: { width: 'auto', flex: '0 0 auto' }, onClick: () => { scope.value = null; go('direct'); } }, 'Import an AI response'),
-            h('button', { type: 'button', class: 'quiet-button', style: { width: 'auto', flex: '0 0 auto' }, onClick: () => emit('cancel') }, 'Cancel'),
-          ]),
-        ] : stage.value === 'configure' ? [
+          onDirect: () => { scope.value = null; go('direct'); },
+          onExit: () => emit('cancel'),
+        }) : stage.value === 'configure' ? [
           h('div', { class: 'review-ai-settings' }, [
             h('label', [h('span', 'Total questions'), h('input', { type: 'number', min: 1, step: 1, value: preferences.value.count,
               onInput: (event: Event) => { preferences.value.count = Number(inputValue(event)); } }), h('small', { class: 'study-ai-muted' }, 'Number of questions the AI should make.')]),

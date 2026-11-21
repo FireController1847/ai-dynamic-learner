@@ -99,7 +99,7 @@ export const IndexCardsAiImport = defineComponent({
         json: json.value, problem: problem.value, maxLength: MAX_AI_IMPORT_LENGTH,
         hasPreview: candidate.value !== null,
         promptHelp: props.scope ? 'Create cards for your selected category.' : 'Create cards covering the overall subject.',
-        importHelp: 'Paste the response from your AI chat to preview the cards.',
+        importHelp: 'Upload or paste the AI response to preview the cards.',
         onUpdateJson: (value: string) => { json.value = value; candidate.value = null; coverageAccepted.value = false; problem.value = ''; },
         onValidate: preview,
         recovering: recovery.active.value,

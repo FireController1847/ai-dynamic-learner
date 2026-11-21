@@ -150,7 +150,7 @@ export const AiCategoryPicker = defineComponent({
         h(AiPromptExchange, {
           key: importExisting.value ? 'existing' : 'new', idPrefix: 'study-category', label: 'Categories',
           prompt, promptHelp: 'Have your AI find the main categories in your source material.',
-          importHelp: 'Paste the category list from your AI chat.',
+          importHelp: 'Upload or paste the category list from your AI chat.',
           json: json.value, problem: problem.value, maxLength: MAX_AI_IMPORT_LENGTH,
           startInImport: importExisting.value, importOnly: importExisting.value, skipSource: true,
           validateLabel: 'Check categories',

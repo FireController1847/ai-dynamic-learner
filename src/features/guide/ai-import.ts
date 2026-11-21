@@ -2,7 +2,7 @@ import { computed, defineComponent, h, ref, type PropType } from 'vue';
 import { useAiRecovery } from '../../components/use-ai-recovery.ts';
 import { readAiResponse, type AiCollectionOptions } from '../../core/ai-response-recovery.ts';
 import { AiPromptExchange, type AiPromptExchangeHandle } from '../../components/ai-prompt-exchange.ts';
-import { AiScopeChoices } from '../../components/ai-scope-choices.ts';
+import { AiCreationScope } from '../../components/ai-creation-scope.ts';
 import { AiFocusChoices } from '../../components/ai-focus-choices.ts';
 import { AiCategoryPicker } from '../../components/ai-category-picker.ts';
 import { categoryScopedPrompt, type AiCardScope, type AiCardCategories } from '../../core/ai-study-categories.ts';
@@ -481,7 +481,8 @@ export const GuideAiImportWorkspace = defineComponent({
   },
   emits: { back: () => true, cancel: () => true, import: (_value: SimpleGuideImport) => true },
   setup(props, { emit }) {
-    const stage = ref<'scope' | 'categories' | 'exchange' | 'review'>(props.direct ? 'exchange' : 'scope');
+    const directImport = ref(props.direct);
+    const stage = ref<'scope' | 'categories' | 'exchange' | 'review'>(directImport.value ? 'exchange' : 'scope');
     const candidate = ref<SimpleGuideImport | null>(null);
     const returningFromReview = ref(false);
     const chosenScope = ref<AiCardScope | null>(null);
@@ -491,7 +492,11 @@ export const GuideAiImportWorkspace = defineComponent({
       if (stage.value === 'review') { returningFromReview.value = true; stage.value = 'exchange'; }
       else if (stage.value === 'exchange') {
         if (exchangeRef.value?.goBack()) return;
-        if (props.direct) { emit('back'); return; }
+        if (directImport.value) {
+          if (props.direct) emit('back');
+          else { directImport.value = false; stage.value = 'scope'; }
+          return;
+        }
         recovery.reset();
         stage.value = chosenScope.value ? 'categories' : 'scope';
       } else if (stage.value === 'categories') stage.value = 'scope';
@@ -525,7 +530,7 @@ export const GuideAiImportWorkspace = defineComponent({
     }, props.mode, chosenScope.value));
     const recoveryMode = ref<GuideMode>(props.mode);
     const recovery = useAiRecovery<SimpleGuideImport>(
-      () => guideRecoveryOptions(recoveryMode.value, props.direct, chosenScope.value?.category.title ?? 'AI Guide'),
+      () => guideRecoveryOptions(recoveryMode.value, directImport.value, chosenScope.value?.category.title ?? 'AI Guide'),
       () => 'Guide', () => recoveryMode.value === 'map' ? 'topics' : 'sections',
       value => { candidate.value = value; returningFromReview.value = false; stage.value = 'review'; },
       () => { json.value = ''; }, () => recoveryMode.value === 'list',
@@ -533,14 +538,14 @@ export const GuideAiImportWorkspace = defineComponent({
     function importValidated() {
       problem.value = '';
       candidate.value = null;
-      if (props.direct && !recovery.retrying.value) {
+      if (directImport.value && !recovery.retrying.value) {
         recoveryMode.value = 'list';
         try { readAiResponse(json.value, 'sections'); }
         catch {
           try { readAiResponse(json.value, 'topics'); recoveryMode.value = 'map'; }
           catch { recoveryMode.value = props.mode; }
         }
-      } else if (!props.direct) recoveryMode.value = props.mode;
+      } else if (!directImport.value) recoveryMode.value = props.mode;
       recovery.check(json.value);
     }
     function optionField<T extends string>(
@@ -572,29 +577,34 @@ export const GuideAiImportWorkspace = defineComponent({
         chosenScope.value = selected; categoryList.value = list; stage.value = 'exchange';
       },
     }) : stage.value === 'review' && candidate.value ? h(GuideAiReview, {
-      candidate: candidate.value, direct: props.direct,
-      targetBlocks: !props.direct && props.mode === 'map' ? targetBlocks.value : 0,
+      candidate: candidate.value, direct: directImport.value,
+      targetBlocks: !directImport.value && props.mode === 'map' ? targetBlocks.value : 0,
       overall: chosenScope.value === null,
       onBack: back, onCancel: () => emit('cancel'),
       onCreate: () => { if (candidate.value) emit('import', candidate.value); },
     }) : h('section', { class: 'guide-ai-workspace', 'aria-labelledby': 'guide-ai-title' }, [
       h('header', { class: 'guide-ai-header' }, [
         h('div', { class: 'guide-ai-heading' }, [
-          h('span', { class: 'guide-ai-kicker' }, `${props.direct ? 'Existing AI response' : props.mode === 'map' ? 'Map mode' : 'List mode'} · Saved in ${props.destination}`),
+          h('span', { class: 'guide-ai-kicker' }, `${directImport.value ? 'Existing AI response' : props.mode === 'map' ? 'Map mode' : 'List mode'} · Saved in ${props.destination}`),
           h('h2', { id: 'guide-ai-title' }, stage.value === 'scope' ? 'Choose what to teach' : chosenScope.value?.category.title ?? 'Create with AI'),
-          h('p', props.direct ? 'Import an existing AI response.' : stage.value === 'scope' ? 'Choose between the overall subject and a specific category, just like Review.' : chosenScope.value?.category.description ?? 'Prepare a Guide from your source material with AI.'),
+          h('p', directImport.value ? 'Import an existing AI response.' : stage.value === 'scope' ? 'Choose between the overall subject and a specific category, just like Review.' : chosenScope.value?.category.description ?? 'Prepare a Guide from your source material with AI.'),
         ]),
         h('div', { class: 'guide-ai-actions' }, [
           h('button', { type: 'button', class: 'quiet-button', onClick: back }, 'Back'),
           h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel') }, 'Cancel'),
         ]),
       ]),
-      stage.value === 'scope' ? h(AiScopeChoices, {
-        onOverall: () => { chosenScope.value = null; stage.value = 'exchange'; },
+      stage.value === 'scope' ? h(AiCreationScope, {
+        showExit: false,
+        onOverall: () => { chosenScope.value = null; directImport.value = false; stage.value = 'exchange'; },
         onCategory: () => { stage.value = 'categories'; },
+        onDirect: () => {
+          chosenScope.value = null; directImport.value = true; recovery.reset();
+          json.value = ''; candidate.value = null; stage.value = 'exchange';
+        },
       }) : h(AiPromptExchange, {
-        ref: exchangeRef, idPrefix: 'guide-ai', label: 'Guide', prompt: prompt.value, json: json.value, problem: problem.value, startInImport: props.direct || returningFromReview.value, importOnly: props.direct,
-        hasPreview: false, showReviewStep: !props.direct,
+        ref: exchangeRef, idPrefix: 'guide-ai', label: 'Guide', prompt: prompt.value, json: json.value, problem: problem.value, startInImport: directImport.value || returningFromReview.value, importOnly: directImport.value,
+        hasPreview: false, showReviewStep: !directImport.value,
         skipSource: Boolean(chosenScope.value),
         preferFileImport: true, allowRawResponseFile: true, recovering: recovery.active.value, maxLength: MAX_AI_IMPORT_LENGTH,
         promptHelp: 'Create a guided interactive lesson from your source, using Teaching Blocks and an exploratory map.',

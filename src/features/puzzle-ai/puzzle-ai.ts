@@ -1,6 +1,6 @@
 import { computed, defineComponent, h, ref, Transition, type PropType } from 'vue';
 import { AiCategoryPicker } from '../../components/ai-category-picker.ts';
-import { AiScopeChoices } from '../../components/ai-scope-choices.ts';
+import { AiCreationScope } from '../../components/ai-creation-scope.ts';
 import { useAiRecovery } from '../../components/use-ai-recovery.ts';
 import { AiPromptExchange } from '../../components/ai-prompt-exchange.ts';
 import { AiCoverageAcceptance } from '../../components/ai-coverage-acceptance.ts';
@@ -151,7 +151,7 @@ export const PuzzleAiCreation = defineComponent({
           h('div', { class: 'study-ai-actions' }, [
             h('button', { type: 'button', class: 'quiet-button', onClick: () => {
               backward.value = true; configured.value = false; entry.value = scope.value ? 'categories' : 'scope';
-            } }, 'Back to categories'),
+            } }, scope.value ? 'Back to categories' : 'Back to scope'),
             h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel') }, 'Cancel'),
           ]),
         ]),
@@ -292,19 +292,17 @@ export const PuzzleAiCreation = defineComponent({
               h('h2', 'Create ' + label.value + ' with AI'),
               h('p', 'Choose the scope for your puzzle.')]),
           ]),
-          h(AiScopeChoices, {
+          h(AiCreationScope, {
             onOverall: () => { scope.value = null; configured.value = false; entry.value = 'settings'; },
             onCategory: () => { entry.value = 'categories'; },
+            onDirect: () => { scope.value = null; configured.value = false; entry.value = 'direct'; },
+            onExit: () => emit('cancel'),
           }),
-          h('div', { class: 'study-ai-actions ai-scope-actions' }, [
-            h('button', { type: 'button', class: 'quiet-button outline-button', style: { width: 'auto', flex: '0 0 auto' }, onClick: () => { scope.value = null; configured.value = false; entry.value = 'direct'; } }, 'Import an AI response'),
-            h('button', { type: 'button', class: 'quiet-button', style: { width: 'auto', flex: '0 0 auto' }, onClick: () => emit('cancel') }, 'Cancel'),
-          ]),
         ]) : entry.value === 'direct' ? h('section', { key: 'direct', class: 'study-ai-workspace puzzle-ai-workspace', 'data-ai-scroll-region': '' }, [
           h('header', { class: 'study-ai-header' }, [h('div', [h('h2', 'Import ' + label.value + ' content'), h('p', 'Paste an overall or category-based response.')]),
             h('button', { type: 'button', class: 'quiet-button', onClick: () => { recovery.reset(); json.value = ''; candidate.value = null; entry.value = 'scope'; } }, 'Back')]),
           h(AiPromptExchange, { idPrefix: 'puzzle-direct-' + props.kind, label: label.value, prompt: '',
-            promptHelp: 'Import an existing puzzle response directly.', importHelp: 'Paste an existing AI response to preview your puzzle.',
+            promptHelp: 'Import an existing puzzle response directly.', importHelp: 'Upload or paste an existing AI response to preview your puzzle.',
             startInImport: true, importOnly: true, json: json.value, problem: problem.value, maxLength: MAX_AI_IMPORT_LENGTH,
             hasPreview: candidate.value !== null, recovering: recovery.active.value, validateLabel: 'Validate puzzle',
             onUpdateJson: (value: string) => { json.value = value; candidate.value = null; coverageAccepted.value = false; problem.value = ''; }, onValidate: validate,
@@ -336,7 +334,7 @@ export const PuzzleAiCreation = defineComponent({
             hasPreview: candidate.value !== null, recovering: recovery.active.value,
             skipSource: Boolean(scope.value),
             promptHelp: 'Create one puzzle for ' + (scope.value?.category.title ?? 'the overall subject') + '.',
-            importHelp: 'Paste the response from your AI chat to preview the puzzle.',
+            importHelp: 'Upload or paste the AI response to preview your puzzle.',
             validateLabel: 'Validate puzzle',
             onUpdateJson: (value: string) => { json.value = value; candidate.value = null; coverageAccepted.value = false; problem.value = ''; },
             onValidate: validate,
