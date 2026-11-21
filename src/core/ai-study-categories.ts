@@ -1,4 +1,5 @@
 import { isRecord } from './validation.ts';
+import { AI_BOUNDED_INFERENCE_PROMPT } from './ai-source-inference.ts';
 import { assertAiTarget, type AiTargetApp } from './ai-app-identity.ts';
 import { aiFileOutputInstructions } from './ai-file-output.ts';
 import { parseAiImportJson } from './ai-json.ts';
@@ -17,6 +18,7 @@ export function studyCategoriesPrompt(product = 'Index Cards', targetApp: AiTarg
 - Treat existing headings, chapters, and instructor-defined units as guidance, not strict boundaries. Keep their logical order, but merge, clarify, and rename headings when helpful. Resolve shorthand or uncertain labels from the actual content (e.g. "Carbohydrate (Issues?)" becomes "Carbohydrate Disorders" ONLY if disorders are covered).
 - Keep categories minimal, but ACCOUNT FOR EVERY subject, subtopic, study-guide objective, question, and bullet in the source. Merging related material must NEVER drop a concept. Think like an instructor when grouping, without inventing unsupported content or filler.
 - Descriptions: one short plain-text phrase (3–8 words, at most 80 characters). No overlap, citations, Markdown, math markup, or application settings.
+- ${AI_BOUNDED_INFERENCE_PROMPT}
 
 ${aiFileOutputInstructions("dynamic-learner-categories.json")}
 

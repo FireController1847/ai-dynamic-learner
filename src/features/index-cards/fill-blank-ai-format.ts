@@ -6,6 +6,7 @@ import { parseAiSubjectCoverage, type AiSubjectCoverage } from '../../core/ai-su
 import { AI_PLAIN_TEXT_ONLY_GUIDANCE } from '../../core/ai-formatting-guidance.ts';
 import { parseAiImportJson, type AiCardCoverage } from './ai-import-format.ts';
 import { aiCoverageInstructions } from '../../core/ai-coverage.ts';
+import { AI_BOUNDED_INFERENCE_PROMPT } from '../../core/ai-source-inference.ts';
 import { MAX_CARDS, MAX_CARD_TEXT_LENGTH } from './card-model.ts';
 import { MAX_NAME_LENGTH } from './tree-model.ts';
 
@@ -35,6 +36,7 @@ Make each card a useful recall challenge:
 - Keep the blank boundaries consistent too: hide the same meaningful term each time, not the full term on one card and only part of it on another. For example, if the source calls a concept "nullword", use {{nullword}} throughout rather than alternating with {{null}}. Adjust the visible sentence to fit the chosen answer naturally.
 - Preserve distinctions between genuinely different concepts. Change singular/plural or grammatical form only when the sentence requires it; consistency must not introduce factual or grammatical errors.
 - Do not invent facts, add citations, URLs, source markers, explanations, headings, IDs, or app settings.
+${AI_BOUNDED_INFERENCE_PROMPT}
 - Do not use nested braces, empty blanks, newlines inside a blank, or any brace characters outside {{answer}} markers.
 
 ${AI_PLAIN_TEXT_ONLY_GUIDANCE}

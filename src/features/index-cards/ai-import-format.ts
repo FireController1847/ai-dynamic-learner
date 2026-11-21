@@ -5,6 +5,7 @@ import { isRecord } from '../../core/validation.ts';
 import { assertAiTarget } from '../../core/ai-app-identity.ts';
 import { parseAiSubjectCoverage, type AiSubjectCoverage } from '../../core/ai-subject-coverage.ts';
 import { aiCoverageInstructions, type AiCoverageLevel } from '../../core/ai-coverage.ts';
+import { AI_BOUNDED_INFERENCE_PROMPT } from '../../core/ai-source-inference.ts';
 import { AI_PLAIN_TEXT_ONLY_GUIDANCE } from '../../core/ai-formatting-guidance.ts';
 import { MAX_CARDS, MAX_CARD_TEXT_LENGTH } from './card-model.ts';
 import { MAX_NAME_LENGTH } from './tree-model.ts';
@@ -31,7 +32,8 @@ Answer brevity is the highest writing priority:
 - Avoid "explain", "discuss", "describe in detail", multi-part questions, and yes/no questions.
 - Keep questions brief and self-contained; do not rely on another card or on "the passage above".
 - Preserve exact terminology and accuracy. Never shorten an answer so far that it becomes misleading.
-- Use only supported source information. Do not invent facts or add citations, references, URLs, or source markers.
+- Use source-supported information and defensible inferences from its immediate context; do not invent facts, citations, references, URLs, or source markers.
+${AI_BOUNDED_INFERENCE_PROMPT}
 
 ${AI_PLAIN_TEXT_ONLY_GUIDANCE}
 

@@ -5,6 +5,7 @@ import { categoryScopedPrompt, type AiCardScope } from '../../core/ai-study-cate
 import { isRecord } from '../../core/validation.ts';
 import { parseAiSubjectCoverage, type AiSubjectCoverage } from '../../core/ai-subject-coverage.ts';
 import { aiCoverageInstructions, type AiCoverageLevel } from '../../core/ai-coverage.ts';
+import { AI_BOUNDED_INFERENCE_PROMPT } from '../../core/ai-source-inference.ts';
 import { AI_PLAIN_TEXT_ONLY_GUIDANCE } from '../../core/ai-formatting-guidance.ts';
 import {
   MAX_HINT_LENGTH, MAX_WORD_LENGTH, DEFAULT_LAYOUT_MIN_WORDS, DEFAULT_LAYOUT_MAX_WORDS, MIN_WORDS,
@@ -111,7 +112,8 @@ STRICT SINGLE-WORD RULES FOR EVERY ANSWER:
 - Apply this rule before generating JSON. Review every answer for disguised multiword phrases, even if it contains no spaces. If you cannot find enough useful single words, return fewer; do not pad the puzzle with irrelevant terms.
 - Titles, category names, hints and clues may still contain multiple words; this restriction applies to the puzzle answer values only.
 
-Use only facts and terminology supported by the original source. If there are fewer useful terms than requested, output fewer rather than inventing unrelated terms; never go below ${minimumEntries} entries.
+Use source-supported facts, terminology, and carefully bounded inferences. If there are fewer useful terms than requested, output fewer rather than inventing unrelated terms; never go below ${minimumEntries} entries.
+${AI_BOUNDED_INFERENCE_PROMPT}
 
 ${AI_PLAIN_TEXT_ONLY_GUIDANCE}
 

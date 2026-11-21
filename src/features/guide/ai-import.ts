@@ -10,6 +10,7 @@ import { categoryScopedPrompt, type AiCardScope, type AiCardCategories } from '.
 import { MAX_AI_IMPORT_LENGTH } from '../../core/ai-json.ts';
 import { AI_COMPLETE_COVERAGE_PROMPT, parseAiSubjectCoverage, type AiSubjectCoverage } from '../../core/ai-subject-coverage.ts';
 import { inputValue } from '../../core/dom.ts';
+import { AI_BOUNDED_INFERENCE_PROMPT } from '../../core/ai-source-inference.ts';
 import { isRecord } from '../../core/validation.ts';
 import { assertAiTarget } from '../../core/ai-app-identity.ts';
 import { AI_PLAIN_TEXT_ONLY_GUIDANCE } from '../../core/ai-formatting-guidance.ts';
@@ -120,6 +121,8 @@ function promptIntro(options: GuideAiPromptOptions, mode: GuideMode): string {
 Write in the style of a capable student taking organized notes during class: compact, practical, and easy to scan. This is a guide, not a rewritten textbook or transcript.
 
 ${planning}
+
+${AI_BOUNDED_INFERENCE_PROMPT}
 
 Selected preferences:
 - Detail: ${DETAIL_INSTRUCTIONS[options.detail]}
