@@ -5,13 +5,12 @@
 - **AI Question Design:** Both AI-selected Review prompts favor reliably scored questions and avoid ambiguous short answers unless uniquely checkable.
 - **Assessment Variety:** Simple selects formats according to the subject without repeating chapter patterns. Detailed uses matching when it assesses meaningful relationships and considers total answer workload.
 - **Advanced Questions:** Appropriate source-supported parameterized questions remain available, and AI focus still guides the mix.
-- **Custom Mixes:** Explicit question-type selections retain their exact requested counts. Added prompt regression checks.
+- **Custom Mixes:** Explicit question-type selections retain their exact requested counts.
 
 <details>
-<summary>View 3 commits</summary>
+<summary>View 2 commits</summary>
 <ol>
 <li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/d270b3762182aef6535399b6f283c863718ade4f">d270b376</a> — Refine Review AI question selection for reliable grading and purposeful formats</li>
-<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/55b4c15f299089339df56050df621d6cac98964e">55b4c15f</a> — Test AI question-format discretion and exact custom short-answer mixes</li>
 <li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/f46aee4b5325873e2862dc2823ee4d2272ba204f">f46aee4b</a> — Bump Review to v1.54.6 for clearer AI question format selection</li>
 </ol>
 </details>
