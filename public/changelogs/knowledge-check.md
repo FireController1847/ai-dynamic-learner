@@ -1,3 +1,17 @@
+## v1.54.8
+
+<small data-utc="2026-11-22T19:08:08Z">November 22, 2026 at 12:00 PM MST</small>
+
+- **Standalone Assessments:** Both Simple and Detailed explicitly forbid questions, choices, contexts, and explanations from referring to the original study materials instead of testing the subject directly.
+- **Final Question Review:** Both prompts now review and revise the complete generated JSON questions for weak or unanswerable matching pairs, inaccurate or unclear wording, ambiguous grading, and other assessment-quality issues before delivery.
+- **Compatibility:** Preserved both reasoning styles, the shared JSON contract, AI Focus, source fidelity, supported question types, and exact custom mixes.
+
+<details>
+<summary>View 1 commit</summary>
+<ol>
+</ol>
+</details>
+
 ## v1.54.7
 
 <small data-utc="2026-11-22T18:44:53Z">November 22, 2026 at 11:44 AM MST</small>
