@@ -221,7 +221,7 @@ test('Confidence repair asks for the complete corrected file rather than seven f
   for (const app of ['Review', 'Guide'] as const) {
     const request = aiConfidenceRequest(app, ['Unit One', 'Unit Two']);
     assert.match(request, /ENTIRE updated, standalone JSON file/);
-    assert.match(request, /not just confidence fields/);
+    assert.match(request, /Do not return just confidence fields/);
     assert.match(request, /ONE COMPLETE UTF-8 \.json file/);
     assert.match(request, /all four confidence scores/);
     assert.doesNotMatch(request, /Return ONLY a JSON object with EXACTLY seven fields/);

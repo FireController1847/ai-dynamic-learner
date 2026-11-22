@@ -46,7 +46,7 @@ export const ReviewAiCreation = defineComponent({
     function createPrompt(options: ReviewAiPreferences): string {
       const detailed = reviewAiPrompt(options, scope.value);
       return promptVariant.value === 'simple' ? simpleAiPrompt(detailed, 'Review',
-        `Create up to ${options.count} useful, distinct questions${scope.value ? ' for the selected category ' + scope.value.category.title : ' for the overall subject'}. Coverage: ${options.coverage}.`,
+        `Create exactly ${options.count} useful, distinct questions when the source supports that many${scope.value ? ' for the selected category ' + scope.value.category.title : ' for the overall subject'}. Coverage: ${options.coverage}.`,
         ['Follow the selected question mix and focus. Use all supported types only when appropriate.',
          'Use source-supported formulas and solver packages for parameterized problems; do not invent ranges.',
          'Use 2–8 plausible choices for multiple-choice and matching, and {{answer}} for fill-in-the-blanks.',
@@ -329,7 +329,7 @@ export const ReviewAiCreation = defineComponent({
           key: validationRevision.value, report: report.value, accepted: acceptedCount.value,
           repairPrompt: batchOnly.value ? batchPrompt.value : reviewRetryPrompt(report.value, preferences.value.count, acceptedCount.value),
           batchOnly: batchOnly.value,
-                    onRetry: () => returnToResponse(Boolean(candidate.value), true),
+          onRetry: () => returnToResponse(batchOnly.value && Boolean(candidate.value), true),
           onReview: () => { batchOnly.value = false; if (candidate.value) go('review'); },
           onBack: () => returnToResponse(false, false),
         }) : stage.value === 'review' && candidate.value ? h('div', { class: 'review-ai-final' }, [

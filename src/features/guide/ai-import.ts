@@ -553,7 +553,7 @@ export const GuideAiImportWorkspace = defineComponent({
       () => guideRecoveryOptions(recoveryMode.value, directImport.value, chosenScope.value?.category.title ?? 'AI Guide'),
       () => 'Guide', () => recoveryMode.value === 'map' ? 'topics' : 'sections',
       value => { candidate.value = value; returningFromReview.value = false; stage.value = 'review'; },
-      () => { json.value = ''; }, () => recoveryMode.value === 'list',
+      () => { json.value = ''; },
     );
     function importValidated() {
       problem.value = '';

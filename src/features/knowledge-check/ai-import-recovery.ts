@@ -62,13 +62,9 @@ export function checkReviewResponse(text: string, preferences: ReviewAiPreferenc
   };
 }
 
-export function reviewRetryPrompt(report: ReviewResponseRecovery, count: number, accepted: number): string {
-  if (accepted) return repairReviewPrompt(report.issues, Math.max(1, report.issues.filter(issue => issue.item !== undefined).length || count - accepted));
-  return 'Please fix your previous Dynamic Learner Review response using the original study material and the instructions I already sent. ' +
-    'Return the COMPLETE valid Review version-1 JSON response with format "dynamic-learner-review" and targetApp "review", preferably as a downloadable .json file. ' +
-    'If you cannot attach a file, return the complete JSON as text. Do not omit any required question fields. ' +
-    'Check the JSON syntax and do not invent facts or answers. Return only the response. ' +
-    'The importer reported: ' + report.issues.map(issue => issue.message).join('; ').slice(0, 2000);
+export function reviewRetryPrompt(report: ReviewResponseRecovery, count: number, _accepted: number,
+  appendToExisting = false): string {
+  return repairReviewPrompt(report.issues, count, appendToExisting);
 }
 
 export function reviewBatchPrompt(prompt: string, questions: readonly Question[]): string {
