@@ -45,12 +45,10 @@ const TEACHING_IMPORT_VERSION = 2;
 const MAX_IMPORT_BULLET_DEPTH = 7;
 const JSON_FENCE = '```';
 
-type PromptDetail = 'concise' | 'balanced' | 'detailed';
 type PromptCoverage = AiCoverageLevel;
 type PromptBulletStyle = 'phrases' | 'thoughts';
 
 export interface GuideAiPromptOptions {
-  detail: PromptDetail;
   coverage: PromptCoverage;
   bulletStyle: PromptBulletStyle;
   mixMode?: TeachingMixMode;
@@ -98,15 +96,8 @@ export interface SimpleMapGuideImport {
 export type SimpleGuideImport = SimpleListGuideImport | SimpleMapGuideImport;
 
 const DEFAULT_PROMPT_OPTIONS: GuideAiPromptOptions = {
-  detail: 'balanced',
   coverage: 'balanced',
   bulletStyle: 'thoughts',
-};
-
-const DETAIL_INSTRUCTIONS: Record<PromptDetail, string> = {
-  concise: 'Keep only high-priority material. Aggressively condense and omit secondary detail.',
-  balanced: 'Keep high- and moderate-priority material. Be selective: simple points are preferred, and minor details, examples, and edge cases may be omitted.',
-  detailed: 'Keep all genuinely useful study material, including lower-priority supporting details, while still writing notes rather than textbook prose.',
 };
 
 const BULLET_STYLE_INSTRUCTIONS: Record<PromptBulletStyle, string> = {
@@ -129,7 +120,6 @@ ${AI_SOURCE_DIFFICULTY_PROMPT}
 ${AI_SOURCE_UNITS_PROMPT}
 
 Selected preferences:
-- Detail: ${DETAIL_INSTRUCTIONS[options.detail]}
 - Coverage: ${aiCoverageInstructions(options.coverage)}
 - Bullet style: ${BULLET_STYLE_INSTRUCTIONS[options.bulletStyle]}
 
@@ -518,7 +508,6 @@ export const GuideAiImportWorkspace = defineComponent({
       else emit('back');
     }
     const promptVariant = ref<AiPromptVariant>(DEFAULT_AI_PROMPT_VARIANT);
-    const detail = ref<PromptDetail>(DEFAULT_PROMPT_OPTIONS.detail);
     const coverage = ref<PromptCoverage>(DEFAULT_PROMPT_OPTIONS.coverage);
     const bulletStyle = ref<PromptBulletStyle>(DEFAULT_PROMPT_OPTIONS.bulletStyle);
     const mixMode = ref<TeachingMixMode>('ai');
@@ -540,11 +529,11 @@ export const GuideAiImportWorkspace = defineComponent({
     const json = ref('');
     const problem = ref('');
     const prompt = computed(() => mixError.value ? '' : (promptVariant.value === 'simple' ? simpleAiPrompt(guideAiPrompt({
-      detail: detail.value, coverage: coverage.value, bulletStyle: bulletStyle.value,
+      coverage: coverage.value, bulletStyle: bulletStyle.value,
       mixMode: mixMode.value, aiFocus: aiFocus.value,
       targetBlocks: targetBlocks.value, weights: weights.value,
     }, props.mode, chosenScope.value), 'Guide',
-       `Make a ${props.mode === 'map' ? 'Map lesson' : 'List guide'}${chosenScope.value ? ' for ' + chosenScope.value.category.title : ' for the overall subject'}. Coverage: ${coverage.value}, detail: ${detail.value}.`,
+       `Make a ${props.mode === 'map' ? 'Map lesson' : 'List guide'}${chosenScope.value ? ' for ' + chosenScope.value.category.title : ' for the overall subject'}. Coverage: ${coverage.value}.`,
        props.mode === 'map' ? [
          `Use approximately ${targetBlocks.value} Teaching Blocks over 5–7 connected stops with prerequisites taught before checks.`,
          `Teaching mix: ${mixMode.value === 'ai' ? 'AI chooses' : TEACHING_TYPES.map(t => t + ' ' + weights.value[t] + '%').join(', ')}. Focus: ${aiFocus.value}.`,
@@ -555,7 +544,7 @@ export const GuideAiImportWorkspace = defineComponent({
          `Bullet style: ${bulletStyle.value}. Use concise nested sections and cover the selected source material.`,
          'Include coverage and confidence; do not exceed section, bullet, or nesting limits.',
        ]) : guideAiPrompt({
-      detail: detail.value, coverage: coverage.value, bulletStyle: bulletStyle.value,
+      coverage: coverage.value, bulletStyle: bulletStyle.value,
       mixMode: mixMode.value, aiFocus: aiFocus.value,
       targetBlocks: targetBlocks.value, weights: weights.value,
     }, props.mode, chosenScope.value)));
@@ -613,23 +602,14 @@ export const GuideAiImportWorkspace = defineComponent({
               : 'Approximate total across 5–7 stops (normally ' +
                 overallTeachingBlockRange(targetBlocks.value).min + '–' +
                 overallTeachingBlockRange(targetBlocks.value).max + ' blocks).'),
-          ]) : optionField('guide-ai-detail', 'Detail', detail.value, [
-            { value: 'concise', label: 'Concise' },
-            { value: 'balanced', label: 'Balanced' },
-            { value: 'detailed', label: 'Detailed' },
-          ], value => { detail.value = value; }, 'How much information appears within each section.'),
+          ]) : null,
           h(AiCoverageSelect, { value: coverage.value, fieldClass: 'ai-options-field',
             onSelect: value => { coverage.value = value; },
           }),
           props.mode === 'list' ? optionField('guide-ai-bullet-style', 'Bullet style', bulletStyle.value, [
             { value: 'phrases', label: 'Key phrases' },
             { value: 'thoughts', label: 'Complete thoughts' },
-          ], value => { bulletStyle.value = value; }, 'List mode retains the classic notes format.')
-            : optionField('guide-ai-detail', 'Detail', detail.value, [
-              { value: 'concise', label: 'Concise' },
-              { value: 'balanced', label: 'Balanced' },
-              { value: 'detailed', label: 'Detailed' },
-            ], value => { detail.value = value; }, 'How much information appears within each topic.'),
+          ], value => { bulletStyle.value = value; }, 'List mode retains the classic notes format.') : null,
         ]),
         props.mode === 'map' ? h('fieldset', { class: 'ai-options-section' }, [
           h('legend', 'Teaching block types'),
