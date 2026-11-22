@@ -1,3 +1,17 @@
+## v2.20.5
+
+<small data-utc="2026-11-22T00:06:09Z">November 21, 2026 at 5:06 PM MST</small>
+
+- **AI Setup:** Remove redundant Detail settings from both List and Map creation. Coverage now controls which source topics and supporting material are included, matching Review.
+- **Generation:** Remove the obsolete Detail preference from both Simple and Detailed Guide prompts while preserving List bullet styles and Map teaching settings.
+
+<details>
+<summary>View 1 commit</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/68f21f6cd189ba2fd5f61ab74939a52cea712a06">68f21f6c</a> — Let Coverage replace Guide's Detail setting</li>
+</ol>
+</details>
+
 ## v2.20.4
 
 <small data-utc="2026-11-22T00:00:00Z">November 21, 2026 at 5:00 PM MST</small>
