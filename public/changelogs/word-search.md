@@ -1,3 +1,16 @@
+## v1.18.4
+
+<small data-utc="2026-11-22T00:00:00Z">November 21, 2026 at 5:00 PM MST</small>
+
+- **AI Options:** Evenly distribute Simple and Detailed buttons across the full-width prompt row, aligning them with the settings underneath.
+
+<details>
+<summary>View 1 commit</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/f065acdefdac001c5d593284ffcff711e142212d">f065acde</a> — Stretch prompt choices evenly across the settings row</li>
+</ol>
+</details>
+
 ## v1.18.3
 
 <small data-utc="2026-11-21T23:54:59Z">November 21, 2026 at 4:54 PM MST</small>
