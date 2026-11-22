@@ -541,7 +541,7 @@ export function useWorkspace() {
     await downloadText(filename, json, 'application/json', { deferPaint: false });
   }
 
-  async function downloadBackup(): Promise<void> {
+  async function initiateBackupDownload(): Promise<void> {
     // A portable v1 backup contains only supported features. Never pretend
     // this is a full backup when unknown records have been preserved in IDB.
     if (compatibility.value && compatibility.value.mode !== 'normal') {
@@ -584,6 +584,13 @@ export function useWorkspace() {
     }
     await downloadText(filename, json, 'application/json', { deferPaint: false });
     if (exportedSnapshot) backup.recordExport(exportedSnapshot.workspaceId, exportedSnapshot.revision, Date.now());
+  }
+
+  async function downloadBackup(): Promise<void> {
+    // Dismiss only after the browser download has been initiated. This also
+    // covers recovery exports that intentionally do not update backup metadata.
+    await initiateBackupDownload();
+    backup.dismiss();
   }
 
   const stopStudySubscription = subscribeStudySessions(active => {
