@@ -1,6 +1,8 @@
 import { defineComponent, h, ref, type PropType } from 'vue';
 import type { SimpleGuideImport } from './ai-import.ts';
 import { AiSourceUnitCoverage } from '../../components/ai-source-unit-coverage.ts';
+import { AiMissingConfidence } from '../../components/ai-missing-confidence.ts';
+import type { AiConfidenceValues } from '../../core/ai-confidence-repair.ts';
 
 const METRICS = [
   ['examConfidence','Exam confidence','Likely relevance to exam topics; no actual exam prediction is verified.'],
@@ -17,7 +19,7 @@ export const GuideAiReview = defineComponent({
     targetBlocks:{type:Number,default:0},
     overall:Boolean,
   },
-  emits:{back:()=>true,cancel:()=>true,create:()=>true},
+  emits:{back:()=>true,cancel:()=>true,create:()=>true,confidence:(_values:AiConfidenceValues)=>true},
   setup(props,{emit}){
     const notice=ref(''), fallback=ref(false);
     function improvement(){
@@ -80,7 +82,9 @@ export const GuideAiReview = defineComponent({
             ]):null,
             h('p',c.confidenceExplanation),
           ]),
-        ]):h('p',{class:'guide-ai-review-disclaimer'},'This older JSON contains no AI confidence estimates. You can still preview and import it.'),
+        ]):h(AiMissingConfidence, {
+          app: 'Guide', items: names, onApply: value => emit('confidence', value),
+        }),
         c&&(low||c.uncoveredSubjects.length)?h('div',{class:'guide-ai-review-improve'},[
           h('strong','Some areas might benefit from improvement'),
           h('p','You can ask AI for a revised file, or keep the current guide.'),

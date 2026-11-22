@@ -13,6 +13,9 @@ export function simpleAiPrompt(detailed: string, application: string, task: stri
   const examples = [...detailed.matchAll(/```json\s*([\s\S]*?)\s*```/gi)];
   const schema = examples.at(-1)?.[1]?.trim();
   if (!schema || !schema.includes('"format"')) return detailed;
+  const needsConfidence = application === 'Review' || application === 'Guide';
+  // Never make Simple mode silently drop the most important review metadata.
+  if (needsConfidence && !schema.includes('"confidence"')) return detailed;
   return [
     'Create ' + application + ' content using only the study material in this AI conversation.',
     task,
@@ -21,6 +24,10 @@ export function simpleAiPrompt(detailed: string, application: string, task: stri
     'Follow these requirements:',
     ...requirements.map(item => '- ' + item),
     '- Keep every answer accurate and unambiguous. Do not invent filler, citations, links, or unrelated concepts.',
+    ...(needsConfidence ? [
+      '- REQUIRED even for Simple mode: Include the COMPLETE top-level confidence object with four whole-number percentages (overallCoverage, examConfidence, subjectConfidence, studyConfidence, 0–100), coverageExplanation, uncoveredSubjects, and confidenceExplanation.',
+      '- Audit the original source against the generated content before rating confidence. Identify actual omissions and explain uncertainty; never invent confidence scores, missing topics, or exam knowledge.',
+    ] : []),
     '- Preserve the indicated app, format, version, and expected fields. Return valid complete JSON; no commentary in the JSON.',
     '- If the source cannot support the requested number or scope, return fewer meaningful items and explain gaps in provided coverage/confidence fields.',
     'OUTPUT: Prefer a downloadable UTF-8 .json file; if files cannot be attached, provide the COMPLETE raw JSON as text. Never claim a file was attached when it was not.',

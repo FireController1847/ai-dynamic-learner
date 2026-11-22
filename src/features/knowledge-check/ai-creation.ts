@@ -2,6 +2,7 @@ import { computed, defineComponent, h, onMounted, ref, Transition } from 'vue';
 import { AiCategoryPicker } from '../../components/ai-category-picker.ts';
 import { AiCreationScope } from '../../components/ai-creation-scope.ts';
 import { AiSourceUnitCoverage } from '../../components/ai-source-unit-coverage.ts';
+import { AiMissingConfidence } from '../../components/ai-missing-confidence.ts';
 import { AiCoverageSelect } from '../../components/ai-coverage-select.ts';
 import { AiPromptStyleSelect } from '../../components/ai-prompt-style-select.ts';
 import { AiOptionsHeader } from '../../components/ai-options-header.ts';
@@ -372,7 +373,12 @@ export const ReviewAiCreation = defineComponent({
                   ]) : null,
               h('p', candidate.value.confidence.confidenceExplanation),
             ]),
-          ]) : h('p', { class: 'study-ai-muted' }, 'AI confidence estimates are unavailable for this set. Its coverage has not been assessed.'),
+          ]) : h(AiMissingConfidence, {
+            app: 'Review', items: candidate.value.questions.map(question => questionDisplayPrompt(question)),
+            onApply: confidence => {
+              if (candidate.value) candidate.value = { ...candidate.value, confidence };
+            },
+          }),
           lowConfidenceMetrics.value.length ? h('section', { class: 'review-ai-difference', role: 'status' }, [
             h('strong', 'One or more confidence estimates are below 80%'),
             h('p', examPrep.value

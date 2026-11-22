@@ -311,3 +311,16 @@
 .ai-options-configuration { display:grid;gap:20px;min-width:0;align-content:start; }
 .ai-options-grid > .ai-options-field > small { margin:0; }
 @container (max-width:700px) { .ai-options-configuration { gap:16px; } }
+
+/* Missing confidence values remain visible and can be repaired without regenerating study content. */
+.ai-missing-confidence { display:grid;gap:12px;min-width:0;padding:20px;border:1px solid var(--border-color);border-left:3px solid var(--brand);border-radius:var(--radius-dialog);background:var(--surface-subtle); }
+.ai-missing-confidence > strong { font-size:16px; }
+.ai-missing-confidence p { margin:0;line-height:1.5; }
+.ai-missing-confidence-values { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px; }
+.ai-missing-confidence-values > div { display:grid;gap:3px;padding:12px;border:1px solid var(--border-color);border-radius:var(--radius);background:var(--page-background); }
+.ai-missing-confidence-values span { color:var(--text-secondary);font-size:12px; }
+.ai-missing-confidence-values strong { color:var(--text-secondary);font-size:13px; }
+.ai-missing-confidence textarea { box-sizing:border-box;width:100%;min-width:0;padding:10px;border:1px solid var(--control-border);border-radius:var(--radius);background:var(--page-background);resize:vertical;font-family:monospace; }
+.ai-missing-confidence-input { display:grid;gap:7px;min-width:0; }
+.ai-missing-confidence-input > span { font-weight:600;font-size:13px; }
+@container (max-width:460px) { .ai-missing-confidence { padding:14px; }.ai-missing-confidence-values { grid-template-columns:minmax(0,1fr); } }
