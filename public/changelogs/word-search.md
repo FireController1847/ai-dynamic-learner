@@ -1,3 +1,23 @@
+## v1.18.6
+
+<small data-utc="2026-11-22T16:40:09Z">November 22, 2026 at 9:40 AM MST</small>
+
+- **Output Contract:** Simple AI instructions now mandate one complete, valid, downloadable UTF-8 JSON file with required fields; raw complete JSON is a fallback only when file attachment is technically unavailable.
+- **AI Corrections:** Normal fix requests demand the entire corrected file, including previously valid content and metadata. Only the separate batch workflow requests additional content.
+- **Recovery:** Word pools are corrected as full standalone JSON responses, rather than partial item patches.
+- **Validation:** Updated regression tests verify full-file correction language, confidence requirements, and explicit import-format behavior.
+
+<details>
+<summary>View 5 commits</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/bb5a8dc2c343621aa7de0fdf36beb374a87a3e2f">bb5a8dc2</a> — Require complete replacement JSON and strict Simple output contract</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/efa709f0ec009140e4500da50d2c1e66734f0e87">efa709f0</a> — Correct full-file retry paths and tests</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/1eaab9d099833399ce276d471ce9a9ba863cfb77">1eaab9d0</a> — Enable confidence reupload and missing-count batch access</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/74129eff1b709e1fd9b4e67752152de647366c59">74129eff</a> — Standardize count and confidence improvement file instructions</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/90c56dfc8a17c77389380d1bd691d02ee40aebfa">90c56dfc</a> — Correct Guide file-format request mode</li>
+</ol>
+</details>
+
 ## v1.18.5
 
 <small data-utc="2026-11-22T02:39:48Z">November 21, 2026 at 7:39 PM MST</small>
