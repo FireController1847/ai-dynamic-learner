@@ -348,15 +348,37 @@ test('Both Review prompt styles require useful explanations and standalone quest
   assert.equal(simple.slice(simple.indexOf(contract)), detailed.slice(detailed.indexOf(contract)));
 });
 
-test('Simple Review favors concise gradable answers while Detailed audits matching workload', () => {
+test('Review AI-selected mixes favor reliably graded formats and subject-specific choices', () => {
   const simple = reviewAiPrompt(preferences, null, 'simple');
   const detailed = reviewAiPrompt(preferences, null, 'detailed');
-  assert.match(simple, /Short-answer questions must ask for one brief, objectively checkable answer/);
-  assert.match(simple, /use matching or blanks for several related facts/);
+  const reasoning = (prompt: string) => prompt.split('JSON AND METADATA CONTRACT')[0];
+  for (const prompt of [simple, detailed]) {
+    assert.match(prompt, /Avoid Short Answer when another type can assess the same knowledge reliably/);
+    assert.match(prompt, /brief, uniquely gradable response because open-text grading can be ambiguous/);
+    assert.match(prompt, /Multiple Choice for distinctions and application/);
+    assert.match(prompt, /Parameterized for genuinely variable source-supported/);
+    assert.match(reviewAiPrompt({ ...preferences, aiFocus: 'numerics' }, null,
+      prompt === simple ? 'simple' : 'detailed'), /Prioritize mathematical reasoning and procedural understanding/);
+    assert.doesNotMatch(reasoning(prompt), /Review's default question percentages|58%|23%|14%/);
+  }
+  assert.match(simple, /rather than repeating one mix across chapters/);
   assert.match(detailed, /Use a matching table only when assessing related pairs together is better/);
+  assert.match(detailed, /consider the total number of answer interactions/);
   assert.match(detailed, /if matching is a substantial share, reconsider/);
   assert.match(detailed, /there is no fixed quota/);
   assert.doesNotMatch(simple, /if matching is a substantial share, reconsider/);
+});
+
+test('Explicit short-answer custom mixes are respected without AI-selected preferences', () => {
+  const selected: ReviewAiPreferences = { ...preferences, count: 6, mixMode: 'custom',
+    weights: { 'multiple-choice': 50, 'true-false': 0, 'fill-in-the-blanks': 0,
+      dropdown: 0, 'short-answer': 50, statement: 0, parameterized: 0 } };
+  for (const variant of ['simple', 'detailed'] as const) {
+    const prompt = reviewAiPrompt(selected, null, variant);
+    assert.match(prompt, /Multiple Choice: 3 items/);
+    assert.match(prompt, /Short Answer: 3 items/);
+    assert.doesNotMatch(prompt, /Avoid Short Answer when another type can assess/);
+  }
 });
 
 test('Custom Review mixes retain the quality contract but do not force unused types', () => {
