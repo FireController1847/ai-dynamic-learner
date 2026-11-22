@@ -1,3 +1,17 @@
+## v1.54.7
+
+<small data-utc="2026-11-22T18:44:24Z">November 22, 2026 at 11:44 AM MST</small>
+
+- **Simple AI Reasoning:** Plan questions around the source's important concepts and skills, then make a compact quality review for trivial matches, repetition, obvious answers, and unclear grading.
+- **Detailed AI Reasoning:** Streamlined repetitive assessment-design and instructor guidance while retaining deeper source audits and workload-aware matching decisions.
+- **Compatibility:** Kept the same JSON contract, question types, source fidelity requirements, AI focuses, and exact custom question mixes.
+
+<details>
+<summary>View commit</summary>
+<ol>
+</ol>
+</details>
+
 ## v1.54.6
 
 <small data-utc="2026-11-22T18:22:42Z">November 22, 2026 at 11:22 AM MST</small>
