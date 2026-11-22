@@ -295,7 +295,7 @@
 .ai-options-grid input:not([type='checkbox']):not([type='radio']),.ai-options-grid select { width:100%;min-width:0; }
 .ai-options-grid small,.ai-options-grid > label > .study-ai-muted { color:var(--text-secondary);font-size:12px;font-weight:400;line-height:18px; }
 /* Keep the choice independent of adjacent settings: the following inputs begin on the next grid row. */
-.ai-options-grid > .ai-prompt-style-select { grid-column:1/-1;justify-self:start;width:100%;max-width:600px; }
+.ai-options-grid > .ai-prompt-style-select { grid-column:1/-1;justify-self:stretch;width:100%;max-width:none; }
 .ai-options-section { display:grid;gap:10px;min-width:0;margin:0;padding:16px;border:1px solid var(--border-color);border-radius:var(--radius-dialog); }
 .ai-options-section > legend { padding-inline:6px;font-weight:600; }
 .ai-options-mode { display:flex;align-items:flex-start;gap:10px;cursor:pointer; }
