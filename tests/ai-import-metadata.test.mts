@@ -319,3 +319,58 @@ test('Explicitly selected parameterized questions retain the full solver package
     assert.match(prompt, /Algorithms must be deterministic/);
   }
 });
+
+test('Both Review prompt styles require useful explanations and standalone questions', () => {
+  const simple = reviewAiPrompt(preferences, null, 'simple');
+  const detailed = reviewAiPrompt(preferences, null, 'detailed');
+  const contract = 'SCORED QUESTION QUALITY — REQUIRED IN BOTH STYLES:';
+  for (const prompt of [simple, detailed]) {
+    assert.match(prompt, /Each scored question MUST include a nonempty, concise explanation/);
+    assert.match(prompt, /Question stems and explanations MUST stand alone/);
+    assert.match(prompt, /do not place every correct answer first/);
+    assert.match(prompt, /use both true and false answers when the source supports/);
+    assert.match(prompt, /verify a non-spoiling explanation for every scored item/);
+    assert.doesNotMatch(prompt.slice(prompt.indexOf(contract)), /optional explanation/);
+    const example = prompt.match(/```json\s*([\s\S]*?)\s*```/);
+    assert.ok(example);
+    const parsed = JSON.parse(example[1]);
+    for (const question of parsed.questions) {
+      if (question.type === 'statement') continue;
+      assert.equal(typeof question.explanation, 'string', question.type);
+      assert.ok(question.explanation.trim(), 'missing sample explanation for ' + question.type);
+    }
+    const choiceExample = parsed.questions.find((question: { type: string }) => question.type === 'multiple-choice');
+    assert.ok(choiceExample);
+    assert.notEqual(choiceExample.choices.indexOf(choiceExample.answer), 0);
+    const tfExample = parsed.questions.find((question: { type: string }) => question.type === 'true-false');
+    assert.equal(tfExample?.answer, 'False');
+  }
+  assert.equal(simple.slice(simple.indexOf(contract)), detailed.slice(detailed.indexOf(contract)));
+});
+
+test('Simple Review favors concise gradable answers while Detailed audits matching workload', () => {
+  const simple = reviewAiPrompt(preferences, null, 'simple');
+  const detailed = reviewAiPrompt(preferences, null, 'detailed');
+  assert.match(simple, /Short-answer questions must ask for one brief, objectively checkable answer/);
+  assert.match(simple, /use matching or blanks for several related facts/);
+  assert.match(detailed, /Use a matching table only when assessing related pairs together is better/);
+  assert.match(detailed, /if matching is a substantial share, reconsider/);
+  assert.match(detailed, /there is no fixed quota/);
+  assert.doesNotMatch(simple, /if matching is a substantial share, reconsider/);
+});
+
+test('Custom Review mixes retain the quality contract but do not force unused types', () => {
+  const chosen: ReviewAiPreferences = { ...preferences, count: 5, mixMode: 'custom',
+    weights: { 'multiple-choice': 100, 'true-false': 0, 'fill-in-the-blanks': 0,
+      dropdown: 0, 'short-answer': 0, statement: 0, parameterized: 0 } };
+  for (const variant of ['simple', 'detailed'] as const) {
+    const prompt = reviewAiPrompt(chosen, null, variant);
+    assert.match(prompt, /SCORED QUESTION QUALITY — REQUIRED IN BOTH STYLES/);
+    assert.match(prompt, /Use EXACTLY this mix|Use exactly this requested question mix/);
+    const example = prompt.match(/```json\s*([\s\S]*?)\s*```/);
+    assert.ok(example);
+    const schema = JSON.parse(example[1]);
+    assert.deepEqual(schema.questions.map((question: { type: string }) => question.type), ['multiple-choice']);
+    assert.equal(schema.solvers, undefined);
+  }
+});

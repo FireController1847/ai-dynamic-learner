@@ -82,15 +82,21 @@ export function reviewAiPrompt(preferences: ReviewAiPreferences, scope: AiCardSc
     } },
   };
   const examples: Record<keyof QuestionWeights, object> = {
-    'multiple-choice': { type: 'multiple-choice', prompt: 'Which symbol represents gold?', choices: ['Au', 'Ag', 'Fe', 'Cu'],
+    'multiple-choice': { type: 'multiple-choice', prompt: 'Which symbol represents gold?', choices: ['Ag', 'Au', 'Fe', 'Cu'],
       answer: 'Au', choicePool: { displayCount: 4, distractors: ['Pt', 'Sn', 'Pb', 'Zn'] },
       explanation: 'Think about the historical naming convention used for elemental symbols rather than relying on the English name.' },
-    'true-false': { type: 'true-false', prompt: 'The chemical symbol for gold is Au.', answer: 'True' },
-    'fill-in-the-blanks': { type: 'fill-in-the-blanks', prompt: 'Use the table: A = {{amylase}} and B = {{pepsin}}.', context: '| Substrate | Enzyme label |\n| --- | --- |\n| Starch | A |\n| Protein | B |' },
-    'short-answer': { type: 'short-answer', prompt: 'What is the chemical symbol for gold?', answer: 'Au' },
-    dropdown: { type: 'dropdown', prompt: 'Match each element to its symbol.', choices: ['Au', 'Ag', 'Fe'],
-      matches: [{ label: 'Gold', answer: 'Au' }, { label: 'Silver', answer: 'Ag' }] },
-    parameterized: aiChoosesMix ? expressionParameterizedExample : AI_PARAMETERIZED_EXAMPLE,
+    'true-false': { type: 'true-false', prompt: 'The chemical symbol for gold is Ag.', answer: 'False',
+      explanation: 'Check whether the proposed abbreviation belongs to this element or a related one.' },
+    'fill-in-the-blanks': { type: 'fill-in-the-blanks', prompt: 'Use the table: A = {{amylase}} and B = {{pepsin}}.',
+      context: '| Substrate | Enzyme label |\n| --- | --- |\n| Starch | A |\n| Protein | B |',
+      explanation: 'Compare the substrates and recall the different digestive roles of the two enzymes.' },
+    'short-answer': { type: 'short-answer', prompt: 'What is the chemical symbol for gold?', answer: 'Au',
+      explanation: 'Recall that an element’s symbol may come from its historical name.' },
+    dropdown: { type: 'dropdown', prompt: 'Match each element to its symbol.', choices: ['Fe', 'Au', 'Ag'],
+      matches: [{ label: 'Gold', answer: 'Au' }, { label: 'Silver', answer: 'Ag' }],
+      explanation: 'Consider the conventional symbol assigned to each element, not its English initials.' },
+    parameterized: { ...(aiChoosesMix ? expressionParameterizedExample : AI_PARAMETERIZED_EXAMPLE),
+      explanation: 'Identify the variables, follow the source-supported method, and check each step.' },
     statement: { type: 'statement', prompt: 'Gold has the chemical symbol Au.' },
   };
   const quality: Record<keyof QuestionWeights, string> = {
@@ -103,13 +109,13 @@ export function reviewAiPrompt(preferences: ReviewAiPreferences, scope: AiCardSc
     parameterized: '- Parameterized: favor genuinely variable, source-supported calculations or procedures and verify every variant is fair and solvable. Choose expressions for simple methods and bounded solvers for algorithms when justified.',
   };
   const fields: Record<keyof QuestionWeights, string> = {
-    'multiple-choice': 'Use type/prompt/choices/answer/optional explanation; multi-answer replaces answer with correctAnswers. Optional choicePool: { displayCount: integer 2–8, distractors: string[] of 1–100 unique extra incorrect terms }. Correct answers must be in choices and count toward displayCount; remaining slots sample from base incorrect choices plus additional terms. Do not provide both answer and correctAnswers.',
-    'true-false': 'Use type/prompt/answer/optional explanation on true/false; omit choices.',
-    'short-answer': 'Use type/prompt/answer/optional explanation on short answer; omit choices.',
-    'dropdown': 'On Dropdown use type/prompt/choices/matches/optional explanation, with correct answers inside the matching rows and no top-level answer.',
-    'fill-in-the-blanks': 'On fill in the blanks use type/prompt/optional explanation, with answers embedded in {{markers}}.',
+    'multiple-choice': 'Use type/prompt/choices/answer/explanation; multi-answer replaces answer with correctAnswers. Optional choicePool: { displayCount: integer 2–8, distractors: string[] of 1–100 unique extra incorrect terms }. Correct answers must be in choices and count toward displayCount; remaining slots sample from base incorrect choices plus additional terms. Do not provide both answer and correctAnswers.',
+    'true-false': 'Use type/prompt/answer/explanation on true/false; omit choices.',
+    'short-answer': 'Use type/prompt/answer/explanation on short answer; omit choices.',
+    'dropdown': 'On Dropdown use type/prompt/choices/matches/explanation, with correct answers inside the matching rows and no top-level answer.',
+    'fill-in-the-blanks': 'On fill in the blanks use type/prompt/explanation, with answers embedded in {{markers}}.',
     'statement': 'On statements use only type/prompt.',
-    'parameterized': 'On parameterized questions use type/prompt/parameters/optional explanation, and place referenced JavaScript solver packages in the optional top-level solvers array.',
+    'parameterized': 'On parameterized questions use type/prompt/parameters/explanation, and place referenced JavaScript solver packages in the optional top-level solvers array.',
   };
   const detailedReasoning = `Using the original source material supplied earlier in this conversation, create a Dynamic Learner Review knowledge set as a teacher or instructor would assess it.
 
@@ -140,7 +146,7 @@ Choose the approach from the material (respect requested type counts where possi
 1. LOGIC / NUMBERS / PROCEDURES: Favor reusable Parameterized questions wherever inputs, calculations, rules, or algorithms can genuinely vary. Test the method with many valid solvable variants, not one fixed numerical result. Supply feasible ranges, constraints and complete solvers as needed. Never randomize fixed facts, diagnostic thresholds, or medical constants. If Parameterized is unavailable or unsuitable, use another enabled type.
 2. RECALL / FIXED FACTS / MEDICAL / ASSOCIATIONS: Favor Multiple Choice, Fill in the Blanks, and matching Dropdowns. Test relationships directly (enzyme ↔ substrate, function ↔ term, symptom ↔ condition, threshold ↔ meaning). Reverse associations where useful; use plausible near-miss distractors to test distinctions, not obviously wrong options. Keep grading unambiguous.
 
-- ASSESSMENT DESIGN: When the mix is AI-selected, choose formats deliberately. Do not let multiple-choice or matching dominate by habit. Use scenarios for application, short answer and blanks for recall, matching for tightly related concepts, and Parameterized for reusable methods. A matching table counts as ONE question but its rows are separate answer interactions: keep tables focused (usually 3–5 rows) and avoid excessive workload. When the user chooses a custom mix, follow it instead of overriding it for variety.
+- ASSESSMENT DESIGN: When the mix is AI-selected, choose formats deliberately. Do not let multiple-choice or matching dominate by habit. Use scenarios for application, short answer and blanks for recall, matching for tightly related concepts, and Parameterized for reusable methods. Use a matching table only when assessing related pairs together is better than separate questions. A matching table counts as ONE question but its rows are separate answer interactions: keep tables focused (usually 3–5 rows) and avoid excessive workload. Before finalizing, review the format distribution; if matching is a substantial share, reconsider which questions would test understanding better through scenarios, independent recall, or conceptual distinctions. Preserve matching when genuinely warranted—there is no fixed quota. When the user chooses a custom mix, follow it instead of overriding it for variety.
 
 Think like an instructor when CHOOSING what to test, not when wording the questions. ${examPrep ? 'Emphasize what the supplied exam evidence explicitly indicates WILL be tested; repetition or importance alone does not establish exam relevance.' : 'Emphasize what the source repeats, compares, demonstrates, or expects learners to apply.'} Vary scenarios and difficulty without redundant questions or outside facts. Reject questions whose answer is given away by their wording, which test only the presence of a word in the prompt, or whose distractors are obviously nonsensical; each question should genuinely test knowledge or reasoning.
 STRICT SOURCE FIDELITY — NON-NEGOTIABLE:
@@ -162,7 +168,7 @@ QUESTION CLARITY IS MANDATORY:
 - Before finalizing, read every question as a learner unfamiliar with the answer: can they understand exactly what is being asked on the first read? If not, rewrite it. Keep conceptual rigor and meaningful differences without creating confusion.
 - Avoid gratuitous complexity in parameterized problems, dropdowns, fill-in-the-blanks, and answer explanations as well. Clarity applies to ALL question types.
 
-EXPLANATION RULES (important): The explanation is a supportive learning hint for someone who may have answered incorrectly. NEVER state, quote, paraphrase, restate, or unmistakably reveal the correct answer in the explanation, including a correct choice, True/False result, filled blank, matching answer, calculated result, or parameterized solution. Instead, give a concise conceptual cue, reasoning strategy, relevant distinction, or next step that helps the learner understand HOW to think about the question and try again. Avoid answer-leaking synonyms and direct elimination hints. Use calm, kind, nonjudgmental wording; do not shame, scold, condescend, blame, or say "obviously" or "you should have known." When no useful non-revealing hint is possible, OMIT explanation rather than writing a disguised answer. Treat the answer field as the only source of the solution.
+EXPLANATION RULES (important): The explanation is a supportive learning hint for someone who may have answered incorrectly. NEVER state, quote, paraphrase, restate, or unmistakably reveal the correct answer in the explanation, including a correct choice, True/False result, filled blank, matching answer, calculated result, or parameterized solution. Instead, give a concise conceptual cue, reasoning strategy, relevant distinction, or next step that helps the learner understand HOW to think about the question and try again. Avoid answer-leaking synonyms and direct elimination hints. Use calm, kind, nonjudgmental wording; do not shame, scold, condescend, blame, or say "obviously" or "you should have known." If a proposed hint would reveal the answer, rewrite it as a general conceptual cue or a reasoning approach; every scored question still needs a helpful explanation. Treat the answer field as the only source of the solution.
 
 Write natural, standalone exam questions, contexts, and explanations. NEVER say "from the notes", "in class", "according to the lecture", "as discussed", "in the material", or similar references to lessons, instructors, sources, or studying. Ask directly about the concept; referencing a table or diagram actually included in the question's context is fine.
 
@@ -181,7 +187,7 @@ Scope: ${scope ? 'Only the selected category.' : 'The overall subject.'}
 Coverage: ${examPrep ? 'EXAM PREP ONLY: Test content supported by explicit exam evidence; do not guess.' : essentials ? 'ESSENTIALS ONLY: Focus on foundational concepts and skills.' : 'BALANCED: Represent major topics and useful supporting details.'}
 Generate EXACTLY ${preferences.count} distinct, useful questions when the source supports that many; never exceed the count, invent facts or add repetitive filler. If the source cannot support the count, return fewer and explain actual omissions in confidence.
 ${aiChoosesMix
-  ? 'Choose appropriate question types from: ' + enabledTypes.map(questionTypeLabel).join(', ') + '. Mix formats naturally: multiple-choice for distinctions and application; blanks or short answer for recall; matching for small related groups (usually 3–5 rows); parameterized for genuinely variable source-supported procedures. Do not default to one type or use complex types solely for variety.' + (focusPrompt ? '\nSelected focus (guidance, not a quota): ' + focusPrompt : '')
+  ? 'Choose appropriate question types from: ' + enabledTypes.map(questionTypeLabel).join(', ') + '. Mix formats naturally: multiple-choice for distinctions and application; blanks or short answer for recall; matching for small related groups (usually 3–5 rows); parameterized for genuinely variable source-supported procedures. Do not default to one type or use complex types solely for variety. Short-answer questions must ask for one brief, objectively checkable answer (normally a term or 1–5 words); use matching or blanks for several related facts instead of asking for a long multi-part response.' + (focusPrompt ? '\nSelected focus (guidance, not a quota): ' + focusPrompt : '')
   : 'Use exactly this requested question mix if the source supports it:\n' + enabledTypes.map(type => '- ' + questionTypeLabel(type) + ': ' + counts![type]).join('\n')}
 Use straightforward, standalone wording, credible distractors, and non-spoiling learning hints. Avoid unsupported scenarios, invented numerical ranges and outside facts.
 ${AI_BOUNDED_INFERENCE_PROMPT}
@@ -189,6 +195,12 @@ ${AI_SOURCE_DIFFICULTY_PROMPT}
 Before creating the file, check the number of questions and the main source topics. Calibrate the four confidence estimates to the content actually tested, listing real omissions without inventing weaknesses.`;
 
   const jsonContract = `JSON AND METADATA CONTRACT — IDENTICAL FOR SIMPLE AND DETAILED:
+
+SCORED QUESTION QUALITY — REQUIRED IN BOTH STYLES:
+- Each scored question MUST include a nonempty, concise explanation that helps the learner reason toward an answer without stating, paraphrasing, or giving away the solution. Rewrite revealing hints as general strategies; do not replace explanations with generic filler. Unscored statement items do not need explanations.
+- Question stems and explanations MUST stand alone. Do not say “according to the notes”, “in the lecture”, “from the material”, or similar source-referential wording; refer to an accompanying table or diagram only if it is actually included in context.
+- Across multiple-choice questions, vary the correct answer’s position in choices; do not place every correct answer first. Keep every correct answer in the choices array. Review may shuffle choices at runtime, but the generated file must not rely on a fixed correct-choice position.
+- Across true/false questions, use both true and false answers when the source supports clear examples of each. Do not use an all-true pattern by default, or invent unsupported falsehoods to satisfy a quota. Choose plausible, unambiguous claims grounded in the source.
 
 SOURCE-UNIT STRUCTURE:
 ${AI_SOURCE_UNITS_PROMPT}
@@ -212,7 +224,7 @@ ${JSON.stringify({ format: REVIEW_AI_FORMAT, targetApp: 'review', version: 1, ti
 
 Examples show structure only, not required types or facts. The top-level fields, allowed question structures and validation requirements are identical for Simple and Detailed. ${allowParameterized ? 'Include solvers only when a Parameterized question needs them. ' : ''}Title: 1–${MAX_NAME_LENGTH} characters; description, prompt, answer, explanation, and choices: at most ${MAX_TEXT} characters each; context: at most ${MAX_QUESTION_CONTEXT} characters. Escape newlines and backslashes inside JSON strings.
 ${enabledTypes.map(type => fields[type]).join('\n')}
-FINAL FILE VALIDATION: Count the final questions array, check every answer and permitted type, verify sourceUnits.itemNumbers against actual question positions if present, and verify all seven confidence fields. Return one complete, validated JSON file; never fragments, filler or untested solver code.`;
+FINAL FILE VALIDATION: Count the final questions array, verify a non-spoiling explanation for every scored item, reject references to absent notes or lectures, inspect correct-choice positions and true/false balance, check every answer and permitted type, verify sourceUnits.itemNumbers against actual question positions if present, and verify all seven confidence fields. Return one complete, validated JSON file; never fragments, filler or untested solver code.`;
   const prompt = (variant === 'simple' ? simpleReasoning : detailedReasoning) + '\n\n' + jsonContract;
   return scope ? categoryScopedPrompt(prompt, scope, 'Review questions') : prompt;
 }
