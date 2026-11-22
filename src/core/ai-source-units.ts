@@ -11,6 +11,8 @@ export interface AiSourceUnit {
 
 export const AI_SOURCE_UNITS_PROMPT = `EXPLICIT SOURCE UNITS: If and ONLY if the source itself has labeled modules, chapters, sections, or units, preserve their original names and order. Work SEQUENTIALLY, completing each unit's content before the next; never mix or reorder the output items between units. Include top-level "sourceUnits": [{"kind":"chapter","title":"Exact original chapter title","itemNumbers":[1,2],"missingTopics":[]}]. itemNumbers are 1-based positions in the generated questions, cards, sections, topics, words or entries array. Map each generated item to exactly one original unit, including nested original units at their most useful level (avoid duplicating nested chapters and sections). List omitted/partially covered topics in missingTopics; [] means no known gaps, not verified completeness. For units without a generated item, include itemNumbers:[] and specific missingTopics. Never invent chapter names. If the source has no explicit labeled units, OMIT sourceUnits or return []; keep the normal overall coverage view. If output must be resumed, continue from the last INCOMPLETE unit and do not repeat completed earlier units. Check ordering and all item references before returning JSON. Source-unit coverage is AI-reported, not independently verified; do not claim it represents study progress.`;
 
+export const MAX_AI_SOURCE_UNIT_GAP_LENGTH = 1000;
+
 const KINDS: readonly AiSourceUnitKind[] = ['module', 'chapter', 'section', 'unit'];
 
 export function parseAiSourceUnits(value: unknown, count: number): AiSourceUnit[] | undefined {
@@ -30,7 +32,7 @@ export function parseAiSourceUnits(value: unknown, count: number): AiSourceUnit[
         entry.itemNumbers.some(n => !Number.isInteger(n) || n < 1 || n > count) ||
         (entry.missingTopics !== undefined && (!Array.isArray(entry.missingTopics) ||
           entry.missingTopics.length > 100 ||
-          entry.missingTopics.some(topic => typeof topic !== 'string' || !topic.trim() || topic.length > 160)))) {
+          entry.missingTopics.some(topic => typeof topic !== 'string' || !topic.trim() || topic.length > MAX_AI_SOURCE_UNIT_GAP_LENGTH)))) {
       throw new Error('Source unit ' + (index + 1) + ' needs a source-defined kind, title, valid item numbers, and optional missing topics.');
     }
     const title = entry.title.trim();
@@ -97,7 +99,7 @@ export function validateSavedSourceUnits(value: unknown): asserts value is AiSou
         !KINDS.some(kind => kind === unit.kind) ||
         typeof unit.title !== 'string' || !unit.title.trim() || unit.title.length > 120 ||
         !Array.isArray(unit.itemNumbers) || unit.itemNumbers.some(n => !Number.isInteger(n) || n < 1 || n > 10000) ||
-        !Array.isArray(unit.missingTopics) || unit.missingTopics.some(s => typeof s !== 'string' || !s.trim() || s.length > 160) ||
+        !Array.isArray(unit.missingTopics) || unit.missingTopics.some(s => typeof s !== 'string' || !s.trim() || s.length > MAX_AI_SOURCE_UNIT_GAP_LENGTH) ||
         seen.has(unit.title.toLowerCase())) {
       throw new Error('A saved source unit has invalid metadata.');
     }

@@ -87,6 +87,16 @@ test('Long but reasonable chapter-level uncoveredSubjects are valid everywhere',
   assert.equal(imported.questions[39]?.sourceUnit, 'Unit Four');
 });
 
+test('Long source-unit gap descriptions remain valid when the AI supplies correct indexes', () => {
+  const correct = titles.map((title, index) => ({
+    kind: 'unit', title, itemNumbers: Array.from({ length: 10 }, (_, j) => index * 10 + j + 1),
+    missingTopics: index === 0 ? ['Important detail: ' + 'not directly tested; '.repeat(12)] : [],
+  }));
+  const imported = parseReviewAiImport(review(correct), preferences, { requireCoverage: true });
+  assert.equal(imported.sourceUnits?.length, 4);
+  assert.ok((imported.sourceUnits?.[0]?.missingTopics[0]?.length ?? 0) > 160);
+});
+
 test('One oversized missing-topic description cannot erase valid percentages', () => {
   const wrong = { ...confidence, uncoveredSubjects: ['Too long: ' + 'x'.repeat(1100), 'A valid gap'] };
   const result = checkReviewResponse(review([], wrong), preferences);
