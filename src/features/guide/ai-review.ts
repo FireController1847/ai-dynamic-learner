@@ -35,7 +35,7 @@ export const GuideAiReview = defineComponent({
         'without inventing unsupported source facts. Preserve good material; update the coverage inventory, '+
         'all four confidence estimates, explanations and uncoveredSubjects honestly. '+
         'Return the COMPLETE corrected downloadable Guide JSON file in the same format.\n\n' +
-        aiFullFileCorrectionInstructions(guide.mode === 'map' ? 'dynamic-learner-guide-map.json' : 'dynamic-learner-guide-list.json');
+        aiFullFileCorrectionInstructions(props.candidate.mode === 'map' ? 'dynamic-learner-guide-map.json' : 'dynamic-learner-guide-list.json');
     }
     async function copyImprovement(){
       try{await navigator.clipboard.writeText(improvement());
