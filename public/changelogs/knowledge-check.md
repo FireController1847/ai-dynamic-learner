@@ -1,3 +1,20 @@
+## v1.54.5
+
+<small data-utc="2026-11-22T17:56:56Z">November 22, 2026 at 10:56 AM MST</small>
+
+- **Statistics:** Removed the unstyled “Statistics by source unit” section from Review knowledge-set overviews and Study session reviews.
+- **Study Data:** Preserved question history and source-unit assignments; other statistics and AI source coverage remain available.
+
+<details>
+<summary>View 4 commits</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/32cccaf7ca9de51a4e560a2769fa9faac3646ba5">32cccaf7</a> — Remove source-unit statistics from Review knowledge-set overview</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/d60630071adc978343528a184f7025757d6aca38">d6063007</a> — Remove redundant source-unit statistics from Study session review</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/fb28c9bef8d71b8156025648c8390cdfb30279a7">fb28c9be</a> — Bump Review to v1.54.5 for source-unit statistics UI cleanup</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/2e9af1cd579e6c06621e877a8619c2a0f8003d93">2e9af1cd</a> — Remove unused source-unit statistics component</li>
+</ol>
+</details>
+
 ## v1.54.4
 
 <small data-utc="2026-11-22T17:48:08Z">November 22, 2026 at 10:48 AM MST</small>
