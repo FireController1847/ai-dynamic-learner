@@ -116,7 +116,7 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'guide', label: 'Guide', path: '/guide/', icon: 'document',
     group: 'master',
-    version: '2.20.5',
+    version: '2.21.0',
     image: 'assets/app-icons/guide.png',
     description: 'Teach and explore ideas through interactive map lessons, Teaching Blocks, or simple lists.',
     metadata: {
@@ -133,7 +133,7 @@ export const featureDefinitions: readonly FeatureDefinition[] = [
   {
     id: 'knowledge-check', label: 'Review', path: '/knowledge-check/', icon: 'checklist',
     group: 'master',
-    version: '1.53.4',
+    version: '1.54.0',
     image: 'assets/app-icons/knowledge-check.png',
     description: 'Make knowledge sets to study, quiz yourself, or take a test.',
     metadata: {

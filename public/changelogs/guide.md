@@ -1,3 +1,19 @@
+## v2.21.0
+
+<small data-utc="2026-11-22T02:20:42Z">November 21, 2026 at 7:20 PM MST</small>
+
+- **AI Prompts:** Require the complete four-metric confidence summary even when using Simple prompts intended for free AI chats.
+- **Confidence Review:** Show an explicit unavailable state rather than hiding missing or invalid statistics or guessing percentages.
+- **Recovery:** Request confidence estimates from the original AI conversation, paste and validate a confidence-only JSON reply, and restore all four graphs without regenerating study content.
+- **Accuracy:** Preserve warnings when source evidence is unavailable; imported AI confidence estimates remain subjective rather than independently verified.
+
+<details>
+<summary>View 1 commit</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/d8ab81e7a8abe6f66a621c33213bc3c04a4ce63c">d8ab81e7</a> — Restore missing AI confidence summaries with validated confidence-only replies</li>
+</ol>
+</details>
+
 ## v2.20.5
 
 <small data-utc="2026-11-22T00:06:09Z">November 21, 2026 at 5:06 PM MST</small>
