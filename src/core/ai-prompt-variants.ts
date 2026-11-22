@@ -14,6 +14,7 @@ export function simpleAiPrompt(detailed: string, application: string, task: stri
   const schema = examples.at(-1)?.[1]?.trim();
   if (!schema || !schema.includes('"format"')) return detailed;
   const needsConfidence = application === 'Review' || application === 'Guide';
+  const filename = detailed.match(/\bnamed\s+([a-z0-9-]+\.json)\b/i)?.[1];
   // Never make Simple mode silently drop the most important review metadata.
   if (needsConfidence && !schema.includes('"confidence"')) return detailed;
   return [
@@ -36,7 +37,9 @@ export function simpleAiPrompt(detailed: string, application: string, task: stri
       '- QUESTION COUNT: Generate EXACTLY the requested number of distinct, valid, source-grounded questions whenever the source supports them. Count the completed questions array. If fewer than requested, add distinct useful questions when possible. Return fewer ONLY when the source genuinely cannot support that count without fabrication or repetition, and explain that limitation in confidence.coverageExplanation. Do not shorten the response merely for convenience.',
     ] : []),
     '- If the source genuinely cannot support the requested quantity, return fewer meaningful items without inventing filler; explain real omissions in the available coverage/confidence fields.',
-    'MANDATORY OUTPUT: Create and attach ONE downloadable UTF-8 .json file containing the ENTIRE complete JSON object in the schema below. It must be valid, parseable JSON. Do not truncate, split, or return a sample, summary, fragment, corrected fields only, or JSON patch.',
+    'MANDATORY OUTPUT: Create and attach ONE downloadable UTF-8 .json file' +
+      (filename ? ' named ' + filename : '') +
+      ' containing the ENTIRE complete JSON object in the schema below. It must be valid, parseable JSON. Do not truncate, split, or return a sample, summary, fragment, corrected fields only, or JSON patch.',
     'ONLY IF this AI environment cannot technically attach an actual file: briefly explain the limitation and return the ENTIRE complete JSON object as raw text, ready to save as a .json file. Never claim a file was attached if it was not.',
     'Use the following JSON as a STRUCTURAL EXAMPLE ONLY. Replace sample content with source-grounded content, and include all required fields:',
     '```json\n' + schema + '\n```',

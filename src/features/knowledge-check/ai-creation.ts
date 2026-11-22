@@ -374,9 +374,7 @@ export const ReviewAiCreation = defineComponent({
             ]),
           ]) : h(AiMissingConfidence, {
             app: 'Review', items: candidate.value.questions.map(question => questionDisplayPrompt(question)),
-            onApply: confidence => {
-              if (candidate.value) candidate.value = { ...candidate.value, confidence };
-            },
+            onRetry: () => returnToResponse(false, true),
           }),
           lowConfidenceMetrics.value.length ? h('section', { class: 'review-ai-difference', role: 'status' }, [
             h('strong', 'One or more confidence estimates are below 80%'),
@@ -421,7 +419,8 @@ export const ReviewAiCreation = defineComponent({
             ].map(message => h('li', message))),
             report.value.issues.length ? h('button', { type: 'button', class: 'quiet-button', onClick: () => go('recovery') }, 'Fix remaining questions') : null,
           ]) : null,
-          batchPrompt.value && report.value && (report.value.issues.length || report.value.notices.length || report.value.recovered)
+          batchPrompt.value && report.value && (candidate.value.questions.length < preferences.value.count ||
+             report.value.issues.length || report.value.notices.length || report.value.recovered)
             ? h('details', { class: 'review-ai-warning-details' }, [
               h('summary', 'Add another batch'),
               h('p', 'Keep these questions and bring back a smaller batch from the same AI conversation.'),
