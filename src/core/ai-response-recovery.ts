@@ -222,9 +222,9 @@ export function recoverAiCollection<T>(text: string, options: AiCollectionOption
     // In particular, an invented sourceUnits schema must not erase valid confidence.
     if (!previous && !source.incomplete && !source.entries.some(item => item.invalid)) {
       const fixedConfidence = raw.confidence === undefined ? null : recoverAiConfidenceValues(raw.confidence);
-      const normalized = fixedConfidence?.notice && fixedConfidence.confidence
+      const normalized: Record<string, unknown> | null = fixedConfidence?.notice && fixedConfidence.confidence
         ? { ...raw, confidence: fixedConfidence.confidence } : null;
-      const bases = [
+      const bases: { envelope: Record<string, unknown>; notes: string[] }[] = [
         { envelope: raw, notes: [] as string[] },
         ...(normalized ? [{ envelope: normalized, notes: [fixedConfidence!.notice!] }] : []),
       ];
