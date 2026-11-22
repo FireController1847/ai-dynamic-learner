@@ -329,8 +329,7 @@ export const ReviewAiCreation = defineComponent({
           key: validationRevision.value, report: report.value, accepted: acceptedCount.value,
           repairPrompt: batchOnly.value ? batchPrompt.value : reviewRetryPrompt(report.value, preferences.value.count, acceptedCount.value),
           batchOnly: batchOnly.value,
-          batchPrompt: batchOnly.value || (!acceptedCount.value && preferences.value.count <= 25) ? '' : batchPrompt.value,
-          onRetry: () => returnToResponse(Boolean(candidate.value), true),
+                    onRetry: () => returnToResponse(Boolean(candidate.value), true),
           onReview: () => { batchOnly.value = false; if (candidate.value) go('review'); },
           onBack: () => returnToResponse(false, false),
         }) : stage.value === 'review' && candidate.value ? h('div', { class: 'review-ai-final' }, [

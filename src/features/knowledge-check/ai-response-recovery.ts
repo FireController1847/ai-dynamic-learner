@@ -155,11 +155,21 @@ export function recoverReviewResponse(text: string, preferences: ReviewAiPrefere
   return result;
 }
 
-export function repairReviewPrompt(issues: readonly ReviewResponseIssue[], count: number): string {
+/** Fix a complete Review file; additional batches are a separate workflow. */
+export function repairReviewPrompt(issues: readonly ReviewResponseIssue[], count: number,
+  appendToExisting = false): string {
   const details = issues.slice(0, 12).map(issue => (issue.item ? 'Question ' + issue.item + ': ' : '') +
     issue.message + (issue.source ? '\nOriginal item: ' + issue.source : '')).join('\n\n').slice(0, 22000);
-  return 'Correct the following problems in your previous Dynamic Learner Review response using the original study material and original instructions. ' +
-    'Return only the corrected or missing questions, NOT the already accepted questions. Return a valid Review version-1 JSON object or a bare JSON array of question objects. ' +
-    'Include any required solver packages in the top-level solvers array. Do not invent answers, add filler, or change the original study scope. ' +
-    'Return at most ' + Math.max(1, Number.isSafeInteger(count) ? count : 1) + ' questions; fewer is fine if the source does not support them.\n\n' + details;
+  return 'Fix the PREVIOUS Dynamic Learner Review JSON file using the original source and previous generation instructions. ' +
+    'Return the COMPLETE corrected standalone version-1 Review JSON file with format "dynamic-learner-review", targetApp "review", title, description, ALL questions (including already-valid questions), and applicable solver packages, sourceUnits, coverage, and confidence metadata. ' +
+    'Do NOT return only corrected fields, newly added questions, a bare array, an incremental reply, or a JSON patch. ' +
+    'Preserve correct original questions and settings; change only what is necessary. ' +
+    (appendToExisting ? 'This is an ADDITIONAL-question file for an existing saved set. Keep all valid questions from this previous generated file, but do NOT repeat questions already in the saved set. ' :
+      'This is the complete replacement for the previously generated knowledge set. ') +
+    'Generate exactly ' + Math.max(1, Number.isSafeInteger(count) ? count : 1) +
+    ' distinct useful questions when the source supports them. Do not exceed that count or invent filler; explain genuine source limitations in confidence when fewer are possible. ' +
+    'Include all four integer confidence scores, both explanations and uncoveredSubjects. Verify source-unit references against the final questions array. ' +
+    'MANDATORY OUTPUT: Create and attach ONE complete UTF-8 .json file. ONLY if attachment is technically unavailable, briefly state the limitation and return the ENTIRE valid JSON object as raw text. ' +
+    'Validate JSON syntax, all fields and question count before replying.\n\n' +
+    'Problems detected:\n' + (details || 'Correct the previous file while retaining valid content.');
 }

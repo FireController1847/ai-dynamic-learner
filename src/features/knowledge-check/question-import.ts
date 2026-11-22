@@ -145,13 +145,8 @@ ${(promptVariant.value === 'simple' ? simpleAiPrompt(reviewAiPrompt({
          h('p', { class: 'study-ai-muted' }, `${props.existing.length} existing questions will stay unchanged.`),
        recovering.value && report.value ? h(ReviewAiRecoveryHelp, {
         report: report.value, accepted: candidate.value?.questions.length ?? 0,
-        repairPrompt: reviewRetryPrompt(report.value, count.value, candidate.value?.questions.length ?? 0),
-        batchPrompt: count.value > (candidate.value?.questions.length ?? 0) + 25
-          ? reviewBatchPrompt(reviewAiPrompt({
-            count: Math.min(25, count.value - (candidate.value?.questions.length ?? 0)),
-            mixMode: 'ai', coverage: 'balanced', weights: { ...DEFAULT_AI_WEIGHTS },
-          }, scope.value), [...props.existing, ...(candidate.value?.questions ?? [])]) : '',
-        onRetry: () => retry(Boolean(candidate.value), true),
+        repairPrompt: reviewRetryPrompt(report.value, count.value, candidate.value?.questions.length ?? 0, true),
+        onRetry: () => retry(false, true),
         onReview: () => { recovering.value = false; },
         onBack: () => { recovering.value = false; },
       }) : h(AiPromptExchange, {

@@ -83,26 +83,25 @@ export function parseAiConfidenceReply(text: string): AiConfidenceValues {
   return parseAiConfidenceValues(input);
 }
 
-/** Request confidence for accepted content only, without regenerating study material. */
+/** Ask the same external AI for a COMPLETE corrected JSON file, not field fragments. */
 export function aiConfidenceRequest(app: 'Review' | 'Guide', items: readonly string[]): string {
-  const shown = items.slice(0, 100).map((item, index) =>
+  const shown = items.slice(0, 80).map((item, index) =>
     (index + 1) + '. ' + item.replace(/\s+/g, ' ').slice(0, 200)).join('\n');
-  const list = items.length > 100
-    ? '\nThe list is abbreviated; refer to the previously generated full material for other accepted items.'
-    : '';
-  return 'Using the ORIGINAL source and the previously generated Dynamic Learner ' + app + ' content in this SAME AI conversation, ' +
-    'calculate the MISSING CONFIDENCE STATISTICS only. Do not regenerate, change, or add study content. ' +
-    'Estimate values for the ' + items.length + ' accepted ' + (app === 'Guide' ? 'Guide sections/map stops' : 'Review questions') +
-    ' listed here, not for any items rejected during import.\n\n' +
-    shown + list + '\n\n' +
-    'Return ONLY a JSON object with EXACTLY seven fields: overallCoverage, examConfidence, subjectConfidence, studyConfidence, coverageExplanation, uncoveredSubjects, confidenceExplanation. ' +
-    'The four percentages must be honest integers from 0 to 100. Both explanations must be nonempty and no longer than 500 characters each. ' +
-    'uncoveredSubjects must be an array of specific missing topics (up to ' + MAX_AI_CONFIDENCE_TOPIC_LENGTH + ' characters each) or []. ' +
-    (app === 'Guide'
-      ? 'Overall coverage measures what is MEANINGFULLY TAUGHT, not just named. Study confidence reflects usefulness of instruction, examples, and practice. '
-      : 'Overall coverage measures what is actually TESTED by the accepted questions, not merely named. Study confidence reflects usefulness for learning and practice. ') +
-    'Exam confidence must reflect only evidence about likely exam objectives; do not pretend to know the exam. Subject confidence reflects accuracy to the original source. ' +
-    'These are subjective AI estimates, not measured mastery or verified probabilities. Describe genuine gaps and uncertainty; do not fabricate facts or scores. ' +
-    'If you cannot inspect the original source or accepted content, state that the estimates CANNOT BE DETERMINED rather than inventing percentages. ' +
-    'Return the seven-field confidence JSON object (or a single "confidence" wrapper) and nothing else.';
+  const list = items.length > 80 ? '\nThis list is abbreviated: refer to the ORIGINAL FULL generated file for the remaining content.' : '';
+  return 'Correct the PREVIOUS Dynamic Learner ' + app + ' JSON file from this SAME AI conversation using the original study source and the prior generated response. ' +
+    'The confidence statistics are missing or invalid. Add or correct the top-level "confidence" object and return the ENTIRE updated, standalone JSON file. ' +
+    'Keep every valid question, answer, lesson, section, title, format, targetApp, version and other metadata unchanged; fix only errors that prevent a valid import. ' +
+    'Do not return just confidence fields, a seven-field object, a bare array, a JSON patch, or a list of edits. ' +
+    'The corrected confidence object MUST contain EXACTLY: overallCoverage, examConfidence, subjectConfidence, studyConfidence, coverageExplanation, uncoveredSubjects, confidenceExplanation. ' +
+    'Four scores are subjective whole-number percentages 0–100; each explanation is nonempty and at most 500 characters; uncoveredSubjects is an array of specific omitted topics (at most ' +
+    MAX_AI_CONFIDENCE_TOPIC_LENGTH + ' characters each) or []. ' +
+    'Assess actual source coverage and uncertainty honestly: these are AI estimates, not measured mastery or confirmed exam probabilities. Never invent evidence or scores. ' +
+    (app === 'Guide' ? 'Coverage concerns meaningfully taught source content rather than headings alone. ' :
+      'Coverage concerns the material actually tested by accepted questions, not merely mentioned. ') +
+    'Keep ALL previously valid generated content, including the following ' + items.length + ' accepted ' +
+    (app === 'Guide' ? 'Guide sections or map stops' : 'Review questions') + ':\n\n' + shown + list + '\n\n' +
+    'MANDATORY OUTPUT: Create and attach ONE COMPLETE UTF-8 .json file containing the corrected full original schema and every retained item. ' +
+    'ONLY if file attachment is technically unavailable, briefly state the limitation and return the ENTIRE valid JSON object as raw text. ' +
+    'Verify all required fields, all four confidence scores, JSON syntax, and all item references before replying. ' +
+    'If you cannot access the original file or study source, request it instead of inventing content or returning partial JSON.';
 }

@@ -658,9 +658,6 @@ export const GuideAiImportWorkspace = defineComponent({
       overall: chosenScope.value === null,
       onBack: back, onCancel: () => emit('cancel'),
       onCreate: () => { if (candidate.value) emit('import', candidate.value); },
-      onConfidence: confidence => {
-        if (candidate.value) candidate.value = { ...candidate.value, confidence };
-      },
     }) : h('section', { class: 'guide-ai-workspace study-ai-workspace', 'aria-labelledby': 'guide-ai-title' }, [
       stage.value === 'configure' ? h(AiOptionsHeader, {
         app: 'Guide', destination: props.destination,

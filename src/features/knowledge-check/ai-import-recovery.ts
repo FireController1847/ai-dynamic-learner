@@ -73,6 +73,6 @@ export function reviewRetryPrompt(report: ReviewResponseRecovery, count: number,
 
 export function reviewBatchPrompt(prompt: string, questions: readonly Question[]): string {
   const prompts = questions.map(question => questionDisplayPrompt(question).replace(/\s+/g, ' ').slice(0, 200)).join('\n');
-  return prompt + (prompts ? '\n\nReturn ONLY new questions. Do not repeat or paraphrase these already accepted question prompts:\n' + prompts : '');
+  return prompt + (prompts ? '\n\nBATCH MODE: Return a standalone, COMPLETE UTF-8 .json file with the full top-level Review schema, but include ONLY new questions in its questions array. Keep the required metadata and confidence. Do not send a bare array, fragments, or patches. Do not repeat or paraphrase these already accepted question prompts:\n' + prompts : '');
 }
 

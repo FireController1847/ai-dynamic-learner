@@ -9,9 +9,7 @@ export function useAiRecovery<T>(
   itemLabel: () => string,
   accept: (value: T) => void,
   clearResponse: () => void,
-  appendRepair: boolean | (() => boolean) = true,
 ) {
-  const canAppend = () => typeof appendRepair === 'function' ? appendRepair() : appendRepair;
   const report = shallowRef<AiCollectionRecovery<T> | null>(null);
   const active = ref(false);
   const retrying = ref(false);
@@ -27,9 +25,9 @@ export function useAiRecovery<T>(
   }
   function check(text: string) {
     const previous = retrying.value ? report.value : null;
-    const result = recoverAiCollection(text, { ...options(), previous: canAppend() ? previous : null });
+    const result = recoverAiCollection(text, { ...options(), previous: null });
     // Full-response formats retain the old candidate when a replacement fails.
-    if (!canAppend() && previous && !result.candidate && previous.accepted > result.accepted) {
+    if (previous && !result.candidate && previous.accepted > result.accepted) {
       report.value = { ...previous, issues: result.issues, notices: [...previous.notices, ...result.notices] };
     } else report.value = result;
     retrying.value = false;
@@ -41,10 +39,9 @@ export function useAiRecovery<T>(
     if (!active.value || !value) return null;
     const settings = options();
     const field = settings.field;
-    const append = canAppend() && Boolean(value.envelope);
     return h(AiRecoveryHelp, {
-      report: value, accepted: value.accepted, itemLabel: itemLabel(), canContinue: Boolean(value.candidate), appendRepair: append,
-      repairPrompt: aiRepairPrompt(value, label(), field, value.accepted, append, settings.formats[0], settings.targetApp),
+      report: value, accepted: value.accepted, itemLabel: itemLabel(), canContinue: Boolean(value.candidate), appendRepair: false,
+      repairPrompt: aiRepairPrompt(value, label(), field, settings.formats[0], settings.targetApp),
       onRetry: () => { retrying.value = true; active.value = false; clearResponse(); },
       onReview: finish,
       onBack: () => { active.value = false; },

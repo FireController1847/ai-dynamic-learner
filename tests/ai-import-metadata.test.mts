@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { parseAiConfidenceReply, recoverAiConfidenceValues } from '../src/core/ai-confidence-repair.ts';
+import { aiConfidenceRequest, parseAiConfidenceReply, recoverAiConfidenceValues } from '../src/core/ai-confidence-repair.ts';
+import { aiRepairPrompt } from '../src/core/ai-response-recovery.ts';
+import { reviewRetryPrompt } from '../src/features/knowledge-check/ai-import-recovery.ts';
 import { recoverAiCollection, type AiCollectionOptions } from '../src/core/ai-response-recovery.ts';
 import { simpleAiPrompt } from '../src/core/ai-prompt-variants.ts';
 import { checkReviewResponse } from '../src/features/knowledge-check/ai-import-recovery.ts';
@@ -162,4 +164,66 @@ test('Simple prompts show the exact sourceUnits contract and preserve confidence
   assert.match(prompt, /Do NOT substitute id, source, questionCount, or coverage/);
   assert.match(prompt, /up to 1000 characters each/);
   assert.match(prompt, /overallCoverage.*examConfidence.*subjectConfidence.*studyConfidence/);
+});
+
+test('Simple Review prompts require the full JSON file and a supported exact count', () => {
+  const schema = JSON.stringify({
+    format: 'dynamic-learner-review', targetApp: 'review', version: 1,
+    title: 'Fixture', questions: [questions[0]], confidence,
+  });
+  const prompt = simpleAiPrompt('Example:\n' + '```json\n' + schema + '\n```',
+    'Review', 'Create 40 review questions', []);
+  assert.match(prompt, /Generate EXACTLY the requested number/);
+  assert.match(prompt, /Count the completed questions array/);
+  assert.match(prompt, /MANDATORY OUTPUT/);
+  assert.match(prompt, /ENTIRE complete JSON object/);
+  assert.match(prompt, /confidence is present with all FOUR integer percentages/);
+  assert.doesNotMatch(prompt, /OUTPUT: Prefer/);
+  assert.match(prompt, /ONLY IF this AI environment cannot technically attach/);
+});
+
+test('Review repair requests return a complete standalone file even after partial recovery', () => {
+  const request = reviewRetryPrompt({
+    candidate: null, recovered: 3, received: 4, notices: [],
+    issues: [{ item: 4, message: 'Invalid option.' }],
+  }, 40, 3);
+  assert.match(request, /COMPLETE corrected standalone version-1 Review JSON file/);
+  assert.match(request, /ALL questions \(including already-valid questions\)/);
+  assert.match(request, /four integer confidence scores/);
+  assert.match(request, /MANDATORY OUTPUT/);
+  assert.doesNotMatch(request, /Return only the corrected or missing questions/);
+});
+
+test('Existing Review set repair returns an entire replacement of additional questions', () => {
+  const request = reviewRetryPrompt({
+    candidate: null, recovered: 1, received: 2, notices: [],
+    issues: [{ item: 2, message: 'Incomplete new question.' }],
+  }, 20, 1, true);
+  assert.match(request, /ADDITIONAL-question file/);
+  assert.match(request, /Keep all valid questions from this previous generated file/);
+  assert.match(request, /ENTIRE valid JSON object/);
+  assert.doesNotMatch(request, /Return only the corrected or missing questions/);
+});
+
+test('Generic correction prompts always require the entire saved content array', () => {
+  const request = aiRepairPrompt({
+    issues: [{ item: 2, message: 'Missing answer field.' }],
+    notices: ['One question was recovered.'],
+  }, 'Index Cards', 'cards', 'dynamic-learner-cards', 'index-cards');
+  assert.match(request, /COMPLETE corrected REPLACEMENT file/);
+  assert.match(request, /ENTIRE "cards" array/);
+  assert.match(request, /even entries that were already correct/);
+  assert.match(request, /MANDATORY OUTPUT/);
+  assert.doesNotMatch(request, /Return ONLY corrected or missing items/);
+});
+
+test('Confidence repair asks for the complete corrected file rather than seven fields only', () => {
+  for (const app of ['Review', 'Guide'] as const) {
+    const request = aiConfidenceRequest(app, ['Unit One', 'Unit Two']);
+    assert.match(request, /ENTIRE updated, standalone JSON file/);
+    assert.match(request, /not just confidence fields/);
+    assert.match(request, /ONE COMPLETE UTF-8 \.json file/);
+    assert.match(request, /all four confidence scores/);
+    assert.doesNotMatch(request, /Return ONLY a JSON object with EXACTLY seven fields/);
+  }
 });

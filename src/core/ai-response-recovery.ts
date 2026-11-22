@@ -320,19 +320,24 @@ export function recoverAiCollection<T>(text: string, options: AiCollectionOption
   }
 }
 
-export function aiRepairPrompt(report: AiRecoveryReport, label: string, field: string, accepted: number, append: boolean,
+/** The "Fix response" action always replaces the entire file, never appends an item fragment. */
+export function aiRepairPrompt(report: AiRecoveryReport, label: string, field: string,
   format?: string, targetApp?: string): string {
-  const details = report.issues.slice(0, 15).map(issue => (issue.item ? 'Item ' + issue.item + ': ' : '') + issue.message +
-    (issue.source ? '\nOriginal item: ' + issue.source : '')).join('\n\n').slice(0, 22000);
-  return 'Fix your previous Dynamic Learner ' + label + ' response using the original study material and original instructions. ' +
-    (format ? 'Use format "' + format + '", the same schema version, and ' : 'Preserve the original schema and ') +
-    (targetApp ? 'targetApp "' + targetApp + '". ' : 'the correct app identifier. ') +
-    (append && accepted ? 'Return ONLY corrected or missing items in the "' + field + '" array, with the same format, version and scope. Do not repeat the ' + accepted + ' accepted items. '
-      : 'Return the COMPLETE corrected response in the same format, version and scope. Preserve all valid existing content. ') +
-    'Return a COMPLETE valid UTF-8 .json file, or raw JSON if file attachment is unavailable. Do not include surrounding commentary. Do not invent facts, answers, or filler. ' +
-    'Check all structural requirements and references before replying.\n\n' + details;
+  const details = [...report.issues.map(issue =>
+    (issue.item ? 'Item ' + issue.item + ': ' : '') + issue.message +
+    (issue.source ? '\nOriginal item: ' + issue.source : '')), ...report.notices]
+    .slice(0, 20).join('\n\n').slice(0, 22000);
+  return 'Fix your PREVIOUS Dynamic Learner ' + label + ' JSON file using the original study material and the previous instructions. ' +
+    'Return a COMPLETE corrected REPLACEMENT file, not a partial reply. Keep all valid content, order and settings unless correction is needed. ' +
+    (format ? 'Use format "' + format + '". ' : 'Preserve the previous format. ') +
+    (targetApp ? 'Use targetApp "' + targetApp + '". ' : 'Preserve the previous app identifier. ') +
+    'Include the original schema version, title, and the ENTIRE "' + field + '" array, even entries that were already correct. ' +
+    'Preserve all applicable confidence statistics, source-unit and subject coverage metadata, and item references; correct invalid ones using original source evidence. ' +
+    'Do NOT return only changed fields, rejected items, a bare array, JSON Patch, or an explanation of corrections. ' +
+    'MANDATORY OUTPUT: Create ONE complete UTF-8 .json file and attach it. ONLY if file attachment is technically unavailable, briefly state that and return the ENTIRE valid JSON object as raw text. ' +
+    'Verify JSON syntax, mandatory fields, and internal references. Never fabricate answers or source content.\n\n' +
+    'Issues to fix:\n' + (details || 'Correct the original file without losing its valid contents.');
 }
-
 
 /** Standalone structured objects (e.g. solver packages) must be complete. */
 export function recoverAiObject(text: string): unknown {
