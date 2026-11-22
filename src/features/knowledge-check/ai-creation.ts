@@ -3,6 +3,7 @@ import { AiCategoryPicker } from '../../components/ai-category-picker.ts';
 import { AiCreationScope } from '../../components/ai-creation-scope.ts';
 import { AiSourceUnitCoverage } from '../../components/ai-source-unit-coverage.ts';
 import { AiMissingConfidence } from '../../components/ai-missing-confidence.ts';
+import { aiFullFileCorrectionInstructions } from '../../core/ai-file-output.ts';
 import { AiCoverageSelect } from '../../components/ai-coverage-select.ts';
 import { AiPromptStyleSelect } from '../../components/ai-prompt-style-select.ts';
 import { AiOptionsHeader } from '../../components/ai-options-header.ts';
@@ -160,9 +161,10 @@ export const ReviewAiCreation = defineComponent({
       returningFromReview.value = false;
       go(result.issues.length || !result.candidate ? 'recovery' : 'review');
     }
+    const correctedFileInstructions = aiFullFileCorrectionInstructions('dynamic-learner-review.json');
     function countCorrection() {
       const coverage = examPrep.value ? 'EXAM PREP ONLY: keep ONLY material you are almost CERTAIN WILL be tested based on explicit exam evidence. IGNORE other material. Report missing strongly evidenced exam topics; never add speculative questions to meet the count.' : selectiveCoverage.value ? 'ESSENTIALS ONLY: keep core concepts and report omitted essentials; do not add minor details.' : 'If the count prevents full coverage, identify the uncovered topics.';
-      return `Return at most ${preferences.value.count} meaningful questions. Combine related concepts where useful; remove redundant questions without losing important distinctions. ${coverage} Report relevant gaps in confidence.uncoveredSubjects, adjust overallCoverage honestly, and return COMPLETE corrected JSON. Never exceed the requested question count.`;
+      return `Return at most ${preferences.value.count} meaningful questions. Combine related concepts where useful; remove redundant questions without losing important distinctions. ${coverage} Report relevant gaps in confidence.uncoveredSubjects, adjust overallCoverage honestly, and return COMPLETE corrected JSON. Never exceed the requested question count.\n\n${correctedFileInstructions}`;
     }
     function lowConfidencePrompt() {
       const result = candidate.value;
@@ -174,7 +176,8 @@ export const ReviewAiCreation = defineComponent({
         low.join('; ') + '. Re-evaluate WHY each is low. ' + coverage + 'If more questions would genuinely increase coverage or study value within the selected scope, regenerate up to ' +
         suggested + ' meaningful questions (never exceed this limit), including underrepresented subjects within the selected scope; preserve accurate, in-scope material and avoid filler. ' +
         'If the problem is insufficient source evidence, subject mismatch, or unknown exam content, clearly identify what additional study material is needed rather than claiming more questions will fix it. ' +
-        'Update all four confidence estimates, explanations and uncoveredSubjects honestly. Return the COMPLETE corrected JSON in the same schema; explanations must gently guide reasoning without giving away answers.';
+        'Update all four confidence estimates, explanations and uncoveredSubjects honestly. Return the COMPLETE corrected JSON in the same schema; explanations must gently guide reasoning without giving away answers.\n\n' +
+        correctedFileInstructions;
     }
     async function requestLowConfidence() {
       const message = lowConfidencePrompt();

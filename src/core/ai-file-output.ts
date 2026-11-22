@@ -6,3 +6,13 @@ export function aiFileOutputInstructions(filename: string): string {
 - If your AI environment cannot create or attach a downloadable file, briefly explain the limitation and provide the COMPLETE raw JSON as a fallback. Do not claim to have attached a file unless it was actually created and attached.
 - Any example JSON shown below explains the file's structure only; it is NOT an instruction to return a code block.`;
 }
+
+/** Corrections always replace a complete import file. Smaller batches use their own workflow. */
+export function aiFullFileCorrectionInstructions(filename: string): string {
+  return 'MANDATORY CORRECTED OUTPUT: Create and attach ONE complete UTF-8 .json file named ' + filename +
+    ' containing the ENTIRE corrected top-level JSON object with all previously valid generated items and required metadata. ' +
+    'Do NOT return only modified fields, only new questions, snippets, JSON Patch, or a summary. ' +
+    'Verify JSON syntax, question/item counts, all required confidence fields, and source-unit references before sending. ' +
+    'ONLY if actual file attachment is technically unavailable, briefly state the limitation and return the ENTIRE complete JSON as raw text. ' +
+    'Never claim to have created or attached a file if it was not actually attached.';
+}

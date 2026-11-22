@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { aiConfidenceRequest, parseAiConfidenceReply, recoverAiConfidenceValues } from '../src/core/ai-confidence-repair.ts';
+import { aiFullFileCorrectionInstructions } from '../src/core/ai-file-output.ts';
 import { aiRepairPrompt } from '../src/core/ai-response-recovery.ts';
 import { reviewRetryPrompt } from '../src/features/knowledge-check/ai-import-recovery.ts';
 import { recoverAiCollection, type AiCollectionOptions } from '../src/core/ai-response-recovery.ts';
@@ -226,4 +227,13 @@ test('Confidence repair asks for the complete corrected file rather than seven f
     assert.match(request, /all four confidence scores/);
     assert.doesNotMatch(request, /Return ONLY a JSON object with EXACTLY seven fields/);
   }
+});
+
+test('Full-file correction instructions require complete JSON even when only confidence changed', () => {
+  const request = aiFullFileCorrectionInstructions('dynamic-learner-review.json');
+  assert.match(request, /MANDATORY CORRECTED OUTPUT/);
+  assert.match(request, /ONE complete UTF-8 \.json file named dynamic-learner-review\.json/);
+  assert.match(request, /ENTIRE corrected top-level JSON object/);
+  assert.match(request, /required confidence fields/);
+  assert.match(request, /ONLY if actual file attachment is technically unavailable/);
 });

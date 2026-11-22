@@ -2,6 +2,7 @@ import { defineComponent, h, ref, type PropType } from 'vue';
 import type { SimpleGuideImport } from './ai-import.ts';
 import { AiSourceUnitCoverage } from '../../components/ai-source-unit-coverage.ts';
 import { AiMissingConfidence } from '../../components/ai-missing-confidence.ts';
+import { aiFullFileCorrectionInstructions } from '../../core/ai-file-output.ts';
 
 const METRICS = [
   ['examConfidence','Exam confidence','Likely relevance to exam topics; no actual exam prediction is verified.'],
@@ -33,7 +34,8 @@ export const GuideAiReview = defineComponent({
         'Improve accurate teaching, worked examples, scaffolded practice and meaningful revisits as needed, '+
         'without inventing unsupported source facts. Preserve good material; update the coverage inventory, '+
         'all four confidence estimates, explanations and uncoveredSubjects honestly. '+
-        'Return the COMPLETE corrected downloadable Guide JSON file in the same format.';
+        'Return the COMPLETE corrected downloadable Guide JSON file in the same format.\n\n' +
+        aiFullFileCorrectionInstructions(guide.mode === 'map' ? 'dynamic-learner-guide-map.json' : 'dynamic-learner-guide-list.json');
     }
     async function copyImprovement(){
       try{await navigator.clipboard.writeText(improvement());
