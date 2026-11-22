@@ -1,6 +1,6 @@
 ## v1.54.3
 
-<small data-utc="2026-11-22T17:28:02Z">November 22, 2026 at 10:28 AM MST</small>
+<small data-utc="2026-11-22T17:29:56Z">November 22, 2026 at 10:29 AM MST</small>
 
 - **Prompt Consistency:** Simple and Detailed now use the same strict Review JSON contract for question types, required confidence values, chapter mapping, and optional parameterized solvers.
 - **Simple:** Shorter educational reasoning helps free AI chats choose useful question formats, respect source-supported question counts, and avoid repetitive or invented content.
@@ -9,9 +9,10 @@
 - **Verification:** Added checks for identical JSON specifications across prompt styles, selected question types, exam/essentials scopes, and advanced solver support.
 
 <details>
-<summary>View 1 commit</summary>
+<summary>View 2 commits</summary>
 <ol>
 <li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/6a6e091e4046dcc211cba0eef8daee43bb03986a">6a6e091e</a> — Share a strict JSON contract across model-specific Review reasoning prompts</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/a145f178bfa5bd55b0f801d12772a9a8c8318389">a145f178</a> — Publish Review v1.54.3 prompt-quality improvements</li>
 </ol>
 </details>
 
