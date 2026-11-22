@@ -124,6 +124,7 @@ const App = defineComponent({
       backupMessage.value = '';
       try {
         await workspace.downloadBackup();
+        workspace.backup.dismiss();
         backupMessage.value = 'Backup download started. Check your Downloads folder to confirm the file was saved.';
       } catch (error) {
         backupMessage.value = error instanceof Error ? error.message : 'The backup could not be downloaded.';
