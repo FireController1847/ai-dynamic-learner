@@ -1,6 +1,7 @@
 import { MAX_AI_IMPORT_LENGTH, parseAiImportJson } from '../../core/ai-json.ts';
 import { assertAiTarget } from '../../core/ai-app-identity.ts';
 import { parseAiSourceUnits } from '../../core/ai-source-units.ts';
+import { recoverAiConfidenceValues } from '../../core/ai-confidence-repair.ts';
 import { readAiResponse, type AiResponseIssue } from '../../core/ai-response-recovery.ts';
 import { isRecord } from '../../core/validation.ts';
 import { parseAiSolvers } from './ai-parameterized-format.ts';
@@ -126,15 +127,22 @@ export function recoverReviewResponse(text: string, preferences: ReviewAiPrefere
           sourceUnits = parseAiSourceUnits(envelope.sourceUnits, questions.length);
           for (const unit of sourceUnits ?? []) for (const n of unit.itemNumbers)
             questions[n - 1].sourceUnit = unit.title;
-        } catch { result.notices.push('Source-unit mapping could not be validated; use the original chapters to request corrected mapping.'); }
+        } catch (error) { result.notices.push('Source-unit mapping was skipped: ' + errorText(error) + ' The questions and confidence statistics were retained.'); }
       }
-      for (const field of ['confidence', 'coverage'] as const) {
-        if (envelope[field] === undefined) continue;
+      // Source-unit problems must never erase valid, independent confidence scores.
+      if (envelope.confidence !== undefined) {
+        const parsed = recoverAiConfidenceValues(envelope.confidence);
+        confidence = parsed.confidence;
+        if (parsed.notice) result.notices.push(parsed.notice);
+        if (parsed.problem) result.notices.push('The AI confidence could not be read: ' + parsed.problem);
+      }
+      if (envelope.coverage !== undefined) {
         try {
-          const parsed = parseReviewAiImport(JSON.stringify({ ...base, questions: accepted, solvers: packages, [field]: envelope[field] }), { ...preferences, count: accepted.length, mixMode: 'ai' });
-          if (field === 'confidence') confidence = parsed.confidence;
-          else coverage = parsed.coverage;
-        } catch { result.notices.push('The AI’s ' + field + ' summary could not be read and was left out.'); }
+          coverage = parseReviewAiImport(JSON.stringify({ ...base, questions: accepted, solvers: packages,
+            coverage: envelope.coverage }), { ...preferences, count: accepted.length, mixMode: 'ai' }).coverage;
+        } catch (error) {
+          result.notices.push('The AI subject-coverage list was skipped: ' + errorText(error));
+        }
       }
     } else if (envelope.sourceUnits !== undefined || envelope.confidence !== undefined || envelope.coverage !== undefined) {
       result.notices.push('Coverage and confidence were not retained because some questions were missing.');

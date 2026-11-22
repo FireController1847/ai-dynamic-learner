@@ -1,4 +1,5 @@
 import { parseAiImportJson, MAX_AI_IMPORT_LENGTH } from './ai-json.ts';
+import { recoverAiConfidenceValues } from './ai-confidence-repair.ts';
 import { isRecord } from './validation.ts';
 import { assertAiTarget, type AiTargetApp } from './ai-app-identity.ts';
 
@@ -216,6 +217,43 @@ export function recoverAiCollection<T>(text: string, options: AiCollectionOption
         if (missing.length) result.notices.push('The AI omitted ' + missing.join(' and ') + '. Completeness is unverified.');
         return result;
       } catch { /* Recover below. */ }
+    }
+    // Isolate malformed optional metadata before changing or dropping any content.
+    // In particular, an invented sourceUnits schema must not erase valid confidence.
+    if (!previous && !source.incomplete && !source.entries.some(item => item.invalid)) {
+      const fixedConfidence = raw.confidence === undefined ? null : recoverAiConfidenceValues(raw.confidence);
+      const normalized = fixedConfidence?.notice && fixedConfidence.confidence
+        ? { ...raw, confidence: fixedConfidence.confidence } : null;
+      const bases = [
+        { envelope: raw, notes: [] as string[] },
+        ...(normalized ? [{ envelope: normalized, notes: [fixedConfidence!.notice!] }] : []),
+      ];
+      const fields = ['sourceUnits', 'coverage', 'confidence'] as const;
+      // Smallest-change-first: preserve any metadata that is independently valid.
+      for (const mask of [0, 1, 2, 4, 3, 5, 6, 7]) {
+        for (const variant of bases) {
+          if (mask === 0 && variant.envelope === raw) continue; // Already tried full validation.
+          const removed = fields.filter((_, index) => Boolean(mask & (1 << index)));
+          if (removed.some(field => variant.envelope[field] === undefined)) continue;
+          if (removed.includes('confidence') && variant.envelope === normalized) continue;
+          const stripped: Record<string, unknown> = { ...variant.envelope };
+          for (const field of removed) delete stripped[field];
+          try {
+            const candidate = options.parse(JSON.stringify(stripped));
+            result.candidate = candidate; result.envelope = stripped;
+            result.items = source.entries.map(entry => entry.value);
+            result.accepted = result.items.length;
+            result.notices.push(...variant.notes);
+            for (const field of removed)
+              result.notices.push('AI ' + field + ' metadata could not be validated and was skipped; other valid content was preserved.');
+            for (const field of options.requiredMetadata ?? []) {
+              if (stripped[field] === undefined && !removed.some(item => item === field))
+                result.notices.push('The AI omitted ' + field + '. Completeness is unverified.');
+            }
+            return result;
+          } catch { /* Try the next minimal metadata correction. */ }
+        }
+      }
     }
     if (source.changed) result.notices.push('Read content from a wrapped or malformed response.');
     if (source.incomplete) result.issues.push({ message: 'The response may have ended before all items were returned.' });

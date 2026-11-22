@@ -3,6 +3,7 @@ import { parseAiImportJson } from '../../core/ai-json.ts';
 import { AI_BOUNDED_INFERENCE_PROMPT } from '../../core/ai-source-inference.ts';
 import { AI_SOURCE_DIFFICULTY_PROMPT } from '../../core/ai-source-difficulty.ts';
 import { AI_SOURCE_UNITS_PROMPT, parseAiSourceUnits, type AiSourceUnit } from '../../core/ai-source-units.ts';
+import { parseAiConfidenceValues, MAX_AI_CONFIDENCE_TOPIC_LENGTH } from '../../core/ai-confidence-repair.ts';
 import { assertAiTarget } from '../../core/ai-app-identity.ts';
 import { categoryScopedPrompt, type AiCardScope } from '../../core/ai-study-categories.ts';
 import { parseFillBlankTemplate } from '../../core/fill-blank.ts';
@@ -161,7 +162,7 @@ ${AI_MARKDOWN_CONTEXT_GUIDANCE}
 
 CONFIDENCE FORMAT CHECK:
 Use a top-level "confidence" object with EXACTLY these fields: overallCoverage, examConfidence, subjectConfidence, studyConfidence, coverageExplanation, uncoveredSubjects, confidenceExplanation.
-The four percentages MUST be whole JSON numbers from 0 to 100 (85, NOT "85%" or 0.85). The two explanations must be nonempty strings (maximum 500 characters). uncoveredSubjects must be an array of specific omitted-topic strings, or [] if no particular missing topic can be identified. For coverage below 100 with no identifiable missing topics, explain the uncertainty, inadequate depth, or intentional scope exclusions in coverageExplanation; do not invent topics.
+The four percentages MUST be whole JSON numbers from 0 to 100 (85, NOT "85%" or 0.85). The two explanations must be nonempty strings (maximum 500 characters). uncoveredSubjects must be an array of specific omitted-topic strings (up to ${MAX_AI_CONFIDENCE_TOPIC_LENGTH} characters each), or [] if no particular missing topic can be identified. For coverage below 100 with no identifiable missing topics, explain the uncertainty, inadequate depth, or intentional scope exclusions in coverageExplanation; do not invent topics.
 Verify this object and the entire JSON before responding.
 
 OUTPUT AS A DOWNLOADABLE JSON FILE, NOT A CHAT CODE BLOCK:
@@ -309,32 +310,7 @@ export function parseReviewAiImport(text: string, preferences: ReviewAiPreferenc
   }
   let confidence: ReviewAiConfidence | null = null;
   if (value.confidence !== undefined) {
-    const data = value.confidence;
-    const percentageFields = ['overallCoverage', 'examConfidence', 'subjectConfidence', 'studyConfidence'] as const;
-    if (!isRecord(data)) throw new Error('confidence must be a JSON object with four percentages, explanations and uncoveredSubjects.');
-    for (const key of percentageFields) {
-      if (!Number.isInteger(data[key]) || (data[key] as number) < 0 || (data[key] as number) > 100)
-        throw new Error('confidence.' + key + ' must be a whole number from 0 to 100, not a percentage string or fraction.');
-    }
-    for (const key of ['coverageExplanation', 'confidenceExplanation'] as const) {
-      if (typeof data[key] !== 'string' || !data[key].trim() || data[key].length > 500)
-        throw new Error('confidence.' + key + ' must be a nonempty explanation of at most 500 characters.');
-    }
-    if (!Array.isArray(data.uncoveredSubjects) ||
-        data.uncoveredSubjects.some(item => typeof item !== 'string' || !item.trim() || item.length > 160))
-      throw new Error('confidence.uncoveredSubjects must be an array of short strings, or [] if no specific topic was missed.');
-
-    if (!isRecord(data) || Object.keys(data).some(key => ![...percentageFields, 'coverageExplanation', 'uncoveredSubjects', 'confidenceExplanation'].includes(key)) ||
-        percentageFields.some(key => !Number.isInteger(data[key]) || (data[key] as number) < 0 || (data[key] as number) > 100) ||
-        typeof data.coverageExplanation !== 'string' || !data.coverageExplanation.trim() || data.coverageExplanation.length > 500 ||
-        typeof data.confidenceExplanation !== 'string' || !data.confidenceExplanation.trim() || data.confidenceExplanation.length > 500 ||
-        !Array.isArray(data.uncoveredSubjects) || data.uncoveredSubjects.some(item => typeof item !== 'string' || !item.trim() || item.length > 160)) {
-      throw new Error('Confidence needs four whole-number percentages (0–100), two brief explanations, and an uncoveredSubjects array ([] is allowed if no specific omission can be named).');
-    }
-    confidence = { overallCoverage: data.overallCoverage as number, examConfidence: data.examConfidence as number,
-      subjectConfidence: data.subjectConfidence as number, studyConfidence: data.studyConfidence as number,
-      coverageExplanation: data.coverageExplanation.trim(), uncoveredSubjects: [...data.uncoveredSubjects] as string[],
-      confidenceExplanation: data.confidenceExplanation.trim() };
+    confidence = parseAiConfidenceValues(value.confidence);
   } else if (options.requireCoverage) {
     throw new Error('The AI omitted the required confidence statistics. Ask for complete JSON with confidence percentages and explanations.');
   }

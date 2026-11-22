@@ -12,6 +12,7 @@
     "test:answer-matching": "node --test packages/@dynamic-learner/answer-matching/tests/*.test.mts",
     "test:fill-blank": "node --test tests/fill-blank.test.mts",
     "test:parameterized": "node --test tests/parameterized-template.test.mts",
+    "test:ai-import": "node --test tests/ai-import-metadata.test.mts",
     "start:frontend": "webpack serve --config webpack.config.mts --disable-interpret --mode development",
     "test:dev-start": "node --test tests/start-dev.test.mjs"
   },
