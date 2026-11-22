@@ -1,14 +1,15 @@
 ## v1.54.7
 
-<small data-utc="2026-11-22T18:44:24Z">November 22, 2026 at 11:44 AM MST</small>
+<small data-utc="2026-11-22T18:44:53Z">November 22, 2026 at 11:44 AM MST</small>
 
 - **Simple AI Reasoning:** Plan questions around the source's important concepts and skills, then make a compact quality review for trivial matches, repetition, obvious answers, and unclear grading.
 - **Detailed AI Reasoning:** Streamlined repetitive assessment-design and instructor guidance while retaining deeper source audits and workload-aware matching decisions.
 - **Compatibility:** Kept the same JSON contract, question types, source fidelity requirements, AI focuses, and exact custom question mixes.
 
 <details>
-<summary>View commit</summary>
+<summary>View 1 commit</summary>
 <ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/7a0712ad806189cd9b26cec096f19763c0c884e5">7a0712ad</a> — Balance Simple and Detailed Review reasoning (v1.54.7)</li>
 </ol>
 </details>
 
