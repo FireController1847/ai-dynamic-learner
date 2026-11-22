@@ -1,3 +1,21 @@
+## v1.54.4
+
+<small data-utc="2026-11-22T17:48:08Z">November 22, 2026 at 10:48 AM MST</small>
+
+- **Explanations:** Simple and Detailed prompts now require concise, source-grounded reasoning hints on every scored question, without disclosing answers. The shared examples include explanations for all scored types.
+- **Standalone Questions:** Both prompts explicitly prohibit references to external notes or lectures and require self-contained question wording.
+- **Answer Variety:** Both prompts call for varied multiple-choice answer positions and supported true/false outcomes instead of predictable first-choice or all-true patterns. Examples demonstrate alternate answer positions and a false statement.
+- **Simple Reasoning:** Short-answer questions now favor one brief, objectively gradable response, while related multi-part recall is better represented with matching or fill-in-the-blanks.
+- **Detailed Reasoning:** Matching-heavy sets receive a final assessment-design check for redundant tables, inflated answer workload, and opportunities for better application or recall questions without imposing rigid type quotas.
+- **Regression Testing:** Added prompt-contract and structural-example tests for explanations, self-contained wording, answer patterns, custom mixes, and model-specific guidance.
+
+<details>
+<summary>View 1 commit</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/4cf8645eb19fa25c8549dc7c8e5a0c1a1fb9c99c">4cf8645e</a> — Strengthen shared Review question quality and balance prompt-specific assessment design</li>
+</ol>
+</details>
+
 ## v1.54.3
 
 <small data-utc="2026-11-22T17:29:56Z">November 22, 2026 at 10:29 AM MST</small>
