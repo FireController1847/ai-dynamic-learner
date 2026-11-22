@@ -1,6 +1,6 @@
 ## v1.54.8
 
-<small data-utc="2026-11-22T19:08:08Z">November 22, 2026 at 12:00 PM MST</small>
+<small data-utc="2026-11-22T19:08:08Z">November 22, 2026 at 12:08 PM MST</small>
 
 - **Standalone Assessments:** Both Simple and Detailed explicitly forbid questions, choices, contexts, and explanations from referring to the original study materials instead of testing the subject directly.
 - **Final Question Review:** Both prompts now review and revise the complete generated JSON questions for weak or unanswerable matching pairs, inaccurate or unclear wording, ambiguous grading, and other assessment-quality issues before delivery.
@@ -9,6 +9,7 @@
 <details>
 <summary>View 1 commit</summary>
 <ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/0ca9ab686aff7c49e40b829dc23a90cfa42a4017">0ca9ab68</a> — Require standalone questions and final AI quality review (Review v1.54.8)</li>
 </ol>
 </details>
 
