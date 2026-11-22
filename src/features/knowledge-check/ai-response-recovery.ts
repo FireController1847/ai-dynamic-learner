@@ -1,6 +1,6 @@
 import { MAX_AI_IMPORT_LENGTH, parseAiImportJson } from '../../core/ai-json.ts';
 import { assertAiTarget } from '../../core/ai-app-identity.ts';
-import { parseAiSourceUnits } from '../../core/ai-source-units.ts';
+import { recoverAiSourceUnits } from '../../core/ai-source-units.ts';
 import { recoverAiConfidenceValues } from '../../core/ai-confidence-repair.ts';
 import { readAiResponse, type AiResponseIssue } from '../../core/ai-response-recovery.ts';
 import { isRecord } from '../../core/validation.ts';
@@ -123,11 +123,13 @@ export function recoverReviewResponse(text: string, preferences: ReviewAiPrefere
     let sourceUnits: ReviewAiImport['sourceUnits'] = undefined;
     if (!source.incomplete && !result.issues.length) {
       if (envelope.sourceUnits !== undefined) {
-        try {
-          sourceUnits = parseAiSourceUnits(envelope.sourceUnits, questions.length);
-          for (const unit of sourceUnits ?? []) for (const n of unit.itemNumbers)
-            questions[n - 1].sourceUnit = unit.title;
-        } catch (error) { result.notices.push('Source-unit mapping was skipped: ' + errorText(error) + ' The questions and confidence statistics were retained.'); }
+        const mapping = recoverAiSourceUnits(envelope.sourceUnits, questions.length);
+        sourceUnits = mapping.units;
+        for (const unit of sourceUnits ?? []) for (const n of unit.itemNumbers)
+          questions[n - 1].sourceUnit = unit.title;
+        if (mapping.notice) result.notices.push(mapping.notice);
+        if (mapping.problem) result.notices.push('Source-unit mapping was skipped: ' +
+          mapping.problem + ' The questions and confidence statistics were retained.');
       }
       // Source-unit problems must never erase valid, independent confidence scores.
       if (envelope.confidence !== undefined) {

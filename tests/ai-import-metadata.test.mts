@@ -46,8 +46,10 @@ test('Review preserves complete confidence when AI invents sourceUnits id/source
   assert.equal(result.candidate?.questions.length, 40);
   assert.equal(result.candidate?.confidence?.overallCoverage, 88);
   assert.equal(result.candidate?.confidence?.examConfidence, 76);
-  assert.equal(result.candidate?.sourceUnits, undefined);
-  assert.match(result.notices.join(' '), /Source-unit mapping was skipped/);
+  assert.equal(result.candidate?.sourceUnits?.length, 4);
+  assert.deepEqual(result.candidate?.sourceUnits?.[0]?.itemNumbers, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+  assert.equal(result.candidate?.questions[39]?.sourceUnit, 'Unit Four');
+  assert.match(result.notices.join(' '), /Recovered chapter mapping from AI-reported sequential item counts/);
 });
 
 test('Review preserves the same graphs when sourceUnits contains chapter coverage descriptions', () => {
@@ -60,6 +62,16 @@ test('Review preserves the same graphs when sourceUnits contains chapter coverag
   assert.equal(result.candidate?.confidence?.studyConfidence, 89);
   assert.equal(result.candidate?.questions.length, 40);
   assert.equal(result.candidate?.sourceUnits, undefined);
+});
+
+test('Review does not guess chapter placement when AI unit counts do not match', () => {
+  const units = titles.map((title, index) => ({
+    id: 'unit-' + (index + 1), title, questionCount: 8,
+  }));
+  const result = checkReviewResponse(review(units), preferences);
+  assert.equal(result.candidate?.confidence?.overallCoverage, 88);
+  assert.equal(result.candidate?.sourceUnits, undefined);
+  assert.match(result.notices.join(' '), /unit counts do not total 40/);
 });
 
 test('Long but reasonable chapter-level uncoveredSubjects are valid everywhere', () => {

@@ -53,6 +53,42 @@ export function parseAiSourceUnits(value: unknown, count: number): AiSourceUnit[
   return units;
 }
 
+/** Adapt an AI-declared, sequential per-unit count without guessing from question text.
+ * If counts are absent or inconsistent, skip mapping rather than invent provenance. */
+export function recoverAiSourceUnits(value: unknown, count: number): {
+  units?: AiSourceUnit[]; notice?: string; problem?: string;
+} {
+  try { return { units: parseAiSourceUnits(value, count) }; }
+  catch (error) {
+    const problem = error instanceof Error ? error.message : String(error);
+    if (!Array.isArray(value) || !value.length || value.length > 100 ||
+        !value.every(entry => isRecord(entry) && typeof entry.title === 'string' &&
+          Number.isSafeInteger(entry.questionCount) && (entry.questionCount as number) >= 0)) {
+      return { problem };
+    }
+    const total = value.reduce((sum, entry) => sum + Number(entry.questionCount), 0);
+    if (total !== count) return { problem: 'The AI-reported unit counts do not total ' + count + ' accepted items.' };
+    let offset = 0;
+    const units = value.map(entry => {
+      const n = Number(entry.questionCount);
+      const mapping = {
+        kind: KINDS.includes(entry.kind as AiSourceUnitKind) ? entry.kind : 'unit',
+        title: entry.title,
+        itemNumbers: Array.from({ length: n }, (_, index) => offset + index + 1),
+        missingTopics: entry.missingTopics ?? [],
+      };
+      offset += n;
+      return mapping;
+    });
+    try {
+      return {
+        units: parseAiSourceUnits(units, count),
+        notice: 'Recovered chapter mapping from AI-reported sequential item counts. These links are not independently verified.',
+      };
+    } catch { return { problem }; }
+  }
+}
+
 export function validateSavedSourceUnits(value: unknown): asserts value is AiSourceUnit[] {
   if (!Array.isArray(value) || value.length > 100) throw new Error('Invalid saved source units.');
   const seen = new Set<string>();
