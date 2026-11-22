@@ -1,4 +1,7 @@
-import { MAX_AI_IMPORT_LENGTH } from '../../core/ai-json.ts';
+import { MAX_AI_IMPORT_LENGTH, parseAiImportJson } from '../../core/ai-json.ts';
+import { assertAiTarget } from '../../core/ai-app-identity.ts';
+import { recoverAiSourceUnits } from '../../core/ai-source-units.ts';
+import { recoverAiConfidenceValues } from '../../core/ai-confidence-repair.ts';
 import { readAiResponse, type AiResponseIssue } from '../../core/ai-response-recovery.ts';
 import { isRecord } from '../../core/validation.ts';
 import { parseAiSolvers } from './ai-parameterized-format.ts';
@@ -40,7 +43,13 @@ export function recoverReviewResponse(text: string, preferences: ReviewAiPrefere
   const result: ReviewResponseRecovery = { candidate: null, issues: [], recovered: 0, received: 0, notices: [] };
   try {
     if (text.length > MAX_AI_IMPORT_LENGTH) throw new Error('This response is too large. Ask for a smaller batch.');
+    // Detect a different app even when its JSON does not have a questions array.
+    try { assertAiTarget(parseAiImportJson(text), 'review'); }
+    catch (error) {
+      if (error instanceof Error && /generated for .*importing it into|identifies conflicting apps|Unknown AI target app/i.test(error.message)) throw error;
+    }
     const source = readAiResponse(text, 'questions'), envelope = source.envelope;
+    assertAiTarget(envelope, 'review');
     if (envelope.format !== undefined && envelope.format !== REVIEW_AI_FORMAT) throw new Error('This response belongs to a different format, not Review.');
     if (envelope.version !== undefined && envelope.version !== 1) throw new Error('This Review response uses an unsupported version.');
     result.received = source.entries.length;
@@ -67,7 +76,7 @@ export function recoverReviewResponse(text: string, preferences: ReviewAiPrefere
         } catch { result.notices.push('An invalid or duplicate solver package was skipped; dependent questions may need repair.'); }
       }
     } else if (envelope.solvers !== undefined) result.notices.push('The solver list was unreadable.');
-    const base = { format: REVIEW_AI_FORMAT, version: 1, title, description };
+    const base = { format: REVIEW_AI_FORMAT, targetApp: 'review', version: 1, title, description };
     const questions: Question[] = [], accepted: unknown[] = [];
     const validationPreferences: ReviewAiPreferences = { ...preferences, count: 1, mixMode: 'ai' };
     for (const item of source.entries) {
@@ -111,28 +120,56 @@ export function recoverReviewResponse(text: string, preferences: ReviewAiPrefere
       }
     }
     let confidence: ReviewAiImport['confidence'] = null, coverage: ReviewAiImport['coverage'] = null;
+    let sourceUnits: ReviewAiImport['sourceUnits'] = undefined;
     if (!source.incomplete && !result.issues.length) {
-      for (const field of ['confidence', 'coverage'] as const) {
-        if (envelope[field] === undefined) continue;
-        try {
-          const parsed = parseReviewAiImport(JSON.stringify({ ...base, questions: accepted, solvers: packages, [field]: envelope[field] }), { ...preferences, count: accepted.length, mixMode: 'ai' });
-          if (field === 'confidence') confidence = parsed.confidence;
-          else coverage = parsed.coverage;
-        } catch { result.notices.push('The AI’s ' + field + ' summary could not be read and was left out.'); }
+      if (envelope.sourceUnits !== undefined) {
+        const mapping = recoverAiSourceUnits(envelope.sourceUnits, questions.length);
+        sourceUnits = mapping.units;
+        for (const unit of sourceUnits ?? []) for (const n of unit.itemNumbers)
+          questions[n - 1].sourceUnit = unit.title;
+        if (mapping.notice) result.notices.push(mapping.notice);
+        if (mapping.problem) result.notices.push('Source-unit mapping was skipped: ' +
+          mapping.problem + ' The questions and confidence statistics were retained.');
       }
-    } else if (envelope.confidence !== undefined || envelope.coverage !== undefined) {
+      // Source-unit problems must never erase valid, independent confidence scores.
+      if (envelope.confidence !== undefined) {
+        const parsed = recoverAiConfidenceValues(envelope.confidence);
+        confidence = parsed.confidence;
+        if (parsed.notice) result.notices.push(parsed.notice);
+        if (parsed.problem) result.notices.push('The AI confidence could not be read: ' + parsed.problem);
+      }
+      if (envelope.coverage !== undefined) {
+        try {
+          coverage = parseReviewAiImport(JSON.stringify({ ...base, questions: accepted, solvers: packages,
+            coverage: envelope.coverage }), { ...preferences, count: accepted.length, mixMode: 'ai' }).coverage;
+        } catch (error) {
+          result.notices.push('The AI subject-coverage list was skipped: ' + errorText(error));
+        }
+      }
+    } else if (envelope.sourceUnits !== undefined || envelope.confidence !== undefined || envelope.coverage !== undefined) {
       result.notices.push('Coverage and confidence were not retained because some questions were missing.');
     }
-    result.candidate = { title, description, questions, warnings, confidence, coverage };
+    result.candidate = { title, description, questions, warnings, confidence, coverage,
+      ...(sourceUnits ? { sourceUnits } : {}) };
   } catch (error) { result.issues.push({ message: errorText(error) }); }
   return result;
 }
 
-export function repairReviewPrompt(issues: readonly ReviewResponseIssue[], count: number): string {
+/** Fix a complete Review file; additional batches are a separate workflow. */
+export function repairReviewPrompt(issues: readonly ReviewResponseIssue[], count: number,
+  appendToExisting = false): string {
   const details = issues.slice(0, 12).map(issue => (issue.item ? 'Question ' + issue.item + ': ' : '') +
     issue.message + (issue.source ? '\nOriginal item: ' + issue.source : '')).join('\n\n').slice(0, 22000);
-  return 'Correct the following problems in your previous Dynamic Learner Review response using the original study material and original instructions. ' +
-    'Return only the corrected or missing questions, NOT the already accepted questions. Return a valid Review version-1 JSON object or a bare JSON array of question objects. ' +
-    'Include any required solver packages in the top-level solvers array. Do not invent answers, add filler, or change the original study scope. ' +
-    'Return at most ' + Math.max(1, Number.isSafeInteger(count) ? count : 1) + ' questions; fewer is fine if the source does not support them.\n\n' + details;
+  return 'Fix the PREVIOUS Dynamic Learner Review JSON file using the original source and previous generation instructions. ' +
+    'Return the COMPLETE corrected standalone version-1 Review JSON file with format "dynamic-learner-review", targetApp "review", title, description, ALL questions (including already-valid questions), and applicable solver packages, sourceUnits, coverage, and confidence metadata. ' +
+    'Do NOT return only corrected fields, newly added questions, a bare array, an incremental reply, or a JSON patch. ' +
+    'Preserve correct original questions and settings; change only what is necessary. ' +
+    (appendToExisting ? 'This is an ADDITIONAL-question file for an existing saved set. Keep all valid questions from this previous generated file, but do NOT repeat questions already in the saved set. ' :
+      'This is the complete replacement for the previously generated knowledge set. ') +
+    'Generate exactly ' + Math.max(1, Number.isSafeInteger(count) ? count : 1) +
+    ' distinct useful questions when the source supports them. Do not exceed that count or invent filler; explain genuine source limitations in confidence when fewer are possible. ' +
+    'Include all four integer confidence scores, both explanations and uncoveredSubjects. Verify source-unit references against the final questions array. ' +
+    'MANDATORY OUTPUT: Create and attach ONE complete UTF-8 .json file. ONLY if attachment is technically unavailable, briefly state the limitation and return the ENTIRE valid JSON object as raw text. ' +
+    'Validate JSON syntax, all fields and question count before replying.\n\n' +
+    'Problems detected:\n' + (details || 'Correct the previous file while retaining valid content.');
 }

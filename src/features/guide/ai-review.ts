@@ -1,5 +1,8 @@
 import { defineComponent, h, ref, type PropType } from 'vue';
 import type { SimpleGuideImport } from './ai-import.ts';
+import { AiSourceUnitCoverage } from '../../components/ai-source-unit-coverage.ts';
+import { AiMissingConfidence } from '../../components/ai-missing-confidence.ts';
+import { aiFullFileCorrectionInstructions } from '../../core/ai-file-output.ts';
 
 const METRICS = [
   ['examConfidence','Exam confidence','Likely relevance to exam topics; no actual exam prediction is verified.'],
@@ -31,7 +34,8 @@ export const GuideAiReview = defineComponent({
         'Improve accurate teaching, worked examples, scaffolded practice and meaningful revisits as needed, '+
         'without inventing unsupported source facts. Preserve good material; update the coverage inventory, '+
         'all four confidence estimates, explanations and uncoveredSubjects honestly. '+
-        'Return the COMPLETE corrected downloadable Guide JSON file in the same format.';
+        'Return the COMPLETE corrected downloadable Guide JSON file in the same format.\n\n' +
+        aiFullFileCorrectionInstructions(props.candidate.mode === 'map' ? 'dynamic-learner-guide-map.json' : 'dynamic-learner-guide-list.json');
     }
     async function copyImprovement(){
       try{await navigator.clipboard.writeText(improvement());
@@ -79,7 +83,9 @@ export const GuideAiReview = defineComponent({
             ]):null,
             h('p',c.confidenceExplanation),
           ]),
-        ]):h('p',{class:'guide-ai-review-disclaimer'},'This older JSON contains no AI confidence estimates. You can still preview and import it.'),
+        ]):h(AiMissingConfidence, {
+          app: 'Guide', items: names, onRetry: () => emit('back'),
+        }),
         c&&(low||c.uncoveredSubjects.length)?h('div',{class:'guide-ai-review-improve'},[
           h('strong','Some areas might benefit from improvement'),
           h('p','You can ask AI for a revised file, or keep the current guide.'),
@@ -91,6 +97,10 @@ export const GuideAiReview = defineComponent({
           h('h3',guide.title),
           guide.mode==='map' ? h('p',{class:'guide-ai-review-disclaimer'},
             'Map background: ' + (guide.background ?? 'contours').replace(/^./,letter=>letter.toUpperCase())) : null,
+          guide.sourceUnits?.length ? h(AiSourceUnitCoverage, {
+            units: guide.sourceUnits, items: names,
+            itemLabel: guide.mode === 'map' ? 'map stops' : 'sections',
+          }) : null,
           h('div',{class:'guide-ai-review-counts'},[
             h('div',[h('strong',String(names.length)),h('span',guide.mode==='map'?'Map stops':'List sections')]),
             guide.mode==='map'?h('div',[h('strong',String(blockCount)),h('span','Teaching Blocks')]):null,

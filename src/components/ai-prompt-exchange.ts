@@ -23,20 +23,22 @@ export const AiPromptExchange = defineComponent({
     importOnly: Boolean,
     skipSource: Boolean,
     showReviewStep: Boolean,
-    preferFileImport: Boolean,
-    // Review can recover raw/malformed response files; other callers keep strict file checks.
-    allowRawResponseFile: Boolean,
+    // Review's file-first, recovery-friendly import is the default for every app.
+    preferFileImport: { type: Boolean, default: true },
+    allowRawResponseFile: { type: Boolean, default: true },
     recovering: Boolean,
   },
   emits: { 'update-json': (_value: string) => true, validate: () => true },
   setup(props, { emit, slots, expose }) {
-    const stage = ref<'source' | 'instructions' | 'send' | 'response'>(props.startInImport || props.importOnly ? 'response' : props.skipSource ? 'instructions' : 'source');
+    const stage = ref<'source' | 'instructions' | 'send' | 'response' | 'import-info'>(props.importOnly ? 'import-info' : props.startInImport ? 'response' : props.skipSource ? 'instructions' : 'source');
+    const fromExisting = ref(props.importOnly);
     const shown = ref(false);
     const copied = ref(false);
     const copying = ref(false);
     const errorMessage = ref('');
     const uploadedFile = ref('');
     const fileProblem = ref('');
+    const previousResponse = ref('');
     const uploading = ref(false);
     const draggingFile = ref(false);
     const pasteExpanded = ref(false);
@@ -61,7 +63,10 @@ export const AiPromptExchange = defineComponent({
       cancelCopy();
       if (stage.value === 'instructions') copied.value = false;
     }, { flush: 'sync' });
-    watch(() => props.json, value => { if (!value) { uploadedFile.value = ''; fileProblem.value = ''; } });
+    watch(() => props.json, (value, previous) => {
+      if (previous?.trim() && !value.trim()) previousResponse.value = previous;
+      if (!value) { uploadedFile.value = ''; fileProblem.value = ''; }
+    });
     onBeforeUnmount(() => { disposed = true; fileAttempt++; cancelCopy(); });
 
     async function acceptJsonFile(file: File | undefined) {
@@ -140,6 +145,10 @@ export const AiPromptExchange = defineComponent({
       focusResponse = true;
       stage.value = 'response';
     }
+    function selectExisting() {
+      fromExisting.value = true;
+      stage.value = 'import-info';
+    }
     function selectInstructions() {
       if (props.importOnly) return;
       stage.value = 'instructions';
@@ -153,7 +162,8 @@ export const AiPromptExchange = defineComponent({
     }
     function goBack(): boolean {
       if (props.importOnly) return false;
-      if (stage.value === 'response') stage.value = 'send';
+      if (stage.value === 'response') stage.value = fromExisting.value ? 'import-info' : 'send';
+      else if (stage.value === 'import-info') stage.value = 'source';
       else if (stage.value === 'send') stage.value = 'instructions';
       else if (stage.value === 'instructions' && !props.skipSource) stage.value = 'source';
       else return false;
@@ -205,7 +215,7 @@ export const AiPromptExchange = defineComponent({
     }
 
     return () => h('div', { class: 'ai-exchange' }, [
-      props.importOnly ? null : h('div', { class: 'ai-exchange-progress', 'aria-label': 'AI creation progress' }, [
+      props.importOnly || stage.value === 'import-info' ? null : h('div', { class: 'ai-exchange-progress', 'aria-label': 'AI creation progress' }, [
         !props.skipSource ? h('span', { class: stage.value === 'source' ? 'is-active' : 'is-complete', 'aria-current': stage.value === 'source' ? 'step' : undefined }, '1 · Source') : null,
         !props.skipSource ? h(Icon, { name: 'chevron' }) : null,
         h('span', { class: stage.value === 'instructions' ? 'is-active' : stage.value === 'send' || stage.value === 'response' ? 'is-complete' : '', 'aria-current': stage.value === 'instructions' ? 'step' : undefined }, props.skipSource ? '1 · Copy' : '2 · Copy'),
@@ -221,18 +231,27 @@ export const AiPromptExchange = defineComponent({
           default: () => h('section', {
             key: stage.value, class: 'ai-exchange-panel',
             'aria-labelledby': props.idPrefix + '-step-title',
-          }, props.recovering && stage.value === 'response' ? slots.recovery?.() : stage.value === 'source' && !props.importOnly ? [
+          }, props.recovering && stage.value === 'response' ? slots.recovery?.() : stage.value === 'import-info' ? [
+            h('div', { class: 'ai-exchange-step-heading' }, [
+              h('h3', { id: props.idPrefix + '-step-title', ref: stepHeading, tabindex: -1 }, 'Import an existing AI response'),
+              h('p', { class: 'ai-exchange-help' }, 'AI responses are app-specific. A response created for another app will not import here.'),
+              h('p', { class: 'ai-exchange-help' }, 'Use a response generated for ' + props.label + '. Older responses are checked against their format.'),
+            ]),
+            h('div', { class: 'ai-exchange-actions' }, [
+              h('button', { type: 'button', class: 'card-primary-button', onClick: selectResponse }, 'Continue to import'),
+              !props.importOnly ? h('button', { type: 'button', class: 'quiet-button', onClick: selectSource }, 'Back') : null,
+            ]),
+          ] : stage.value === 'source' && !props.importOnly ? [
             h('div', { class: 'ai-exchange-step-heading' }, [
               h('h3', { id: props.idPrefix + '-step-title', ref: stepHeading, tabindex: -1 }, 'Give your AI something to study'),
               h('p', { class: 'ai-exchange-help' }, 'Open your AI chat and share the material you want to learn from.'),
             ]),
-            h(AiSourceIntro, { showImportShortcut: true, onNext: selectInstructions, onImport: selectResponse }),
+            h(AiSourceIntro, { showImportShortcut: true, onNext: selectInstructions, onImport: selectExisting }),
           ] : stage.value === 'instructions' && !props.importOnly ? [
             h('div', { class: 'ai-exchange-step-heading' }, [
               h('h3', { id: props.idPrefix + '-step-title' }, 'Make instructions for your AI'),
               h('p', { class: 'ai-exchange-help' }, props.promptHelp),
             ]),
-            slots.options?.(),
             slots.guidance?.(),
             h('div', { class: 'ai-exchange-actions' }, [
               h('button', {
@@ -311,7 +330,7 @@ export const AiPromptExchange = defineComponent({
                   'is-dragging': draggingFile.value,
                   'has-file': Boolean(uploadedFile.value || props.json.trim()),
                 }],
-                role: 'group', 'aria-label': 'Choose a JSON file',
+                role: 'group', 'aria-label': 'Choose an AI response file',
                 onDragenter: (event: DragEvent) => {
                   event.preventDefault();
                   draggingFile.value = true;
@@ -334,22 +353,22 @@ export const AiPromptExchange = defineComponent({
                 ]),
                 h('div', { class: 'ai-json-upload-copy' }, [
                   h('strong', uploading.value ? 'Reading your file…'
-                    : uploadedFile.value || (props.json.trim() ? 'JSON response ready' : 'Add your JSON file')),
+                    : uploadedFile.value || (props.json.trim() ? 'AI response ready' : 'Add your AI response')),
                   h('p', { class: 'ai-exchange-help' },
                     uploading.value ? props.allowRawResponseFile ? 'Reading the response locally.' : 'Checking the file format locally.'
                       : uploadedFile.value || props.json.trim()
                         ? 'Ready to validate and move on.'
-                        : 'Drop a .json file here, or select one from your device.'),
+                        : props.allowRawResponseFile ? 'Drop a .json, .txt, or .md response here, or select one from your device.' : 'Drop a .json file here, or select one from your device.'),
                 ]),
                 h('div', { class: 'ai-json-upload-actions' }, [
                   h('button', {
                     ref: fileButton, type: 'button', class: 'quiet-button ai-json-choose-button',
                     disabled: uploading.value, onClick: () => fileInput.value?.click(),
                   }, [h(Icon, { name: 'upload' }),
-                    uploadedFile.value || props.json.trim() ? 'Replace file' : 'Choose JSON file']),
+                    uploadedFile.value || props.json.trim() ? 'Replace file' : 'Choose response file']),
                   uploadedFile.value || props.json.trim() ? h('button', {
                     type: 'button', class: 'quiet-button ai-json-clear-button',
-                    'aria-label': 'Clear selected JSON response', disabled: uploading.value,
+                    'aria-label': 'Clear selected AI response', disabled: uploading.value,
                     onClick: clearJsonFile,
                   }, [h(Icon, { name: 'trash' }), 'Clear']) : null,
                 ]),
@@ -398,6 +417,12 @@ export const AiPromptExchange = defineComponent({
               'aria-describedby': props.problem ? props.idPrefix + '-error' : undefined,
               onInput: (event: Event) => { emit('update-json', inputValue(event)); },
             }) : null,
+            previousResponse.value ? h('details', { class: 'ai-exchange-format-help' }, [
+              h('summary', 'Previous response retained'),
+              h('p', { class: 'ai-exchange-help' }, 'Your earlier response is still available if a repair needs to be retried.'),
+              h('textarea', { readonly: true, value: previousResponse.value, rows: 4, 'aria-label': 'Previous AI response' }),
+              h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('update-json', previousResponse.value) }, 'Restore previous response'),
+            ]) : null,
             props.problem ? h('p', { id: props.idPrefix + '-error', role: 'alert', class: 'ai-exchange-error' }, [
               h('strong', 'That response could not be used. '), props.problem,
             ]) : null,

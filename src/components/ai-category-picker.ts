@@ -2,19 +2,24 @@ import { defineComponent, h, nextTick, onMounted, ref, watch, type PropType } fr
 import { useAiRecovery } from './use-ai-recovery.ts';
 import { AiPromptExchange } from './ai-prompt-exchange.ts';
 import { AiSourceIntro } from './ai-source-intro.ts';
+import { AiPromptStyleSelect } from './ai-prompt-style-select.ts';
+import { AiOptionsHeader } from './ai-options-header.ts';
+import { DEFAULT_AI_PROMPT_VARIANT, simpleAiPrompt, type AiPromptVariant } from '../core/ai-prompt-variants.ts';
 import { PopupDialog } from './popup-dialog.ts';
 import { Icon } from './icon.ts';
 import { studyCategoriesPrompt, parseStudyCategories, STUDY_CATEGORIES_FORMAT, MAX_CATEGORIES, type AiCardCategories, type AiCardScope } from '../core/ai-study-categories.ts';
 import { readCategoryHistory, rememberCategories, writeCategoryHistory, type CategoryHistoryEntry } from '../core/ai-category-history.ts';
 import { MAX_AI_IMPORT_LENGTH } from '../core/ai-json.ts';
+import type { AiTargetApp } from '../core/ai-app-identity.ts';
 
-type CategoryStage = 'source' | 'start' | 'saved' | 'generate' | 'choose';
+type CategoryStage = 'source' | 'start' | 'saved' | 'configure' | 'generate' | 'choose';
 
 export const AiCategoryPicker = defineComponent({
   name: 'AiCategoryPicker',
   props: {
     destination: { type: String, required: true },
     label: { type: String, default: 'Index Cards' },
+    targetApp: { type: String as PropType<AiTargetApp>, required: true },
     totalSteps: { type: Number, default: 2 },
     initialCategories: { type: Object as PropType<AiCardCategories | null>, default: null },
   },
@@ -32,13 +37,21 @@ export const AiCategoryPicker = defineComponent({
     const clearButton = ref<HTMLButtonElement | null>(null);
     const clearOpen = ref(false);
     const storageMessage = ref('');
-    const prompt = studyCategoriesPrompt(props.label);
+    const promptVariant = ref<AiPromptVariant>(DEFAULT_AI_PROMPT_VARIANT);
+    const prompt = () => {
+      const detailed = studyCategoriesPrompt(props.label, props.targetApp);
+      return promptVariant.value === 'simple' ? simpleAiPrompt(detailed, props.label,
+        'Identify a few distinct categories covering every major source topic, retaining the original order.',
+        ['Use 1–40 categories with unique key, title and concise description.',
+         'Do not split every heading into its own category; merge only genuinely related topics.',
+         'Keep all important subject matter represented, without invented facts.']) : detailed;
+    };
 
     const recovery = useAiRecovery(() => ({
-      field: 'categories', formats: [STUDY_CATEGORIES_FORMAT], title: 'Study topics', maxItems: MAX_CATEGORIES,
-      parse: parseStudyCategories,
+      field: 'categories', targetApp: props.targetApp, formats: [STUDY_CATEGORIES_FORMAT], title: 'Study topics', maxItems: MAX_CATEGORIES,
+      parse: (text: string) => parseStudyCategories(text, props.targetApp),
       validateItem: entry => {
-        const category = parseStudyCategories(JSON.stringify({ format: STUDY_CATEGORIES_FORMAT, version: 1, title: 'Topics', categories: [entry] })).categories[0];
+        const category = parseStudyCategories(JSON.stringify({ format: STUDY_CATEGORIES_FORMAT, targetApp: props.targetApp, version: 1, title: 'Topics', categories: [entry] }), props.targetApp).categories[0];
         return category.key;
       },
       conflicts: (entry, kept) => {
@@ -65,6 +78,7 @@ export const AiCategoryPicker = defineComponent({
         else stage.value = 'source';
       }
       else if (stage.value === 'choose') stage.value = chosenFrom.value;
+      else if (stage.value === 'generate' && !importExisting.value) stage.value = 'configure';
       else stage.value = 'start';
     }
     function newCategories(direct = false) {
@@ -72,7 +86,7 @@ export const AiCategoryPicker = defineComponent({
       importExisting.value = direct;
       problem.value = '';
       json.value = '';
-      stage.value = 'generate';
+      stage.value = direct ? 'generate' : 'configure';
     }
     function useSaved(entry: CategoryHistoryEntry) {
       categories.value = entry.categories;
@@ -128,6 +142,16 @@ export const AiCategoryPicker = defineComponent({
         ]),
       ];
 
+      if (stage.value === 'configure') return [
+        h('div', { class: 'ai-options-grid' }, [
+          h(AiPromptStyleSelect, { value: promptVariant.value,
+            onSelect: value => { promptVariant.value = value; },
+          }),
+        ]),
+        h('div', { class: 'study-ai-actions' }, [
+          h('button', { type: 'button', class: 'card-primary-button', onClick: () => { stage.value = 'generate'; } }, 'Continue to AI'),
+        ]),
+      ];
       if (stage.value === 'saved') return [
         h('ul', { ref: historyList, class: 'ai-category-history-list' }, history.value.map(entry => h('li', { key: entry.id }, [
           h('button', { type: 'button', class: 'quiet-button study-ai-history-use', onClick: () => useSaved(entry) }, [
@@ -149,8 +173,8 @@ export const AiCategoryPicker = defineComponent({
       if (stage.value === 'generate') return [
         h(AiPromptExchange, {
           key: importExisting.value ? 'existing' : 'new', idPrefix: 'study-category', label: 'Categories',
-          prompt, promptHelp: 'Have your AI find the main categories in your source material.',
-          importHelp: 'Paste the category list from your AI chat.',
+          prompt: prompt(), promptHelp: 'Have your AI find the main categories in your source material.',
+          importHelp: 'Upload or paste the category list from your AI chat.',
           json: json.value, problem: problem.value, maxLength: MAX_AI_IMPORT_LENGTH,
           startInImport: importExisting.value, importOnly: importExisting.value, skipSource: true,
           validateLabel: 'Check categories',
@@ -176,6 +200,7 @@ export const AiCategoryPicker = defineComponent({
       if (stage.value === 'source') return 'Share your study material';
       if (stage.value === 'start') return 'Choose a category';
       if (stage.value === 'saved') return 'Saved categories';
+      if (stage.value === 'configure') return 'Configure categories';
       if (stage.value === 'generate') return importExisting.value ? 'Import categories' : 'Find categories with AI';
       return categories.value?.title ?? 'Choose a category';
     }
@@ -183,6 +208,7 @@ export const AiCategoryPicker = defineComponent({
       if (stage.value === 'source') return 'Give the AI your notes first. Choose or create categories afterward.';
       if (stage.value === 'start') return history.value.length ? 'Use saved categories or find new ones with AI.' : 'Find categories in your study material with AI.';
       if (stage.value === 'saved') return 'Choose the list for the material in your AI chat.';
+      if (stage.value === 'configure') return 'Choose your settings before starting the AI steps.';
       if (stage.value === 'generate') return importExisting.value
         ? 'Bring in a category list you already have.'
         : 'Use the same AI conversation to organize the material you already shared.';
@@ -191,7 +217,11 @@ export const AiCategoryPicker = defineComponent({
 
     return () => h('div', [
       h('section', { class: 'study-ai-workspace ai-category-workspace', 'aria-labelledby': 'study-category-title' }, [
-        h('header', { class: 'study-ai-header ai-category-header' }, [
+        stage.value === 'configure' ? h(AiOptionsHeader, {
+          app: props.label, destination: props.destination, title: 'Configure categories',
+          headingId: 'study-category-title',
+          scope: 'Study categories', onBack: goBack, onCancel: () => emit('cancel'),
+        }) : h('header', { class: 'study-ai-header ai-category-header' }, [
           h('div', [
             h('p', { class: 'study-ai-muted' }, props.label + ' · Saved in ' + props.destination),
             h('h2', { id: 'study-category-title', ref: heading, tabindex: -1 }, title()),

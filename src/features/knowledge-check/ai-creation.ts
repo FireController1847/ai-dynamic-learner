@@ -1,20 +1,26 @@
 import { computed, defineComponent, h, onMounted, ref, Transition } from 'vue';
 import { AiCategoryPicker } from '../../components/ai-category-picker.ts';
-import { AiScopeChoices } from '../../components/ai-scope-choices.ts';
+import { AiCreationScope } from '../../components/ai-creation-scope.ts';
+import { AiSourceUnitCoverage } from '../../components/ai-source-unit-coverage.ts';
+import { AiMissingConfidence } from '../../components/ai-missing-confidence.ts';
+import { aiFullFileCorrectionInstructions } from '../../core/ai-file-output.ts';
+import { AiCoverageSelect } from '../../components/ai-coverage-select.ts';
+import { AiPromptStyleSelect } from '../../components/ai-prompt-style-select.ts';
+import { AiOptionsHeader } from '../../components/ai-options-header.ts';
+import { DEFAULT_AI_PROMPT_VARIANT, type AiPromptVariant } from '../../core/ai-prompt-variants.ts';
 import { Icon } from '../../components/icon.ts';
 import { AiPromptExchange, type AiPromptExchangeHandle } from '../../components/ai-prompt-exchange.ts';
-import { MarkdownContent } from '../../components/markdown-content.ts';
 import { MAX_AI_IMPORT_LENGTH } from '../../core/ai-json.ts';
 import { DEFAULT_SESSION_QUESTION_LIMIT } from './set-options.ts';
 import type { AiCardCategories, AiCardScope } from '../../core/ai-study-categories.ts';
 import { inputValue } from '../../core/dom.ts';
-import { parseFillBlankTemplate } from '../../core/fill-blank.ts';
 import { reviewAiPrompt, type ReviewAiImport, type ReviewAiPreferences } from './ai-import-format.ts';
 
 import { REVIEW_AI_FOCUSES, type ReviewAiFocus } from './ai-focus.ts';
 import { AiFocusChoices } from '../../components/ai-focus-choices.ts';
 import { AI_QUESTION_TYPES, allocateQuestions, DEFAULT_AI_WEIGHTS, equalizeQuestionWeights, normalizeQuestionWeights, questionCountProblem, questionMixProblem, questionTypeLabel, rebalanceQuestionWeights, type QuestionWeights, type AiQuestionType } from './ai-question-mix.ts';
-import { questionDisplayPrompt, type Question } from './question-model.ts';
+import { reviewAiQuestionPreview } from './ai-question-preview.ts';
+import { questionDisplayPrompt } from './question-model.ts';
 import { checkReviewResponse, reviewRetryPrompt, reviewBatchPrompt, ReviewAiRecoveryHelp } from './ai-import-recovery.ts';
 import type { ReviewResponseRecovery } from './ai-response-recovery.ts';
 
@@ -25,6 +31,7 @@ export const ReviewAiCreation = defineComponent({
   setup(props, { emit }) {
     const stage = ref<'scope' | 'categories' | 'configure' | 'generate' | 'direct' | 'review' | 'recovery'>('scope');
     const importedDirectly = ref(false);
+    const promptVariant = ref<AiPromptVariant>(DEFAULT_AI_PROMPT_VARIANT);
     const returningFromReview = ref(false);
     const scope = ref<AiCardScope | null>(null);
     const categories = ref<AiCardCategories | null>(null);
@@ -37,10 +44,13 @@ export const ReviewAiCreation = defineComponent({
     const batchOnly = ref(false);
     const retrying = ref(false);
     const acceptedCount = computed(() => candidate.value?.questions.length ?? 0);
+    function createPrompt(options: ReviewAiPreferences): string {
+      return reviewAiPrompt(options, scope.value, promptVariant.value);
+    }
     const batchPrompt = computed(() => {
       const remaining = preferences.value.count - acceptedCount.value;
       if (importedDirectly.value || remaining <= 0 || mixProblem.value) return '';
-      return reviewBatchPrompt(reviewAiPrompt({ ...preferences.value, count: Math.min(25, remaining) }, scope.value), candidate.value?.questions ?? []);
+      return reviewBatchPrompt(createPrompt({ ...preferences.value, count: Math.min(25, remaining) }), candidate.value?.questions ?? []);
     });
     const examPrep = computed(() => !importedDirectly.value && preferences.value.coverage === 'exam-prep');
     const selectiveCoverage = computed(() => !importedDirectly.value && preferences.value.coverage !== 'balanced');
@@ -77,7 +87,7 @@ export const ReviewAiCreation = defineComponent({
         ? allocateQuestions(normalizedMix.value, preferences.value.count) : null
       : counts.value);
     const total = computed(() => AI_QUESTION_TYPES.reduce((sum, type) => sum + preferences.value.weights[type], 0));
-    const prompt = computed(() => mixProblem.value ? '' : reviewAiPrompt(preferences.value, scope.value));
+    const prompt = computed(() => mixProblem.value ? '' : createPrompt(preferences.value));
     onMounted(() => heading.value?.focus());
     function commitWeight(type: AiQuestionType, input?: HTMLInputElement) {
       if (editingWeight.value !== type) return;
@@ -143,9 +153,10 @@ export const ReviewAiCreation = defineComponent({
       returningFromReview.value = false;
       go(result.issues.length || !result.candidate ? 'recovery' : 'review');
     }
+    const correctedFileInstructions = aiFullFileCorrectionInstructions('dynamic-learner-review.json');
     function countCorrection() {
       const coverage = examPrep.value ? 'EXAM PREP ONLY: keep ONLY material you are almost CERTAIN WILL be tested based on explicit exam evidence. IGNORE other material. Report missing strongly evidenced exam topics; never add speculative questions to meet the count.' : selectiveCoverage.value ? 'ESSENTIALS ONLY: keep core concepts and report omitted essentials; do not add minor details.' : 'If the count prevents full coverage, identify the uncovered topics.';
-      return `Return at most ${preferences.value.count} meaningful questions. Combine related concepts where useful; remove redundant questions without losing important distinctions. ${coverage} Report relevant gaps in confidence.uncoveredSubjects, adjust overallCoverage honestly, and return COMPLETE corrected JSON. Never exceed the requested question count.`;
+      return `Return at most ${preferences.value.count} meaningful questions. Combine related concepts where useful; remove redundant questions without losing important distinctions. ${coverage} Report relevant gaps in confidence.uncoveredSubjects, adjust overallCoverage honestly, and return COMPLETE corrected JSON. Never exceed the requested question count.\n\n${correctedFileInstructions}`;
     }
     function lowConfidencePrompt() {
       const result = candidate.value;
@@ -157,7 +168,8 @@ export const ReviewAiCreation = defineComponent({
         low.join('; ') + '. Re-evaluate WHY each is low. ' + coverage + 'If more questions would genuinely increase coverage or study value within the selected scope, regenerate up to ' +
         suggested + ' meaningful questions (never exceed this limit), including underrepresented subjects within the selected scope; preserve accurate, in-scope material and avoid filler. ' +
         'If the problem is insufficient source evidence, subject mismatch, or unknown exam content, clearly identify what additional study material is needed rather than claiming more questions will fix it. ' +
-        'Update all four confidence estimates, explanations and uncoveredSubjects honestly. Return the COMPLETE corrected JSON in the same schema; explanations must gently guide reasoning without giving away answers.';
+        'Update all four confidence estimates, explanations and uncoveredSubjects honestly. Return the COMPLETE corrected JSON in the same schema; explanations must gently guide reasoning without giving away answers.\n\n' +
+        correctedFileInstructions;
     }
     async function requestLowConfidence() {
       const message = lowConfidencePrompt();
@@ -183,31 +195,20 @@ export const ReviewAiCreation = defineComponent({
         correctionMessage.value = 'Copying was blocked. Select this request and send it to the same AI chat.';
       }
     }
-    function previewQuestion(question: Question, index: number) {
-      const answers = question.type === 'parameterized' ? (question.parameters?.rules.answers ?? []).map(answer => `${answer.label}: ${answer.expression ?? `Solver output ${answer.solverKey}`}`) : question.type === 'dropdown' ? (question.matches ?? []).map(row => `${row.label}: ${row.answer}`) :
-        question.type === 'fill-in-the-blanks' ? parseFillBlankTemplate(question.prompt).answers :
-        question.correctAnswers ?? [question.answer];
-      return h('li', { key: question.id }, [
-        h('span', { class: 'study-ai-muted' }, `${index + 1} · ${questionTypeLabel(question.type)}`),
-        h('strong', questionDisplayPrompt(question)),
-        question.context?.trim() ? h(MarkdownContent, { text: question.context, class: 'knowledge-question-context' }) : null,
-        question.type === 'dropdown' ? h('ul', (question.matches ?? []).map(row => h('li', row.label))) : null,
-        question.parameters?.rules.solver?.package ? h('p', { class: 'study-ai-muted' }, `Includes uploaded solver: ${question.parameters.rules.solver.package.label}. Code runs only when previewing or reviewing a generated variant.`) : null,
-        question.choices.length ? h('ul', question.choices.map(choice => h('li', choice))) : null,
-        question.type !== 'statement' ? h('details', [h('summary', 'Reveal answer'),
-          h('p', answers.join(' · ')), question.explanation ? h('p', question.explanation) : null]) : null,
-      ]);
-    }
     function workspace() {
       if (stage.value === 'categories') return h(AiCategoryPicker, {
-        key: 'categories', label: 'Review', destination: props.destination, initialCategories: categories.value,
+        key: 'categories', label: 'Review', targetApp: 'review', destination: props.destination, initialCategories: categories.value,
         onBack: () => go('scope', true), onCancel: () => emit('cancel'),
         onSelect: (selected: AiCardScope, list: AiCardCategories) => { scope.value = selected; categories.value = list; go('configure'); },
       });
       return h('section', { key: stage.value, class: 'study-ai-workspace review-ai-workspace' }, [
-        h('header', { class: 'study-ai-header' }, [
+        stage.value === 'configure' ? h(AiOptionsHeader, {
+          app: 'Review', destination: props.destination, title: 'Configure questions',
+          scope: scope.value?.category.title ?? 'Overall subject', onBack: back,
+          onCancel: () => emit('cancel'),
+        }) : h('header', { class: 'study-ai-header' }, [
           h('div', [h('p', { class: 'study-ai-muted' }, `Review · Saved in ${props.destination}`),
-            h('h2', { ref: heading, tabindex: -1 }, stage.value === 'scope' ? 'Create a knowledge set with AI' : stage.value === 'configure' ? 'Choose your question mix' : scope.value?.category.title ?? 'Overall subject'),
+            h('h2', { ref: heading, tabindex: -1 }, stage.value === 'scope' ? 'Create a knowledge set with AI' : scope.value?.category.title ?? 'Overall subject'),
             h('p', stage.value === 'scope'
               ? 'Choose how much of the material your questions should cover.'
               : scope.value?.category.description ?? 'Cover the overall subject using your chosen question-type strategy.'),
@@ -217,21 +218,21 @@ export const ReviewAiCreation = defineComponent({
             stage.value !== 'scope' ? h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel') }, 'Cancel') : null,
           ]),
         ]),
-        stage.value === 'scope' ? [h(AiScopeChoices, {
+        stage.value === 'scope' ? h(AiCreationScope, {
           onOverall: () => { scope.value = null; go('configure'); },
           onCategory: () => go('categories'),
-        }),
-          h('div', { class: 'study-ai-actions ai-scope-actions' }, [
-            h('button', { type: 'button', class: 'quiet-button outline-button', style: { width: 'auto', flex: '0 0 auto' }, onClick: () => { scope.value = null; go('direct'); } }, 'Import an AI response'),
-            h('button', { type: 'button', class: 'quiet-button', style: { width: 'auto', flex: '0 0 auto' }, onClick: () => emit('cancel') }, 'Cancel'),
-          ]),
-        ] : stage.value === 'configure' ? [
-          h('div', { class: 'review-ai-settings' }, [
-            h('label', [h('span', 'Total questions'), h('input', { type: 'number', min: 1, step: 1, value: preferences.value.count,
+          onDirect: () => { scope.value = null; go('direct'); },
+          onExit: () => emit('cancel'),
+        }) : stage.value === 'configure' ? [
+          h('div', { class: 'ai-options-grid' }, [
+            h(AiPromptStyleSelect, { value: promptVariant.value,
+              onSelect: value => { promptVariant.value = value; },
+            }),
+            h('label', { class: 'ai-options-field' }, [h('span', 'Total questions'), h('input', { type: 'number', min: 1, step: 1, value: preferences.value.count,
               onInput: (event: Event) => { preferences.value.count = Number(inputValue(event)); } }), h('small', { class: 'study-ai-muted' }, 'Number of questions the AI should make.')]),
-            h('label', [h('span', 'Coverage'), h('select', { value: preferences.value.coverage, onChange: (event: Event) => {
-              const value = inputValue(event); if (value === 'exam-prep' || value === 'essentials' || value === 'balanced') preferences.value.coverage = value;
-            } }, [h('option', { value: 'exam-prep' }, 'Exam prep only'), h('option', { value: 'essentials' }, 'Essentials only'), h('option', { value: 'balanced' }, 'Balanced')]), h('small', { class: 'study-ai-muted' }, 'Likely exam content, essential concepts, or a balanced review.')]),
+            h(AiCoverageSelect, { value: preferences.value.coverage,
+              onSelect: value => { preferences.value.coverage = value; },
+            }),
           ]),
           h('div', { class: 'review-ai-question-bank' }, [
             h('div', { class: 'review-ai-bank-counts' }, [
@@ -323,8 +324,7 @@ export const ReviewAiCreation = defineComponent({
           key: validationRevision.value, report: report.value, accepted: acceptedCount.value,
           repairPrompt: batchOnly.value ? batchPrompt.value : reviewRetryPrompt(report.value, preferences.value.count, acceptedCount.value),
           batchOnly: batchOnly.value,
-          batchPrompt: batchOnly.value || (!acceptedCount.value && preferences.value.count <= 25) ? '' : batchPrompt.value,
-          onRetry: () => returnToResponse(Boolean(candidate.value), true),
+          onRetry: () => returnToResponse(batchOnly.value && Boolean(candidate.value), true),
           onReview: () => { batchOnly.value = false; if (candidate.value) go('review'); },
           onBack: () => returnToResponse(false, false),
         }) : stage.value === 'review' && candidate.value ? h('div', { class: 'review-ai-final' }, [
@@ -367,7 +367,10 @@ export const ReviewAiCreation = defineComponent({
                   ]) : null,
               h('p', candidate.value.confidence.confidenceExplanation),
             ]),
-          ]) : h('p', { class: 'study-ai-muted' }, 'AI confidence estimates are unavailable for this set. Its coverage has not been assessed.'),
+          ]) : h(AiMissingConfidence, {
+            app: 'Review', items: candidate.value.questions.map(question => questionDisplayPrompt(question)),
+            onRetry: () => returnToResponse(false, true),
+          }),
           lowConfidenceMetrics.value.length ? h('section', { class: 'review-ai-difference', role: 'status' }, [
             h('strong', 'One or more confidence estimates are below 80%'),
             h('p', examPrep.value
@@ -383,6 +386,10 @@ export const ReviewAiCreation = defineComponent({
           ]) : null,
                     h('h3', candidate.value.title),
           h('p', candidate.value.description),
+          candidate.value.sourceUnits?.length ? h(AiSourceUnitCoverage, {
+            units: candidate.value.sourceUnits,
+            items: candidate.value.questions.map(q => questionDisplayPrompt(q)), itemLabel: 'questions',
+          }) : null,
           h('div', { class: 'review-ai-preview-counts', role: 'status' }, [
             !importedDirectly.value ? h('div', [h('strong', String(preferences.value.count)), h('span', 'Requested')]) : null,
             !importedDirectly.value ? h(Icon, { name: 'chevron' }) : null,
@@ -407,7 +414,8 @@ export const ReviewAiCreation = defineComponent({
             ].map(message => h('li', message))),
             report.value.issues.length ? h('button', { type: 'button', class: 'quiet-button', onClick: () => go('recovery') }, 'Fix remaining questions') : null,
           ]) : null,
-          batchPrompt.value && report.value && (report.value.issues.length || report.value.notices.length || report.value.recovered)
+          batchPrompt.value && report.value && (candidate.value.questions.length < preferences.value.count ||
+             report.value.issues.length || report.value.notices.length || report.value.recovered)
             ? h('details', { class: 'review-ai-warning-details' }, [
               h('summary', 'Add another batch'),
               h('p', 'Keep these questions and bring back a smaller batch from the same AI conversation.'),
@@ -424,7 +432,7 @@ export const ReviewAiCreation = defineComponent({
           ]) : null,
           h('details', { class: 'review-ai-questions-details', open: true }, [
             h('summary', `Preview all ${candidate.value.questions.length} questions`),
-            h('ol', { class: 'review-ai-preview' }, candidate.value.questions.map(previewQuestion)),
+            h('ol', { class: 'review-ai-preview' }, candidate.value.questions.map(reviewAiQuestionPreview)),
           ]),
           h('div', { class: 'study-ai-actions' }, [
             h('button', { type: 'button', class: 'quiet-button', onClick: back }, 'Back to response'),

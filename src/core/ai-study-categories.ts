@@ -1,4 +1,9 @@
 import { isRecord } from './validation.ts';
+import { AI_BOUNDED_INFERENCE_PROMPT } from './ai-source-inference.ts';
+import { AI_SOURCE_DIFFICULTY_PROMPT } from './ai-source-difficulty.ts';
+import { assertAiTarget, type AiTargetApp } from './ai-app-identity.ts';
+import { aiFileOutputInstructions } from './ai-file-output.ts';
+import { AI_SOURCE_UNITS_PROMPT } from './ai-source-units.ts';
 import { parseAiImportJson } from './ai-json.ts';
 const MAX_NAME_LENGTH = 120;
 
@@ -8,18 +13,24 @@ export interface AiCardCategory { key: string; title: string; description: strin
 export interface AiCardCategories { title: string; categories: AiCardCategory[] }
 export interface AiCardScope { subject: string; category: AiCardCategory }
 
-export function studyCategoriesPrompt(product = 'Index Cards'): string {
+export function studyCategoriesPrompt(product = 'Index Cards', targetApp: AiTargetApp = 'index-cards'): string {
   return `Using the source material I supplied immediately before this instruction, organize categories for Dynamic Learner ${product}. This step ONLY proposes categories; I will select one before generating study content.
 
 - Prefer the FEWEST useful categories that cover the source. Combine related short sections and overlapping topics; don't create a category for every heading. Keep genuinely different major topics separate.
-- Treat existing headings, chapters, and instructor-defined units as guidance, not strict boundaries. Keep their logical order, but merge, clarify, and rename headings when helpful. Resolve shorthand or uncertain labels from the actual content (e.g. "Carbohydrate (Issues?)" becomes "Carbohydrate Disorders" ONLY if disorders are covered).
+- Preserve explicitly named chapters, modules and sections in their original order. Do not merge distinct source units or invent missing unit headings; you may group closely related topics *within* each unit. Resolve shorthand or uncertain labels from the actual content (e.g. "Carbohydrate (Issues?)" becomes "Carbohydrate Disorders" ONLY if disorders are covered).
 - Keep categories minimal, but ACCOUNT FOR EVERY subject, subtopic, study-guide objective, question, and bullet in the source. Merging related material must NEVER drop a concept. Think like an instructor when grouping, without inventing unsupported content or filler.
 - Descriptions: one short plain-text phrase (3–8 words, at most 80 characters). No overlap, citations, Markdown, math markup, or application settings.
+- ${AI_BOUNDED_INFERENCE_PROMPT}
+- ${AI_SOURCE_DIFFICULTY_PROMPT}
+- ${AI_SOURCE_UNITS_PROMPT}
 
-Return ONLY one JSON code block:
+${aiFileOutputInstructions("dynamic-learner-categories.json")}
+
+The JSON file must match this structure:
 \`\`\`json
 {
   "format": "${STUDY_CATEGORIES_FORMAT}",
+  "targetApp": "${targetApp}",
   "version": 1,
   "title": "Subject title",
   "categories": [
@@ -35,9 +46,10 @@ export function categoryResponseJson(value: AiCardCategories): string {
   return JSON.stringify({ format: STUDY_CATEGORIES_FORMAT, version: 1, ...value }, null, 2);
 }
 
-export function parseStudyCategories(text: string): AiCardCategories {
+export function parseStudyCategories(text: string, targetApp?: AiTargetApp): AiCardCategories {
   const value = parseAiImportJson(text);
-  if (!isRecord(value) || Object.keys(value).some(key => !['format', 'version', 'title', 'categories'].includes(key)) ||
+  if (targetApp) assertAiTarget(value, targetApp);
+  if (!isRecord(value) || Object.keys(value).some(key => !['format', 'targetApp', 'version', 'title', 'categories'].includes(key)) ||
       value.format !== STUDY_CATEGORIES_FORMAT || value.version !== 1 ||
       typeof value.title !== 'string' || !value.title.trim() || value.title.trim().length > MAX_NAME_LENGTH ||
       !Array.isArray(value.categories) || !value.categories.length || value.categories.length > MAX_CATEGORIES) {

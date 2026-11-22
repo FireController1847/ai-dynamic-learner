@@ -1,8 +1,14 @@
 import { parseFillBlankTemplate } from '../../core/fill-blank.ts';
+import { aiFileOutputInstructions } from '../../core/ai-file-output.ts';
 import { isRecord } from '../../core/validation.ts';
-import { AI_COMPLETE_COVERAGE_PROMPT, parseAiSubjectCoverage, type AiSubjectCoverage } from '../../core/ai-subject-coverage.ts';
+import { assertAiTarget } from '../../core/ai-app-identity.ts';
+import { parseAiSubjectCoverage, type AiSubjectCoverage } from '../../core/ai-subject-coverage.ts';
 import { AI_PLAIN_TEXT_ONLY_GUIDANCE } from '../../core/ai-formatting-guidance.ts';
-import { AI_COVERAGE_INSTRUCTIONS, parseAiImportJson, type AiCardCoverage } from './ai-import-format.ts';
+import { parseAiImportJson, type AiCardCoverage } from './ai-import-format.ts';
+import { aiCoverageInstructions } from '../../core/ai-coverage.ts';
+import { AI_BOUNDED_INFERENCE_PROMPT } from '../../core/ai-source-inference.ts';
+import { AI_SOURCE_DIFFICULTY_PROMPT } from '../../core/ai-source-difficulty.ts';
+import { AI_SOURCE_UNITS_PROMPT, parseAiSourceUnits, type AiSourceUnit } from '../../core/ai-source-units.ts';
 import { MAX_CARDS, MAX_CARD_TEXT_LENGTH } from './card-model.ts';
 import { MAX_NAME_LENGTH } from './tree-model.ts';
 
@@ -12,6 +18,7 @@ export interface FillBlankCardsImport {
   title: string;
   cards: { text: string }[];
   coverage?: AiSubjectCoverage[];
+  sourceUnits?: AiSourceUnit[];
 }
 
 export function fillBlankAiPrompt(coverage: AiCardCoverage, limit: number, style: AiBlankStyle): string {
@@ -32,18 +39,24 @@ Make each card a useful recall challenge:
 - Keep the blank boundaries consistent too: hide the same meaningful term each time, not the full term on one card and only part of it on another. For example, if the source calls a concept "nullword", use {{nullword}} throughout rather than alternating with {{null}}. Adjust the visible sentence to fit the chosen answer naturally.
 - Preserve distinctions between genuinely different concepts. Change singular/plural or grammatical form only when the sentence requires it; consistency must not introduce factual or grammatical errors.
 - Do not invent facts, add citations, URLs, source markers, explanations, headings, IDs, or app settings.
+${AI_BOUNDED_INFERENCE_PROMPT}
+${AI_SOURCE_DIFFICULTY_PROMPT}
+${AI_SOURCE_UNITS_PROMPT}
 - Do not use nested braces, empty blanks, newlines inside a blank, or any brace characters outside {{answer}} markers.
 
 ${AI_PLAIN_TEXT_ONLY_GUIDANCE}
 
-Coverage depth: ${AI_COVERAGE_INSTRUCTIONS[coverage]} This controls DETAIL, never subject inclusion.
-${AI_COMPLETE_COVERAGE_PROMPT}
+Coverage depth: ${aiCoverageInstructions(coverage)} This controls DETAIL, never subject inclusion.
 Create at most ${limit} cards. Use fewer if the source does not support that many useful recall targets; never pad with filler.
 
-Return ONLY one JSON code block with this exact structure:
+${aiFileOutputInstructions("dynamic-learner-fill-in-the-blanks.json")}
+
+The JSON file must match this structure:
 \`\`\`json
 {
   "format": "${FILL_BLANK_IMPORT_FORMAT}",
+  "targetApp": "index-cards",
+  "sourceUnits": [],
   "version": 1,
   "title": "Short set title",
   "coverage": [{ "subject": "Chemical symbols", "itemNumbers": [1] }],
@@ -59,8 +72,9 @@ Use only the fields shown. The title must be 1–${MAX_NAME_LENGTH} characters. 
 
 export function parseFillBlankAiImport(text: string): FillBlankCardsImport {
   const value = parseAiImportJson(text);
+  assertAiTarget(value, 'index-cards');
   if (!isRecord(value) ||
-      Object.keys(value).some(key => !['format', 'version', 'title', 'cards', 'coverage'].includes(key)) ||
+      Object.keys(value).some(key => !['format', 'targetApp', 'version', 'title', 'cards', 'coverage', 'sourceUnits'].includes(key)) ||
       value.format !== FILL_BLANK_IMPORT_FORMAT || value.version !== 1 ||
       typeof value.title !== 'string' || !value.title.trim() || value.title.trim().length > MAX_NAME_LENGTH) {
     throw new Error('This is not a supported Fill in the Blanks import. Use the generated Fill in the Blanks prompt.');
@@ -86,5 +100,6 @@ export function parseFillBlankAiImport(text: string): FillBlankCardsImport {
     return { text: source };
   });
   const subjectCoverage = value.coverage === undefined ? undefined : parseAiSubjectCoverage(value.coverage, cards.length);
-  return { title: value.title.trim(), cards, coverage: subjectCoverage };
+  const sourceUnits = parseAiSourceUnits(value.sourceUnits, cards.length);
+  return { title: value.title.trim(), cards, coverage: subjectCoverage, ...(sourceUnits ? { sourceUnits } : {}) };
 }

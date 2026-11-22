@@ -2,14 +2,23 @@ import { computed, defineComponent, h, ref, type PropType } from 'vue';
 import { useAiRecovery } from '../../components/use-ai-recovery.ts';
 import { readAiResponse, type AiCollectionOptions } from '../../core/ai-response-recovery.ts';
 import { AiPromptExchange, type AiPromptExchangeHandle } from '../../components/ai-prompt-exchange.ts';
-import { AiScopeChoices } from '../../components/ai-scope-choices.ts';
+import { AiCreationScope } from '../../components/ai-creation-scope.ts';
+import { AiCoverageSelect } from '../../components/ai-coverage-select.ts';
+import { AiPromptStyleSelect } from '../../components/ai-prompt-style-select.ts';
+import { AiOptionsHeader } from '../../components/ai-options-header.ts';
+import { DEFAULT_AI_PROMPT_VARIANT, simpleAiPrompt, type AiPromptVariant } from '../../core/ai-prompt-variants.ts';
 import { AiFocusChoices } from '../../components/ai-focus-choices.ts';
 import { AiCategoryPicker } from '../../components/ai-category-picker.ts';
 import { categoryScopedPrompt, type AiCardScope, type AiCardCategories } from '../../core/ai-study-categories.ts';
 import { MAX_AI_IMPORT_LENGTH } from '../../core/ai-json.ts';
-import { AI_COMPLETE_COVERAGE_PROMPT, parseAiSubjectCoverage, type AiSubjectCoverage } from '../../core/ai-subject-coverage.ts';
+import { parseAiSubjectCoverage, type AiSubjectCoverage } from '../../core/ai-subject-coverage.ts';
+import { aiCoverageInstructions, type AiCoverageLevel } from '../../core/ai-coverage.ts';
 import { inputValue } from '../../core/dom.ts';
+import { AI_BOUNDED_INFERENCE_PROMPT } from '../../core/ai-source-inference.ts';
+import { AI_SOURCE_DIFFICULTY_PROMPT } from '../../core/ai-source-difficulty.ts';
+import { AI_SOURCE_UNITS_PROMPT, parseAiSourceUnits, type AiSourceUnit } from '../../core/ai-source-units.ts';
 import { isRecord } from '../../core/validation.ts';
+import { assertAiTarget } from '../../core/ai-app-identity.ts';
 import { AI_PLAIN_TEXT_ONLY_GUIDANCE } from '../../core/ai-formatting-guidance.ts';
 import { parseAiTeachingLesson } from './ai-teaching-schema.ts';
 import { parseAiSolvers } from '../knowledge-check/ai-parameterized-format.ts';
@@ -36,12 +45,10 @@ const TEACHING_IMPORT_VERSION = 2;
 const MAX_IMPORT_BULLET_DEPTH = 7;
 const JSON_FENCE = '```';
 
-type PromptDetail = 'concise' | 'balanced' | 'detailed';
-type PromptCoverage = 'essentials' | 'balanced' | 'comprehensive';
+type PromptCoverage = AiCoverageLevel;
 type PromptBulletStyle = 'phrases' | 'thoughts';
 
 export interface GuideAiPromptOptions {
-  detail: PromptDetail;
   coverage: PromptCoverage;
   bulletStyle: PromptBulletStyle;
   mixMode?: TeachingMixMode;
@@ -59,6 +66,7 @@ export interface SimpleListGuideImport {
   mode: 'list';
   title: string;
   coverage?: AiSubjectCoverage[];
+  sourceUnits?: AiSourceUnit[];
   confidence: GuideAiConfidence | null;
   sections: SimpleGuideImportSection[];
 }
@@ -78,6 +86,7 @@ export interface SimpleMapGuideImport {
   /** One theme for the full generated map, optional for legacy AI responses. */
   background?: GuideMapPattern;
   coverage?: AiSubjectCoverage[];
+  sourceUnits?: AiSourceUnit[];
   confidence: GuideAiConfidence | null;
   startTopic: string;
   topics: SimpleMapGuideImportTopic[];
@@ -87,21 +96,8 @@ export interface SimpleMapGuideImport {
 export type SimpleGuideImport = SimpleListGuideImport | SimpleMapGuideImport;
 
 const DEFAULT_PROMPT_OPTIONS: GuideAiPromptOptions = {
-  detail: 'balanced',
   coverage: 'balanced',
   bulletStyle: 'thoughts',
-};
-
-const DETAIL_INSTRUCTIONS: Record<PromptDetail, string> = {
-  concise: 'Keep only high-priority material. Aggressively condense and omit secondary detail.',
-  balanced: 'Keep high- and moderate-priority material. Be selective: simple points are preferred, and minor details, examples, and edge cases may be omitted.',
-  detailed: 'Keep all genuinely useful study material, including lower-priority supporting details, while still writing notes rather than textbook prose.',
-};
-
-const COVERAGE_INSTRUCTIONS: Record<PromptCoverage, string> = {
-  essentials: 'Cover only the core concepts needed to understand and remember the material.',
-  balanced: 'Cover the major ideas plus supporting details that directly help understanding or recall. Do not try to preserve every fact.',
-  comprehensive: 'Cover the material broadly, including useful distinctions and supporting details, but skip redundancy and trivia.',
 };
 
 const BULLET_STYLE_INSTRUCTIONS: Record<PromptBulletStyle, string> = {
@@ -119,13 +115,15 @@ Write in the style of a capable student taking organized notes during class: com
 
 ${planning}
 
+${AI_BOUNDED_INFERENCE_PROMPT}
+${AI_SOURCE_DIFFICULTY_PROMPT}
+${AI_SOURCE_UNITS_PROMPT}
+
 Selected preferences:
-- Detail: ${DETAIL_INSTRUCTIONS[options.detail]}
-- Coverage: ${COVERAGE_INSTRUCTIONS[options.coverage]}
+- Coverage: ${aiCoverageInstructions(options.coverage)}
 - Bullet style: ${BULLET_STYLE_INSTRUCTIONS[options.bulletStyle]}
 
-Condense redundant wording, NEVER omit a source subject or subtopic. If the material exceeds application limits, ask for batches rather than silently dropping topics.
-${AI_COMPLETE_COVERAGE_PROMPT}
+Condense redundant wording. Respect the selected coverage level; explain omitted important topics rather than silently dropping them. If the material exceeds application limits, ask for batches.
 ${GUIDE_CONFIDENCE_PROMPT}
 For Guide, coverage itemNumbers are 1-based section indices in List mode and 1-based topic indices in Map mode.
 
@@ -143,6 +141,8 @@ Write the following illustrative JSON STRUCTURE into the downloadable file (the 
 ${JSON_FENCE}json
 {
   "format": "${LIST_IMPORT_FORMAT}",
+  "targetApp": "guide",
+  "sourceUnits": [],
   "version": ${IMPORT_VERSION},
   "title": "Short guide title",
   "coverage": [{ "subject": "Specific source topic", "itemNumbers": [1] }],
@@ -272,7 +272,7 @@ function parsedJson(text: string): unknown {
 
 function parseListImport(value: unknown): SimpleListGuideImport {
   if (!isRecord(value) ||
-      Object.keys(value).some((key) => !['format', 'version', 'title', 'sections', 'coverage', 'confidence'].includes(key)) ||
+      Object.keys(value).some((key) => !['format', 'targetApp', 'version', 'title', 'sections', 'coverage', 'confidence', 'sourceUnits'].includes(key)) ||
       (value.format !== LIST_IMPORT_FORMAT && value.format !== LEGACY_LIST_IMPORT_FORMAT) || value.version !== IMPORT_VERSION ||
       typeof value.title !== 'string' || !value.title.trim() || value.title.trim().length > MAX_NAME_LENGTH) {
     throw new Error('This is not a supported List-mode Guide import.');
@@ -284,12 +284,13 @@ function parseListImport(value: unknown): SimpleListGuideImport {
     sections: parseImportSections(value.sections, state, 'Guide'),
     confidence: parseGuideConfidence(value.confidence),
     coverage: value.coverage === undefined ? undefined : parseAiSubjectCoverage(value.coverage, Array.isArray(value.sections) ? value.sections.length : 0),
+    sourceUnits: parseAiSourceUnits(value.sourceUnits, Array.isArray(value.sections) ? value.sections.length : 0),
   };
 }
 
 function parseMapImport(value: unknown): SimpleMapGuideImport {
   if (!isRecord(value) ||
-      Object.keys(value).some((key) => !['format', 'version', 'title', 'startTopic', 'topics', 'connections', 'coverage', 'confidence', 'solvers', 'background'].includes(key)) ||
+      Object.keys(value).some((key) => !['format', 'targetApp', 'version', 'title', 'startTopic', 'topics', 'connections', 'coverage', 'confidence', 'solvers', 'background', 'sourceUnits'].includes(key)) ||
       (value.format !== MAP_IMPORT_FORMAT && value.format !== LEGACY_MAP_IMPORT_FORMAT) ||
       (value.version !== IMPORT_VERSION && value.version !== TEACHING_IMPORT_VERSION) ||
       typeof value.title !== 'string' || !value.title.trim() || value.title.trim().length > MAX_NAME_LENGTH ||
@@ -404,11 +405,13 @@ function parseMapImport(value: unknown): SimpleMapGuideImport {
   return { mode: 'map', title: value.title.trim(), startTopic, topics, connections,
     ...(background ? { background } : {}),
     confidence: parseGuideConfidence(value.confidence),
-    coverage: value.coverage === undefined ? undefined : parseAiSubjectCoverage(value.coverage, topics.length) };
+    coverage: value.coverage === undefined ? undefined : parseAiSubjectCoverage(value.coverage, topics.length),
+    sourceUnits: parseAiSourceUnits(value.sourceUnits, topics.length) };
 }
 
 export function parseGuideAiImport(text: string, mode: GuideMode = 'list'): SimpleGuideImport {
   const value = parsedJson(text);
+  assertAiTarget(value, 'guide');
   return mode === 'map' ? parseMapImport(value) : parseListImport(value);
 }
 
@@ -432,6 +435,7 @@ function guideRecoveryOptions(mode: GuideMode, direct: boolean, title: string): 
   return {
     field: map ? 'topics' : 'sections',
     formats: map ? [MAP_IMPORT_FORMAT, LEGACY_MAP_IMPORT_FORMAT] : [LIST_IMPORT_FORMAT, LEGACY_LIST_IMPORT_FORMAT],
+    targetApp: 'guide',
     versions: map ? [TEACHING_IMPORT_VERSION, IMPORT_VERSION] : [IMPORT_VERSION],
     title, maxItems: map ? MAX_TOPICS : MAX_SECTIONS,
     requiredMetadata: direct ? [] : ['coverage', 'confidence'],
@@ -481,7 +485,8 @@ export const GuideAiImportWorkspace = defineComponent({
   },
   emits: { back: () => true, cancel: () => true, import: (_value: SimpleGuideImport) => true },
   setup(props, { emit }) {
-    const stage = ref<'scope' | 'categories' | 'exchange' | 'review'>(props.direct ? 'exchange' : 'scope');
+    const directImport = ref(props.direct);
+    const stage = ref<'scope' | 'categories' | 'configure' | 'exchange' | 'review'>(directImport.value ? 'exchange' : 'scope');
     const candidate = ref<SimpleGuideImport | null>(null);
     const returningFromReview = ref(false);
     const chosenScope = ref<AiCardScope | null>(null);
@@ -491,13 +496,18 @@ export const GuideAiImportWorkspace = defineComponent({
       if (stage.value === 'review') { returningFromReview.value = true; stage.value = 'exchange'; }
       else if (stage.value === 'exchange') {
         if (exchangeRef.value?.goBack()) return;
-        if (props.direct) { emit('back'); return; }
+        if (directImport.value) {
+          if (props.direct) emit('back');
+          else { directImport.value = false; stage.value = 'scope'; }
+          return;
+        }
         recovery.reset();
-        stage.value = chosenScope.value ? 'categories' : 'scope';
-      } else if (stage.value === 'categories') stage.value = 'scope';
+        stage.value = 'configure';
+      } else if (stage.value === 'configure') stage.value = chosenScope.value ? 'categories' : 'scope';
+      else if (stage.value === 'categories') stage.value = 'scope';
       else emit('back');
     }
-    const detail = ref<PromptDetail>(DEFAULT_PROMPT_OPTIONS.detail);
+    const promptVariant = ref<AiPromptVariant>(DEFAULT_AI_PROMPT_VARIANT);
     const coverage = ref<PromptCoverage>(DEFAULT_PROMPT_OPTIONS.coverage);
     const bulletStyle = ref<PromptBulletStyle>(DEFAULT_PROMPT_OPTIONS.bulletStyle);
     const mixMode = ref<TeachingMixMode>('ai');
@@ -518,29 +528,44 @@ export const GuideAiImportWorkspace = defineComponent({
     const allocations = computed(() => mixError.value || mixMode.value !== 'custom' ? null : allocateTeachingBlocks(weights.value, targetBlocks.value));
     const json = ref('');
     const problem = ref('');
-    const prompt = computed(() => mixError.value ? '' : guideAiPrompt({
-      detail: detail.value, coverage: coverage.value, bulletStyle: bulletStyle.value,
+    const prompt = computed(() => mixError.value ? '' : (promptVariant.value === 'simple' ? simpleAiPrompt(guideAiPrompt({
+      coverage: coverage.value, bulletStyle: bulletStyle.value,
       mixMode: mixMode.value, aiFocus: aiFocus.value,
       targetBlocks: targetBlocks.value, weights: weights.value,
-    }, props.mode, chosenScope.value));
+    }, props.mode, chosenScope.value), 'Guide',
+       `Make a ${props.mode === 'map' ? 'Map lesson' : 'List guide'}${chosenScope.value ? ' for ' + chosenScope.value.category.title : ' for the overall subject'}. Coverage: ${coverage.value}.`,
+       props.mode === 'map' ? [
+         `Use approximately ${targetBlocks.value} Teaching Blocks over 5–7 connected stops with prerequisites taught before checks.`,
+         `Teaching mix: ${mixMode.value === 'ai' ? 'AI chooses' : TEACHING_TYPES.map(t => t + ' ' + weights.value[t] + '%').join(', ')}. Focus: ${aiFocus.value}.`,
+         'Keep a connected tree: every topic is reachable; N topics have N−1 links. Use valid stop positions or omit them all.',
+         'Use teaching examples, comparisons, and guided practice; for procedural numeric problems use safe parameterized rules or solvers only when supported.',
+         'Include valid lesson.blocks, coverage, confidence, and a suitable background.',
+       ] : [
+         `Bullet style: ${bulletStyle.value}. Use concise nested sections and cover the selected source material.`,
+         'Include coverage and confidence; do not exceed section, bullet, or nesting limits.',
+       ]) : guideAiPrompt({
+      coverage: coverage.value, bulletStyle: bulletStyle.value,
+      mixMode: mixMode.value, aiFocus: aiFocus.value,
+      targetBlocks: targetBlocks.value, weights: weights.value,
+    }, props.mode, chosenScope.value)));
     const recoveryMode = ref<GuideMode>(props.mode);
     const recovery = useAiRecovery<SimpleGuideImport>(
-      () => guideRecoveryOptions(recoveryMode.value, props.direct, chosenScope.value?.category.title ?? 'AI Guide'),
+      () => guideRecoveryOptions(recoveryMode.value, directImport.value, chosenScope.value?.category.title ?? 'AI Guide'),
       () => 'Guide', () => recoveryMode.value === 'map' ? 'topics' : 'sections',
       value => { candidate.value = value; returningFromReview.value = false; stage.value = 'review'; },
-      () => { json.value = ''; }, () => recoveryMode.value === 'list',
+      () => { json.value = ''; },
     );
     function importValidated() {
       problem.value = '';
       candidate.value = null;
-      if (props.direct && !recovery.retrying.value) {
+      if (directImport.value && !recovery.retrying.value) {
         recoveryMode.value = 'list';
         try { readAiResponse(json.value, 'sections'); }
         catch {
           try { readAiResponse(json.value, 'topics'); recoveryMode.value = 'map'; }
           catch { recoveryMode.value = props.mode; }
         }
-      } else if (!props.direct) recoveryMode.value = props.mode;
+      } else if (!directImport.value) recoveryMode.value = props.mode;
       recovery.check(json.value);
     }
     function optionField<T extends string>(
@@ -551,7 +576,7 @@ export const GuideAiImportWorkspace = defineComponent({
       change: (value: T) => void,
       explanation: string,
     ) {
-      return h('label', { for: id, class: 'guide-ai-option' }, [
+      return h('label', { for: id, class: 'ai-options-field' }, [
         h('span', label),
         h('select', {
           id,
@@ -564,37 +589,110 @@ export const GuideAiImportWorkspace = defineComponent({
       ]);
     }
 
+    function renderOptions() {
+      return h('div', { class: 'ai-options-body' }, [
+        h('div', { class: 'ai-options-grid' }, [
+          h(AiPromptStyleSelect, { value: promptVariant.value, onSelect: value => { promptVariant.value = value; } }),
+          props.mode === 'map' ? h('label', { class: 'ai-options-field' }, [
+            h('span', 'Target Teaching Blocks'),
+            h('input', { type: 'number', min: 1, max: 80, step: 1, value: targetBlocks.value,
+              onInput: (event: Event) => { targetBlocks.value = Number(inputValue(event)); } }),
+            h('small', { class: 'study-ai-muted' }, chosenScope.value
+              ? 'Aim for exactly this many blocks across 5–7 stops, unless the source requires fewer.'
+              : 'Approximate total across 5–7 stops (normally ' +
+                overallTeachingBlockRange(targetBlocks.value).min + '–' +
+                overallTeachingBlockRange(targetBlocks.value).max + ' blocks).'),
+          ]) : null,
+          h(AiCoverageSelect, { value: coverage.value, fieldClass: 'ai-options-field',
+            onSelect: value => { coverage.value = value; },
+          }),
+          props.mode === 'list' ? optionField('guide-ai-bullet-style', 'Bullet style', bulletStyle.value, [
+            { value: 'phrases', label: 'Key phrases' },
+            { value: 'thoughts', label: 'Complete thoughts' },
+          ], value => { bulletStyle.value = value; }, 'List mode retains the classic notes format.') : null,
+        ]),
+        props.mode === 'map' ? h('fieldset', { class: 'ai-options-section' }, [
+          h('legend', 'Teaching block types'),
+          h('label', { class: 'ai-options-mode' }, [
+            h('input', { type: 'radio', name: 'guide-ai-mix-mode', checked: mixMode.value === 'ai',
+              onChange: () => { mixMode.value = 'ai'; } }),
+            h('span', [h('strong', 'Let AI choose'),
+              h('span', 'Choose suitable teaching activities based on the source.')]),
+          ]),
+          h('label', { class: 'ai-options-mode' }, [
+            h('input', { type: 'radio', name: 'guide-ai-mix-mode', checked: mixMode.value === 'custom',
+              onChange: () => { mixMode.value = 'custom'; } }),
+            h('span', [h('strong', 'Custom percentages'),
+              h('span', 'Set how many Teaching Blocks of each type you want.')]),
+          ]),
+          mixMode.value === 'ai' ? h(AiFocusChoices, {
+            options: GUIDE_AI_FOCUSES, value: aiFocus.value, name: 'guide-ai-focus',
+            onSelect: (id: string) => { aiFocus.value = id as GuideAiFocus; },
+          }) : null,
+          mixMode.value === 'custom' ? h('div', { class: 'guide-ai-weight-list' },
+            TEACHING_TYPES.map(kind => h('label', { class: 'guide-ai-weight-row', key: kind }, [
+              h('span', kind.replace(/-/g, ' ')),
+              h('input', { type: 'number', min: 0, max: 100, step: 1,
+                'aria-label': kind + ' teaching block percentage', value: weights.value[kind],
+                onChange: (event: Event) => {
+                  weights.value = rebalanceTeachingWeights(weights.value, kind, Number(inputValue(event)));
+                } }),
+              h('span', '%'),
+              allocations.value ? h('small', '≈ ' + allocations.value[kind]) : null,
+            ]))) : null,
+          mixError.value ? h('p', { class: 'guide-ai-mix-error', role: 'alert' }, mixError.value) : null,
+        ]) : null,
+      ]);
+    }
+
     return () => stage.value === 'categories' ? h(AiCategoryPicker, {
-      key: 'guide-categories', label: 'Guide', destination: props.destination,
+      key: 'guide-categories', label: 'Guide', targetApp: 'guide', destination: props.destination,
       initialCategories: categoryList.value, onBack: () => { stage.value = 'scope'; },
       onCancel: () => emit('cancel'),
       onSelect: (selected: AiCardScope, list: AiCardCategories) => {
-        chosenScope.value = selected; categoryList.value = list; stage.value = 'exchange';
+        chosenScope.value = selected; categoryList.value = list; stage.value = 'configure';
       },
     }) : stage.value === 'review' && candidate.value ? h(GuideAiReview, {
-      candidate: candidate.value, direct: props.direct,
-      targetBlocks: !props.direct && props.mode === 'map' ? targetBlocks.value : 0,
+      candidate: candidate.value, direct: directImport.value,
+      targetBlocks: !directImport.value && props.mode === 'map' ? targetBlocks.value : 0,
       overall: chosenScope.value === null,
       onBack: back, onCancel: () => emit('cancel'),
       onCreate: () => { if (candidate.value) emit('import', candidate.value); },
-    }) : h('section', { class: 'guide-ai-workspace', 'aria-labelledby': 'guide-ai-title' }, [
-      h('header', { class: 'guide-ai-header' }, [
+    }) : h('section', { class: 'guide-ai-workspace study-ai-workspace', 'aria-labelledby': 'guide-ai-title' }, [
+      stage.value === 'configure' ? h(AiOptionsHeader, {
+        app: 'Guide', destination: props.destination,
+        title: 'Configure ' + (props.mode === 'map' ? 'map guide' : 'list guide'),
+        headingId: 'guide-ai-title',
+        scope: chosenScope.value?.category.title ?? 'Overall subject',
+        onBack: back, onCancel: () => emit('cancel'),
+      }) : h('header', { class: 'guide-ai-header' }, [
         h('div', { class: 'guide-ai-heading' }, [
-          h('span', { class: 'guide-ai-kicker' }, `${props.direct ? 'Existing AI response' : props.mode === 'map' ? 'Map mode' : 'List mode'} · Saved in ${props.destination}`),
+          h('span', { class: 'guide-ai-kicker' }, `${directImport.value ? 'Existing AI response' : props.mode === 'map' ? 'Map mode' : 'List mode'} · Saved in ${props.destination}`),
           h('h2', { id: 'guide-ai-title' }, stage.value === 'scope' ? 'Choose what to teach' : chosenScope.value?.category.title ?? 'Create with AI'),
-          h('p', props.direct ? 'Import an existing AI response.' : stage.value === 'scope' ? 'Choose between the overall subject and a specific category, just like Review.' : chosenScope.value?.category.description ?? 'Prepare a Guide from your source material with AI.'),
+          h('p', directImport.value ? 'Import an existing AI response.' : stage.value === 'scope' ? 'Choose between the overall subject and a specific category, just like Review.' : chosenScope.value?.category.description ?? 'Prepare a Guide from your source material with AI.'),
         ]),
         h('div', { class: 'guide-ai-actions' }, [
           h('button', { type: 'button', class: 'quiet-button', onClick: back }, 'Back'),
           h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel') }, 'Cancel'),
         ]),
       ]),
-      stage.value === 'scope' ? h(AiScopeChoices, {
-        onOverall: () => { chosenScope.value = null; stage.value = 'exchange'; },
+      stage.value === 'scope' ? h(AiCreationScope, {
+        showExit: false,
+        onOverall: () => { chosenScope.value = null; directImport.value = false; stage.value = 'configure'; },
         onCategory: () => { stage.value = 'categories'; },
-      }) : h(AiPromptExchange, {
-        ref: exchangeRef, idPrefix: 'guide-ai', label: 'Guide', prompt: prompt.value, json: json.value, problem: problem.value, startInImport: props.direct || returningFromReview.value, importOnly: props.direct,
-        hasPreview: false, showReviewStep: !props.direct,
+        onDirect: () => {
+          chosenScope.value = null; directImport.value = true; recovery.reset();
+          json.value = ''; candidate.value = null; stage.value = 'exchange';
+        },
+      }) : stage.value === 'configure' ? h('div', { class: 'ai-options-configuration' }, [
+        renderOptions(),
+        h('div', { class: 'guide-ai-actions' }, [
+          h('button', { type: 'button', class: 'card-primary-button', disabled: Boolean(mixError.value),
+            onClick: () => { if (!mixError.value) stage.value = 'exchange'; } }, 'Continue to AI'),
+        ]),
+      ]) : h(AiPromptExchange, {
+        ref: exchangeRef, idPrefix: 'guide-ai', label: 'Guide', prompt: prompt.value, json: json.value, problem: problem.value, startInImport: directImport.value || returningFromReview.value, importOnly: directImport.value,
+        hasPreview: false, showReviewStep: !directImport.value,
         skipSource: Boolean(chosenScope.value),
         preferFileImport: true, allowRawResponseFile: true, recovering: recovery.active.value, maxLength: MAX_AI_IMPORT_LENGTH,
         promptHelp: 'Create a guided interactive lesson from your source, using Teaching Blocks and an exploratory map.',
@@ -604,61 +702,7 @@ export const GuideAiImportWorkspace = defineComponent({
         onValidate: importValidated,
       }, {
         recovery: recovery.panel,
-        options: () => h('div', { class: 'guide-ai-options' }, [
-              optionField('guide-ai-detail', 'Detail', detail.value, [
-                { value: 'concise', label: 'Concise' },
-                { value: 'balanced', label: 'Balanced' },
-                { value: 'detailed', label: 'Detailed' },
-              ], (value) => { detail.value = value; }, 'How much information appears within each section.'),
-              optionField('guide-ai-coverage', 'Coverage', coverage.value, [
-                { value: 'essentials', label: 'Essentials only' },
-                { value: 'balanced', label: 'Balanced' },
-                { value: 'comprehensive', label: 'Comprehensive' },
-              ], (value) => { coverage.value = value; }, 'Key ideas only or more of the subject.'),
-              props.mode === 'list' ? optionField('guide-ai-bullet-style', 'Bullet style', bulletStyle.value, [
-                { value: 'phrases', label: 'Key phrases' },
-                { value: 'thoughts', label: 'Complete thoughts' },
-              ], (value) => { bulletStyle.value = value; }, 'List mode retains the classic notes format.') : null,
-              props.mode === 'map' ? h('div', { class: 'guide-ai-teaching-settings' }, [
-                h('h3', 'Teaching Blocks mix'),
-                h('p', { class: 'study-ai-muted' },
-                  'Like Review, let AI choose the best types or specify your own weighted distribution. Teaching Blocks help explain concepts before Review assesses them.'),
-                h('div', { class: 'guide-ai-mix-modes', role: 'group', 'aria-label': 'Teaching block selection strategy' }, [
-                  ...([['ai', 'Let AI choose'], ['custom', 'Custom weighted mix']] as const).map(([value, label]) =>
-                    h('button', { type: 'button', class: 'quiet-button', key: value,
-                      'aria-pressed': mixMode.value === value, onClick: () => { mixMode.value = value; } }, label)),
-                ]),
-                mixMode.value === 'ai' ? h(AiFocusChoices, {
-                  options: GUIDE_AI_FOCUSES,
-                  value: aiFocus.value,
-                  name: 'guide-ai-focus',
-                  onSelect: (id: string) => { aiFocus.value = id as GuideAiFocus; },
-                }) : null,
-                h('label', { class: 'guide-ai-option' }, [
-                  h('span', 'Target total Teaching Blocks'),
-                  h('input', { type: 'number', min: 1, max: 80, step: 1, value: targetBlocks.value,
-                    onInput: (event: Event) => { targetBlocks.value = Number(inputValue(event)); } }),
-                  h('small', chosenScope.value
-                    ? 'Category: aim for exactly this total across 5–7 stops. Deviate only if the source makes it necessary. No filler.'
-                    : 'Overall: aim near this total across 5–7 stops (normally ' +
-                      overallTeachingBlockRange(targetBlocks.value).min + '–' +
-                      overallTeachingBlockRange(targetBlocks.value).max +
-                      ' blocks). Allow source-backed flexibility. No filler.'),
-                ]),
-                mixMode.value === 'custom' ? h('div', { class: 'guide-ai-weight-list' },
-                  TEACHING_TYPES.map(kind => h('label', { class: 'guide-ai-weight-row', key: kind }, [
-                    h('span', kind.replace(/-/g, ' ')),
-                    h('input', { type: 'number', min: 0, max: 100, step: 1,
-                      'aria-label': kind + ' teaching block percentage', value: weights.value[kind],
-                      onChange: (event: Event) => {
-                        weights.value = rebalanceTeachingWeights(weights.value, kind, Number(inputValue(event)));
-                      } }),
-                    h('span', '%'),
-                    allocations.value ? h('small', '≈ ' + allocations.value[kind]) : null,
-                  ]))) : null,
-                mixError.value ? h('p', { class: 'guide-ai-mix-error', role: 'alert' }, mixError.value) : null,
-              ]) : null,
-            ]),
+
 
       }),
     ]);

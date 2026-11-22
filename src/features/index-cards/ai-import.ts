@@ -3,6 +3,11 @@ import { useAiRecovery } from '../../components/use-ai-recovery.ts';
 import { MAX_CARDS } from './card-model.ts';
 import { AiPromptExchange } from '../../components/ai-prompt-exchange.ts';
 import { AiCoverageAcceptance } from '../../components/ai-coverage-acceptance.ts';
+import { AiSourceUnitCoverage } from '../../components/ai-source-unit-coverage.ts';
+import { AiCoverageSelect } from '../../components/ai-coverage-select.ts';
+import { AiPromptStyleSelect } from '../../components/ai-prompt-style-select.ts';
+import { AiOptionsHeader } from '../../components/ai-options-header.ts';
+import { DEFAULT_AI_PROMPT_VARIANT, simpleAiPrompt, type AiPromptVariant } from '../../core/ai-prompt-variants.ts';
 import { inputValue } from '../../core/dom.ts';
 import { maskFillBlankAnswers, parseFillBlankTemplate } from '../../core/fill-blank.ts';
 import { fillBlankAiPrompt, parseFillBlankAiImport, FILL_BLANK_IMPORT_FORMAT, type AiBlankStyle, type FillBlankCardsImport } from './fill-blank-ai-format.ts';
@@ -28,6 +33,8 @@ export const IndexCardsAiImport = defineComponent({
   },
   emits: { back: () => true, cancel: () => true, import: (_value: IndexCardsAiImportValue) => true },
   setup(props, { emit }) {
+    const stage = ref<'configure' | 'exchange'>(props.direct ? 'exchange' : 'configure');
+    const promptVariant = ref<AiPromptVariant>(DEFAULT_AI_PROMPT_VARIANT);
     const coverage = ref<AiCardCoverage>('balanced');
     const limit = ref(20);
     const blankStyle = ref<AiBlankStyle>('connected');
@@ -40,7 +47,17 @@ export const IndexCardsAiImport = defineComponent({
     const isFillBlank = computed(() => props.mode === 'fill-in-the-blanks');
     const prompt = computed(() => {
       const base = isFillBlank.value ? fillBlankAiPrompt(coverage.value, limit.value, blankStyle.value) : flashCardsAiPrompt(coverage.value, limit.value);
-      return props.scope ? categoryScopedPrompt(base, props.scope) : base;
+      const detailed = props.scope ? categoryScopedPrompt(base, props.scope) : base;
+      return promptVariant.value === 'simple' ? simpleAiPrompt(detailed, modeLabel.value,
+        `Create up to ${limit.value} ${isFillBlank.value ? 'Fill in the Blanks' : 'Flash Cards'} cards${props.scope ? ' for ' + props.scope.category.title : ''}. Coverage: ${coverage.value}.`,
+        isFillBlank.value ? [
+          `Blank style: ${blankStyle.value}. Put each correct answer inside {{answer}} and leave clear visible context.`,
+          'Use consistent terminology, short accurate statements, and source-supported facts.',
+          'Cover requested source objectives without padding with filler.',
+        ] : [
+          'Ask one clear recall question per card. Use answers of 1–5 words when possible, never long explanations.',
+          'Cover requested source objectives without padding with filler.',
+        ]) : detailed;
     });
     const longAnswers = computed(() => candidate.value?.mode === 'flash-cards'
       ? candidate.value.data.cards.filter(card => answerIsLong(card.answer)).length : 0);
@@ -53,7 +70,7 @@ export const IndexCardsAiImport = defineComponent({
           : { mode: 'flash-cards', data: parseFlashCardsAiImport(text) };
       }
       return {
-        field: 'cards', formats: [format], title: props.scope?.category.title ?? modeLabel.value,
+        field: 'cards', targetApp: 'index-cards', formats: [format], title: props.scope?.category.title ?? modeLabel.value,
         maxItems: Math.min(MAX_CARDS, props.remainingCards), parse,
         requiredMetadata: props.direct ? [] : ['coverage'],
         validateItem: entry => JSON.stringify(parse(JSON.stringify({ format, version: 1, title: 'Cards', cards: [entry] })).data.cards[0]),
@@ -81,8 +98,34 @@ export const IndexCardsAiImport = defineComponent({
       });
     }
 
-    return () => h('section', { class: 'flash-ai-workspace', 'aria-labelledby': 'flash-ai-title' }, [
-      h('header', { class: 'flash-ai-header' }, [
+    function renderOptions() { return h('div', { class: 'ai-options-grid' }, [
+            h(AiPromptStyleSelect, { value: promptVariant.value, fieldClass: 'ai-options-field',
+              onSelect: value => { promptVariant.value = value; },
+            }),
+            h('label', { class: 'ai-options-field' }, [h('span', 'Maximum cards'), h('select', {
+              value: limit.value, onChange: (event: Event) => {
+                const value = Number(inputValue(event));
+                if ([10, 20, 30, 50].includes(value)) limit.value = value;
+              },
+            }, [10, 20, 30, 50].map(value => h('option', { value }, String(value)))), h('small', 'An upper limit, not a required number of cards.')]),
+            h(AiCoverageSelect, { value: coverage.value, fieldClass: 'ai-options-field',
+              onSelect: value => { coverage.value = value; },
+            }),
+            isFillBlank.value ? h('label', { class: 'ai-options-field' }, [h('span', 'Blank style'), h('select', {
+              value: blankStyle.value, onChange: (event: Event) => {
+                const value = inputValue(event);
+                if (value === 'focused' || value === 'connected') blankStyle.value = value;
+              },
+            }, [h('option', { value: 'focused' }, 'One focused blank'), h('option', { value: 'connected' }, 'A few related blanks')]), h('small', 'One missing answer or several connected answers per card.')]) : null,
+          ]); }
+
+    return () => h('section', { class: 'flash-ai-workspace study-ai-workspace', 'aria-labelledby': 'flash-ai-title' }, [
+      stage.value === 'configure' ? h(AiOptionsHeader, {
+        app: modeLabel.value, destination: props.destination, title: 'Configure ' + modeLabel.value.toLowerCase(),
+        headingId: 'flash-ai-title',
+        scope: props.scope?.category.title ?? 'Overall subject',
+        onBack: () => emit('back'), onCancel: () => emit('cancel'),
+      }) : h('header', { class: 'flash-ai-header' }, [
         h('div', [
           h('p', { class: 'flash-ai-muted' }, `${modeLabel.value} · Saved in ${props.destination}`),
           h('h2', { id: 'flash-ai-title', ref: heading, tabindex: -1 }, props.scope?.category.title ?? (props.direct ? 'Import an AI response' : 'Overall subject')),
@@ -90,47 +133,38 @@ export const IndexCardsAiImport = defineComponent({
           h('p', { class: 'flash-ai-muted' }, props.scope?.category.description ?? ''),
         ]),
         h('div', { class: 'flash-ai-actions' }, [
-          h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('back') }, 'Back'),
+          h('button', { type: 'button', class: 'quiet-button', onClick: () => {
+            if (stage.value === 'exchange' && !props.direct) stage.value = 'configure';
+            else emit('back');
+          } }, 'Back'),
           h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('cancel') }, 'Cancel'),
         ]),
       ]),
-      h(AiPromptExchange, {
+      stage.value === 'configure' ? h('div', { class: 'ai-options-configuration' }, [
+        renderOptions(),
+        h('div', { class: 'study-ai-actions' }, [h('button', {
+          type: 'button', class: 'card-primary-button', onClick: () => { stage.value = 'exchange'; },
+        }, 'Continue to AI')]),
+      ]) : h(AiPromptExchange, {
         idPrefix: 'index-cards-ai', label: modeLabel.value, prompt: prompt.value, startInImport: props.direct, importOnly: props.direct, skipSource: Boolean(props.scope),
         json: json.value, problem: problem.value, maxLength: MAX_AI_IMPORT_LENGTH,
         hasPreview: candidate.value !== null,
         promptHelp: props.scope ? 'Create cards for your selected category.' : 'Create cards covering the overall subject.',
-        importHelp: 'Paste the response from your AI chat to preview the cards.',
+        importHelp: 'Upload or paste the AI response to preview the cards.',
         onUpdateJson: (value: string) => { json.value = value; candidate.value = null; coverageAccepted.value = false; problem.value = ''; },
         onValidate: preview,
         recovering: recovery.active.value,
       }, {
         recovery: recovery.panel,
-        options: () => h('div', { class: 'flash-ai-options' }, [
-            h('label', { class: 'flash-ai-option' }, [h('span', 'Coverage'), h('select', {
-              value: coverage.value,
-              onChange: (event: Event) => {
-                const value = inputValue(event);
-                if (value === 'essentials' || value === 'balanced' || value === 'comprehensive') coverage.value = value;
-              },
-            }, [h('option', { value: 'essentials' }, 'Essentials only'), h('option', { value: 'balanced' }, 'Balanced'),
-              h('option', { value: 'comprehensive' }, 'Comprehensive')]), h('small', 'How much to cover: just key facts, a balanced mix, or most of the material.')]),
-            h('label', { class: 'flash-ai-option' }, [h('span', 'Maximum cards'), h('select', {
-              value: limit.value, onChange: (event: Event) => {
-                const value = Number(inputValue(event));
-                if ([10, 20, 30, 50].includes(value)) limit.value = value;
-              },
-            }, [10, 20, 30, 50].map(value => h('option', { value }, String(value)))), h('small', 'An upper limit, not a required number of cards.')]),
-            isFillBlank.value ? h('label', { class: 'flash-ai-option' }, [h('span', 'Blank style'), h('select', {
-              value: blankStyle.value, onChange: (event: Event) => {
-                const value = inputValue(event);
-                if (value === 'focused' || value === 'connected') blankStyle.value = value;
-              },
-            }, [h('option', { value: 'focused' }, 'One focused blank'), h('option', { value: 'connected' }, 'A few related blanks')]), h('small', 'One missing answer or several connected answers per card.')]) : null,
-          ]),
         preview: () => candidate.value ? h('div', { class: 'flash-ai-preview', 'aria-label': `${modeLabel.value} preview` }, [
           h('h3', candidate.value.data.title),
           h('p', { role: 'status' }, `${candidate.value.data.cards.length} cards · ${modeLabel.value} · ${props.remainingCards} card spaces available`),
           longAnswers.value ? h('p', { class: 'flash-ai-muted' }, `${longAnswers.value} ${longAnswers.value === 1 ? 'answer exceeds' : 'answers exceed'} 10 words. Ask your AI to split those into shorter cards, or shorten them after import.`) : null,
+          candidate.value.data.sourceUnits?.length ? h(AiSourceUnitCoverage, {
+            units: candidate.value.data.sourceUnits,
+            items: candidate.value.data.cards.map(card => 'question' in card ? card.question : maskFillBlankAnswers(card.text)),
+            itemLabel: 'cards',
+          }) : null,
           h('ol', { class: 'flash-ai-cards' }, previewCards(candidate.value)),
           candidate.value.data.coverage ? h(AiCoverageAcceptance, { key: json.value, coverage: candidate.value.data.coverage,
             items: candidate.value.data.cards.map(card => 'question' in card ? card.question : card.text),

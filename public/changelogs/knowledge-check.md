@@ -1,3 +1,217 @@
+## v1.54.5
+
+<small data-utc="2026-11-22T17:56:56Z">November 22, 2026 at 10:56 AM MST</small>
+
+- **Statistics:** Removed the unstyled “Statistics by source unit” section from Review knowledge-set overviews and Study session reviews.
+- **Study Data:** Preserved question history and source-unit assignments; other statistics and AI source coverage remain available.
+
+<details>
+<summary>View 4 commits</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/32cccaf7ca9de51a4e560a2769fa9faac3646ba5">32cccaf7</a> — Remove source-unit statistics from Review knowledge-set overview</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/d60630071adc978343528a184f7025757d6aca38">d6063007</a> — Remove redundant source-unit statistics from Study session review</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/fb28c9bef8d71b8156025648c8390cdfb30279a7">fb28c9be</a> — Bump Review to v1.54.5 for source-unit statistics UI cleanup</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/2e9af1cd579e6c06621e877a8619c2a0f8003d93">2e9af1cd</a> — Remove unused source-unit statistics component</li>
+</ol>
+</details>
+
+## v1.54.4
+
+<small data-utc="2026-11-22T17:48:08Z">November 22, 2026 at 10:48 AM MST</small>
+
+- **Explanations:** Simple and Detailed prompts now require concise, source-grounded reasoning hints on every scored question, without disclosing answers. The shared examples include explanations for all scored types.
+- **Standalone Questions:** Both prompts explicitly prohibit references to external notes or lectures and require self-contained question wording.
+- **Answer Variety:** Both prompts call for varied multiple-choice answer positions and supported true/false outcomes instead of predictable first-choice or all-true patterns. Examples demonstrate alternate answer positions and a false statement.
+- **Simple Reasoning:** Short-answer questions now favor one brief, objectively gradable response, while related multi-part recall is better represented with matching or fill-in-the-blanks.
+- **Detailed Reasoning:** Matching-heavy sets receive a final assessment-design check for redundant tables, inflated answer workload, and opportunities for better application or recall questions without imposing rigid type quotas.
+- **Regression Testing:** Added prompt-contract and structural-example tests for explanations, self-contained wording, answer patterns, custom mixes, and model-specific guidance.
+
+<details>
+<summary>View 1 commit</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/4cf8645eb19fa25c8549dc7c8e5a0c1a1fb9c99c">4cf8645e</a> — Strengthen shared Review question quality and balance prompt-specific assessment design</li>
+</ol>
+</details>
+
+## v1.54.3
+
+<small data-utc="2026-11-22T17:29:56Z">November 22, 2026 at 10:29 AM MST</small>
+
+- **Prompt Consistency:** Simple and Detailed now use the same strict Review JSON contract for question types, required confidence values, chapter mapping, and optional parameterized solvers.
+- **Simple:** Shorter educational reasoning helps free AI chats choose useful question formats, respect source-supported question counts, and avoid repetitive or invented content.
+- **Detailed:** Richer instructional planning prioritizes meaningful coverage and assessment diversity without inflating matching-question workload.
+- **Parameterized:** AI-selected mixes demonstrate simpler expression rules, while explicitly requested parameterized questions retain full custom solver examples and constraints.
+- **Verification:** Added checks for identical JSON specifications across prompt styles, selected question types, exam/essentials scopes, and advanced solver support.
+
+<details>
+<summary>View 2 commits</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/6a6e091e4046dcc211cba0eef8daee43bb03986a">6a6e091e</a> — Share a strict JSON contract across model-specific Review reasoning prompts</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/a145f178bfa5bd55b0f801d12772a9a8c8318389">a145f178</a> — Publish Review v1.54.3 prompt-quality improvements</li>
+</ol>
+</details>
+
+## v1.54.2
+
+<small data-utc="2026-11-22T16:40:09Z">November 22, 2026 at 9:40 AM MST</small>
+
+- **Output Contract:** Simple AI instructions now mandate one complete, valid, downloadable UTF-8 JSON file with required fields; raw complete JSON is a fallback only when file attachment is technically unavailable.
+- **AI Corrections:** Normal fix requests demand the entire corrected file, including previously valid content and metadata. Only the separate batch workflow requests additional content.
+- **Question Count:** Direct Simple prompts toward the requested count when supported by the source, and offer another batch whenever a valid response falls short.
+- **Confidence:** Ask the AI for a complete updated JSON file when confidence is missing or needs improvement, retaining the separate estimate warning until usable values arrive.
+- **Validation:** Updated regression tests verify full-file correction language, confidence requirements, and explicit import-format behavior.
+
+<details>
+<summary>View 5 commits</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/bb5a8dc2c343621aa7de0fdf36beb374a87a3e2f">bb5a8dc2</a> — Require complete replacement JSON and strict Simple output contract</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/efa709f0ec009140e4500da50d2c1e66734f0e87">efa709f0</a> — Correct full-file retry paths and tests</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/1eaab9d099833399ce276d471ce9a9ba863cfb77">1eaab9d0</a> — Enable confidence reupload and missing-count batch access</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/74129eff1b709e1fd9b4e67752152de647366c59">74129eff</a> — Standardize count and confidence improvement file instructions</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/90c56dfc8a17c77389380d1bd691d02ee40aebfa">90c56dfc</a> — Correct Guide file-format request mode</li>
+</ol>
+</details>
+
+## v1.54.1
+
+<small data-utc="2026-11-22T02:39:48Z">November 21, 2026 at 7:39 PM MST</small>
+
+- **AI Prompts:** Clarify the exact source-unit JSON structure for Simple prompts only in apps that support it, avoiding confusing fields generated by free AI chats.
+- **JSON Recovery:** Isolate invalid optional metadata rather than dropping otherwise valid generated content or statistics; give explicit recovery notices.
+- **Confidence:** Keep valid AI confidence graphs when generated chapter metadata uses different fields; accept realistic chapter-level missing-topic descriptions.
+- **Source Units:** Recover sequential chapter mapping only when AI-reported question counts exactly match the accepted questions. Otherwise explain why chapter links were omitted.
+- **Validation:** Accept chapter-level missing-topic descriptions up to 1,000 characters while still rejecting invalid or fabricated confidence scores.
+- **Testing:** Add automated regression cases for malformed source units, missing-topic limits, and preserved confidence values.
+
+<details>
+<summary>View 5 commits</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/57a02a7f183f844ef4169b2c69843fa22089aa33">57a02a7f</a> — Isolate confidence and metadata validation; add regression tests</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/903f60a697391d915316b1fbb2821f438211635c">903f60a6</a> — Limit source-unit instructions to supported formats</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/f66a6fdf10382b4ac2b6b192b84360a606c021f6">f66a6fdf</a> — Correct metadata recovery typings</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/3420ca9e4f40f512df48dd32ed60aea321aeed24">3420ca9e</a> — Recover trustworthy sequential chapter counts</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/22098f9a371732750a906cb44eb4231121ad5f88">22098f9a</a> — Allow longer chapter-level missing-topic descriptions</li>
+</ol>
+</details>
+
+## v1.54.0
+
+<small data-utc="2026-11-22T02:20:42Z">November 21, 2026 at 7:20 PM MST</small>
+
+- **AI Prompts:** Require the complete four-metric confidence summary even when using Simple prompts intended for free AI chats.
+- **Confidence Review:** Show an explicit unavailable state rather than hiding missing or invalid statistics or guessing percentages.
+- **Recovery:** Request confidence estimates from the original AI conversation, paste and validate a confidence-only JSON reply, and restore all four graphs without regenerating study content.
+- **Accuracy:** Preserve warnings when source evidence is unavailable; imported AI confidence estimates remain subjective rather than independently verified.
+
+<details>
+<summary>View 1 commit</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/d8ab81e7a8abe6f66a621c33213bc3c04a4ce63c">d8ab81e7</a> — Restore missing AI confidence summaries with validated confidence-only replies</li>
+</ol>
+</details>
+
+## v1.53.4
+
+<small data-utc="2026-11-22T00:00:00Z">November 21, 2026 at 5:00 PM MST</small>
+
+- **AI Options:** Evenly distribute Simple and Detailed buttons across the full-width prompt row, aligning them with the settings underneath.
+
+<details>
+<summary>View 1 commit</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/f065acdefdac001c5d593284ffcff711e142212d">f065acde</a> — Stretch prompt choices evenly across the settings row</li>
+</ol>
+</details>
+
+## v1.53.3
+
+<small data-utc="2026-11-21T23:54:59Z">November 21, 2026 at 4:54 PM MST</small>
+
+- **AI Options:** Give Simple and Detailed prompts a separate full-width row above the other settings.
+- **Layout:** Allow counts, coverage, and app-specific inputs to keep their natural height in the responsive settings grid.
+
+<details>
+<summary>View 1 commit</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/b84ef344b73f607406f4791ff93d0a0c2aaa9581">b84ef344</a> — Separate prompt selection from the settings grid</li>
+</ol>
+</details>
+
+## v1.53.2
+
+<small data-utc="2026-11-21T23:49:51Z">November 21, 2026 at 4:49 PM MST</small>
+
+- **AI Setup:** Unify configuration screens around Review's header, two-column settings grid, and responsive grouped controls.
+- **Prompt Choice:** Keep Simple and Detailed equally available, with clear descriptions for free and paid external AI chats instead of premium-style cues.
+- **Categories:** Choose category-discovery prompt settings before starting the AI exchange.
+- **Review:** The options for adding questions now appear before the guided AI exchange.
+
+<details>
+<summary>View 2 commits</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/122e45de7b4191b41268b062623e1170e60392b2">122e45de</a> — Unify AI settings and clarify free/paid AI compatibility</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/ecff9dd67fd4530e67edd3f24bb31ab1d04fdd77">ecff9dd6</a> — Fix Review configuration title type check</li>
+</ol>
+</details>
+
+## v1.53.1
+
+<small data-utc="2026-11-21T23:39:25Z">November 21, 2026 at 4:39 PM MST</small>
+
+- **AI Prompts:** Default to the simpler prompt for free AI chats, with Detailed still available for larger paid AI models.
+- **UI/UX:** Replace the text-heavy prompt dropdown with compact selectable buttons and a subtle crown icon for Detailed.
+
+<details>
+<summary>View 1 commit</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/201b8fe4469c5a3cd250ffdd1cca3727e9b2a599">201b8fe4</a> — Default to Simple with a compact premium-style Detailed option</li>
+</ol>
+</details>
+
+## v1.53.0
+
+<small data-utc="2026-11-21T23:30:48Z">November 21, 2026 at 4:30 PM MST</small>
+
+- **AI Workflow:** Keep generation settings before the Source, Copy, Send, and Return steps, with Simple and Detailed prompt choices.
+- **Generation:** Match the source’s difficulty and permit cautious source-bounded inference while preserving Review-specific question types and mixes.
+- **Import:** Check the intended app before parsing, explain JSON errors, and retain earlier responses during correction.
+- **Source Units:** Track explicitly named chapters and modules through import, preview their reported coverage, and show actual question-exposure and Quiz/Test statistics per unit.
+
+<details>
+<summary>View 11 commits</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/d86b3dd76ba413919195ef8b690c8d4f744a33fa">d86b3dd7</a> — Move Guide and Index Cards settings before AI steps</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/40661a0745b24fb2c5528814a98f20a8a008900d">40661a07</a> — Identify target apps and guide direct imports</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/2c5d352cd6ab9c52ae757adddad1b716f3eb6434">2c5d352c</a> — Unify AI coverage choices</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/f38500843aeae770343d08f2c80e5fa61270959b">f3850084</a> — Support source-bounded inference</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/80377bcedcca2f36ca3fa7e8eddec2f2cc8f5038">80377bce</a> — Match source difficulty and scope</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/6d88549c757e9df7757b9f4f8057e5457bee5bac">6d88549c</a> — Offer simple and detailed prompts</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/ecbb2949ce3d9878ca7552e7b52a4d79a4d90eee">ecbb2949</a> — Improve JSON error guidance and recovery</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/ffc743caf61cb5f8b061b4e8a76edc2731f0469e">ffc743ca</a> — Preserve source units and per-chapter statistics</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/b71f83bbf1312fe4468da602e886425f84337d19">b71f83bb</a> — Clarify wrong-app imports before content validation</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/9cc5db7c2bf34ec9cfa2a063c2499154972b3718">9cc5db7c</a> — Separate settings and import guidance from numbered steps</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/70be7cc70fadfb8057ff613a5f8e6d9c3e256e01">70be7cc7</a> — Bump versions for unified AI enhancements</li>
+</ol>
+</details>
+
+## v1.52.0
+
+<small data-utc="2026-11-21T20:34:16Z">November 21, 2026 at 1:34 PM MST</small>
+
+- **Question Import:** Choose the overall subject or an AI-discovered topic when adding questions to an existing set.
+- **AI Workflow:** Use the shared scope picker and file-first category response import without changing Review’s approved question-generation prompt.
+- **Preview:** Show the same question details when creating and appending questions.
+
+<details>
+<summary>View 4 commits</summary>
+<ol>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/26ca0590d4e0168825bebc0e02284fd165e1a349">26ca0590</a> — Share Review-style scope picker and response-file recovery entry</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/6f7a3dfead85a0d86accd76f5e0dfd18d4712e8b">6f7a3dfe</a> — Share question previews and support topic-scoped additions</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/1bcc796f416900acd6c0a34386c1655cf7fe84ab">1bcc796f</a> — Centralize downloadable JSON output across generators</li>
+<li><a href="https://github.com/FireController1847/ai-dynamic-learner/commit/8bef12e0f4be69be9b43f4f05ef773c6dab6f8b5">8bef12e0</a> — Bump AI-enabled app versions for unified import workflow</li>
+</ol>
+</details>
+
 ## v1.51.1
 
 <small data-utc="2026-11-17T02:46:45Z">November 16, 2026 at 7:46 PM MST</small>

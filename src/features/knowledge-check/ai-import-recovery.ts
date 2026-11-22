@@ -56,22 +56,19 @@ export function checkReviewResponse(text: string, preferences: ReviewAiPreferenc
       warnings: previous ? ['Requested ' + preferences.count + ' questions; ' + questions.length + ' are ready.'] : incoming.warnings,
       confidence: previous || duplicates ? null : incoming.confidence,
       coverage: previous || duplicates ? null : incoming.coverage,
+      sourceUnits: previous || duplicates ? undefined : incoming.sourceUnits,
     },
     notices: [...report.notices, ...(previous ? ['AI confidence estimates cannot be combined across responses.'] : [])],
   };
 }
 
-export function reviewRetryPrompt(report: ReviewResponseRecovery, count: number, accepted: number): string {
-  if (accepted) return repairReviewPrompt(report.issues, Math.max(1, report.issues.filter(issue => issue.item !== undefined).length || count - accepted));
-  return 'Please fix your previous Dynamic Learner Review response using the original study material and the instructions I already sent. ' +
-    'Return the COMPLETE valid Review version-1 JSON response, preferably as a downloadable .json file. ' +
-    'If you cannot attach a file, return the complete JSON as text. Do not omit any required question fields. ' +
-    'Check the JSON syntax and do not invent facts or answers. Return only the response. ' +
-    'The importer reported: ' + report.issues.map(issue => issue.message).join('; ').slice(0, 2000);
+export function reviewRetryPrompt(report: ReviewResponseRecovery, count: number, _accepted: number,
+  appendToExisting = false): string {
+  return repairReviewPrompt(report.issues, count, appendToExisting);
 }
 
 export function reviewBatchPrompt(prompt: string, questions: readonly Question[]): string {
   const prompts = questions.map(question => questionDisplayPrompt(question).replace(/\s+/g, ' ').slice(0, 200)).join('\n');
-  return prompt + (prompts ? '\n\nReturn ONLY new questions. Do not repeat or paraphrase these already accepted question prompts:\n' + prompts : '');
+  return prompt + (prompts ? '\n\nBATCH MODE: Return a standalone, COMPLETE UTF-8 .json file with the full top-level Review schema, but include ONLY new questions in its questions array. Keep the required metadata and confidence. Do not send a bare array, fragments, or patches. Do not repeat or paraphrase these already accepted question prompts:\n' + prompts : '');
 }
 

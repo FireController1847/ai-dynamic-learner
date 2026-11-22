@@ -1,6 +1,5 @@
 .puzzle-ai-workspace { min-width: 0; }
 .puzzle-ai-setup { display: grid; gap: 20px; width: 100%; max-width: 800px; }
-.puzzle-ai-setup-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .puzzle-ai-setting { display: grid; align-content: start; gap: 8px; min-width: 0; }
 .puzzle-ai-setting > span:first-child { font-weight: 600; }
 .puzzle-ai-setting input, .puzzle-ai-setting select, .puzzle-ai-setting textarea {
@@ -14,7 +13,7 @@
   max-width: 500px;
 }
 .puzzle-ai-selection-range > p { grid-column: 1 / -1; }
-.puzzle-ai-choice-group { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.puzzle-ai-choice-group { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; min-width: 0; }
 .puzzle-ai-choice-group legend { width: 100%; margin-bottom: 10px; font-weight: 600; }
 .puzzle-ai-choice { display: flex; align-items: flex-start; gap: 10px; min-width: 0; min-height: 68px; padding: 12px;
   border: 1px solid var(--control-border); border-radius: var(--radius);
@@ -30,7 +29,6 @@
 .puzzle-ai-preview-list strong { display: block; }
 .puzzle-ai-preview-list span { display: block; color: var(--text-secondary); white-space: pre-wrap; }
 @media (max-width: 620px) {
-  .puzzle-ai-setup-grid { grid-template-columns: minmax(0, 1fr); }
-  .puzzle-ai-choice-group { grid-template-columns: minmax(0, 1fr); }
+    .puzzle-ai-choice-group { grid-template-columns: minmax(0, 1fr); }
   .puzzle-ai-choice { min-height: 48px; }
 }

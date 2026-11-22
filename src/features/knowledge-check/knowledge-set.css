@@ -782,3 +782,9 @@
   .knowledge-set-toolbar-actions > button,
   .knowledge-history-actions > button { padding-inline: 2px; font-size: 11px; }
 }
+
+/* Appending Review questions uses the same AI configuration pane as new sets. */
+.knowledge-question-import.study-ai-workspace { width:min(900px,100%);display:grid;align-content:start;gap:20px;container-type:inline-size;padding:clamp(28px,5vw,56px); }
+@media(max-width:700px),(max-width:1100px) and (pointer:coarse) {
+  .knowledge-question-import.study-ai-workspace { padding:48px 20px 20px; }
+}

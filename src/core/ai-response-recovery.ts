@@ -1,5 +1,7 @@
 import { parseAiImportJson, MAX_AI_IMPORT_LENGTH } from './ai-json.ts';
+import { recoverAiConfidenceValues } from './ai-confidence-repair.ts';
 import { isRecord } from './validation.ts';
+import { assertAiTarget, type AiTargetApp } from './ai-app-identity.ts';
 
 export interface AiResponseIssue { item?: number; message: string; source?: string }
 export interface AiRecoveryReport { issues: AiResponseIssue[]; notices: string[] }
@@ -161,6 +163,7 @@ export function readAiResponse(text: string, field: string): AiResponseSource {
 
 export interface AiCollectionOptions<T> {
   field: string;
+  targetApp?: AiTargetApp;
   formats: readonly string[];
   versions?: readonly number[];
   title: string;
@@ -188,9 +191,18 @@ export function recoverAiCollection<T>(text: string, options: AiCollectionOption
   const result: AiCollectionRecovery<T> = { candidate: previous?.candidate ?? null, envelope: previous?.envelope ?? null,
     items: previous?.items ?? [], accepted: previous?.accepted ?? 0, issues: [], notices: [] };
   try {
+    // Check recognizable app identity before looking for an app-specific items array.
+    // A well-formed wrong-app response may contain no field named options.field.
+    if (options.targetApp) {
+      try { assertAiTarget(parseAiImportJson(text), options.targetApp); }
+      catch (error) {
+        if (error instanceof Error && /generated for .*importing it into|identifies conflicting apps|Unknown AI target app/i.test(error.message)) throw error;
+      }
+    }
     // Full validation comes first. A valid response keeps its metadata and exact semantics.
     const source = readAiResponse(text, options.field);
     const raw = source.envelope;
+    if (options.targetApp) assertAiTarget(raw, options.targetApp);
     if (raw.format !== undefined && !options.formats.includes(String(raw.format)))
       throw new Error('This response is for a different Dynamic Learner format.');
     if (raw.version !== undefined && (typeof raw.version !== 'number' || !(options.versions ?? [1]).includes(raw.version)))
@@ -205,6 +217,43 @@ export function recoverAiCollection<T>(text: string, options: AiCollectionOption
         if (missing.length) result.notices.push('The AI omitted ' + missing.join(' and ') + '. Completeness is unverified.');
         return result;
       } catch { /* Recover below. */ }
+    }
+    // Isolate malformed optional metadata before changing or dropping any content.
+    // In particular, an invented sourceUnits schema must not erase valid confidence.
+    if (!previous && !source.incomplete && !source.entries.some(item => item.invalid)) {
+      const fixedConfidence = raw.confidence === undefined ? null : recoverAiConfidenceValues(raw.confidence);
+      const normalized: Record<string, unknown> | null = fixedConfidence?.notice && fixedConfidence.confidence
+        ? { ...raw, confidence: fixedConfidence.confidence } : null;
+      const bases: { envelope: Record<string, unknown>; notes: string[] }[] = [
+        { envelope: raw, notes: [] as string[] },
+        ...(normalized ? [{ envelope: normalized, notes: [fixedConfidence!.notice!] }] : []),
+      ];
+      const fields = ['sourceUnits', 'coverage', 'confidence'] as const;
+      // Smallest-change-first: preserve any metadata that is independently valid.
+      for (const mask of [0, 1, 2, 4, 3, 5, 6, 7]) {
+        for (const variant of bases) {
+          if (mask === 0 && variant.envelope === raw) continue; // Already tried full validation.
+          const removed = fields.filter((_, index) => Boolean(mask & (1 << index)));
+          if (removed.some(field => variant.envelope[field] === undefined)) continue;
+          if (removed.includes('confidence') && variant.envelope === normalized) continue;
+          const stripped: Record<string, unknown> = { ...variant.envelope };
+          for (const field of removed) delete stripped[field];
+          try {
+            const candidate = options.parse(JSON.stringify(stripped));
+            result.candidate = candidate; result.envelope = stripped;
+            result.items = source.entries.map(entry => entry.value);
+            result.accepted = result.items.length;
+            result.notices.push(...variant.notes);
+            for (const field of removed)
+              result.notices.push('AI ' + field + ' metadata could not be validated and was skipped; other valid content was preserved.');
+            for (const field of options.requiredMetadata ?? []) {
+              if (stripped[field] === undefined && !removed.some(item => item === field))
+                result.notices.push('The AI omitted ' + field + '. Completeness is unverified.');
+            }
+            return result;
+          } catch { /* Try the next minimal metadata correction. */ }
+        }
+      }
     }
     if (source.changed) result.notices.push('Read content from a wrapped or malformed response.');
     if (source.incomplete) result.issues.push({ message: 'The response may have ended before all items were returned.' });
@@ -244,6 +293,10 @@ export function recoverAiCollection<T>(text: string, options: AiCollectionOption
       return result;
     }
     const repaired = { ...base, [options.field]: kept } as Record<string, unknown>;
+    if (repaired.sourceUnits !== undefined) {
+      delete repaired.sourceUnits;
+      result.notices.push('Source-unit references were omitted after recovery because item positions changed; ask the AI to regenerate the unit mapping.');
+    }
     if (repaired.coverage !== undefined || repaired.confidence !== undefined) {
       delete repaired.coverage; delete repaired.confidence;
       result.notices.push('Coverage and confidence estimates were omitted because the content was recovered or combined.');
@@ -267,16 +320,24 @@ export function recoverAiCollection<T>(text: string, options: AiCollectionOption
   }
 }
 
-export function aiRepairPrompt(report: AiRecoveryReport, label: string, field: string, accepted: number, append: boolean): string {
-  const details = report.issues.slice(0, 15).map(issue => (issue.item ? 'Item ' + issue.item + ': ' : '') + issue.message +
-    (issue.source ? '\nOriginal item: ' + issue.source : '')).join('\n\n').slice(0, 22000);
-  return 'Fix your previous Dynamic Learner ' + label + ' response using the original study material and original instructions. ' +
-    (append && accepted ? 'Return ONLY corrected or missing items in the "' + field + '" array, with the same format, version and scope. Do not repeat the ' + accepted + ' accepted items. '
-      : 'Return the COMPLETE corrected response in the same format, version and scope. Preserve all valid existing content. ') +
-    'Return valid JSON as requested, with no unrelated commentary. Do not invent facts, answers, or filler. ' +
-    'Check all structural requirements and references before replying.\n\n' + details;
+/** The "Fix response" action always replaces the entire file, never appends an item fragment. */
+export function aiRepairPrompt(report: AiRecoveryReport, label: string, field: string,
+  format?: string, targetApp?: string): string {
+  const details = [...report.issues.map(issue =>
+    (issue.item ? 'Item ' + issue.item + ': ' : '') + issue.message +
+    (issue.source ? '\nOriginal item: ' + issue.source : '')), ...report.notices]
+    .slice(0, 20).join('\n\n').slice(0, 22000);
+  return 'Fix your PREVIOUS Dynamic Learner ' + label + ' JSON file using the original study material and the previous instructions. ' +
+    'Return a COMPLETE corrected REPLACEMENT file, not a partial reply. Keep all valid content, order and settings unless correction is needed. ' +
+    (format ? 'Use format "' + format + '". ' : 'Preserve the previous format. ') +
+    (targetApp ? 'Use targetApp "' + targetApp + '". ' : 'Preserve the previous app identifier. ') +
+    'Include the original schema version, title, and the ENTIRE "' + field + '" array, even entries that were already correct. ' +
+    'Preserve all applicable confidence statistics, source-unit and subject coverage metadata, and item references; correct invalid ones using original source evidence. ' +
+    'Do NOT return only changed fields, rejected items, a bare array, JSON Patch, or an explanation of corrections. ' +
+    'MANDATORY OUTPUT: Create ONE complete UTF-8 .json file and attach it. ONLY if file attachment is technically unavailable, briefly state that and return the ENTIRE valid JSON object as raw text. ' +
+    'Verify JSON syntax, mandatory fields, and internal references. Never fabricate answers or source content.\n\n' +
+    'Issues to fix:\n' + (details || 'Correct the original file without losing its valid contents.');
 }
-
 
 /** Standalone structured objects (e.g. solver packages) must be complete. */
 export function recoverAiObject(text: string): unknown {

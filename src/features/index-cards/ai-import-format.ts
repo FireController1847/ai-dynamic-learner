@@ -1,25 +1,26 @@
 import { parseAiImportJson } from '../../core/ai-json.ts';
+import { aiFileOutputInstructions } from '../../core/ai-file-output.ts';
 export { parseAiImportJson, MAX_AI_IMPORT_LENGTH } from '../../core/ai-json.ts';
 import { isRecord } from '../../core/validation.ts';
-import { AI_COMPLETE_COVERAGE_PROMPT, parseAiSubjectCoverage, type AiSubjectCoverage } from '../../core/ai-subject-coverage.ts';
+import { assertAiTarget } from '../../core/ai-app-identity.ts';
+import { parseAiSubjectCoverage, type AiSubjectCoverage } from '../../core/ai-subject-coverage.ts';
+import { aiCoverageInstructions, type AiCoverageLevel } from '../../core/ai-coverage.ts';
+import { AI_BOUNDED_INFERENCE_PROMPT } from '../../core/ai-source-inference.ts';
+import { AI_SOURCE_DIFFICULTY_PROMPT } from '../../core/ai-source-difficulty.ts';
+import { AI_SOURCE_UNITS_PROMPT, parseAiSourceUnits, type AiSourceUnit } from '../../core/ai-source-units.ts';
 import { AI_PLAIN_TEXT_ONLY_GUIDANCE } from '../../core/ai-formatting-guidance.ts';
 import { MAX_CARDS, MAX_CARD_TEXT_LENGTH } from './card-model.ts';
 import { MAX_NAME_LENGTH } from './tree-model.ts';
 
 export const FLASH_CARDS_IMPORT_FORMAT = 'dynamic-learner-flash-cards';
 
-export type AiCardCoverage = 'essentials' | 'balanced' | 'comprehensive';
+export type AiCardCoverage = AiCoverageLevel;
 export interface FlashCardsImport {
   title: string;
   cards: { question: string; answer: string }[];
   coverage?: AiSubjectCoverage[];
+  sourceUnits?: AiSourceUnit[];
 }
-
-export const AI_COVERAGE_INSTRUCTIONS: Record<AiCardCoverage, string> = {
-  essentials: 'Only the core facts and terms worth memorizing.',
-  balanced: 'Major ideas plus useful supporting facts; omit trivia and repetition.',
-  comprehensive: 'Broad coverage of useful facts and distinctions, without duplicates or filler.',
-};
 
 export function flashCardsAiPrompt(coverage: AiCardCoverage, limit: number): string {
   return `Using the source material I supplied immediately before this instruction, create a Dynamic Learner Flash Cards set.
@@ -34,19 +35,25 @@ Answer brevity is the highest writing priority:
 - Avoid "explain", "discuss", "describe in detail", multi-part questions, and yes/no questions.
 - Keep questions brief and self-contained; do not rely on another card or on "the passage above".
 - Preserve exact terminology and accuracy. Never shorten an answer so far that it becomes misleading.
-- Use only supported source information. Do not invent facts or add citations, references, URLs, or source markers.
+- Use source-supported information and defensible inferences from its immediate context; do not invent facts, citations, references, URLs, or source markers.
+${AI_BOUNDED_INFERENCE_PROMPT}
+${AI_SOURCE_DIFFICULTY_PROMPT}
+${AI_SOURCE_UNITS_PROMPT}
 
 ${AI_PLAIN_TEXT_ONLY_GUIDANCE}
 
-Coverage depth: ${AI_COVERAGE_INSTRUCTIONS[coverage]} This controls DETAIL, never subject inclusion.
-${AI_COMPLETE_COVERAGE_PROMPT}
+Coverage depth: ${aiCoverageInstructions(coverage)} This controls DETAIL, never subject inclusion.
 Create at most ${limit} useful cards. Fewer is better if the source does not support that many; do not invent filler.
 Do not create Fill in the Blanks, cloze syntax, card headings, explanations, IDs, groups, or application settings.
 
-Return ONLY one JSON code block with this exact structure:
+${aiFileOutputInstructions("dynamic-learner-flash-cards.json")}
+
+The JSON file must match this structure:
 \`\`\`json
 {
   "format": "${FLASH_CARDS_IMPORT_FORMAT}",
+  "targetApp": "index-cards",
+  "sourceUnits": [],
   "version": 1,
   "title": "Short set title",
   "coverage": [{ "subject": "Chemical symbols", "itemNumbers": [1] }],
@@ -62,8 +69,9 @@ Use only the fields shown. The title must be 1–${MAX_NAME_LENGTH} characters. 
 
 export function parseFlashCardsAiImport(text: string): FlashCardsImport {
   const value = parseAiImportJson(text);
+  assertAiTarget(value, 'index-cards');
   if (!isRecord(value) ||
-      Object.keys(value).some(key => !['format', 'version', 'title', 'cards', 'coverage'].includes(key)) ||
+      Object.keys(value).some(key => !['format', 'targetApp', 'version', 'title', 'cards', 'coverage', 'sourceUnits'].includes(key)) ||
       value.format !== FLASH_CARDS_IMPORT_FORMAT || value.version !== 1 ||
       typeof value.title !== 'string' || !value.title.trim() || value.title.trim().length > MAX_NAME_LENGTH) {
     throw new Error('This is not a supported Flash Cards import. Use the generated Flash Cards prompt.');
@@ -81,7 +89,8 @@ export function parseFlashCardsAiImport(text: string): FlashCardsImport {
     return { question: card.question.trim(), answer: card.answer.trim() };
   });
   const subjectCoverage = value.coverage === undefined ? undefined : parseAiSubjectCoverage(value.coverage, cards.length);
-  return { title: value.title.trim(), cards, coverage: subjectCoverage };
+  const sourceUnits = parseAiSourceUnits(value.sourceUnits, cards.length);
+  return { title: value.title.trim(), cards, coverage: subjectCoverage, ...(sourceUnits ? { sourceUnits } : {}) };
 }
 
 export function answerIsLong(answer: string): boolean {

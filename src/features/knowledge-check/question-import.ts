@@ -1,10 +1,15 @@
 import { computed, defineComponent, h, ref, type PropType } from 'vue';
 import { AiPromptExchange } from '../../components/ai-prompt-exchange.ts';
-import { MarkdownContent } from '../../components/markdown-content.ts';
+import { AiCreationScope } from '../../components/ai-creation-scope.ts';
+import { AiPromptStyleSelect } from '../../components/ai-prompt-style-select.ts';
+import { AiOptionsHeader } from '../../components/ai-options-header.ts';
+import { DEFAULT_AI_PROMPT_VARIANT, type AiPromptVariant } from '../../core/ai-prompt-variants.ts';
+import { AiCategoryPicker } from '../../components/ai-category-picker.ts';
+import type { AiCardCategories, AiCardScope } from '../../core/ai-study-categories.ts';
+import { reviewAiQuestionPreview } from './ai-question-preview.ts';
 import { MAX_AI_IMPORT_LENGTH } from '../../core/ai-json.ts';
-import { parseFillBlankTemplate } from '../../core/fill-blank.ts';
 import { inputValue } from '../../core/dom.ts';
-import { DEFAULT_AI_WEIGHTS, questionCountProblem, questionTypeLabel } from './ai-question-mix.ts';
+import { DEFAULT_AI_WEIGHTS, questionCountProblem } from './ai-question-mix.ts';
 import { reviewAiPrompt, type ReviewAiImport } from './ai-import-format.ts';
 import { questionDisplayPrompt, type Question } from './question-model.ts';
 import { checkReviewResponse, ReviewAiRecoveryHelp, reviewRetryPrompt, reviewBatchPrompt } from './ai-import-recovery.ts';
@@ -22,6 +27,11 @@ export const ReviewQuestionImport = defineComponent({
   },
   setup(props, { emit }) {
     const count = ref(20);
+    const promptVariant = ref<AiPromptVariant>(DEFAULT_AI_PROMPT_VARIANT);
+    const stage = ref<'scope' | 'categories' | 'configure' | 'import'>('scope');
+    const scope = ref<AiCardScope | null>(null);
+    const categories = ref<AiCardCategories | null>(null);
+    const direct = ref(false);
     const json = ref('');
     const problem = ref('');
     const candidate = ref<ReviewAiImport | null>(null);
@@ -45,7 +55,7 @@ Your answer must be a standalone valid Review JSON response with a title, descri
 
 ${reviewAiPrompt({
         count: count.value, mixMode: 'ai', coverage: 'balanced', weights: { ...DEFAULT_AI_WEIGHTS },
-      }, null)}`;
+      }, scope.value, promptVariant.value)}`;
     });
 
     function validate() {
@@ -64,43 +74,9 @@ ${reviewAiPrompt({
       recovering.value = false;
       if (!add) { candidate.value = null; report.value = null; }
     }
-    function previewQuestion(question: Question, index: number) {
-      const answers = question.type === 'parameterized'
-        ? (question.parameters?.rules.answers ?? []).map(answer => `${answer.label}: ${answer.expression ?? `Solver output ${answer.solverKey}`}`)
-        : question.type === 'dropdown'
-          ? (question.matches ?? []).map(row => `${row.label}: ${row.answer}`)
-          : question.type === 'fill-in-the-blanks'
-            ? parseFillBlankTemplate(question.prompt).answers
-            : question.correctAnswers ?? (question.type === 'statement' ? [] : [question.answer]);
-      return h('li', { key: question.id }, [
-        h('span', { class: 'study-ai-muted' }, `${index + 1} · ${questionTypeLabel(question.type)}`),
-        h('strong', questionDisplayPrompt(question)),
-        question.context?.trim()
-          ? h(MarkdownContent, { text: question.context, class: 'knowledge-question-context' }) : null,
-        question.choices.length ? h('ul', question.choices.map(choice => h('li', choice))) : null,
-        question.parameters?.rules.solver?.package
-          ? h('p', { class: 'study-ai-muted' }, 'Includes a solver package for this generated question.') : null,
-        question.type !== 'statement' ? h('details', [
-          h('summary', 'Reveal expected answer'),
-          h('p', answers.join(' · ')),
-          question.explanation ? h('p', question.explanation) : null,
-        ]) : null,
-      ]);
-    }
-
-    return () => h('section', { class: 'knowledge-set-builder knowledge-question-import',
-      'aria-label': 'Import additional questions' }, [
-      h('header', { class: 'knowledge-builder-header' }, [
-        h('div', [
-          h('h2', 'Import questions'),
-          h('p', `Append questions to ${props.setName} without replacing the existing ones.`),
-        ]),
-        h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('back') }, 'Back to builder'),
-      ]),
-      h('p', { class: 'knowledge-muted' },
-        `${props.existing.length} existing questions`),
-      h('label', { class: 'knowledge-field knowledge-question-import-count' }, [
-        'Number of new questions to request',
+    function questionCountField() {
+      return h('label', { class: 'ai-options-field' }, [
+        h('span', direct.value ? 'Maximum new questions to import' : 'Number of new questions to request'),
         h('input', {
           type: 'number', min: 1, step: 1, value: count.value,
           onInput: (event: Event) => {
@@ -113,29 +89,69 @@ ${reviewAiPrompt({
             problem.value = '';
           },
         }),
-      ]),
-      h('p', { class: 'knowledge-muted' },
-        'Add more questions from an AI response without replacing your existing ones.'),
-      recovering.value && report.value ? h(ReviewAiRecoveryHelp, {
+      ]);
+    }
+    return () => stage.value === 'categories' ? h(AiCategoryPicker, {
+      label: 'Review', targetApp: 'review', destination: props.setName, initialCategories: categories.value,
+      onBack: () => { stage.value = 'scope'; }, onCancel: () => emit('back'),
+      onSelect: (selected: AiCardScope, list: AiCardCategories) => {
+        scope.value = selected; categories.value = list; direct.value = false; stage.value = 'configure';
+        json.value = ''; candidate.value = null; report.value = null; recovering.value = false;
+      },
+    }) : h('section', { class: 'study-ai-workspace knowledge-question-import',
+      'aria-label': 'Import additional questions' }, [
+      stage.value === 'configure' ? h(AiOptionsHeader, {
+         app: 'Review', destination: props.setName, title: 'Configure additional questions',
+         scope: props.setName, onBack: () => { stage.value = 'scope'; },
+         onCancel: () => emit('back'),
+       }) : h('header', { class: 'study-ai-header' }, [
+         h('div', [
+           h('p', { class: 'study-ai-muted' }, `Review · ${props.setName}`),
+           h('h2', stage.value === 'scope' ? 'Choose what to import' : 'Import questions'),
+           h('p', `Append questions to ${props.setName} without replacing the existing ones.`),
+         ]),
+         h('div', { class: 'study-ai-actions' }, [
+           stage.value === 'import' ? h('button', { type: 'button', class: 'quiet-button', onClick: () => {
+             stage.value = direct.value ? 'scope' : 'configure';
+             candidate.value = null; report.value = null; recovering.value = false; json.value = '';
+           } }, direct.value ? 'Change scope' : 'Edit settings') : null,
+           h('button', { type: 'button', class: 'quiet-button', onClick: () => emit('back') }, 'Back to builder'),
+         ]),
+       ]),
+       ...(stage.value === 'scope' ? [h(AiCreationScope, {
+         showExit: false,
+         onOverall: () => { scope.value = null; direct.value = false; stage.value = 'configure'; },
+         onCategory: () => { stage.value = 'categories'; },
+         onDirect: () => { scope.value = null; direct.value = true; stage.value = 'import'; },
+       })] : stage.value === 'configure' ? [
+         h('div', { class: 'ai-options-grid' }, [
+           h(AiPromptStyleSelect, { value: promptVariant.value,
+             onSelect: value => { promptVariant.value = value; } }),
+           questionCountField(),
+         ]),
+         h('p', { class: 'study-ai-muted' }, `${props.existing.length} existing questions will stay unchanged.`),
+         h('div', { class: 'study-ai-actions' }, [
+           h('button', { type: 'button', class: 'card-primary-button', onClick: () => { stage.value = 'import'; } }, 'Continue to AI'),
+         ]),
+       ] : [
+         direct.value ? h('div', { class: 'ai-options-grid' }, [questionCountField()]) : null,
+         h('p', { class: 'study-ai-muted' }, `${props.existing.length} existing questions will stay unchanged.`),
+       recovering.value && report.value ? h(ReviewAiRecoveryHelp, {
         report: report.value, accepted: candidate.value?.questions.length ?? 0,
-        repairPrompt: reviewRetryPrompt(report.value, count.value, candidate.value?.questions.length ?? 0),
-        batchPrompt: count.value > (candidate.value?.questions.length ?? 0) + 25
-          ? reviewBatchPrompt(reviewAiPrompt({
-            count: Math.min(25, count.value - (candidate.value?.questions.length ?? 0)),
-            mixMode: 'ai', coverage: 'balanced', weights: { ...DEFAULT_AI_WEIGHTS },
-          }, null), [...props.existing, ...(candidate.value?.questions ?? [])]) : '',
-        onRetry: () => retry(Boolean(candidate.value), true),
+        repairPrompt: reviewRetryPrompt(report.value, count.value, candidate.value?.questions.length ?? 0, true),
+        onRetry: () => retry(false, true),
         onReview: () => { recovering.value = false; },
         onBack: () => { recovering.value = false; },
       }) : h(AiPromptExchange, {
         idPrefix: 'review-question-append', label: 'Review questions',
         prompt: prompt.value, json: json.value, problem: problem.value,
         maxLength: MAX_AI_IMPORT_LENGTH, hasPreview: candidate.value !== null && !adding.value,
-        startInImport: report.value !== null,
+        startInImport: direct.value || report.value !== null,
+        importOnly: direct.value, skipSource: Boolean(scope.value),
         promptHelp: 'These instructions request additional questions and help your AI avoid repeating existing ones.',
         importHelp: adding.value && candidate.value
           ? `${candidate.value.questions.length} new questions are safe. Paste the AI’s next response to add to them.`
-          : 'Paste the AI response you want to add. Existing questions and settings stay unchanged.',
+          : 'Upload or paste the AI response you want to add. Existing questions and settings stay unchanged.',
         onUpdateJson: (value: string) => { json.value = value; if (!adding.value) candidate.value = null; problem.value = ''; },
         onValidate: validate,
       }, {
@@ -153,12 +169,13 @@ ${reviewAiPrompt({
             h('strong', 'Review these warnings'),
             h('ul', candidate.value.warnings.map(warning => h('li', warning))),
           ]) : null,
-          h('ol', { class: 'review-ai-preview' }, candidate.value.questions.map(previewQuestion)),
+          h('ol', { class: 'review-ai-preview' }, candidate.value.questions.map(reviewAiQuestionPreview)),
           h('button', { type: 'button', class: 'card-primary-button', onClick: () => {
             if (candidate.value) emit('append', candidate.value.questions);
           } }, `Add ${candidate.value.questions.length} ${candidate.value.questions.length === 1 ? 'question' : 'questions'} to builder`),
         ]) : null,
       }),
+      ]),
     ]);
   },
 });

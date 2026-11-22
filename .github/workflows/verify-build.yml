@@ -21,6 +21,8 @@ jobs:
         run: npm ci
       - name: Dev startup tests
         run: npm run test:dev-start
+      - name: AI import regression tests
+        run: npm run test:ai-import
       - name: Type check
         run: npm run typecheck
       - name: Production build

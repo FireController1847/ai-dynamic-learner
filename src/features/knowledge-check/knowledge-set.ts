@@ -93,14 +93,14 @@ export const KnowledgeSet = defineComponent({
         key: `builder-${revision.value}`, item: props.item, onSave: save,
         onCancel: () => { building.value = false; message.value = ''; },
       });
-      if (!mode.value) return h(ModePicker, {
+      if (!mode.value) return h('div', { class: 'knowledge-unit-overview' }, [h(ModePicker, {
         key: 'mode-picker', setName: props.item.name, statisticsId: props.item.id,
         pausedStudy: props.statisticsEnabled && Boolean(pausedSessionSettings(props.item.id, 'study')),
         pausedQuiz: props.statisticsEnabled && Boolean(pausedSessionSettings(props.item.id, 'quiz')),
         historyCount: props.item.history?.length ?? 0,
         onHistory: openHistory, onPublish: openPublishing,
         onChoose: chooseMode, onBuild: openBuilder,
-      });
+      })]);
       if (!sessionSettings.value) return h(SessionSetup, {
         key: `setup-${revision.value}-${mode.value}`,
         item: props.item,

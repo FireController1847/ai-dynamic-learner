@@ -1,7 +1,13 @@
 import { parseAiImportJson } from '../../core/ai-json.ts';
+import { assertAiTarget } from '../../core/ai-app-identity.ts';
+import { aiFileOutputInstructions } from '../../core/ai-file-output.ts';
 import { categoryScopedPrompt, type AiCardScope } from '../../core/ai-study-categories.ts';
 import { isRecord } from '../../core/validation.ts';
-import { AI_COMPLETE_COVERAGE_PROMPT, parseAiSubjectCoverage, type AiSubjectCoverage } from '../../core/ai-subject-coverage.ts';
+import { parseAiSubjectCoverage, type AiSubjectCoverage } from '../../core/ai-subject-coverage.ts';
+import { aiCoverageInstructions, type AiCoverageLevel } from '../../core/ai-coverage.ts';
+import { AI_BOUNDED_INFERENCE_PROMPT } from '../../core/ai-source-inference.ts';
+import { AI_SOURCE_DIFFICULTY_PROMPT } from '../../core/ai-source-difficulty.ts';
+import { AI_SOURCE_UNITS_PROMPT, parseAiSourceUnits, type AiSourceUnit } from '../../core/ai-source-units.ts';
 import { AI_PLAIN_TEXT_ONLY_GUIDANCE } from '../../core/ai-formatting-guidance.ts';
 import {
   MAX_HINT_LENGTH, MAX_WORD_LENGTH, DEFAULT_LAYOUT_MIN_WORDS, DEFAULT_LAYOUT_MAX_WORDS, MIN_WORDS,
@@ -14,8 +20,8 @@ import {
 
 export type PuzzleAiKind = 'word-search' | 'crossword';
 export type PuzzleAiResult =
-  | { kind: 'word-search'; title: string; puzzle: WordSearchPuzzle; coverage?: AiSubjectCoverage[] }
-  | { kind: 'crossword'; title: string; puzzle: CrosswordPuzzle; coverage?: AiSubjectCoverage[] };
+  | { kind: 'word-search'; title: string; puzzle: WordSearchPuzzle; coverage?: AiSubjectCoverage[]; sourceUnits?: AiSourceUnit[] }
+  | { kind: 'crossword'; title: string; puzzle: CrosswordPuzzle; coverage?: AiSubjectCoverage[]; sourceUnits?: AiSourceUnit[] };
 
 export const puzzleAiLimits = {
   'word-search': { initial: 40, min: MIN_WORDS, max: 200 },
@@ -24,6 +30,7 @@ export const puzzleAiLimits = {
 
 export interface PuzzleAiOptions {
   count: number;
+  coverage: AiCoverageLevel;
   size: GridSize;
   difficulty: Difficulty;
   studyMode: StudyMode;
@@ -37,6 +44,7 @@ export interface PuzzleAiOptions {
 export function defaultPuzzleAiOptions(kind: PuzzleAiKind): PuzzleAiOptions {
   return {
     count: puzzleAiLimits[kind].initial,
+    coverage: 'balanced',
     size: 15,
     difficulty: 'medium',
     studyMode: 'hints',
@@ -106,19 +114,26 @@ STRICT SINGLE-WORD RULES FOR EVERY ANSWER:
 - Apply this rule before generating JSON. Review every answer for disguised multiword phrases, even if it contains no spaces. If you cannot find enough useful single words, return fewer; do not pad the puzzle with irrelevant terms.
 - Titles, category names, hints and clues may still contain multiple words; this restriction applies to the puzzle answer values only.
 
-Use only facts and terminology supported by the original source. If there are fewer useful terms than requested, output fewer rather than inventing unrelated terms; never go below ${minimumEntries} entries.
+Use source-supported facts, terminology, and carefully bounded inferences. If there are fewer useful terms than requested, output fewer rather than inventing unrelated terms; never go below ${minimumEntries} entries.
+${AI_BOUNDED_INFERENCE_PROMPT}
+${AI_SOURCE_DIFFICULTY_PROMPT}
+${AI_SOURCE_UNITS_PROMPT}
 
 ${AI_PLAIN_TEXT_ONLY_GUIDANCE}
 
-${AI_COMPLETE_COVERAGE_PROMPT}
-For puzzle answers that cannot represent a multiword subject directly, test the subject using a relevant valid single-word answer and a specific clue/hint. If complete coverage cannot fit the supported entry limits, ask to split the source; never silently omit a subject.
+${aiCoverageInstructions(options.coverage)}
+For puzzle answers that cannot represent a multiword subject directly, test the subject using a relevant valid single-word answer and a specific clue/hint. If selected coverage cannot fit the supported entry limits, report omissions and ask to split the source; never silently omit an important selected subject.
 
 Avoid repeated answers, redundant clues, citations, URLs, attribution, markdown commentary and ChatGPT citation markers. ${scope ? 'This JSON represents ONE selected category only.' : 'Cover the overall subject, not a single category.'}
 
-Return ONLY one fenced JSON code block with this exact structure:
+${aiFileOutputInstructions(format + ".json")}
+
+The JSON file must match this structure:
 \`\`\`json
 {
   "format": "${format}",
+  "targetApp": "${kind}",
+  "sourceUnits": [],
   "version": 1,
   "title": ${JSON.stringify(scope?.category.title ?? "Subject word puzzle")},
   ${scope ? `"categoryKey": ${JSON.stringify(scope.category.key)},` : ''}
@@ -158,9 +173,10 @@ export function parsePuzzleAiImport(json: string, kind: PuzzleAiKind, scope: AiC
   const randomPool = kind === 'word-search' && options.selectionMode === 'random';
   const minEntries = randomPool ? Math.max(MIN_WORDS, options.layoutMax) : puzzleAiLimits[kind].min;
   const value = parseAiImportJson(json);
+  assertAiTarget(value, kind);
   const format = kind === 'word-search' ? 'dynamic-learner-word-search' : 'dynamic-learner-crossword';
   const field = kind === 'word-search' ? 'words' : 'entries';
-  if (!isRecord(value) || Object.keys(value).some(k => !['format', 'version', 'title', 'categoryKey', field, 'coverage'].includes(k)) ||
+  if (!isRecord(value) || Object.keys(value).some(k => !['format', 'targetApp', 'version', 'title', 'categoryKey', field, 'coverage', 'sourceUnits'].includes(k)) ||
       value.format !== format || value.version !== 1 || (scope ? value.categoryKey !== scope.category.key : (value.categoryKey !== undefined && typeof value.categoryKey !== 'string')) ||
       typeof value.title !== 'string' || !value.title.trim() || value.title.length > 120 ||
       !Array.isArray(value[field]) || value[field].length < minEntries || value[field].length > Math.min(limit, kind === 'word-search' ? puzzleAiLimits['word-search'].max : MAX_ENTRIES)) {
@@ -168,6 +184,7 @@ export function parsePuzzleAiImport(json: string, kind: PuzzleAiKind, scope: AiC
   }
   const items: unknown[] = value[field];
   const coverage = value.coverage === undefined ? undefined : parseAiSubjectCoverage(value.coverage, items.length);
+  const sourceUnits = parseAiSourceUnits(value.sourceUnits, items.length);
   const used = new Set<string>();
   if (kind === 'word-search') {
     const words: string[] = [];
@@ -188,7 +205,7 @@ export function parsePuzzleAiImport(json: string, kind: PuzzleAiKind, scope: AiC
       ...(randomPool ? { selection: { min: options.layoutMin, max: options.layoutMax } } : {}),
     };
     validateWordSearch(puzzle);
-    return { kind, title: value.title.trim(), puzzle, coverage };
+    return { kind, title: value.title.trim(), puzzle, coverage, sourceUnits };
   }
 
   const entries: CrosswordPuzzle['entries'] = [];
@@ -199,5 +216,5 @@ export function parsePuzzleAiImport(json: string, kind: PuzzleAiKind, scope: AiC
   }
   const puzzle: CrosswordPuzzle = { entries, instructions: options.instructions.trim() };
   validatePuzzleForGeneration(puzzle);
-  return { kind, title: value.title.trim(), puzzle, coverage };
+  return { kind, title: value.title.trim(), puzzle, coverage, sourceUnits };
 }
