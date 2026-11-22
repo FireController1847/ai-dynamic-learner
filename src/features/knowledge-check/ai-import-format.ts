@@ -1,5 +1,6 @@
 import { AI_PARAMETERIZED_EXAMPLE, AI_SOLVER_EXAMPLE, PARAMETERIZED_AI_GUIDANCE, parseAiSolvers, resolveAiParameters } from './ai-parameterized-format.ts';
 import { parseAiImportJson } from '../../core/ai-json.ts';
+import type { AiPromptVariant } from '../../core/ai-prompt-variants.ts';
 import { AI_BOUNDED_INFERENCE_PROMPT } from '../../core/ai-source-inference.ts';
 import { AI_SOURCE_DIFFICULTY_PROMPT } from '../../core/ai-source-difficulty.ts';
 import { AI_SOURCE_UNITS_PROMPT, parseAiSourceUnits, type AiSourceUnit } from '../../core/ai-source-units.ts';
@@ -58,7 +59,8 @@ export interface ReviewAiPreferences {
  * the resulting generated text and schema when such a change is authorized.
  * Changes to surrounding application code do not authorize prompt edits.
  */
-export function reviewAiPrompt(preferences: ReviewAiPreferences, scope: AiCardScope | null): string {
+export function reviewAiPrompt(preferences: ReviewAiPreferences, scope: AiCardScope | null,
+  variant: AiPromptVariant = 'detailed'): string {
   const countProblem = questionCountProblem(preferences.count);
   if (countProblem) throw new Error(countProblem);
   const examPrep = preferences.coverage === 'exam-prep';
@@ -68,6 +70,17 @@ export function reviewAiPrompt(preferences: ReviewAiPreferences, scope: AiCardSc
   const counts = aiChoosesMix ? null : allocateQuestions(preferences.weights, preferences.count);
   const enabledTypes = AI_QUESTION_TYPES.filter(type => counts === null || counts[type] > 0);
   const allowParameterized = counts === null || counts.parameterized > 0;
+  // An AI-selected mix should demonstrate the simplest valid parameterization.
+  // Explicitly requested parameterized questions retain the full solver example.
+  const expressionParameterizedExample = {
+    type: 'parameterized', prompt: 'What is {{a}} + {{b}}?',
+    parameters: { presentation: 'fields', rules: { version: 1,
+      variables: [{ name: 'a', kind: 'integer', min: 1, max: 10 },
+        { name: 'b', kind: 'integer', min: 1, max: 10 }],
+      constraints: [],
+      answers: [{ key: 'result', label: 'Your answer', expression: 'a + b', matching: 'numeric' }],
+    } },
+  };
   const examples: Record<keyof QuestionWeights, object> = {
     'multiple-choice': { type: 'multiple-choice', prompt: 'Which symbol represents gold?', choices: ['Au', 'Ag', 'Fe', 'Cu'],
       answer: 'Au', choicePool: { displayCount: 4, distractors: ['Pt', 'Sn', 'Pb', 'Zn'] },
@@ -77,7 +90,7 @@ export function reviewAiPrompt(preferences: ReviewAiPreferences, scope: AiCardSc
     'short-answer': { type: 'short-answer', prompt: 'What is the chemical symbol for gold?', answer: 'Au' },
     dropdown: { type: 'dropdown', prompt: 'Match each element to its symbol.', choices: ['Au', 'Ag', 'Fe'],
       matches: [{ label: 'Gold', answer: 'Au' }, { label: 'Silver', answer: 'Ag' }] },
-    parameterized: AI_PARAMETERIZED_EXAMPLE,
+    parameterized: aiChoosesMix ? expressionParameterizedExample : AI_PARAMETERIZED_EXAMPLE,
     statement: { type: 'statement', prompt: 'Gold has the chemical symbol Au.' },
   };
   const quality: Record<keyof QuestionWeights, string> = {
@@ -87,7 +100,7 @@ export function reviewAiPrompt(preferences: ReviewAiPreferences, scope: AiCardSc
     'short-answer': '- Short Answer: only short, uniquely checkable responses (usually 1–5 words) that cannot be assessed more reliably with another type.',
     dropdown: `- Dropdown: directly test matching relationships, with 1–${MAX_DROPDOWN_ROWS} labeled rows (label/answer) and 2–${MAX_DROPDOWN_CHOICES} distinct shared choices. Every answer must appear in choices; use plausible neighbors. Aim for 3–5 matches per matching question; split larger groups when practical. A matching table counts as one item.`,
     'statement': '- Statement: unscored directions/context only; do not substitute it for meaningful scored questions.',
-    parameterized: PARAMETERIZED_AI_GUIDANCE,
+    parameterized: '- Parameterized: favor genuinely variable, source-supported calculations or procedures and verify every variant is fair and solvable. Choose expressions for simple methods and bounded solvers for algorithms when justified.',
   };
   const fields: Record<keyof QuestionWeights, string> = {
     'multiple-choice': 'Use type/prompt/choices/answer/optional explanation; multi-answer replaces answer with correctAnswers. Optional choicePool: { displayCount: integer 2–8, distractors: string[] of 1–100 unique extra incorrect terms }. Correct answers must be in choices and count toward displayCount; remaining slots sample from base incorrect choices plus additional terms. Do not provide both answer and correctAnswers.',
@@ -98,7 +111,7 @@ export function reviewAiPrompt(preferences: ReviewAiPreferences, scope: AiCardSc
     'statement': 'On statements use only type/prompt.',
     'parameterized': 'On parameterized questions use type/prompt/parameters/optional explanation, and place referenced JavaScript solver packages in the optional top-level solvers array.',
   };
-  const prompt = `Using the original source material supplied earlier in this conversation, create a Dynamic Learner Review knowledge set as a teacher or instructor would assess it.
+  const detailedReasoning = `Using the original source material supplied earlier in this conversation, create a Dynamic Learner Review knowledge set as a teacher or instructor would assess it.
 
 Scope: ${scope ? 'Only the selected category described above.' : examPrep ? 'The overall subject, restricted to strongly evidenced exam content.' : 'The overall subject, covering its important topics.'}
 Coverage: ${examPrep ? 'EXAM PREP ONLY — EXPLICITLY focus on material you are almost CERTAIN WILL be on the exam, based on the supplied evidence. IGNORE material that does not lead to likely exam questions. FOCUS HEAVILY on topics, question formats, calculations, and skills the sources indicate WILL be tested. This is NOT a comprehensive review of the source.' : essentials ? 'ESSENTIALS ONLY — focus on core concepts, key facts, and indispensable skills across the subject. Omit minor details, trivia, and nonessential examples.' : 'BALANCED — cover major topics and useful supporting details across the subject, balancing breadth and depth.'}
@@ -118,20 +131,21 @@ ${examPrep ? `EXAM EVIDENCE AUDIT — complete BEFORE and AFTER writing question
 - Identify core concepts, definitions, relationships, formulas, and skills necessary to understand the subject or selected category. Prioritize essential material over minor facts, isolated details, and repetition.
 - Ensure essential topics are meaningfully tested within the requested count; omit nonessential material rather than treating every source bullet as a required question.
 - Cross-check the source again before returning JSON. Do not output the internal inventory or falsely claim full source coverage. Identify omitted essentials and explain intentional exclusions in confidence.` : `SUBJECT COVERAGE AUDIT — complete BEFORE and AFTER writing questions while respecting the requested count:
-- Inventory EVERY testable subject in the supplied material: all study-guide objectives, headings, subheadings, bullets, definitions, facts, figures, numerical values, formulas, associations, exceptions, comparisons, and examples. A study guide is a checklist; do not skip any item, even if it seems minor.
+- Inventory the testable subjects in the supplied material: all study-guide objectives, headings, subheadings, bullets, definitions, facts, figures, numerical values, formulas, associations, exceptions, comparisons, and examples. Use study-guide items to plan coverage; distinguish central objectives from supporting details rather than assuming every bullet requires a separate question.
 - For a selected category, inventory and test EVERY subject inside that category, not only its title/description or the most important points. For the overall subject, cover the entire supplied source. Questions may cover multiple subjects only if each one is genuinely tested.
-- Ensure each inventoried subject is tested by at least one meaningful scored question. Do not output the internal subject-by-subject inventory.
+- Maximize meaningful coverage within the requested count, prioritizing core ideas, relationships and skills. Do not compress unrelated details into enormous matching questions just to check off every topic. Report untested content in confidence; do not output the internal inventory.
 - Cross-check the original source against the inventory again before returning JSON. Do not falsely claim full coverage. If a topic cannot fit within the requested number, list it under confidence.uncoveredSubjects and lower overallCoverage appropriately.`}
 
 Choose the approach from the material (respect requested type counts where possible):
 1. LOGIC / NUMBERS / PROCEDURES: Favor reusable Parameterized questions wherever inputs, calculations, rules, or algorithms can genuinely vary. Test the method with many valid solvable variants, not one fixed numerical result. Supply feasible ranges, constraints and complete solvers as needed. Never randomize fixed facts, diagnostic thresholds, or medical constants. If Parameterized is unavailable or unsuitable, use another enabled type.
 2. RECALL / FIXED FACTS / MEDICAL / ASSOCIATIONS: Favor Multiple Choice, Fill in the Blanks, and matching Dropdowns. Test relationships directly (enzyme ↔ substrate, function ↔ term, symptom ↔ condition, threshold ↔ meaning). Reverse associations where useful; use plausible near-miss distractors to test distinctions, not obviously wrong options. Keep grading unambiguous.
 
+- ASSESSMENT DESIGN: When the mix is AI-selected, choose formats deliberately. Do not let multiple-choice or matching dominate by habit. Use scenarios for application, short answer and blanks for recall, matching for tightly related concepts, and Parameterized for reusable methods. A matching table counts as ONE question but its rows are separate answer interactions: keep tables focused (usually 3–5 rows) and avoid excessive workload. When the user chooses a custom mix, follow it instead of overriding it for variety.
+
 Think like an instructor when CHOOSING what to test, not when wording the questions. ${examPrep ? 'Emphasize what the supplied exam evidence explicitly indicates WILL be tested; repetition or importance alone does not establish exam relevance.' : 'Emphasize what the source repeats, compares, demonstrates, or expects learners to apply.'} Vary scenarios and difficulty without redundant questions or outside facts. Reject questions whose answer is given away by their wording, which test only the presence of a word in the prompt, or whose distractors are obviously nonsensical; each question should genuinely test knowledge or reasoning.
 STRICT SOURCE FIDELITY — NON-NEGOTIABLE:
 ${AI_BOUNDED_INFERENCE_PROMPT}
 ${AI_SOURCE_DIFFICULTY_PROMPT}
-${AI_SOURCE_UNITS_PROMPT}
 - Use ONLY the study material supplied in this AI conversation and the explicitly selected category. Treat it as a closed knowledge source. Do not add facts from general knowledge, training data, web searches, common practice, or assumptions about what instructors normally teach.
 - Reasonable, well-supported inference is allowed to clarify an incomplete idea using adjacent source facts and relationships. Do not invent missing details, methods, examples, or claims that the supplied concepts cannot justify.
 - Test definitions, facts, comparisons, methods, and relationships present or defensibly implied by the source. Make clear when a conclusion is inferred rather than directly quoted; do not assert uncertainty as fact.
@@ -160,10 +174,31 @@ ${enabledTypes.map(type => quality[type]).join('\n')}
 
 ${AI_MARKDOWN_CONTEXT_GUIDANCE}
 
+All scored types may include optional context. New AI-created sets REQUIRE a concise confidence object. Do NOT output a long subject checklist. All percentages are subjective estimates (integers 0–100), NOT verified probabilities. Calibrate confidently rather than conservatively: when the source is sufficiently detailed, the questions accurately address it, and there are no identifiable shortcomings, lean toward HIGH justified estimates instead of automatically discounting confidence for generic uncertainty. Do not invent weaknesses or reduce scores solely because an exam blueprint is unavailable. However, never inflate scores to hide real omissions, poor question quality, unsupported exam predictions, or thin source materials; describe actual limitations. overallCoverage estimates the fraction of provided source/category assessed by the questions; examConfidence estimates likelihood these questions resemble exam content; subjectConfidence estimates relevance and accuracy to the chosen subject; studyConfidence estimates usefulness for learning AND exam preparation. Explain uncertainty, particularly if the supplied material is insufficient. ${examPrep ? 'Keep overallCoverage honest against the entire supplied source/category; it may be low by design. Explain intentional exclusion of material without strong exam evidence in coverageExplanation. List omitted HIGH-PRIORITY exam topics in uncoveredSubjects, not every deliberately excluded non-exam topic. If examConfidence, subjectConfidence, or studyConfidence is below 80, explain improvements within EXAM PREP ONLY; request clearer exam evidence if needed. Never recommend adding non-exam questions just to raise overallCoverage. Recommend a larger count only for additional strongly evidenced exam material. Lower examConfidence honestly when evidence is insufficient.' : essentials ? 'Keep overallCoverage honest against the entire supplied source/category; it may be low by design. Explain intentional exclusions in coverageExplanation and list omitted essential topics in uncoveredSubjects. Explain improvements within ESSENTIALS ONLY for low confidence scores; do not add nonessential material just to raise overallCoverage. Recommend a larger count only when essential coverage would improve.' : 'If ANY of the four estimates is below 80, explain actionable ways to improve it. Recommend increasing the question count when the limit meaningfully restricts coverage, identifying topics that would benefit; do not exceed the count in this response. Distinguish this from low confidence caused by insufficient source materials, where more questions alone will not solve the problem. If coverage is below 100, list identifiable gaps in uncoveredSubjects; when no distinct omitted topic can be identified, use [] and explain the uncertainty in coverageExplanation.'} Never report 100 unless all supplied material was assessed.`;
+
+  const simpleReasoning = `Using only the supplied study material, create a Dynamic Learner Review knowledge set that tests what the learner needs to understand.
+Scope: ${scope ? 'Only the selected category.' : 'The overall subject.'}
+Coverage: ${examPrep ? 'EXAM PREP ONLY: Test content supported by explicit exam evidence; do not guess.' : essentials ? 'ESSENTIALS ONLY: Focus on foundational concepts and skills.' : 'BALANCED: Represent major topics and useful supporting details.'}
+Generate EXACTLY ${preferences.count} distinct, useful questions when the source supports that many; never exceed the count, invent facts or add repetitive filler. If the source cannot support the count, return fewer and explain actual omissions in confidence.
+${aiChoosesMix
+  ? 'Choose appropriate question types from: ' + enabledTypes.map(questionTypeLabel).join(', ') + '. Mix formats naturally: multiple-choice for distinctions and application; blanks or short answer for recall; matching for small related groups (usually 3–5 rows); parameterized for genuinely variable source-supported procedures. Do not default to one type or use complex types solely for variety.' + (focusPrompt ? '\nSelected focus (guidance, not a quota): ' + focusPrompt : '')
+  : 'Use exactly this requested question mix if the source supports it:\n' + enabledTypes.map(type => '- ' + questionTypeLabel(type) + ': ' + counts![type]).join('\n')}
+Use straightforward, standalone wording, credible distractors, and non-spoiling learning hints. Avoid unsupported scenarios, invented numerical ranges and outside facts.
+${AI_BOUNDED_INFERENCE_PROMPT}
+${AI_SOURCE_DIFFICULTY_PROMPT}
+Before creating the file, check the number of questions and the main source topics. Calibrate the four confidence estimates to the content actually tested, listing real omissions without inventing weaknesses.`;
+
+  const jsonContract = `JSON AND METADATA CONTRACT — IDENTICAL FOR SIMPLE AND DETAILED:
+
+SOURCE-UNIT STRUCTURE:
+${AI_SOURCE_UNITS_PROMPT}
+
+${allowParameterized ? PARAMETERIZED_AI_GUIDANCE : ''}
+
 CONFIDENCE FORMAT CHECK:
 Use a top-level "confidence" object with EXACTLY these fields: overallCoverage, examConfidence, subjectConfidence, studyConfidence, coverageExplanation, uncoveredSubjects, confidenceExplanation.
 The four percentages MUST be whole JSON numbers from 0 to 100 (85, NOT "85%" or 0.85). The two explanations must be nonempty strings (maximum 500 characters). uncoveredSubjects must be an array of specific omitted-topic strings (up to ${MAX_AI_CONFIDENCE_TOPIC_LENGTH} characters each), or [] if no particular missing topic can be identified. For coverage below 100 with no identifiable missing topics, explain the uncertainty, inadequate depth, or intentional scope exclusions in coverageExplanation; do not invent topics.
-Verify this object and the entire JSON before responding.
+Verify this object and the entire JSON before responding. All scored types may include optional context. overallCoverage measures source content assessed, examConfidence resemblance to evidenced exam material, subjectConfidence relevance and accuracy, and studyConfidence learning usefulness. These are subjective estimates, not measured outcomes.
 
 OUTPUT AS A DOWNLOADABLE JSON FILE, NOT A CHAT CODE BLOCK:
 - Create an actual UTF-8 .json file named dynamic-learner-review.json, containing the COMPLETE valid JSON object below, and attach the file to your reply so the user can download it.
@@ -172,12 +207,13 @@ OUTPUT AS A DOWNLOADABLE JSON FILE, NOT A CHAT CODE BLOCK:
 
 Write the following JSON STRUCTURE to the downloadable file (illustrative schema only):
 \`\`\`json
-${JSON.stringify({ format: REVIEW_AI_FORMAT, targetApp: 'review', version: 1, title: 'Short knowledge set title', description: 'Brief scope of this knowledge set.', ...(allowParameterized ? { solvers: [AI_SOLVER_EXAMPLE] } : {}), questions: enabledTypes.map(type => examples[type]), sourceUnits: [], confidence: { overallCoverage: 85, examConfidence: 90, subjectConfidence: 86, studyConfidence: 90, coverageExplanation: 'Short explanation of coverage estimate.', uncoveredSubjects: ['Specific source topics not adequately tested'], confidenceExplanation: 'Short explanation of evidence and uncertainty.' } }, null, 2)}
+${JSON.stringify({ format: REVIEW_AI_FORMAT, targetApp: 'review', version: 1, title: 'Short knowledge set title', description: 'Brief scope of this knowledge set.', ...(allowParameterized && !aiChoosesMix ? { solvers: [AI_SOLVER_EXAMPLE] } : {}), questions: enabledTypes.map(type => examples[type]), sourceUnits: [], confidence: { overallCoverage: 85, examConfidence: 90, subjectConfidence: 86, studyConfidence: 90, coverageExplanation: 'Short explanation of coverage estimate.', uncoveredSubjects: ['Specific source topics not adequately tested'], confidenceExplanation: 'Short explanation of evidence and uncertainty.' } }, null, 2)}
 \`\`\`
 
-Examples show structure only, not required types or facts. ${allowParameterized ? 'Include solvers only when a Parameterized question needs them. ' : ''}Title: 1–${MAX_NAME_LENGTH} characters; description, prompt, answer, explanation, and choices: at most ${MAX_TEXT} characters each; context: at most ${MAX_QUESTION_CONTEXT} characters. Escape newlines and backslashes inside JSON strings.
+Examples show structure only, not required types or facts. The top-level fields, allowed question structures and validation requirements are identical for Simple and Detailed. ${allowParameterized ? 'Include solvers only when a Parameterized question needs them. ' : ''}Title: 1–${MAX_NAME_LENGTH} characters; description, prompt, answer, explanation, and choices: at most ${MAX_TEXT} characters each; context: at most ${MAX_QUESTION_CONTEXT} characters. Escape newlines and backslashes inside JSON strings.
 ${enabledTypes.map(type => fields[type]).join('\n')}
-All scored types may include optional context. New AI-created sets REQUIRE a concise confidence object. Do NOT output a long subject checklist. All percentages are subjective estimates (integers 0–100), NOT verified probabilities. Calibrate confidently rather than conservatively: when the source is sufficiently detailed, the questions accurately address it, and there are no identifiable shortcomings, lean toward HIGH justified estimates instead of automatically discounting confidence for generic uncertainty. Do not invent weaknesses or reduce scores solely because an exam blueprint is unavailable. However, never inflate scores to hide real omissions, poor question quality, unsupported exam predictions, or thin source materials; describe actual limitations. overallCoverage estimates the fraction of provided source/category assessed by the questions; examConfidence estimates likelihood these questions resemble exam content; subjectConfidence estimates relevance and accuracy to the chosen subject; studyConfidence estimates usefulness for learning AND exam preparation. Explain uncertainty, particularly if the supplied material is insufficient. ${examPrep ? 'Keep overallCoverage honest against the entire supplied source/category; it may be low by design. Explain intentional exclusion of material without strong exam evidence in coverageExplanation. List omitted HIGH-PRIORITY exam topics in uncoveredSubjects, not every deliberately excluded non-exam topic. If examConfidence, subjectConfidence, or studyConfidence is below 80, explain improvements within EXAM PREP ONLY; request clearer exam evidence if needed. Never recommend adding non-exam questions just to raise overallCoverage. Recommend a larger count only for additional strongly evidenced exam material. Lower examConfidence honestly when evidence is insufficient.' : essentials ? 'Keep overallCoverage honest against the entire supplied source/category; it may be low by design. Explain intentional exclusions in coverageExplanation and list omitted essential topics in uncoveredSubjects. Explain improvements within ESSENTIALS ONLY for low confidence scores; do not add nonessential material just to raise overallCoverage. Recommend a larger count only when essential coverage would improve.' : 'If ANY of the four estimates is below 80, explain actionable ways to improve it. Recommend increasing the question count when the limit meaningfully restricts coverage, identifying topics that would benefit; do not exceed the count in this response. Distinguish this from low confidence caused by insufficient source materials, where more questions alone will not solve the problem. If coverage is below 100, list identifiable gaps in uncoveredSubjects; when no distinct omitted topic can be identified, use [] and explain the uncertainty in coverageExplanation.'} Never report 100 unless all supplied material was assessed.`;
+FINAL FILE VALIDATION: Count the final questions array, check every answer and permitted type, verify sourceUnits.itemNumbers against actual question positions if present, and verify all seven confidence fields. Return one complete, validated JSON file; never fragments, filler or untested solver code.`;
+  const prompt = (variant === 'simple' ? simpleReasoning : detailedReasoning) + '\n\n' + jsonContract;
   return scope ? categoryScopedPrompt(prompt, scope, 'Review questions') : prompt;
 }
 

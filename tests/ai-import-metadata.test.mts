@@ -7,7 +7,7 @@ import { reviewRetryPrompt } from '../src/features/knowledge-check/ai-import-rec
 import { recoverAiCollection, type AiCollectionOptions } from '../src/core/ai-response-recovery.ts';
 import { simpleAiPrompt } from '../src/core/ai-prompt-variants.ts';
 import { checkReviewResponse } from '../src/features/knowledge-check/ai-import-recovery.ts';
-import { parseReviewAiImport, type ReviewAiPreferences } from '../src/features/knowledge-check/ai-import-format.ts';
+import { reviewAiPrompt, parseReviewAiImport, type ReviewAiPreferences } from '../src/features/knowledge-check/ai-import-format.ts';
 import { DEFAULT_AI_WEIGHTS } from '../src/features/knowledge-check/ai-question-mix.ts';
 import { parseGuideAiImport, type SimpleGuideImport } from '../src/features/guide/ai-import.ts';
 
@@ -236,4 +236,86 @@ test('Full-file correction instructions require complete JSON even when only con
   assert.match(request, /ENTIRE corrected top-level JSON object/);
   assert.match(request, /required confidence fields/);
   assert.match(request, /ONLY if actual file attachment is technically unavailable/);
+});
+
+test('Review Simple and Detailed share the exact same strict JSON contract', () => {
+  const simple = reviewAiPrompt(preferences, null, 'simple');
+  const detailed = reviewAiPrompt(preferences, null, 'detailed');
+  const separator = 'JSON AND METADATA CONTRACT — IDENTICAL FOR SIMPLE AND DETAILED:';
+  assert.ok(simple.includes(separator) && detailed.includes(separator));
+  assert.equal(simple.slice(simple.indexOf(separator)), detailed.slice(detailed.indexOf(separator)));
+  assert.ok(simple.length < detailed.length);
+  for (const prompt of [simple, detailed]) {
+    assert.match(prompt, /SOURCE-UNIT STRUCTURE:/);
+    assert.match(prompt, /itemNumbers/);
+    assert.match(prompt, /confidence.*overallCoverage|overallCoverage.*examConfidence/);
+    assert.match(prompt, /four percentages MUST|four percentages MUST|The four percentages MUST/);
+    assert.match(prompt, /function solve\(parameters\)/);
+    assert.match(prompt, /OUTPUT AS A DOWNLOADABLE JSON FILE/);
+    assert.match(prompt, /FINAL FILE VALIDATION/);
+    const match = prompt.match(/```json\s*([\s\S]*?)\s*```/);
+    assert.ok(match, 'the complete shared schema example must be included');
+    const schema = JSON.parse(match[1]);
+    assert.equal(schema.format, 'dynamic-learner-review');
+    assert.equal(schema.targetApp, 'review');
+    assert.equal(schema.version, 1);
+    assert.ok(schema.questions.some((item: { type: string }) => item.type === 'parameterized'));
+    assert.equal(schema.solvers, undefined);
+    assert.equal(schema.questions.find((item: { type: string }) => item.type === 'parameterized')
+      .parameters.rules.answers[0].expression, 'a + b');
+  }
+  assert.match(simple, /Do not default to one type/);
+  assert.match(detailed, /avoid excessive workload/);
+  assert.doesNotMatch(simple, /Inventory the testable subjects/);
+  assert.doesNotMatch(detailed, /Ensure each inventoried subject is tested/);
+});
+
+test('Review custom mixes share the contract but exclude unsupported types', () => {
+  const selected: ReviewAiPreferences = { ...preferences, count: 12, mixMode: 'custom',
+    weights: { 'multiple-choice': 50, 'true-false': 0, 'fill-in-the-blanks': 50,
+      dropdown: 0, 'short-answer': 0, statement: 0, parameterized: 0 },
+  };
+  const simple = reviewAiPrompt(selected, null, 'simple');
+  const detailed = reviewAiPrompt(selected, null, 'detailed');
+  assert.equal(simple.slice(simple.indexOf('JSON AND METADATA CONTRACT')),
+    detailed.slice(detailed.indexOf('JSON AND METADATA CONTRACT')));
+  for (const prompt of [simple, detailed]) {
+    const match = prompt.match(/```json\s*([\s\S]*?)\s*```/);
+    assert.ok(match);
+    const schema = JSON.parse(match[1]);
+    assert.deepEqual(schema.questions.map((item: { type: string }) => item.type),
+      ['multiple-choice', 'fill-in-the-blanks']);
+    assert.equal(schema.solvers, undefined);
+    assert.doesNotMatch(prompt, /function solve\(parameters\)/);
+    assert.match(prompt, /6 items|: 6/);
+  }
+});
+
+test('Review exam and essentials scopes retain their teaching objectives in both styles', () => {
+  for (const style of ['simple','detailed'] as const) {
+    const exam = reviewAiPrompt({ ...preferences, coverage: 'exam-prep' }, null, style);
+    const essentials = reviewAiPrompt({ ...preferences, coverage: 'essentials' }, null, style);
+    assert.match(exam, /EXAM PREP ONLY/);
+    assert.match(essentials, /ESSENTIALS ONLY/);
+    assert.match(exam, /50/);
+    assert.match(essentials, /50/);
+  }
+});
+
+test('Explicitly selected parameterized questions retain the full solver package contract', () => {
+  const selected: ReviewAiPreferences = { ...preferences, count: 4, mixMode: 'custom',
+    weights: { 'multiple-choice': 0, 'true-false': 0, 'fill-in-the-blanks': 0,
+      dropdown: 0, 'short-answer': 0, statement: 0, parameterized: 100 },
+  };
+  for (const style of ['simple', 'detailed'] as const) {
+    const prompt = reviewAiPrompt(selected, null, style);
+    const match = prompt.match(/```json\s*([\s\S]*?)\s*```/);
+    assert.ok(match);
+    const schema = JSON.parse(match[1]);
+    assert.equal(schema.questions[0].type, 'parameterized');
+    assert.equal(schema.solvers[0].format, 'dynamic-learner-solver');
+    assert.equal(schema.questions[0].parameters.rules.solver.id, schema.solvers[0].id);
+    assert.match(prompt, /Reference a package with rules.solver/);
+    assert.match(prompt, /Algorithms must be deterministic/);
+  }
 });

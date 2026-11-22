@@ -3,7 +3,7 @@ import { AiPromptExchange } from '../../components/ai-prompt-exchange.ts';
 import { AiCreationScope } from '../../components/ai-creation-scope.ts';
 import { AiPromptStyleSelect } from '../../components/ai-prompt-style-select.ts';
 import { AiOptionsHeader } from '../../components/ai-options-header.ts';
-import { DEFAULT_AI_PROMPT_VARIANT, simpleAiPrompt, type AiPromptVariant } from '../../core/ai-prompt-variants.ts';
+import { DEFAULT_AI_PROMPT_VARIANT, type AiPromptVariant } from '../../core/ai-prompt-variants.ts';
 import { AiCategoryPicker } from '../../components/ai-category-picker.ts';
 import type { AiCardCategories, AiCardScope } from '../../core/ai-study-categories.ts';
 import { reviewAiQuestionPreview } from './ai-question-preview.ts';
@@ -53,16 +53,9 @@ ${existing}
 
 Your answer must be a standalone valid Review JSON response with a title, description, and ONLY the additional questions. The title and description are required for the JSON format but will NOT replace my existing knowledge set name or options.
 
-${(promptVariant.value === 'simple' ? simpleAiPrompt(reviewAiPrompt({
+${reviewAiPrompt({
         count: count.value, mixMode: 'ai', coverage: 'balanced', weights: { ...DEFAULT_AI_WEIGHTS },
-      }, scope.value), 'Review', 'Create additional questions without replacing the existing set.',
-         ['Use exactly the requested count when supported; no duplicate or paraphrased existing questions.',
-          'Use the supported question types, including parameterized or solver questions when supported.',
-          'For multiple-choice, use plausible choices; for fill-in-the-blanks, place answers in {{markers}}.',
-          'Explanations are gentle hints and must not reveal the correct answer.',
-          'Include source-based confidence and coverage estimates.']) : reviewAiPrompt({
-        count: count.value, mixMode: 'ai', coverage: 'balanced', weights: { ...DEFAULT_AI_WEIGHTS },
-      }, scope.value))}`;
+      }, scope.value, promptVariant.value)}`;
     });
 
     function validate() {

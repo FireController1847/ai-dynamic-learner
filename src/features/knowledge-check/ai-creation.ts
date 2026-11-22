@@ -7,7 +7,7 @@ import { aiFullFileCorrectionInstructions } from '../../core/ai-file-output.ts';
 import { AiCoverageSelect } from '../../components/ai-coverage-select.ts';
 import { AiPromptStyleSelect } from '../../components/ai-prompt-style-select.ts';
 import { AiOptionsHeader } from '../../components/ai-options-header.ts';
-import { DEFAULT_AI_PROMPT_VARIANT, simpleAiPrompt, type AiPromptVariant } from '../../core/ai-prompt-variants.ts';
+import { DEFAULT_AI_PROMPT_VARIANT, type AiPromptVariant } from '../../core/ai-prompt-variants.ts';
 import { Icon } from '../../components/icon.ts';
 import { AiPromptExchange, type AiPromptExchangeHandle } from '../../components/ai-prompt-exchange.ts';
 import { MAX_AI_IMPORT_LENGTH } from '../../core/ai-json.ts';
@@ -45,15 +45,7 @@ export const ReviewAiCreation = defineComponent({
     const retrying = ref(false);
     const acceptedCount = computed(() => candidate.value?.questions.length ?? 0);
     function createPrompt(options: ReviewAiPreferences): string {
-      const detailed = reviewAiPrompt(options, scope.value);
-      return promptVariant.value === 'simple' ? simpleAiPrompt(detailed, 'Review',
-        `Create exactly ${options.count} useful, distinct questions when the source supports that many${scope.value ? ' for the selected category ' + scope.value.category.title : ' for the overall subject'}. Coverage: ${options.coverage}.`,
-        ['Follow the selected question mix and focus. Use all supported types only when appropriate.',
-         'Use source-supported formulas and solver packages for parameterized problems; do not invent ranges.',
-         'Use 2–8 plausible choices for multiple-choice and matching, and {{answer}} for fill-in-the-blanks.',
-         'Write clear, unambiguous questions with brief supportive explanations that never give away answers.',
-         'Include all four confidence estimates, coverage explanation, and uncovered subjects; never inflate them.',
-         'Do not exceed the requested question count or invent filler.']) : detailed;
+      return reviewAiPrompt(options, scope.value, promptVariant.value);
     }
     const batchPrompt = computed(() => {
       const remaining = preferences.value.count - acceptedCount.value;
